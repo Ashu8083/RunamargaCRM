@@ -17,10 +17,12 @@ import UserPlusIcon from '@heroicons/react/24/outline/UserPlusIcon'
 import ChartBarIcon from '@heroicons/react/24/outline/ChartBarIcon'
 import LightBulbIcon from '@heroicons/react/24/outline/LightBulbIcon'
 import BuildingLibraryIcon from '@heroicons/react/24/outline/BuildingLibraryIcon'
-import BuildingOffice2Icon from '@heroicons/react/24/outline/BuildingOffice2Icon'
 import IdentificationIcon from '@heroicons/react/24/outline/IdentificationIcon'
 import BriefcaseIcon from '@heroicons/react/24/outline/BriefcaseIcon'
-
+import FunnelIcon from '@heroicons/react/24/outline/FunnelIcon'
+import UserCircleIcon from '@heroicons/react/24/outline/UserCircleIcon'
+import KeyIcon from '@heroicons/react/24/outline/KeyIcon'
+import DocumentDuplicateIcon from '@heroicons/react/24/outline/DocumentDuplicateIcon'
 const iconClasses = `h-6 w-6`
 const submenuIconClasses = `h-5 w-5`
 
@@ -35,22 +37,24 @@ const routes = [
     icon: <Squares2X2Icon className={iconClasses} />,
     name: 'Dashboard',
   },
+
   {
     path: '/app/filter',
-    icon: <Squares2X2Icon className={iconClasses} />,
+    icon: <FunnelIcon className={iconClasses} />,
     name: 'Application Filter',
   },
+
   {
     path: '/app/attendance',
     icon: <CalendarDaysIcon className={iconClasses} />,
     name: 'Attendance',
   },
 
-  {
-    path: '/app/profile',
-    icon: <UserIcon className={iconClasses} />,
-    name: 'My Profile',
-  },
+  // {
+  //   path: '/app/profile',
+  //   icon: <UserCircleIcon className={iconClasses} />,
+  //   name: 'My Profile',
+  // },
 
 
   // =========================================================
@@ -58,15 +62,14 @@ const routes = [
   // =========================================================
 
   {
-    path: '',
-    icon: <UserGroupIcon className={`${iconClasses} inline`} />,
+    type: 'section',
     name: 'Teams & Roles',
 
     submenu: [
 
       {
         path: '/app/roles',
-        icon: <ShieldCheckIcon className={submenuIconClasses} />,
+        icon: <KeyIcon className={submenuIconClasses} />,
         name: 'Roles',
       },
 
@@ -81,6 +84,11 @@ const routes = [
         icon: <UserIcon className={submenuIconClasses} />,
         name: 'Agents',
       },
+      {
+        path: '/app/admins',
+        icon: <ShieldCheckIcon className={submenuIconClasses} />,
+        name: 'Admins',
+      },
 
     ]
   },
@@ -91,12 +99,15 @@ const routes = [
   // =========================================================
 
   {
-    path: '',
-    icon: <DocumentTextIcon className={`${iconClasses} inline`} />,
-    name: 'Loan Applications',
+    type: 'section',
+    name: 'Loans',
 
     submenu: [
-
+      {
+        path: '/app/duplicate-approval',
+        icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
+        name: 'Approval Duplicate',
+      },
       {
         path: '/app/createapplication',
         icon: <DocumentPlusIcon className={submenuIconClasses} />,
@@ -106,13 +117,13 @@ const routes = [
       {
         path: '/app/myleads',
         icon: <DocumentTextIcon className={submenuIconClasses} />,
-        name: 'Originated Applications',
+        name: 'RM Applications',
       },
 
       {
         path: '/app/assignedleads',
         icon: <ClipboardDocumentCheckIcon className={submenuIconClasses} />,
-        name: 'Supervised Applications',
+        name: 'Agent Applications',
       },
 
       {
@@ -142,8 +153,7 @@ const routes = [
   // =========================================================
 
   {
-    path: '',
-    icon: <PhoneIcon className={`${iconClasses} inline`} />,
+    type: 'section',
     name: 'Call Management',
 
     submenu: [
@@ -175,8 +185,7 @@ const routes = [
   // =========================================================
 
   {
-    path: '',
-    icon: <ChartBarIcon className={`${iconClasses} inline`} />,
+    type: 'section',
     name: 'Analytics Management',
 
     submenu: [
@@ -196,8 +205,7 @@ const routes = [
   // =========================================================
 
   {
-    path: '',
-    icon: <BuildingLibraryIcon className={`${iconClasses} inline`} />,
+    type: 'section',
     name: 'Banks & Bankers Directory',
 
     submenu: [
@@ -229,8 +237,7 @@ const routes = [
   // =========================================================
 
   {
-    path: '',
-    icon: <UsersIcon className={`${iconClasses} inline`} />,
+    type: 'section',
     name: 'Employees & Attendance Management',
 
     submenu: [
