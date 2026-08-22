@@ -103,11 +103,7 @@ const routes = [
     name: 'Loans',
 
     submenu: [
-      {
-        path: '/app/duplicate-approval',
-        icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
-        name: 'Approval Duplicate',
-      },
+
       {
         path: '/app/createapplication',
         icon: <DocumentPlusIcon className={submenuIconClasses} />,
@@ -142,6 +138,16 @@ const routes = [
         path: '/app/revertapplications',
         icon: <ArrowUturnLeftIcon className={submenuIconClasses} />,
         name: 'Reverted Applications',
+      },
+      {
+        path: '/app/loan-auto-assign',
+        icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
+        name: 'Loan Auto Assignment',
+      },
+      {
+        path: '/app/duplicate-approval',
+        icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
+        name: 'Approval Duplicate',
       },
 
     ]

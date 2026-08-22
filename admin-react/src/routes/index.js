@@ -1,10 +1,14 @@
 // All components mapping with path for internal routes
 
 import { lazy } from 'react'
+import TeamLead from '../pages/Role-management/TeamLead'
+import Agents from '../pages/Role-management/Agents.'
+import Admins from '../pages/Role-management/Admins'
 
 const Dashboard = lazy(() => import('../pages/Dashboard/index'))
 const ApplicationFilter = lazy(() => import('../pages/Applicationfilter/index'))
 const Attendance = lazy(() => import('../pages/Attendance/index'))
+const Roles = lazy(() => import('../pages/Role-management/Roles'))
 const Welcome = lazy(() => import('../pages/protected/Welcome'))
 const Page404 = lazy(() => import('../pages/protected/404'))
 const Blank = lazy(() => import('../pages/protected/Blank'))
@@ -35,28 +39,20 @@ const routes = [
     component: Attendance,
   },
   {
-    path: '/settings-team',
-    component: Team,
+    path: '/roles',
+    component: Roles,
   },
   {
-    path: '/calendar',
-    component: Calendar,
+    path: '/team-leads',
+    component: TeamLead,
   },
   {
-    path: '/transactions',
-    component: Transactions,
+    path: '/agents',
+    component: Agents,
   },
   {
-    path: '/settings-profile',
-    component: ProfileSettings,
-  },
-  {
-    path: '/settings-billing',
-    component: Bills,
-  },
-  {
-    path: '/getting-started',
-    component: GettingStarted,
+    path: '/admins',
+    component: Admins,
   },
   {
     path: '/features',

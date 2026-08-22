@@ -1,13 +1,26 @@
+import React from 'react'
+
+import ConversionOverview from './components/ConversionOverview'
+import ConversionFunnel from './components/ConversionFunnel'
+import MonthlyDisbursement from './components/MonthlyDisbursement'
+import LoanTypeDistribution from './components/LoanTypeDistribution'
+
 function Dashboard() {
     return (
-        <div>
-            <h1 className="text-2xl font-semibold">
-                Dashboard
-            </h1>
+        <div className="space-y-6">
 
-            <p className="mt-2 text-base-content/60">
-                Welcome to Runamarga Dashboard.
-            </p>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+                <ConversionOverview />
+
+                <ConversionFunnel />
+                <MonthlyDisbursement />
+                <LoanTypeDistribution />
+
+
+
+            </div>
+
         </div>
     )
 }
