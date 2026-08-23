@@ -52,7 +52,12 @@ const CreateApplication = lazy(
 const RMApplications = lazy(() =>
     import('../pages/Loans/RMApplications/index')
 )
-
+const AgentApplications = lazy(() =>
+    import('../pages/Loans/AgentApplications/index')
+)
+const PendingApplications = lazy(() =>
+    import('../pages/Loans/PendingApplications/index')
+)
 
 // =========================================================
 // OTHER PAGES
@@ -178,6 +183,15 @@ const routes = [
     {
         path: '/rm-applications',
         component: RMApplications,
+    },
+
+    {
+        path: '/agent-applications',
+        component: AgentApplications,
+    },
+    {
+        path: '/pending-applications',
+        component: PendingApplications,
     },
 
 

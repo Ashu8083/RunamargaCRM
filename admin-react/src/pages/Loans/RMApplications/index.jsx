@@ -1,4 +1,5 @@
 // admin-react/src/pages/Loans/RMApplications/index.jsx
+
 import { useState } from 'react'
 
 import RMApplicationsTable from './components/RMApplicationsTable'
@@ -11,6 +12,10 @@ function RMApplications() {
 
     const [search, setSearch] = useState('')
 
+    const [selectedLoanType, setSelectedLoanType] = useState('')
+
+    const [selectedRM, setSelectedRM] = useState('')
+
 
     const [applications, setApplications] = useState([
         {
@@ -22,8 +27,11 @@ function RMApplications() {
             loanType: 'Personal Loan',
             amount: '500000',
             status: 'Inprocess',
-            createdAt: 'Aug 20, 2026, 10:30 AM',
-            updatedAt: 'Aug 21, 2026, 2:15 PM',
+            appliedDate: '2026-08-20',
+            appliedBy: 'Premalatha N',
+            rmName: 'Premalatha N',
+            rmId: 201,
+            processingAgent: 'Prashanth',
             agentId: 101,
         },
         {
@@ -35,8 +43,11 @@ function RMApplications() {
             loanType: 'Business Loan',
             amount: '1000000',
             status: 'Docs Pending',
-            createdAt: 'Aug 20, 2026, 11:45 AM',
-            updatedAt: 'Aug 22, 2026, 9:20 AM',
+            appliedDate: '2026-08-20',
+            appliedBy: 'Premalatha N',
+            rmName: 'Premalatha N',
+            rmId: 201,
+            processingAgent: 'Kasturi',
             agentId: 102,
         },
         {
@@ -48,8 +59,11 @@ function RMApplications() {
             loanType: 'Home Loan',
             amount: '2500000',
             status: 'Rejected',
-            createdAt: 'Aug 19, 2026, 3:10 PM',
-            updatedAt: 'Aug 21, 2026, 4:30 PM',
+            appliedDate: '2026-08-19',
+            appliedBy: 'Shubha',
+            rmName: 'Shubha',
+            rmId: 202,
+            processingAgent: 'Kasturi',
             agentId: 103,
         },
         {
@@ -61,11 +75,22 @@ function RMApplications() {
             loanType: 'Personal Loan',
             amount: '300000',
             status: 'Inprocess',
-            createdAt: 'Aug 18, 2026, 9:15 AM',
-            updatedAt: 'Aug 20, 2026, 1:45 PM',
+            appliedDate: '2026-08-18',
+            appliedBy: 'Prasanna Y R',
+            rmName: 'Prasanna Y R',
+            rmId: 203,
+            processingAgent: 'Nayana',
             agentId: 104,
         },
     ])
+
+
+    // =========================================================
+    // SELECTED APPLICATION
+    // =========================================================
+
+    const [selectedApplication, setSelectedApplication] =
+        useState(null)
 
 
     // =========================================================
@@ -75,35 +100,13 @@ function RMApplications() {
     const [showLoanTypeModal, setShowLoanTypeModal] =
         useState(false)
 
-    const [selectedApplication, setSelectedApplication] =
-        useState(null)
-
-
-    // =========================================================
-    // STATUS MODAL
-    // =========================================================
-
-    const [showStatusModal, setShowStatusModal] =
-        useState(false)
-
-
-    // =========================================================
-    // REMINDER MODAL
-    // =========================================================
-
-    const [showReminderModal, setShowReminderModal] =
-        useState(false)
-
-
-    // =========================================================
-    // LOAN TYPE
-    // =========================================================
 
     const handleLoanTypeChange = (application) => {
 
         setSelectedApplication(application)
 
         setShowLoanTypeModal(true)
+
     }
 
 
@@ -112,6 +115,7 @@ function RMApplications() {
         setShowLoanTypeModal(false)
 
         setSelectedApplication(null)
+
     }
 
 
@@ -139,20 +143,25 @@ function RMApplications() {
             )
         )
 
-
         handleCloseLoanTypeModal()
+
     }
 
 
     // =========================================================
-    // STATUS
+    // STATUS MODAL
     // =========================================================
+
+    const [showStatusModal, setShowStatusModal] =
+        useState(false)
+
 
     const handleStatusChange = (application) => {
 
         setSelectedApplication(application)
 
         setShowStatusModal(true)
+
     }
 
 
@@ -161,6 +170,7 @@ function RMApplications() {
         setShowStatusModal(false)
 
         setSelectedApplication(null)
+
     }
 
 
@@ -172,6 +182,8 @@ function RMApplications() {
                     ? {
                         ...application,
                         status: data.status,
+                        rejectionReason:
+                            data.rejectionReason || '',
                         updatedAt: new Date().toLocaleString(
                             'en-IN',
                             {
@@ -188,20 +200,25 @@ function RMApplications() {
             )
         )
 
-
         handleCloseStatusModal()
+
     }
 
 
     // =========================================================
-    // REMINDER
+    // REMINDER MODAL
     // =========================================================
+
+    const [showReminderModal, setShowReminderModal] =
+        useState(false)
+
 
     const handleReminder = (application) => {
 
         setSelectedApplication(application)
 
         setShowReminderModal(true)
+
     }
 
 
@@ -210,6 +227,7 @@ function RMApplications() {
         setShowReminderModal(false)
 
         setSelectedApplication(null)
+
     }
 
 
@@ -225,8 +243,26 @@ function RMApplications() {
 
         console.log('Reminder:', data)
 
-
         handleCloseReminderModal()
+
+    }
+
+
+    // =========================================================
+    // VIEW APPLICATION
+    // =========================================================
+
+    const handleViewApplication = (application) => {
+
+        /*
+         * Application details/view page will be connected later.
+         */
+
+        console.log(
+            'View RM Application:',
+            application
+        )
+
     }
 
 
@@ -237,21 +273,25 @@ function RMApplications() {
     const handleChat = (application) => {
 
         /*
-         * Global ChatModal will be connected here.
+         * GlobalChat is handled inside RMApplicationsTable.
          *
-         * It will receive:
-         *
-         * loanId
-         * agentId
+         * loanId and agentId are passed there.
          */
 
         console.log(
-            'Open chat',
+            'Open RM Application Chat:',
             {
-                loanId: application.loanId || application.id,
-                agentId: application.agentId,
+                loanId:
+                    application.loanId ||
+                    application.loan_id ||
+                    application.id,
+
+                agentId:
+                    application.agentId ||
+                    application.agent_id,
             }
         )
+
     }
 
 
@@ -266,6 +306,22 @@ function RMApplications() {
          */
 
         console.log('Refresh RM applications')
+
+    }
+
+
+    // =========================================================
+    // CLEAR FILTERS
+    // =========================================================
+
+    const handleClearFilters = () => {
+
+        setSearch('')
+
+        setSelectedLoanType('')
+
+        setSelectedRM('')
+
     }
 
 
@@ -274,48 +330,62 @@ function RMApplications() {
     // =========================================================
 
     return (
-        <div className="p-4 sm:p-6 space-y-5">
 
-
-            {/* =====================================================
-                PAGE HEADER
-            ===================================================== */}
-
-            {/* <div>
-
-                <h1 className="
-                    text-2xl
-                    sm:text-3xl
-                    font-semibold
-                ">
-                    RM Applications
-                </h1>
-
-
-                <p className="
-                    text-sm
-                    text-base-content/60
-                    mt-1
-                ">
-                    Manage and track applications assigned to relationship managers.
-                </p>
-
-            </div> */}
-
-
-            {/* =====================================================
-                APPLICATION TABLE
-            ===================================================== */}
+        <div className="
+            p-4
+            sm:p-6
+            space-y-5
+        ">
 
             <RMApplicationsTable
                 applications={applications}
+
                 search={search}
                 setSearch={setSearch}
-                onLoanTypeChange={handleLoanTypeChange}
-                onStatusChange={handleStatusChange}
-                onReminder={handleReminder}
-                onChat={handleChat}
-                onRefresh={handleRefresh}
+
+                selectedLoanType={
+                    selectedLoanType
+                }
+
+                setSelectedLoanType={
+                    setSelectedLoanType
+                }
+
+                selectedRM={
+                    selectedRM
+                }
+
+                setSelectedRM={
+                    setSelectedRM
+                }
+
+                onClearFilters={
+                    handleClearFilters
+                }
+
+                onLoanTypeChange={
+                    handleLoanTypeChange
+                }
+
+                onStatusChange={
+                    handleStatusChange
+                }
+
+                onReminder={
+                    handleReminder
+                }
+
+                onChat={
+                    handleChat
+                }
+
+                onViewApplication={
+                    handleViewApplication
+                }
+
+                onRefresh={
+                    handleRefresh
+                }
             />
 
 
@@ -324,10 +394,21 @@ function RMApplications() {
             ===================================================== */}
 
             <LoanTypeModal
-                open={showLoanTypeModal}
-                application={selectedApplication}
-                onClose={handleCloseLoanTypeModal}
-                onSubmit={handleLoanTypeSubmit}
+                open={
+                    showLoanTypeModal
+                }
+
+                application={
+                    selectedApplication
+                }
+
+                onClose={
+                    handleCloseLoanTypeModal
+                }
+
+                onSubmit={
+                    handleLoanTypeSubmit
+                }
             />
 
 
@@ -336,10 +417,21 @@ function RMApplications() {
             ===================================================== */}
 
             <StatusModal
-                open={showStatusModal}
-                application={selectedApplication}
-                onClose={handleCloseStatusModal}
-                onSubmit={handleStatusSubmit}
+                open={
+                    showStatusModal
+                }
+
+                application={
+                    selectedApplication
+                }
+
+                onClose={
+                    handleCloseStatusModal
+                }
+
+                onSubmit={
+                    handleStatusSubmit
+                }
             />
 
 
@@ -348,13 +440,25 @@ function RMApplications() {
             ===================================================== */}
 
             <ReminderModal
-                open={showReminderModal}
-                application={selectedApplication}
-                onClose={handleCloseReminderModal}
-                onSubmit={handleReminderSubmit}
+                open={
+                    showReminderModal
+                }
+
+                application={
+                    selectedApplication
+                }
+
+                onClose={
+                    handleCloseReminderModal
+                }
+
+                onSubmit={
+                    handleReminderSubmit
+                }
             />
 
         </div>
+
     )
 }
 
