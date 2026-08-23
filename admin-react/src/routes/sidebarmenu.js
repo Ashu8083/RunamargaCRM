@@ -1,3 +1,4 @@
+// admin-react/src/routes/sidebarmenu.js
 /** Icons are imported separately to reduce build time */
 
 import Squares2X2Icon from '@heroicons/react/24/outline/Squares2X2Icon'
@@ -5,7 +6,6 @@ import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 import UserIcon from '@heroicons/react/24/outline/UserIcon'
 import UsersIcon from '@heroicons/react/24/outline/UsersIcon'
 import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon'
-import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
 import DocumentPlusIcon from '@heroicons/react/24/outline/DocumentPlusIcon'
 import DocumentTextIcon from '@heroicons/react/24/outline/DocumentTextIcon'
 import ClipboardDocumentCheckIcon from '@heroicons/react/24/outline/ClipboardDocumentCheckIcon'
@@ -20,41 +20,35 @@ import BuildingLibraryIcon from '@heroicons/react/24/outline/BuildingLibraryIcon
 import IdentificationIcon from '@heroicons/react/24/outline/IdentificationIcon'
 import BriefcaseIcon from '@heroicons/react/24/outline/BriefcaseIcon'
 import FunnelIcon from '@heroicons/react/24/outline/FunnelIcon'
-import UserCircleIcon from '@heroicons/react/24/outline/UserCircleIcon'
 import KeyIcon from '@heroicons/react/24/outline/KeyIcon'
 import DocumentDuplicateIcon from '@heroicons/react/24/outline/DocumentDuplicateIcon'
+
 const iconClasses = `h-6 w-6`
 const submenuIconClasses = `h-5 w-5`
 
-const routes = [
+const sidebarmenu = [
 
   // =========================================================
   // MAIN
   // =========================================================
 
   {
-    path: '/app/dashboard',
+    path: '/crm/dashboard',
     icon: <Squares2X2Icon className={iconClasses} />,
     name: 'Dashboard',
   },
 
   {
-    path: '/app/filter',
+    path: '/crm/filter',
     icon: <FunnelIcon className={iconClasses} />,
     name: 'Application Filter',
   },
 
   {
-    path: '/app/attendance',
+    path: '/crm/attendance',
     icon: <CalendarDaysIcon className={iconClasses} />,
     name: 'Attendance',
   },
-
-  // {
-  //   path: '/app/profile',
-  //   icon: <UserCircleIcon className={iconClasses} />,
-  //   name: 'My Profile',
-  // },
 
 
   // =========================================================
@@ -68,26 +62,31 @@ const routes = [
     submenu: [
 
       {
-        path: '/app/roles',
+        path: '/crm/roles',
         icon: <KeyIcon className={submenuIconClasses} />,
         name: 'Roles',
+        parent: 'Teams & Roles',
       },
 
       {
-        path: '/app/team-leads',
+        path: '/crm/team-leads',
         icon: <UsersIcon className={submenuIconClasses} />,
         name: 'Team Leads',
+        parent: 'Teams & Roles',
       },
 
       {
-        path: '/app/agents',
+        path: '/crm/agents',
         icon: <UserIcon className={submenuIconClasses} />,
         name: 'Agents',
+        parent: 'Teams & Roles',
       },
+
       {
-        path: '/app/admins',
+        path: '/crm/admins',
         icon: <ShieldCheckIcon className={submenuIconClasses} />,
         name: 'Admins',
+        parent: 'Teams & Roles',
       },
 
     ]
@@ -95,7 +94,7 @@ const routes = [
 
 
   // =========================================================
-  // LOAN APPLICATIONS
+  // LOANS
   // =========================================================
 
   {
@@ -105,49 +104,59 @@ const routes = [
     submenu: [
 
       {
-        path: '/app/createapplication',
+        path: '/crm/create-application',
         icon: <DocumentPlusIcon className={submenuIconClasses} />,
         name: 'Create Application',
+        parent: 'Loans',
       },
 
       {
-        path: '/app/myleads',
+        path: '/crm/rm-applications',
         icon: <DocumentTextIcon className={submenuIconClasses} />,
         name: 'RM Applications',
+        parent: 'Loans',
       },
 
       {
-        path: '/app/assignedleads',
+        path: '/crm/agent-applications',
         icon: <ClipboardDocumentCheckIcon className={submenuIconClasses} />,
         name: 'Agent Applications',
+        parent: 'Loans',
       },
 
       {
-        path: '/app/pendingleads',
+        path: '/crm/pendingleads',
         icon: <ClockIcon className={submenuIconClasses} />,
         name: 'Pending Applications',
+        parent: 'Loans',
       },
 
       {
-        path: '/app/shuffleapplications',
+        path: '/crm/shuffleapplications',
         icon: <ArrowsRightLeftIcon className={submenuIconClasses} />,
         name: 'Shuffle Applications',
+        parent: 'Loans',
       },
 
       {
-        path: '/app/revertapplications',
+        path: '/crm/revertapplications',
         icon: <ArrowUturnLeftIcon className={submenuIconClasses} />,
         name: 'Reverted Applications',
+        parent: 'Loans',
       },
+
       {
-        path: '/app/loan-auto-assign',
+        path: '/crm/loan-auto-assign',
         icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
         name: 'Loan Auto Assignment',
+        parent: 'Loans',
       },
+
       {
-        path: '/app/duplicate-approval',
+        path: '/crm/duplicate-approval',
         icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
         name: 'Approval Duplicate',
+        parent: 'Loans',
       },
 
     ]
@@ -165,21 +174,24 @@ const routes = [
     submenu: [
 
       {
-        path: '/app/calllogs',
+        path: '/crm/calllogs',
         icon: <PhoneIcon className={submenuIconClasses} />,
         name: 'Call Logs',
+        parent: 'Call Management',
       },
 
       {
-        path: '/app/callassignments',
+        path: '/crm/callassignments',
         icon: <UserPlusIcon className={submenuIconClasses} />,
         name: 'Call Assignments',
+        parent: 'Call Management',
       },
 
       {
-        path: '/app/call-analytics',
+        path: '/crm/call-analytics',
         icon: <ChartBarIcon className={submenuIconClasses} />,
         name: 'Call Analytics',
+        parent: 'Call Management',
       },
 
     ]
@@ -197,9 +209,10 @@ const routes = [
     submenu: [
 
       {
-        path: '/app/analytics',
+        path: '/crm/analytics',
         icon: <LightBulbIcon className={submenuIconClasses} />,
         name: 'Insights',
+        parent: 'Analytics Management',
       },
 
     ]
@@ -207,31 +220,34 @@ const routes = [
 
 
   // =========================================================
-  // BANKS & BANKERS DIRECTORY
+  // BANK & DSA
   // =========================================================
 
   {
     type: 'section',
-    name: 'Banks & Bankers Directory',
+    name: 'Bank & DSA',
 
     submenu: [
 
       {
-        path: '/app/banks',
+        path: '/crm/banks',
         icon: <BuildingLibraryIcon className={submenuIconClasses} />,
         name: 'Banks',
+        parent: 'Bank & DSA',
       },
 
       {
-        path: '/app/bankerdirectory',
+        path: '/crm/bankerdirectory',
         icon: <IdentificationIcon className={submenuIconClasses} />,
         name: 'Banker Directory',
+        parent: 'Bank & DSA',
       },
 
       {
-        path: '/app/dsadetails',
+        path: '/crm/dsadetails',
         icon: <BriefcaseIcon className={submenuIconClasses} />,
         name: 'DSA Details',
+        parent: 'Bank & DSA',
       },
 
     ]
@@ -239,25 +255,27 @@ const routes = [
 
 
   // =========================================================
-  // EMPLOYEES & ATTENDANCE MANAGEMENT
+  // EMPLOYEES MANAGEMENT
   // =========================================================
 
   {
     type: 'section',
-    name: 'Employees & Attendance Management',
+    name: 'Employees Management',
 
     submenu: [
 
       {
-        path: '/app/employees',
+        path: '/crm/employees',
         icon: <UsersIcon className={submenuIconClasses} />,
         name: 'Employees',
+        parent: 'Employees Management',
       },
 
       {
-        path: '/app/attendance-dashboard',
+        path: '/crm/attendance-dashboard',
         icon: <CalendarDaysIcon className={submenuIconClasses} />,
         name: 'Attendance Dashboard',
+        parent: 'Employees Management',
       },
 
     ]
@@ -265,4 +283,4 @@ const routes = [
 
 ]
 
-export default routes
+export default sidebarmenu

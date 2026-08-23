@@ -1,52 +1,143 @@
-import React, { lazy, useEffect } from 'react'
-import './App.css';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom'
-import { themeChange } from 'theme-change'
-import checkAuth from './app/auth';
-import initializeApp from './app/init';
+// admin-react/src/App.js
 
-// Importing pages
+import React, { lazy, useEffect } from 'react'
+import './App.css'
+import {
+    BrowserRouter as Router,
+    Route,
+    Routes,
+    Navigate,
+} from 'react-router-dom'
+import { themeChange } from 'theme-change'
+
+import checkAuth from './app/auth'
+import initializeApp from './app/init'
+
+
+// =========================================================
+// PAGES
+// =========================================================
+
 const Layout = lazy(() => import('./containers/Layout'))
+
 const Login = lazy(() => import('./pages/Login'))
+
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+
 const Register = lazy(() => import('./pages/Register'))
+
 const Documentation = lazy(() => import('./pages/Documentation'))
 
+const Dashboard = lazy(() => import('./pages/Dashboard'))
 
-// Initializing different libraries
+
+// =========================================================
+// INITIALIZATION
+// =========================================================
+
 initializeApp()
 
-
-// Check for login and initialize axios
 const token = checkAuth()
 
 
+// =========================================================
+// APP
+// =========================================================
+
 function App() {
 
-  useEffect(() => {
-    // 👆 daisy UI themes initialization
-    themeChange(false)
-  }, [])
+    useEffect(() => {
+
+        // DaisyUI theme initialization
+        themeChange(false)
+
+    }, [])
 
 
-  return (
-    <>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/documentation" element={<Documentation />} />
-          
-          {/* Place new routes over this */}
-          <Route path="/app/*" element={<Layout />} />
+    return (
 
-          <Route path="*" element={<Navigate to={token ? "/app/welcome" : "/login"} replace />}/>
+        <Router>
 
-        </Routes>
-      </Router>
-    </>
-  )
+            <Routes>
+
+                {/* =================================================
+                    PUBLIC ROUTES
+                ================================================= */}
+
+                <Route
+                    path="/login"
+                    element={<Login />}
+                />
+
+                <Route
+                    path="/forgot-password"
+                    element={<ForgotPassword />}
+                />
+
+                <Route
+                    path="/register"
+                    element={<Register />}
+                />
+
+                <Route
+                    path="/documentation"
+                    element={<Documentation />}
+                />
+
+
+                {/* =================================================
+                    PROTECTED APPLICATION
+                ================================================= */}
+
+                <Route
+                    path="/crm/*"
+                    element={<Layout />}
+                />
+
+
+                {/* =================================================
+                    ROOT
+                ================================================= */}
+
+                <Route
+                    path="/"
+                    element={
+                        <Navigate
+                            to={
+                                token
+                                    ? "/crm/dashboard"
+                                    : "/login"
+                            }
+                            replace
+                        />
+                    }
+                />
+
+
+                {/* =================================================
+                    FALLBACK
+                ================================================= */}
+
+                <Route
+                    path="*"
+                    element={
+                        <Navigate
+                            to={
+                                token
+                                    ? "/crm/dashboard"
+                                    : "/login"
+                            }
+                            replace
+                        />
+                    }
+                />
+
+            </Routes>
+
+        </Router>
+
+    )
 }
+
 
 export default App

@@ -1,4 +1,5 @@
-import routes from '../routes/sidebar'
+// admin-react\src\containers\LeftSidebar.js
+import routes from '../routes/sidebarmenu'
 import { NavLink, Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
@@ -17,7 +18,7 @@ function LeftSidebar() {
                 className="drawer-overlay"
             ></label>
 
-            <ul className="menu pt-2 w-80 bg-base-100 min-h-full text-base-content">
+            <ul className="menu pt-2 w-60 bg-base-100 min-h-full text-base-content">
 
                 {/* Mobile close button */}
                 <button
@@ -31,7 +32,7 @@ function LeftSidebar() {
                 {/* Logo */}
                 <li className="mb-2 font-semibold text-xl">
 
-                    <Link to="/app/welcome">
+                    <Link to="/crm/welcome">
                         <img
                             className="mask mask-squircle w-10"
                             src="/logo192.png"
