@@ -281,7 +281,7 @@ function RMApplications() {
                 PAGE HEADER
             ===================================================== */}
 
-            <div>
+            {/* <div>
 
                 <h1 className="
                     text-2xl
@@ -300,7 +300,7 @@ function RMApplications() {
                     Manage and track applications assigned to relationship managers.
                 </p>
 
-            </div>
+            </div> */}
 
 
             {/* =====================================================

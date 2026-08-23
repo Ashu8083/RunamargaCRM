@@ -46,7 +46,9 @@ const Admins = lazy(() =>
 // =========================================================
 // LOANS
 // =========================================================
-
+const CreateApplication = lazy(
+    () => import('../pages/Loans/CreateApplication/index')
+)
 const RMApplications = lazy(() =>
     import('../pages/Loans/RMApplications/index')
 )
@@ -170,7 +172,7 @@ const routes = [
 
     {
         path: '/create-application',
-        component: DocFeatures,
+        component: CreateApplication,
     },
 
     {
