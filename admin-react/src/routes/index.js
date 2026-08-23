@@ -52,7 +52,9 @@ const CreateApplication = lazy(
 const RMApplications = lazy(() =>
     import('../pages/Loans/RMApplications/index')
 )
-
+const ViewApplication = lazy(
+    () => import('../pages/Loans/ViewApplication/index')
+)
 
 // =========================================================
 // OTHER PAGES
@@ -175,6 +177,10 @@ const routes = [
         component: CreateApplication,
     },
 
+    {
+        path: '/view-application',
+        component: ViewApplication,
+    },
     {
         path: '/rm-applications',
         component: RMApplications,

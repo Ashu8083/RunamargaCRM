@@ -556,7 +556,7 @@ function CreateApplication() {
 
                             <button
                                 type="button"
-                                className="btn btn-primary"
+                                className="btn btn-success"
                                 onClick={handleNext}
                             >
                                 Next →
@@ -711,7 +711,7 @@ function CreateApplication() {
 
                         <button
                             type="button"
-                            className="btn btn-primary"
+                            className="btn btn-success"
                             onClick={handleSubmit}
                         >
                             Review & Submit
