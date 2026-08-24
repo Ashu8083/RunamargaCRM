@@ -132,9 +132,9 @@ const sidebarmenu = [
       },
 
       {
-        path: '/crm/shuffleapplications',
+        path: '/crm/shuffle-loans',
         icon: <ArrowsRightLeftIcon className={submenuIconClasses} />,
-        name: 'Shuffle Applications',
+        name: 'Shuffle Loans',
         parent: 'Loans',
       },
 

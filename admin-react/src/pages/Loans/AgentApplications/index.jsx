@@ -3,9 +3,10 @@
 import { useMemo, useState } from 'react'
 
 import AgentApplicationsTable from './components/AgentApplicationsTable'
-import LoanTypeModal from './components/LoanTypeModal'
-import StatusModal from './components/StatusModal'
-import ReminderModal from './components/ReminderModal'
+
+import LoanTypeModal from '../../../components/Loans/LoanTypeModal'
+import StatusModal from '../../../components/Loans/StatusModal'
+import ReminderModal from '../../../components/Loans/ReminderModal'
 
 
 function AgentApplications() {
@@ -568,7 +569,7 @@ function AgentApplications() {
 
 
             {/* =====================================================
-                LOAN TYPE MODAL
+                GLOBAL LOAN TYPE MODAL
             ===================================================== */}
 
             <LoanTypeModal
@@ -584,7 +585,7 @@ function AgentApplications() {
 
 
             {/* =====================================================
-                STATUS MODAL
+                GLOBAL STATUS MODAL
             ===================================================== */}
 
             <StatusModal
@@ -600,7 +601,7 @@ function AgentApplications() {
 
 
             {/* =====================================================
-                REMINDER MODAL
+                GLOBAL REMINDER MODAL
             ===================================================== */}
 
             <ReminderModal

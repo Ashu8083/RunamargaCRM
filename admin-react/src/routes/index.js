@@ -59,6 +59,11 @@ const PendingApplications = lazy(() =>
     import('../pages/Loans/PendingApplications/index')
 )
 
+const ShuffleLoans = lazy(() =>
+    import('../pages/Loans/ShuffleLoans/index')
+)
+
+
 // =========================================================
 // OTHER PAGES
 // =========================================================
@@ -192,6 +197,10 @@ const routes = [
     {
         path: '/pending-applications',
         component: PendingApplications,
+    },
+    {
+        path: '/shuffle-loans',
+        component: ShuffleLoans,
     },
 
 

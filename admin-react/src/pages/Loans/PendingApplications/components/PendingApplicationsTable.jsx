@@ -10,7 +10,7 @@ import EyeIcon from '@heroicons/react/24/outline/EyeIcon'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
 
-import GlobalChat from '../../../../components/GlobalChat'
+import GlobalChat from '../../../../components/Loans/GlobalChat'
 
 
 function PendingApplicationsTable({
