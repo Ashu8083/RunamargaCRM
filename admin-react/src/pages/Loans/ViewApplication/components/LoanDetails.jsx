@@ -207,13 +207,18 @@ function LoanDetails({ application }) {
 
                         <button
                             type="button"
-                            className="btn btn-sm"
+                            onClick={handleEdit}
+                            className="
+                                                               btn
+                                                               btn-sm
+                                                               text-black
+                                                               border-none
+                                                               shadow-sm
+                                                           "
                             style={{
                                 backgroundColor:
                                     COLORS.GREEN,
-
                             }}
-                            onClick={handleEdit}
                         >
                             ✎ Edit Details
                         </button>

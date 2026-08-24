@@ -125,7 +125,7 @@ const sidebarmenu = [
       },
 
       {
-        path: '/crm/pendingleads',
+        path: '/crm/pending-applications',
         icon: <ClockIcon className={submenuIconClasses} />,
         name: 'Pending Applications',
         parent: 'Loans',

@@ -1,10 +1,13 @@
-import React from 'react'
-import { COLORS } from '../../../../constants/colors'
 
+
+import React, { useState } from 'react'
+import { COLORS } from '../../../../constants/colors'
+import AddCoApplicantModal from '../modals/AddCoApplicantModal'
 function CoApplicantsSection({ application }) {
 
     const coApplicants = application?.co_applicants || []
-
+    const [showCoApplicantModal, setShowCoApplicantModal] =
+        useState(false)
     return (
 
         <div className="card bg-base-100 border border-base-300 shadow-sm">
@@ -34,8 +37,15 @@ function CoApplicantsSection({ application }) {
                     <button
                         type="button"
                         className="btn btn-sm btn-outline"
+                        style={{
+                            borderColor: COLORS.GREEN,
+                            color: COLORS.GREEN,
+                        }}
+                        onClick={() =>
+                            setShowCoApplicantModal(true)
+                        }
                     >
-                        + Add Co-Applicant
+                        + ADD CO-APPLICANT
                     </button>
 
                 </div>
@@ -63,8 +73,11 @@ function CoApplicantsSection({ application }) {
                             style={{
                                 color: COLORS.GREEN,
                             }}
+                            onClick={() =>
+                                setShowCoApplicantModal(true)
+                            }
                         >
-                            ADD CO-APPLICANT
+                            + ADD CO-APPLICANT
                         </button>
 
                     </div>
@@ -189,6 +202,34 @@ function CoApplicantsSection({ application }) {
                 )}
 
             </div>
+            <AddCoApplicantModal
+                isOpen={showCoApplicantModal}
+                onClose={() =>
+                    setShowCoApplicantModal(false)
+                }
+                onSubmit={async (coApplicantData) => {
+
+                    console.log(
+                        'Co-applicant:',
+                        coApplicantData
+                    )
+
+                    /*
+                        Later:
+            
+                        POST /applications/{id}/co-applicants
+            
+                        {
+                            application_id: application.id,
+                            ...coApplicantData
+                        }
+            
+                        Then refresh the application.
+                    */
+
+                    setShowCoApplicantModal(false)
+                }}
+            />
 
         </div>
     )

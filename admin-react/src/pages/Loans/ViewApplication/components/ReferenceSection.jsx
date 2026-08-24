@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { COLORS } from '../../../../constants/colors'
-
+import AddAddressReference from '../modals/AddReferenceModal'
 function ReferenceSection({ application }) {
 
     const references = application?.references || []
-
+    const [showAddReference, setShowAddReference] =
+        useState(false)
     return (
 
         <div className="card bg-base-100 border border-base-300 shadow-sm">
@@ -33,7 +34,10 @@ function ReferenceSection({ application }) {
 
                     <button
                         type="button"
-                        className="btn btn-sm btn-outline"
+                        className="btn btn-sm btn-outline" onClick={() => setShowAddReference(true)} style={{
+                            borderColor: COLORS.GREEN,
+                            color: COLORS.GREEN,
+                        }}
                     >
                         + Add Reference
                     </button>
@@ -63,6 +67,7 @@ function ReferenceSection({ application }) {
                             style={{
                                 color: COLORS.GREEN,
                             }}
+                            onClick={() => setShowAddReference(true)}
                         >
                             ADD YOUR FIRST REFERENCE
                         </button>
@@ -159,7 +164,29 @@ function ReferenceSection({ application }) {
                 )}
 
             </div>
+            <AddAddressReference
+                isOpen={showAddReference}
+                onClose={() => setShowAddReference(false)}
+                onSubmit={async (referenceData) => {
 
+                    console.log(
+                        'Address to save:',
+                        referenceData
+                    )
+
+                    /*
+                        Backend connection will go here.
+            
+                        application.id
+                        +
+                        referenceData
+            
+                        Then refresh application addresses.
+                    */
+
+                    setShowAddReference(false)
+                }}
+            />
         </div>
     )
 }

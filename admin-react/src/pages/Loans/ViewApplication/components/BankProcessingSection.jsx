@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 
-
+import AssignBankModal from '../modals/AssignBankModal'
 /* -------------------------------------------------
    HELPERS
 -------------------------------------------------- */
@@ -66,10 +66,9 @@ function TimelineItem({
                     text-[10px]
                     font-bold
                     z-10
-                    ${
-                        active
-                            ? 'text-white'
-                            : 'bg-base-300 text-base-content/40'
+                    ${active
+                        ? 'text-white'
+                        : 'bg-base-300 text-base-content/40'
                     }
                 `}
                 style={
@@ -346,7 +345,8 @@ function BankProcessingSection({ application }) {
         application.bank_processing
     */
 
-
+    const [showAssignBank, setShowAssignBank] =
+        useState(false)
     const banks =
         application?.bank_processing || []
 
@@ -402,7 +402,13 @@ function BankProcessingSection({ application }) {
 
                         <button
                             type="button"
-                            className="btn btn-sm text-black border-none"
+                            onClick={() => setShowAssignBank(true)}
+                            className="
+                                btn
+                                btn-sm
+                                text-black
+                                border-none
+                            "
                             style={{
                                 backgroundColor: COLORS.GREEN,
                             }}
@@ -430,7 +436,13 @@ function BankProcessingSection({ application }) {
 
                         <button
                             type="button"
-                            className="btn btn-sm mt-4 text-black border-none"
+                            onClick={() => setShowAssignBank(true)}
+                            className="
+                                btn
+                                btn-sm
+                                text-black
+                                border-none
+                            "
                             style={{
                                 backgroundColor: COLORS.GREEN,
                             }}
@@ -471,6 +483,32 @@ function BankProcessingSection({ application }) {
                 )}
 
             </div>
+            <AssignBankModal
+                isOpen={showAssignBank}
+                onClose={() => setShowAssignBank(false)}
+                onSubmit={async (bank) => {
+
+                    console.log(
+                        'Bank selected:',
+                        bank
+                    )
+
+                    /*
+                        Later:
+            
+                        POST /applications/{id}/banks
+            
+                        {
+                            application_id: application.id,
+                            bank_id: bank.id
+                        }
+            
+                        Then refresh application.
+                    */
+
+                    setShowAssignBank(false)
+                }}
+            />
 
         </div>
     )

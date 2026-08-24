@@ -1,11 +1,14 @@
-import React from 'react'
-import { COLORS } from '../../../../constants/colors'
 
+
+import React, { useState } from 'react'
+import { COLORS } from '../../../../constants/colors'
+import AddAddressModal from '../modals/AddAddressModal'
 
 function AddressSection({ application }) {
 
     const addresses = application?.addresses || []
-
+    const [showAddAddress, setShowAddAddress] =
+        useState(false)
 
     return (
 
@@ -30,7 +33,10 @@ function AddressSection({ application }) {
 
                     <button
                         type="button"
-                        className="btn btn-sm btn-outline"
+                        className="btn btn-sm btn-outline" onClick={() => setShowAddAddress(true)} style={{
+                            borderColor: COLORS.GREEN,
+                            color: COLORS.GREEN,
+                        }}
                     >
                         + Add Address
                     </button>
@@ -60,6 +66,7 @@ function AddressSection({ application }) {
                             style={{
                                 color: COLORS.GREEN,
                             }}
+                            onClick={() => setShowAddAddress(true)}
                         >
                             ADD YOUR FIRST ADDRESS
                         </button>
@@ -121,8 +128,31 @@ function AddressSection({ application }) {
                 )}
 
             </div>
+            <AddAddressModal
+                isOpen={showAddAddress}
+                onClose={() => setShowAddAddress(false)}
+                onSubmit={async (addressData) => {
 
+                    console.log(
+                        'Address to save:',
+                        addressData
+                    )
+
+                    /*
+                        Backend connection will go here.
+            
+                        application.id
+                        +
+                        addressData
+            
+                        Then refresh application addresses.
+                    */
+
+                    setShowAddAddress(false)
+                }}
+            />
         </div>
+
     )
 }
 
