@@ -116,7 +116,9 @@ function GlobalChat({
                     event.target
                 )
             ) {
+
                 setShowEmojiPicker(false)
+
             }
 
         }
@@ -196,12 +198,6 @@ function GlobalChat({
 
 
         setSelectedFile(file)
-
-
-        /*
-         * Reset input value so selecting the same file
-         * again will trigger onChange.
-         */
 
         event.target.value = ''
 
@@ -414,6 +410,7 @@ function GlobalChat({
             bg-black/50
             p-0
             sm:p-3
+            space-y-0
         ">
 
             {/* =====================================================
@@ -429,7 +426,7 @@ function GlobalChat({
                 bg-base-100
                 shadow-2xl
                 sm:h-[calc(100vh-24px)]
-                sm:max-h-[780px]
+                sm:max-h-[760px]
                 sm:w-[calc(100vw-24px)]
                 sm:max-w-5xl
                 sm:rounded-[24px]
@@ -447,8 +444,9 @@ function GlobalChat({
                     border-b
                     border-base-300
                     bg-base-100
-                    px-5
-                    py-4
+                    px-4
+                    py-3
+                    sm:px-5
                 ">
 
                     <div className="
@@ -460,8 +458,8 @@ function GlobalChat({
 
                         <div className="
                             flex
-                            h-12
-                            w-12
+                            h-10
+                            w-10
                             shrink-0
                             items-center
                             justify-center
@@ -473,8 +471,8 @@ function GlobalChat({
 
                             <UserGroupIcon
                                 className="
-                                    h-6
-                                    w-6
+                                    h-5
+                                    w-5
                                     text-[#398A2F]
                                 "
                             />
@@ -486,8 +484,9 @@ function GlobalChat({
 
                             <h2 className="
                                 truncate
-                                text-xl
+                                text-lg
                                 font-semibold
+                                leading-5
                                 text-base-content
                             ">
                                 Team Chat
@@ -497,8 +496,8 @@ function GlobalChat({
                             <p className="
                                 mt-0.5
                                 truncate
-                                text-sm
-                                text-base-content/70
+                                text-xs
+                                text-base-content/60
                             ">
 
                                 {customerName}
@@ -521,7 +520,8 @@ function GlobalChat({
                         flex
                         shrink-0
                         items-center
-                        gap-2
+                        gap-1.5
+                        sm:gap-2
                     ">
 
                         <div className="
@@ -532,8 +532,8 @@ function GlobalChat({
                         ">
 
                             <span className="
-                                h-3
-                                w-3
+                                h-2.5
+                                w-2.5
                                 rounded-full
                                 bg-[#A8D5A2]
                             " />
@@ -565,8 +565,8 @@ function GlobalChat({
                             onClick={handleRefresh}
                             className="
                                 flex
-                                h-10
-                                w-10
+                                h-9
+                                w-9
                                 items-center
                                 justify-center
                                 rounded-full
@@ -580,8 +580,8 @@ function GlobalChat({
                         >
 
                             <ArrowPathIcon className="
-                                h-5
-                                w-5
+                                h-4.5
+                                w-4.5
                                 text-base-content/70
                             " />
 
@@ -596,8 +596,8 @@ function GlobalChat({
                             disabled={!customerPhone}
                             className="
                                 flex
-                                h-10
-                                w-10
+                                h-9
+                                w-9
                                 items-center
                                 justify-center
                                 rounded-full
@@ -613,8 +613,8 @@ function GlobalChat({
                         >
 
                             <PhoneIcon className="
-                                h-5
-                                w-5
+                                h-4.5
+                                w-4.5
                                 text-base-content/70
                             " />
 
@@ -628,8 +628,8 @@ function GlobalChat({
                             onClick={onClose}
                             className="
                                 flex
-                                h-10
-                                w-10
+                                h-9
+                                w-9
                                 items-center
                                 justify-center
                                 rounded-full
@@ -643,8 +643,8 @@ function GlobalChat({
                         >
 
                             <XMarkIcon className="
-                                h-5
-                                w-5
+                                h-4.5
+                                w-4.5
                                 text-base-content/70
                             " />
 
@@ -664,8 +664,10 @@ function GlobalChat({
                     flex-1
                     overflow-y-auto
                     bg-base-100
-                    px-5
-                    py-6
+                    px-4
+                    py-3
+                    sm:px-5
+                    sm:py-4
                 ">
 
                     {messages.length === 0 ? (
@@ -714,13 +716,16 @@ function GlobalChat({
                             flex
                             max-w-5xl
                             flex-col
-                            gap-5
+                            gap-3
                         ">
+
+                            {/* DATE DIVIDER */}
 
                             <div className="
                                 flex
                                 items-center
-                                gap-4
+                                gap-3
+                                py-1
                             ">
 
                                 <div className="
@@ -735,9 +740,9 @@ function GlobalChat({
                                     border
                                     border-base-300
                                     bg-base-200
-                                    px-5
-                                    py-1.5
-                                    text-xs
+                                    px-4
+                                    py-1
+                                    text-[11px]
                                     font-semibold
                                     text-base-content/60
                                 ">
@@ -766,7 +771,7 @@ function GlobalChat({
                                         key={item.id}
                                         className={`
                                             flex
-                                            gap-3
+                                            gap-2.5
                                             ${
                                                 isCurrentUser
                                                     ? 'justify-end'
@@ -779,14 +784,14 @@ function GlobalChat({
 
                                             <div className="
                                                 flex
-                                                h-11
-                                                w-11
+                                                h-9
+                                                w-9
                                                 shrink-0
                                                 items-center
                                                 justify-center
                                                 rounded-full
                                                 bg-[#09B889]
-                                                text-sm
+                                                text-xs
                                                 font-semibold
                                                 text-white
                                             ">
@@ -801,8 +806,8 @@ function GlobalChat({
 
 
                                         <div className={`
-                                            max-w-[75%]
-                                            sm:max-w-[60%]
+                                            max-w-[80%]
+                                            sm:max-w-[65%]
                                             ${
                                                 isCurrentUser
                                                     ? 'items-end'
@@ -813,19 +818,19 @@ function GlobalChat({
                                             <p className="
                                                 mb-1
                                                 px-1
-                                                text-sm
+                                                text-xs
                                                 font-semibold
-                                                text-base-content/80
+                                                text-base-content/70
                                             ">
                                                 {item.senderName}
                                             </p>
 
 
                                             <div className={`
-                                                rounded-[24px]
+                                                rounded-[18px]
                                                 border
-                                                px-5
-                                                py-4
+                                                px-4
+                                                py-3
                                                 ${
                                                     isCurrentUser
                                                         ? 'border-[#8BCF00]/20 bg-[#8BCF00]/10'
@@ -838,8 +843,8 @@ function GlobalChat({
                                                     <p className="
                                                         whitespace-pre-wrap
                                                         break-words
-                                                        text-[15px]
-                                                        leading-6
+                                                        text-sm
+                                                        leading-5
                                                         text-base-content
                                                     ">
                                                         {item.message}
@@ -855,14 +860,14 @@ function GlobalChat({
                                                     <div className={`
                                                         flex
                                                         items-center
-                                                        gap-3
-                                                        rounded-xl
+                                                        gap-2.5
+                                                        rounded-lg
                                                         border
                                                         px-3
                                                         py-2
                                                         ${
                                                             item.message
-                                                                ? 'mt-3'
+                                                                ? 'mt-2'
                                                                 : ''
                                                         }
                                                         border-base-300
@@ -870,8 +875,8 @@ function GlobalChat({
                                                     `}>
 
                                                         <PaperClipIcon className="
-                                                            h-5
-                                                            w-5
+                                                            h-4
+                                                            w-4
                                                             shrink-0
                                                             text-base-content/60
                                                         " />
@@ -883,7 +888,7 @@ function GlobalChat({
 
                                                             <p className="
                                                                 truncate
-                                                                text-sm
+                                                                text-xs
                                                                 font-medium
                                                             ">
                                                                 {item.attachment.name}
@@ -891,7 +896,7 @@ function GlobalChat({
 
 
                                                             <p className="
-                                                                text-xs
+                                                                text-[11px]
                                                                 text-base-content/45
                                                             ">
                                                                 {formatFileSize(
@@ -907,8 +912,8 @@ function GlobalChat({
 
 
                                                 <p className="
-                                                    mt-3
-                                                    text-xs
+                                                    mt-2
+                                                    text-[11px]
                                                     text-base-content/45
                                                 ">
                                                     {item.createdAt}
@@ -944,9 +949,9 @@ function GlobalChat({
                     border-t
                     border-base-300
                     bg-base-100
-                    px-4
-                    py-4
-                    sm:px-5
+                    px-3
+                    py-3
+                    sm:px-4
                 ">
 
                     {/* =================================================
@@ -959,18 +964,18 @@ function GlobalChat({
                             ref={emojiPickerRef}
                             className="
                                 absolute
-                                bottom-[82px]
-                                left-4
+                                bottom-[68px]
+                                left-3
                                 z-50
-                                w-[310px]
-                                max-w-[calc(100vw-32px)]
+                                w-[300px]
+                                max-w-[calc(100vw-24px)]
                                 rounded-2xl
                                 border
                                 border-base-300
                                 bg-base-100
                                 p-3
                                 shadow-2xl
-                                sm:left-5
+                                sm:left-4
                             "
                         >
 
@@ -1068,10 +1073,10 @@ function GlobalChat({
                     {selectedFile && (
 
                         <div className="
-                            mb-3
+                            mb-2
                             flex
                             items-center
-                            gap-3
+                            gap-2.5
                             rounded-xl
                             border
                             border-base-300
@@ -1082,8 +1087,8 @@ function GlobalChat({
 
                             <div className="
                                 flex
-                                h-9
-                                w-9
+                                h-8
+                                w-8
                                 shrink-0
                                 items-center
                                 justify-center
@@ -1092,8 +1097,8 @@ function GlobalChat({
                             ">
 
                                 <PaperClipIcon className="
-                                    h-5
-                                    w-5
+                                    h-4
+                                    w-4
                                     text-base-content/60
                                 " />
 
@@ -1107,7 +1112,7 @@ function GlobalChat({
 
                                 <p className="
                                     truncate
-                                    text-sm
+                                    text-xs
                                     font-medium
                                 ">
                                     {selectedFile.name}
@@ -1115,7 +1120,7 @@ function GlobalChat({
 
 
                                 <p className="
-                                    text-xs
+                                    text-[11px]
                                     text-base-content/45
                                 ">
                                     {formatFileSize(
@@ -1126,8 +1131,6 @@ function GlobalChat({
                             </div>
 
 
-                            {/* REMOVE ATTACHMENT */}
-
                             <button
                                 type="button"
                                 onClick={
@@ -1135,8 +1138,8 @@ function GlobalChat({
                                 }
                                 className="
                                     flex
-                                    h-8
-                                    w-8
+                                    h-7
+                                    w-7
                                     shrink-0
                                     items-center
                                     justify-center
@@ -1182,8 +1185,8 @@ function GlobalChat({
                             onClick={handleAttachmentClick}
                             className="
                                 flex
-                                h-11
-                                w-11
+                                h-10
+                                w-10
                                 shrink-0
                                 items-center
                                 justify-center
@@ -1226,8 +1229,8 @@ function GlobalChat({
                                 }
                                 className={`
                                     flex
-                                    h-11
-                                    w-11
+                                    h-10
+                                    w-10
                                     items-center
                                     justify-center
                                     rounded-full
@@ -1266,7 +1269,7 @@ function GlobalChat({
                             items-center
                             rounded-full
                             bg-base-200
-                            px-5
+                            px-4
                         ">
 
                             <input
@@ -1282,7 +1285,7 @@ function GlobalChat({
                                 className="
                                     w-full
                                     bg-transparent
-                                    py-4
+                                    py-3
                                     text-sm
                                     outline-none
                                     placeholder:text-base-content/40
@@ -1306,8 +1309,8 @@ function GlobalChat({
                             }
                             className="
                                 flex
-                                h-12
-                                w-12
+                                h-10
+                                w-10
                                 shrink-0
                                 items-center
                                 justify-center
@@ -1338,6 +1341,7 @@ function GlobalChat({
         </div>
 
     )
+
 }
 
 

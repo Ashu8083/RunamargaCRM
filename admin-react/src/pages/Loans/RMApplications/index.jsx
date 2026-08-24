@@ -3,9 +3,9 @@
 import { useState } from 'react'
 
 import RMApplicationsTable from './components/RMApplicationsTable'
-import LoanTypeModal from './components/LoanTypeModal'
-import StatusModal from './components/StatusModal'
-import ReminderModal from './components/ReminderModal'
+import LoanTypeModal from '../../../components/Loans/LoanTypeModal'
+import StatusModal from '../../../components/Loans/StatusModal'
+import ReminderModal from '../../../components/Loans/ReminderModal'
 
 
 function RMApplications() {
