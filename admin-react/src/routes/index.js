@@ -63,6 +63,41 @@ const ShuffleLoans = lazy(() =>
     import('../pages/Loans/ShuffleLoans/index')
 )
 
+const RevertedApplications = lazy(() =>
+    import('../pages/Loans/RevertedApplications/index')
+)
+const LoanAssignment = lazy(() =>
+    import('../pages/Loans/LoanAssignment/index')
+)
+
+const DuplicateApproval = lazy(() =>
+    import('../pages/Loans/DuplicateApproval/index')
+)
+
+
+const ViewApplication = lazy(
+    () => import('../pages/Loans/ViewApplication/index')
+)
+
+
+
+
+
+// =========================================================
+// Banks & DSA
+// =========================================================
+const Banks = lazy(
+    () => import('../pages/Banks&DSA/Banks/index')
+)
+
+const BankersDirectory = lazy(
+    () => import('../pages/Banks&DSA/BankersDirectory/index')
+)
+
+
+const DSADirectory = lazy(
+    () => import('../pages/Banks&DSA/DSADirectory/index')
+)
 
 // =========================================================
 // OTHER PAGES
@@ -186,6 +221,10 @@ const routes = [
     },
 
     {
+        path: '/view-application',
+        component: ViewApplication,
+    },
+    {
         path: '/rm-applications',
         component: RMApplications,
     },
@@ -201,6 +240,40 @@ const routes = [
     {
         path: '/shuffle-loans',
         component: ShuffleLoans,
+    },
+    {
+        path: '/reverted-applications',
+        component: RevertedApplications,
+    },
+    {
+        path: '/duplicate-approvals',
+        component: DuplicateApproval,
+    },
+    {
+        path: '/loan-assignment',
+        component: LoanAssignment,
+    },
+
+
+
+
+
+
+
+    // =====================================================
+    // Banks and DSA
+    // =====================================================
+    {
+        path: '/banks',
+        component: Banks,
+    },
+    {
+        path: '/bankers-directory',
+        component: BankersDirectory,
+    },
+   {
+        path: '/dsa-directory',
+        component: DSADirectory,
     },
 
 

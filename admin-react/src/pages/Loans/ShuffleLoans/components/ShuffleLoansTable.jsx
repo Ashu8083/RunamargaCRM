@@ -132,6 +132,17 @@ function ShuffleLoansTable({
 
 
     // =========================================================
+    // ROW SELECTION
+    // =========================================================
+
+    const handleRowSelection = (application) => {
+
+        onSelectApplication?.(application.id)
+
+    }
+
+
+    // =========================================================
     // EMPTY STATE
     // =========================================================
 
@@ -526,14 +537,20 @@ function ShuffleLoansTable({
                             return (
                                 <tr
                                     key={application.id}
+                                    onClick={() =>
+                                        handleRowSelection(
+                                            application
+                                        )
+                                    }
                                     className={[
+                                        'cursor-pointer',
                                         'border-b',
                                         'border-base-300',
                                         'last:border-b-0',
                                         'transition',
                                         'hover:bg-base-200/30',
                                         isSelected
-                                            ? 'bg-[#8BCF00]/5'
+                                            ? 'bg-[#8BCF00]/10'
                                             : '',
                                     ].join(' ')}
                                 >
@@ -553,9 +570,12 @@ function ShuffleLoansTable({
                                             type="checkbox"
                                             checked={isSelected}
                                             onChange={() =>
-                                                onSelectApplication?.(
-                                                    application.id
+                                                handleRowSelection(
+                                                    application
                                                 )
+                                            }
+                                            onClick={(event) =>
+                                                event.stopPropagation()
                                             }
                                             className="
                                                 checkbox

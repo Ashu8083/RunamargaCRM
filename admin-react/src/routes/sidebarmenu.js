@@ -139,23 +139,23 @@ const sidebarmenu = [
       },
 
       {
-        path: '/crm/revertapplications',
+        path: '/crm/reverted-applications',
         icon: <ArrowUturnLeftIcon className={submenuIconClasses} />,
         name: 'Reverted Applications',
         parent: 'Loans',
       },
 
       {
-        path: '/crm/loan-auto-assign',
+        path: '/crm/loan-assignment',
         icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
-        name: 'Loan Auto Assignment',
+        name: 'Loan Assignment',
         parent: 'Loans',
       },
 
       {
-        path: '/crm/duplicate-approval',
+        path: '/crm/duplicate-approvals',
         icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
-        name: 'Approval Duplicate',
+        name: 'Duplicate Approvals',
         parent: 'Loans',
       },
 
@@ -237,16 +237,16 @@ const sidebarmenu = [
       },
 
       {
-        path: '/crm/bankerdirectory',
+        path: '/crm/bankers-directory',
         icon: <IdentificationIcon className={submenuIconClasses} />,
         name: 'Banker Directory',
         parent: 'Bank & DSA',
       },
 
       {
-        path: '/crm/dsadetails',
+        path: '/crm/dsa-directory',
         icon: <BriefcaseIcon className={submenuIconClasses} />,
-        name: 'DSA Details',
+        name: 'DSA Directory',
         parent: 'Bank & DSA',
       },
 

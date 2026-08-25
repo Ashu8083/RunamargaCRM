@@ -104,6 +104,20 @@ function PendingApplicationsTable({
         'N/A'
 
 
+    const getReferralName = (application) =>
+        application.referral ??
+        application.referralName ??
+        application.referral_name ??
+        application.referredBy ??
+        application.referred_by ??
+        application.referrer ??
+        application.referrerName ??
+        application.referrer_name ??
+        application.referral?.name ??
+        application.referrer?.name ??
+        'N/A'
+
+
     const getLoanId = (application) =>
         application.loanId ??
         application.loan_id ??
@@ -134,9 +148,7 @@ function PendingApplicationsTable({
             amount === undefined ||
             amount === ''
         ) {
-
             return 'N/A'
-
         }
 
 
@@ -374,9 +386,7 @@ function PendingApplicationsTable({
                                     event.target.value
                                 )
                             }
-                            placeholder="
-                                Search name, phone, loan type, agent...
-                            "
+                            placeholder="Search name, phone, loan type, agent..."
                             className="
                                 grow
                                 min-w-0
@@ -406,6 +416,7 @@ function PendingApplicationsTable({
                         <option value="">
                             All Loan Types
                         </option>
+
 
                         {loanTypes.map((loanType) => (
 
@@ -693,7 +704,7 @@ function PendingApplicationsTable({
 
                     <table className="
                         w-full
-                        min-w-[1050px]
+                        min-w-[1150px]
                         table-fixed
                         border-collapse
                     ">
@@ -702,20 +713,23 @@ function PendingApplicationsTable({
 
                             <col className="w-[3%]" />
                             <col className="w-[10%]" />
-                            <col className="w-[10%]" />
-                            <col className="w-[10%]" />
                             <col className="w-[9%]" />
                             <col className="w-[9%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[7%]" />
                             <col className="w-[10%]" />
-                            <col className="w-[8%]" />
-                            <col className="w-[11%]" />
-                            <col className="w-[8%]" />
-                            <col className="w-[12%]" />
 
                         </colgroup>
 
 
-                        {/* HEADER */}
+                        {/* =================================================
+                            HEADER
+                        ================================================= */}
 
                         <thead>
 
@@ -732,6 +746,7 @@ function PendingApplicationsTable({
                                     'Loan Amount',
                                     'Applied Date',
                                     'Applied By',
+                                    'Referral',
                                     'RM',
                                     'Processing Agent',
                                     'Status',
@@ -759,7 +774,9 @@ function PendingApplicationsTable({
                         </thead>
 
 
-                        {/* BODY */}
+                        {/* =================================================
+                            BODY
+                        ================================================= */}
 
                         <tbody>
 
@@ -768,7 +785,7 @@ function PendingApplicationsTable({
                                 <tr>
 
                                     <td
-                                        colSpan="11"
+                                        colSpan={12}
                                         className="
                                             text-center
                                             py-12
@@ -896,7 +913,10 @@ function PendingApplicationsTable({
                                                             application
                                                         )
                                                     }
-                                                    title={application.loanType}
+                                                    title={
+                                                        application.loanType ||
+                                                        'Not Assigned'
+                                                    }
                                                     className="
                                                         max-w-full
                                                         inline-flex
@@ -966,6 +986,20 @@ function PendingApplicationsTable({
                                             </td>
 
 
+                                            {/* REFERRAL */}
+
+                                            <td className="px-3 py-4">
+
+                                                <Cell
+                                                    title={getReferralName(application)}
+                                                    className="text-sm"
+                                                >
+                                                    {getReferralName(application)}
+                                                </Cell>
+
+                                            </td>
+
+
                                             {/* RM */}
 
                                             <td className="px-3 py-4">
@@ -1005,7 +1039,10 @@ function PendingApplicationsTable({
                                                             application
                                                         )
                                                     }
-                                                    title={application.status}
+                                                    title={
+                                                        application.status ||
+                                                        'N/A'
+                                                    }
                                                     className={`
                                                         max-w-full
                                                         inline-flex
