@@ -1,0 +1,219 @@
+backend/
+│
+├── app/
+│   │
+│   ├── __init__.py
+│   ├── main.py
+│   │
+│   ├── config/
+│   │   ├── __init__.py
+│   │   ├── settings.py
+│   │   └── database.py
+│   │
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── role.py
+│   │   ├── permission.py
+│   │   ├── loan_application.py
+│   │   ├── loan_type.py
+│   │   ├── address.py
+│   │   ├── reference.py
+│   │   ├── co_applicant.py
+│   │   ├── document.py
+│   │   ├── bank.py
+│   │   └── bank_processing.py
+│   │
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── user.py
+│   │   ├── application.py
+│   │   ├── address.py
+│   │   ├── reference.py
+│   │   ├── co_applicant.py
+│   │   └── bank_processing.py
+│   │
+│   ├── controllers/
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── users.py
+│   │   ├── applications.py
+│   │   ├── loans.py
+│   │   ├── banks.py
+│   │   └── documents.py
+│   │
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── users.py
+│   │   ├── applications.py
+│   │   ├── loans.py
+│   │   ├── banks.py
+│   │   └── documents.py
+│   │
+│   ├── middleware/
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── cors.py
+│   │   ├── logging.py
+│   │   └── error.py
+│   │
+│   ├── security/
+│   │   ├── __init__.py
+│   │   ├── password.py
+│   │   ├── jwt.py
+│   │   └── permissions.py
+│   │
+│   ├── websockets/
+│   │   ├── __init__.py
+│   │   └── manager.py
+│   │
+│   └── utils/
+│       ├── __init__.py
+│       ├── logger.py
+│       └── response.py
+│
+├── migrations/
+│   └── versions/
+│
+├── tests/
+│
+├── .env
+├── .env.example
+├── .gitignore
+├── alembic.ini
+├── requirements.txt
+└── README.md
+
+RUNAMARGA CRM — Alembic Database Migration Reference
+
+1. What is Alembic?
+
+Alembic is a database migration tool used with SQLAlchemy. It tracks changes to database structure over time.
+
+Simple way to remember:
+
+Git tracks code changes.
+
+Alembic tracks database structure changes.
+
+2. Our Database Stack
+
+Python 3.10
+
+SQLAlchemy 2.0
+
+psycopg 3
+
+PostgreSQL 18
+
+Alembic
+
+Application flow: Python → SQLAlchemy → psycopg → PostgreSQL 18
+
+3. What We Have Done
+
+Installed Alembic
+Installed Alembic inside the project's .venv.
+
+Initialized Alembic
+Ran: alembic init migrations
+
+Created Base
+Created app/models/base.py using SQLAlchemy DeclarativeBase.
+
+Connected Alembic to model metadata
+Updated migrations/env.py to import Base and set target_metadata = Base.metadata.
+
+Connected Alembic to the database
+Alembic reads .env through app/config/settings.py and builds the PostgreSQL connection URL.
+
+4. Current Database Setup
+
+PostgreSQL: 18
+
+Host: localhost
+
+Port: 5432
+
+Database: runamarga_crm_new
+
+User: postgres
+
+Existing/reference database: runamarga_crm
+
+5. Configuration Flow
+
+.env → settings.py → database.py → SQLAlchemy → PostgreSQL
+
+.env → settings.py → migrations/env.py → Alembic → PostgreSQL
+
+Both SQLAlchemy and Alembic use the same database configuration.
+
+6. Important Alembic Files
+
+alembic.ini
+Main Alembic configuration.
+
+migrations/env.py
+Connects Alembic to application settings and SQLAlchemy metadata.
+
+migrations/versions/
+Stores migration files.
+
+migrations/script.py.mako
+Template used to create migration files.
+
+7. Migration Workflow
+
+1. Create or modify a SQLAlchemy Model.
+
+2. The model inherits from Base.
+
+3. The model becomes part of Base.metadata.
+
+4. Run: alembic revision --autogenerate -m "description"
+
+5. Alembic compares model metadata with the database structure.
+
+6. Alembic creates a migration file in migrations/versions/.
+
+7. Review the migration file.
+
+8. Run: alembic upgrade head
+
+9. Alembic applies the migration to PostgreSQL.
+
+8. What Does `alembic current` Do?
+
+It only checks which Alembic migration revision the database is currently at. It does not create a migration or change tables/data.
+
+Simple meaning: “What migration version is my database currently on?”
+
+9. Common Commands
+
+alembic current
+Show the current database migration revision.
+
+alembic revision --autogenerate -m "message"
+Generate a migration from model/database differences.
+
+alembic upgrade head
+Apply all pending migrations.
+
+alembic history
+Show migration history.
+
+alembic downgrade -1
+Move back one migration.
+
+10. Simple Mental Model
+
+SQLAlchemy Models → Base.metadata → Alembic Migration → PostgreSQL
+
+Models define the intended database structure. Alembic records the changes needed to move the database from one structure/version to another.
+
+11. RUNAMARGA Rule
+
+The existing runamarga_crm database is reference-only. The new backend uses runamarga_crm_new. For tracked schema changes, modify the SQLAlchemy model, generate a migration, review it, and apply it with Alembic.
