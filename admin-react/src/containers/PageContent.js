@@ -1,15 +1,24 @@
 import Header from "./Header"
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import routes from '../routes'
-import { Suspense, lazy } from 'react'
+import { Suspense } from 'react'
 import SuspenseContent from "./SuspenseContent"
 import { useSelector } from 'react-redux'
 import { useEffect, useRef } from "react"
+import PermissionGate from "../components/Auth/PermissionGate"
 
-const Page404 = lazy(() => import('../pages/protected/404'))
+function AccessDenied(){
+    return(
+        <div className="rounded-box bg-base-100 p-8 text-center shadow-sm">
+            <h2 className="text-xl font-semibold">Access restricted</h2>
+            <p className="mt-2 text-sm text-base-content/60">
+                Your account does not have permission to view this page.
+            </p>
+        </div>
+    )
+}
 
-
-function PageContent(){
+function PageContent({ onToggleSidebar, sidebarOpen }){
     const mainContentRef = useRef(null);
     const {pageTitle} = useSelector(state => state.header)
 
@@ -24,8 +33,11 @@ function PageContent(){
 
     return(
         <div className="drawer-content flex flex-col ">
-            <Header/>
-            <main className="flex-1 overflow-y-auto md:pt-4 pt-4 px-6  bg-base-200" ref={mainContentRef}>
+            <Header
+                onToggleSidebar={onToggleSidebar}
+                sidebarOpen={sidebarOpen}
+            />
+            <main className="flex-1 overflow-y-auto pt-4 px-3 sm:px-6 bg-base-200" ref={mainContentRef}>
                 <Suspense fallback={<SuspenseContent />}>
                         <Routes>
                             {
@@ -35,14 +47,20 @@ function PageContent(){
                                             key={key}
                                             exact={true}
                                             path={`${route.path}`}
-                                            element={<route.component />}
+                                            element={
+                                                <PermissionGate
+                                                    permission={route.permission}
+                                                    fallback={<AccessDenied />}
+                                                >
+                                                    <route.component />
+                                                </PermissionGate>
+                                            }
                                         />
                                     )
                                 })
                             }
 
-                            {/* Redirecting unknown url to 404 page */}
-                            <Route path="*" element={<Page404 />} />
+                            <Route path="*" element={<Navigate to="/crm/dashboard" replace />} />
                         </Routes>
                 </Suspense>
                 <div className="h-16"></div>

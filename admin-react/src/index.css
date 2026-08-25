@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --brand-green: #8bcf00;
+  --brand-green-dark: #78b300;
+  --brand-black: #111827;
+}
+
 /* Prevent text caret from appearing on normal/static page content */
 html,
 body,
@@ -21,6 +27,15 @@ select,
 [contenteditable="true"] {
   caret-color: auto;
 }
+
+.btn-primary {
+  border-color: var(--brand-green);
+}
+
+.btn-primary:hover {
+  border-color: var(--brand-green-dark);
+}
+
 .loading-indicator:before {
   content: "";
   background: #00000080;
@@ -43,7 +58,7 @@ select,
   font-weight: bold;
   font-size: 1.2rem;
   border: 16px solid #f3f3f3; /* Light grey */
-  border-top: 16px solid #0474bf; /* Blue */
+  border-top: 16px solid var(--brand-green);
   border-radius: 50%;
   width: 120px;
   height: 120px;

@@ -86,13 +86,6 @@ function RMApplicationsTable({
         'N/A'
 
 
-    const getRMId = (application) =>
-        application.rmId ??
-        application.rm_id ??
-        application.rm?.id ??
-        null
-
-
     const getLoanId = (application) =>
         application.loanId ??
         application.loan_id ??

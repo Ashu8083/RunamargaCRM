@@ -1,14 +1,27 @@
 // admin-react\src\containers\LeftSidebar.js
 import routes from '../routes/sidebarmenu'
 import { NavLink, Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
+import { APP_LOGO } from '../constants/assets'
+import { getCurrentUser } from '../app/auth'
+import { hasPermission } from '../app/permissions'
 
-function LeftSidebar() {
+function LeftSidebar({ onClose }) {
     const location = useLocation()
+    const currentUser = getCurrentUser()
 
     const close = () => {
-        document.getElementById('left-sidebar-drawer').click()
+        onClose?.()
+    }
+
+    const closeOnMobile = () => {
+        if (window.matchMedia('(max-width: 1023px)').matches) {
+            close()
+        }
+    }
+
+    const canSeeRoute = (route) => {
+        return hasPermission(route.permission, currentUser)
     }
 
     return (
@@ -16,14 +29,17 @@ function LeftSidebar() {
             <label
                 htmlFor="left-sidebar-drawer"
                 className="drawer-overlay"
+                onClick={close}
             ></label>
 
-            <ul className="menu pt-2 w-60 bg-base-100 min-h-full text-base-content">
+            <ul className="menu pt-2 w-72 lg:w-64 bg-base-100 min-h-full text-base-content overflow-y-auto">
 
                 {/* Mobile close button */}
                 <button
                     className="btn btn-ghost bg-base-300 btn-circle z-50 top-0 right-0 mt-4 mr-2 absolute lg:hidden"
                     onClick={close}
+                    type="button"
+                    aria-label="Close sidebar"
                 >
                     <XMarkIcon className="h-5 inline-block w-5" />
                 </button>
@@ -32,11 +48,11 @@ function LeftSidebar() {
                 {/* Logo */}
                 <li className="mb-2 font-semibold text-xl">
 
-                    <Link to="/crm/welcome">
+                    <Link to="/crm/dashboard">
                         <img
-                            className="mask mask-squircle w-10"
-                            src="/logo192.png"
-                            alt="DashWind Logo"
+                            className="h-10 w-8 object-contain"
+                            src={APP_LOGO}
+                            alt="Runamarga Logo"
                         />
 
                         Runamarga
@@ -53,6 +69,12 @@ function LeftSidebar() {
                     // =====================================================
 
                     if (route.type === 'section') {
+                        const visibleSubmenu =
+                            route.submenu.filter(canSeeRoute)
+
+                        if (visibleSubmenu.length === 0) {
+                            return null
+                        }
 
                         return (
                             <div key={index}>
@@ -66,13 +88,14 @@ function LeftSidebar() {
 
 
                                 {/* Section items */}
-                                {route.submenu.map((item, itemIndex) => (
+                                {visibleSubmenu.map((item, itemIndex) => (
 
                                     <li key={itemIndex}>
 
                                         <NavLink
                                             end
                                             to={item.path}
+                                            onClick={closeOnMobile}
                                             className={({ isActive }) =>
                                                 `${isActive
                                                     ? 'font-semibold bg-base-200'
@@ -107,12 +130,17 @@ function LeftSidebar() {
                     // NORMAL SIDEBAR ITEM
                     // =====================================================
 
+                    if (!canSeeRoute(route)) {
+                        return null
+                    }
+
                     return (
                         <li key={index}>
 
                             <NavLink
                                 end
                                 to={route.path}
+                                onClick={closeOnMobile}
                                 className={({ isActive }) =>
                                     `${isActive
                                         ? 'font-semibold bg-base-200'

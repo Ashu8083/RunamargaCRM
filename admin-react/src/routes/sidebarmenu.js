@@ -12,16 +12,14 @@ import ClipboardDocumentCheckIcon from '@heroicons/react/24/outline/ClipboardDoc
 import ClockIcon from '@heroicons/react/24/outline/ClockIcon'
 import ArrowsRightLeftIcon from '@heroicons/react/24/outline/ArrowsRightLeftIcon'
 import ArrowUturnLeftIcon from '@heroicons/react/24/outline/ArrowUturnLeftIcon'
-import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
-import UserPlusIcon from '@heroicons/react/24/outline/UserPlusIcon'
-import ChartBarIcon from '@heroicons/react/24/outline/ChartBarIcon'
-import LightBulbIcon from '@heroicons/react/24/outline/LightBulbIcon'
 import BuildingLibraryIcon from '@heroicons/react/24/outline/BuildingLibraryIcon'
 import IdentificationIcon from '@heroicons/react/24/outline/IdentificationIcon'
 import BriefcaseIcon from '@heroicons/react/24/outline/BriefcaseIcon'
 import FunnelIcon from '@heroicons/react/24/outline/FunnelIcon'
 import KeyIcon from '@heroicons/react/24/outline/KeyIcon'
 import DocumentDuplicateIcon from '@heroicons/react/24/outline/DocumentDuplicateIcon'
+
+import { PERMISSIONS } from '../app/permissions'
 
 const iconClasses = `h-6 w-6`
 const submenuIconClasses = `h-5 w-5`
@@ -36,18 +34,21 @@ const sidebarmenu = [
     path: '/crm/dashboard',
     icon: <Squares2X2Icon className={iconClasses} />,
     name: 'Dashboard',
+    permission: PERMISSIONS.DASHBOARD_VIEW,
   },
 
   {
     path: '/crm/filter',
     icon: <FunnelIcon className={iconClasses} />,
     name: 'Application Filter',
+    permission: PERMISSIONS.APPLICATION_FILTER_VIEW,
   },
 
   {
     path: '/crm/attendance',
     icon: <CalendarDaysIcon className={iconClasses} />,
     name: 'Attendance',
+    permission: PERMISSIONS.ATTENDANCE_VIEW,
   },
 
 
@@ -66,6 +67,7 @@ const sidebarmenu = [
         icon: <KeyIcon className={submenuIconClasses} />,
         name: 'Roles',
         parent: 'Teams & Roles',
+        permission: PERMISSIONS.ROLES_VIEW,
       },
 
       {
@@ -73,6 +75,7 @@ const sidebarmenu = [
         icon: <UsersIcon className={submenuIconClasses} />,
         name: 'Team Leads',
         parent: 'Teams & Roles',
+        permission: PERMISSIONS.TEAM_LEADS_VIEW,
       },
 
       {
@@ -80,6 +83,7 @@ const sidebarmenu = [
         icon: <UserIcon className={submenuIconClasses} />,
         name: 'Agents',
         parent: 'Teams & Roles',
+        permission: PERMISSIONS.AGENTS_VIEW,
       },
 
       {
@@ -87,6 +91,7 @@ const sidebarmenu = [
         icon: <ShieldCheckIcon className={submenuIconClasses} />,
         name: 'Admins',
         parent: 'Teams & Roles',
+        permission: PERMISSIONS.ADMINS_VIEW,
       },
 
     ]
@@ -108,6 +113,7 @@ const sidebarmenu = [
         icon: <DocumentPlusIcon className={submenuIconClasses} />,
         name: 'Create Application',
         parent: 'Loans',
+        permission: PERMISSIONS.LOANS_CREATE,
       },
 
       {
@@ -115,6 +121,7 @@ const sidebarmenu = [
         icon: <DocumentTextIcon className={submenuIconClasses} />,
         name: 'RM Applications',
         parent: 'Loans',
+        permission: PERMISSIONS.LOANS_RM_VIEW,
       },
 
       {
@@ -122,6 +129,7 @@ const sidebarmenu = [
         icon: <ClipboardDocumentCheckIcon className={submenuIconClasses} />,
         name: 'Agent Applications',
         parent: 'Loans',
+        permission: PERMISSIONS.LOANS_AGENT_VIEW,
       },
 
       {
@@ -129,6 +137,7 @@ const sidebarmenu = [
         icon: <ClockIcon className={submenuIconClasses} />,
         name: 'Pending Applications',
         parent: 'Loans',
+        permission: PERMISSIONS.LOANS_PENDING_VIEW,
       },
 
       {
@@ -136,6 +145,7 @@ const sidebarmenu = [
         icon: <ArrowsRightLeftIcon className={submenuIconClasses} />,
         name: 'Shuffle Loans',
         parent: 'Loans',
+        permission: PERMISSIONS.LOANS_SHUFFLE,
       },
 
       {
@@ -143,6 +153,7 @@ const sidebarmenu = [
         icon: <ArrowUturnLeftIcon className={submenuIconClasses} />,
         name: 'Reverted Applications',
         parent: 'Loans',
+        permission: PERMISSIONS.LOANS_REVERTED_VIEW,
       },
 
       {
@@ -150,6 +161,7 @@ const sidebarmenu = [
         icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
         name: 'Loan Assignment',
         parent: 'Loans',
+        permission: PERMISSIONS.LOANS_ASSIGN,
       },
 
       {
@@ -157,62 +169,7 @@ const sidebarmenu = [
         icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
         name: 'Duplicate Approvals',
         parent: 'Loans',
-      },
-
-    ]
-  },
-
-
-  // =========================================================
-  // CALL MANAGEMENT
-  // =========================================================
-
-  {
-    type: 'section',
-    name: 'Call Management',
-
-    submenu: [
-
-      {
-        path: '/crm/calllogs',
-        icon: <PhoneIcon className={submenuIconClasses} />,
-        name: 'Call Logs',
-        parent: 'Call Management',
-      },
-
-      {
-        path: '/crm/callassignments',
-        icon: <UserPlusIcon className={submenuIconClasses} />,
-        name: 'Call Assignments',
-        parent: 'Call Management',
-      },
-
-      {
-        path: '/crm/call-analytics',
-        icon: <ChartBarIcon className={submenuIconClasses} />,
-        name: 'Call Analytics',
-        parent: 'Call Management',
-      },
-
-    ]
-  },
-
-
-  // =========================================================
-  // ANALYTICS MANAGEMENT
-  // =========================================================
-
-  {
-    type: 'section',
-    name: 'Analytics Management',
-
-    submenu: [
-
-      {
-        path: '/crm/analytics',
-        icon: <LightBulbIcon className={submenuIconClasses} />,
-        name: 'Insights',
-        parent: 'Analytics Management',
+        permission: PERMISSIONS.LOANS_DUPLICATE_APPROVE,
       },
 
     ]
@@ -234,6 +191,7 @@ const sidebarmenu = [
         icon: <BuildingLibraryIcon className={submenuIconClasses} />,
         name: 'Banks',
         parent: 'Bank & DSA',
+        permission: PERMISSIONS.BANKS_VIEW,
       },
 
       {
@@ -241,6 +199,7 @@ const sidebarmenu = [
         icon: <IdentificationIcon className={submenuIconClasses} />,
         name: 'Banker Directory',
         parent: 'Bank & DSA',
+        permission: PERMISSIONS.BANKERS_VIEW,
       },
 
       {
@@ -248,38 +207,12 @@ const sidebarmenu = [
         icon: <BriefcaseIcon className={submenuIconClasses} />,
         name: 'DSA Directory',
         parent: 'Bank & DSA',
+        permission: PERMISSIONS.DSA_VIEW,
       },
 
     ]
   },
 
-
-  // =========================================================
-  // EMPLOYEES MANAGEMENT
-  // =========================================================
-
-  {
-    type: 'section',
-    name: 'Employees Management',
-
-    submenu: [
-
-      {
-        path: '/crm/employees',
-        icon: <UsersIcon className={submenuIconClasses} />,
-        name: 'Employees',
-        parent: 'Employees Management',
-      },
-
-      {
-        path: '/crm/attendance-dashboard',
-        icon: <CalendarDaysIcon className={submenuIconClasses} />,
-        name: 'Attendance Dashboard',
-        parent: 'Employees Management',
-      },
-
-    ]
-  },
 
 ]
 

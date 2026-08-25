@@ -3,10 +3,15 @@ import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import ClockIcon from '@heroicons/react/24/outline/ClockIcon'
 import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 import ArrowRightIcon from '@heroicons/react/24/outline/ArrowRightIcon'
+import { getDefaultProfileImage } from '../../../constants/assets'
 
 function AttendanceDetailsModal({ attendance, onClose }) {
 
     if (!attendance) return null
+
+    const profileImage = attendance.profileImage ||
+        attendance.profile_image ||
+        getDefaultProfileImage(attendance.gender)
 
     const formattedDate = new Date(
         `${attendance.date}T00:00:00`
@@ -172,8 +177,11 @@ function AttendanceDetailsModal({ attendance, onClose }) {
                                             <div className="w-14 h-14 rounded-lg">
 
                                                 <img
-                                                    src="https://placehold.co/120x120"
+                                                    src={profileImage}
                                                     alt="Punch in verification"
+                                                    onError={(event) => {
+                                                        event.currentTarget.src = getDefaultProfileImage(attendance.gender)
+                                                    }}
                                                 />
 
                                             </div>
@@ -212,8 +220,11 @@ function AttendanceDetailsModal({ attendance, onClose }) {
                                             <div className="w-14 h-14 rounded-lg">
 
                                                 <img
-                                                    src="https://placehold.co/120x120"
+                                                    src={profileImage}
                                                     alt="Punch out verification"
+                                                    onError={(event) => {
+                                                        event.currentTarget.src = getDefaultProfileImage(attendance.gender)
+                                                    }}
                                                 />
 
                                             </div>

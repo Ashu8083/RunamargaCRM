@@ -1,5 +1,3 @@
-// admin-react/src/containers/Header.js
-import { themeChange } from "theme-change";
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 
@@ -10,41 +8,66 @@ import SunIcon from "@heroicons/react/24/outline/SunIcon";
 
 import { openRightDrawer } from "../features/common/rightDrawerSlice";
 import { RIGHT_DRAWER_TYPES } from "../utils/globalConstantUtil";
+import { getCurrentUser, logout } from "../app/auth";
+import { getDefaultProfileImage } from "../constants/assets";
 
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 import routes from "../routes/sidebarmenu";
 
-function Header() {
+function Header({ onToggleSidebar, sidebarOpen }) {
   const dispatch = useDispatch();
   const location = useLocation();
 
   const { noOfNotifications } = useSelector((state) => state.header);
+  const currentUser = getCurrentUser();
+  const profileFallback = getDefaultProfileImage(currentUser?.gender);
+  const profileImage =
+    currentUser?.profileImage ||
+    currentUser?.profile_image ||
+    currentUser?.avatar ||
+    profileFallback;
 
   const [currentTheme, setCurrentTheme] = useState(
     localStorage.getItem("theme"),
   );
 
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [profileSrc, setProfileSrc] = useState(profileImage);
 
   // =========================================================
   // THEME
   // =========================================================
 
   useEffect(() => {
-    themeChange(false);
+    const storedTheme = localStorage.getItem("theme");
+    const preferredTheme =
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    const nextTheme = storedTheme || preferredTheme;
 
-    if (currentTheme === null) {
-      if (
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      ) {
-        setCurrentTheme("dark");
-      } else {
-        setCurrentTheme("light");
-      }
-    }
+    setCurrentTheme(nextTheme);
+    localStorage.setItem("theme", nextTheme);
+    document.documentElement.setAttribute("data-theme", nextTheme);
   }, []);
+
+  const updateTheme = (theme) => {
+    setCurrentTheme(theme);
+    localStorage.setItem("theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  };
+
+  useEffect(() => {
+    setProfileSrc(profileImage);
+  }, [profileImage]);
+
+  const handleProfileImageError = () => {
+    if (profileSrc !== profileFallback) {
+      setProfileSrc(profileFallback);
+    }
+  };
 
   // =========================================================
   // DIGITAL CLOCK
@@ -141,8 +164,7 @@ function Header() {
   // =========================================================
 
   function logoutUser() {
-    localStorage.clear();
-    window.location.href = "/";
+    logout();
   }
 
   // =========================================================
@@ -153,13 +175,13 @@ function Header() {
     if (currentPage.parent) {
       return (
         <div className="flex items-center ml-2">
-          <span className="text-sm font-medium text-base-content/60">
+          <span className="hidden sm:inline truncate text-sm font-medium text-base-content/60">
             {currentPage.parent}
           </span>
 
-          <span className="mx-2 text-base-content/40">/</span>
+          <span className="hidden sm:inline mx-2 text-base-content/40">/</span>
 
-          <span className="text-2xl font-semibold">
+          <span className="truncate text-lg sm:text-2xl font-semibold">
             {currentPage.name}
           </span>
         </div>
@@ -167,27 +189,28 @@ function Header() {
     }
 
     return (
-      <h1 className="text-2xl font-semibold ml-2">
+      <h1 className="truncate text-lg sm:text-2xl font-semibold ml-2">
         {currentPage.name}
       </h1>
     );
   };
 
   return (
-    <div className="navbar sticky top-0 bg-base-100 z-10 shadow-md">
+    <div className="navbar sticky top-0 bg-base-100 z-10 border-b border-base-300 shadow-sm px-2 sm:px-4">
       {/* =====================================================
                 LEFT SIDE
             ===================================================== */}
 
-      <div className="flex-1">
-        {/* Mobile sidebar button */}
-
-        <label
-          htmlFor="left-sidebar-drawer"
-          className="btn btn-primary drawer-button lg:hidden"
+      <div className="flex-1 min-w-0">
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          className="btn btn-ghost btn-circle mr-1 sm:mr-2"
+          aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+          title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
         >
           <Bars3Icon className="h-5 inline-block w-5" />
-        </label>
+        </button>
 
         {/* Page title */}
 
@@ -198,7 +221,7 @@ function Header() {
                 RIGHT SIDE
             ===================================================== */}
 
-      <div className="flex-none flex items-center">
+      <div className="flex-none flex items-center gap-1 sm:gap-2">
         {/* =================================================
                     DATE & TIME
                 ================================================= */}
@@ -217,25 +240,22 @@ function Header() {
                     THEME TOGGLE
                 ================================================= */}
 
-        <label className="swap">
-          <input type="checkbox" />
+        <label className="btn btn-ghost btn-circle swap swap-rotate">
+          <input
+            type="checkbox"
+            checked={currentTheme === "dark"}
+            onChange={(event) =>
+              updateTheme(event.target.checked ? "dark" : "light")
+            }
+            aria-label="Toggle theme"
+          />
 
           <SunIcon
-            data-set-theme="light"
-            data-act-class="ACTIVECLASS"
-            className={
-              "fill-current w-6 h-6 " +
-              (currentTheme === "dark" ? "swap-on" : "swap-off")
-            }
+            className="swap-off fill-current w-5 h-5"
           />
 
           <MoonIcon
-            data-set-theme="dark"
-            data-act-class="ACTIVECLASS"
-            className={
-              "fill-current w-6 h-6 " +
-              (currentTheme === "light" ? "swap-on" : "swap-off")
-            }
+            className="swap-on fill-current w-5 h-5"
           />
         </label>
 
@@ -244,8 +264,10 @@ function Header() {
                 ================================================= */}
 
         <button
-          className="btn btn-ghost ml-4 btn-circle"
+          className="btn btn-ghost btn-circle"
           onClick={openNotification}
+          type="button"
+          aria-label="Open notifications"
         >
           <div className="indicator">
             <BellIcon className="h-6 w-6" />
@@ -262,30 +284,31 @@ function Header() {
                     PROFILE
                 ================================================= */}
 
-        <div className="dropdown dropdown-end ml-4">
-          <label tabIndex={0} className="btn btn-ghost btn-circle avatar">
-            <div className="w-10 rounded-full">
+        <div className="dropdown dropdown-end">
+          <button type="button" tabIndex={0} className="btn btn-ghost btn-circle avatar">
+            <div className="w-10 rounded-full bg-base-200">
               <img
-                src="https://placeimg.com/80/80/people"
-                alt="profile"
+                src={profileSrc}
+                alt={currentUser?.name || "Profile"}
+                className="object-cover"
+                onError={handleProfileImageError}
               />
             </div>
-          </label>
+          </button>
 
           <ul
             tabIndex={0}
             className="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
           >
-            <li className="justify-between">
-              <Link to="/app/settings-profile">
-                Profile Settings
-              </Link>
+            <li className="menu-title px-3 py-2">
+              <span className="truncate text-sm normal-case">
+                {currentUser?.name || "Runamarga User"}
+              </span>
             </li>
-
-            <div className="divider mt-0 mb-0"></div>
-
             <li>
-              <a onClick={logoutUser}>Logout</a>
+              <button type="button" onClick={logoutUser}>
+                Logout
+              </button>
             </li>
           </ul>
         </div>

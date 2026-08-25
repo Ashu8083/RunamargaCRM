@@ -244,30 +244,6 @@ function AssignedTeamLeadsModal({
 
 
     // =========================================================
-    // CHECK STATE
-    // =========================================================
-
-    const isRMSelected = (teamLeadId, loanType) => {
-
-        return selectedRM.some(
-            (item) =>
-                item.id === teamLeadId &&
-                item.loanType === loanType
-        )
-    }
-
-
-    const isAgentSelected = (teamLeadId, loanType) => {
-
-        return selectedAgent.some(
-            (item) =>
-                item.id === teamLeadId &&
-                item.loanType === loanType
-        )
-    }
-
-
-    // =========================================================
     // TEAM LEAD LIST
     // =========================================================
 
