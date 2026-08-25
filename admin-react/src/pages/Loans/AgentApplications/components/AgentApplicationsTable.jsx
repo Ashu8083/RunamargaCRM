@@ -12,6 +12,7 @@ import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
 
 import GlobalChat from '../../../../components/Loans/GlobalChat'
 
+
 function AgentApplicationsTable({
     applications = [],
 
@@ -53,8 +54,10 @@ function AgentApplicationsTable({
     const [chatOpen, setChatOpen] =
         useState(false)
 
-    const [selectedChatApplication, setSelectedChatApplication] =
-        useState(null)
+    const [
+        selectedChatApplication,
+        setSelectedChatApplication,
+    ] = useState(null)
 
 
     // =========================================================
@@ -100,6 +103,18 @@ function AgentApplicationsTable({
         application.applied_by ??
         application.createdBy ??
         application.created_by ??
+        'N/A'
+
+
+    const getReferral = (application) =>
+        application.referral ??
+        application.referralName ??
+        application.referral_name ??
+        application.referredBy ??
+        application.referred_by ??
+        application.referrer ??
+        application.referrerName ??
+        application.referrer_name ??
         'N/A'
 
 
@@ -370,9 +385,7 @@ function AgentApplicationsTable({
                                     event.target.value
                                 )
                             }
-                            placeholder="
-                                Search name, phone, loan type, agent...
-                            "
+                            placeholder="Search name, phone, loan type, agent..."
                             className="
                                 grow
                                 min-w-0
@@ -688,7 +701,7 @@ function AgentApplicationsTable({
 
                     <table className="
                         w-full
-                        min-w-[1050px]
+                        min-w-[1150px]
                         table-fixed
                         border-collapse
                     ">
@@ -697,15 +710,16 @@ function AgentApplicationsTable({
 
                             <col className="w-[3%]" />
                             <col className="w-[10%]" />
-                            <col className="w-[10%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[8%]" />
                             <col className="w-[10%]" />
                             <col className="w-[9%]" />
                             <col className="w-[9%]" />
-                            <col className="w-[10%]" />
                             <col className="w-[8%]" />
-                            <col className="w-[11%]" />
+                            <col className="w-[9%]" />
                             <col className="w-[8%]" />
-                            <col className="w-[12%]" />
 
                         </colgroup>
 
@@ -727,6 +741,7 @@ function AgentApplicationsTable({
                                     'Loan Amount',
                                     'Applied Date',
                                     'Applied By',
+                                    'Referral',
                                     'RM',
                                     'Processing Agent',
                                     'Status',
@@ -763,7 +778,7 @@ function AgentApplicationsTable({
                                 <tr>
 
                                     <td
-                                        colSpan="11"
+                                        colSpan="12"
                                         className="
                                             text-center
                                             py-12
@@ -956,6 +971,20 @@ function AgentApplicationsTable({
                                                     className="text-sm"
                                                 >
                                                     {getAppliedBy(application)}
+                                                </Cell>
+
+                                            </td>
+
+
+                                            {/* REFERRAL */}
+
+                                            <td className="px-3 py-4">
+
+                                                <Cell
+                                                    title={getReferral(application)}
+                                                    className="text-sm"
+                                                >
+                                                    {getReferral(application)}
                                                 </Cell>
 
                                             </td>

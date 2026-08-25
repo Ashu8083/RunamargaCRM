@@ -11,10 +11,6 @@ import FaceSmileIcon from '@heroicons/react/24/outline/FaceSmileIcon'
 import PaperAirplaneIcon from '@heroicons/react/24/outline/PaperAirplaneIcon'
 
 
-const PRIMARY_GREEN = '#8BCF00'
-const DARK_GREEN = '#78B300'
-
-
 const EMOJIS = [
     '😀', '😃', '😄', '😁', '😆', '😅',
     '😂', '🤣', '😊', '😇', '🙂', '🙃',

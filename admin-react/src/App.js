@@ -1,7 +1,6 @@
 // admin-react/src/App.js
 
-import React, { lazy, useEffect } from 'react'
-import './App.css'
+import React, { lazy, useEffect, useState } from 'react'
 import {
     BrowserRouter as Router,
     Route,
@@ -10,7 +9,7 @@ import {
 } from 'react-router-dom'
 import { themeChange } from 'theme-change'
 
-import checkAuth from './app/auth'
+import { isAuthenticated } from './app/auth'
 import initializeApp from './app/init'
 
 
@@ -22,14 +21,6 @@ const Layout = lazy(() => import('./containers/Layout'))
 
 const Login = lazy(() => import('./pages/Login'))
 
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
-
-const Register = lazy(() => import('./pages/Register'))
-
-const Documentation = lazy(() => import('./pages/Documentation'))
-
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-
 
 // =========================================================
 // INITIALIZATION
@@ -37,19 +28,29 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 
 initializeApp()
 
-const token = checkAuth()
-
-
 // =========================================================
 // APP
 // =========================================================
 
 function App() {
+    const [authenticated, setAuthenticated] = useState(isAuthenticated())
 
     useEffect(() => {
 
         // DaisyUI theme initialization
         themeChange(false)
+
+        const syncAuthState = () => {
+            setAuthenticated(isAuthenticated())
+        }
+
+        window.addEventListener('auth:changed', syncAuthState)
+        window.addEventListener('storage', syncAuthState)
+
+        return () => {
+            window.removeEventListener('auth:changed', syncAuthState)
+            window.removeEventListener('storage', syncAuthState)
+        }
 
     }, [])
 
@@ -66,22 +67,11 @@ function App() {
 
                 <Route
                     path="/login"
-                    element={<Login />}
-                />
-
-                <Route
-                    path="/forgot-password"
-                    element={<ForgotPassword />}
-                />
-
-                <Route
-                    path="/register"
-                    element={<Register />}
-                />
-
-                <Route
-                    path="/documentation"
-                    element={<Documentation />}
+                    element={
+                        authenticated
+                            ? <Navigate to="/crm/dashboard" replace />
+                            : <Login onLogin={() => setAuthenticated(true)} />
+                    }
                 />
 
 
@@ -91,7 +81,11 @@ function App() {
 
                 <Route
                     path="/crm/*"
-                    element={<Layout />}
+                    element={
+                        authenticated
+                            ? <Layout />
+                            : <Navigate to="/login" replace />
+                    }
                 />
 
 
@@ -104,7 +98,7 @@ function App() {
                     element={
                         <Navigate
                             to={
-                                token
+                                authenticated
                                     ? "/crm/dashboard"
                                     : "/login"
                             }
@@ -123,7 +117,7 @@ function App() {
                     element={
                         <Navigate
                             to={
-                                token
+                                authenticated
                                     ? "/crm/dashboard"
                                     : "/login"
                             }

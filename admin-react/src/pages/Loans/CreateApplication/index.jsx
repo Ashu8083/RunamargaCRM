@@ -370,7 +370,7 @@ function CreateApplication() {
     };
     return (
 
-        <div className="w-full py-5 px-10">
+        <div className="w-full py-5 px-0 sm:px-4 lg:px-10">
 
             {/* -------------------------------------------------
                 STEP INDICATOR

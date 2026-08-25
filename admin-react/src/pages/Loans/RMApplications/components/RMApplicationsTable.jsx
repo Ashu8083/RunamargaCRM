@@ -59,7 +59,7 @@ function RMApplicationsTable({
 
 
     // =========================================================
-    // FILTERED RMs
+    // FILTERED RMS
     // =========================================================
 
     const filteredRMs =
@@ -84,13 +84,6 @@ function RMApplicationsTable({
         application.rm?.name ??
         application.rm ??
         'N/A'
-
-
-    const getRMId = (application) =>
-        application.rmId ??
-        application.rm_id ??
-        application.rm?.id ??
-        null
 
 
     const getLoanId = (application) =>
@@ -118,6 +111,17 @@ function RMApplicationsTable({
         application.agent?.id ??
         application.processingAgent?.id ??
         null
+
+
+    const getReferral = (application) =>
+        application.referral ??
+        application.referralName ??
+        application.referral_name ??
+        application.referredBy ??
+        application.referred_by ??
+        application.referredByName ??
+        application.referred_by_name ??
+        'N/A'
 
 
     const getAmount = (application) => {
@@ -323,7 +327,6 @@ function RMApplicationsTable({
 
         <div className="space-y-4">
 
-
             {/* =====================================================
                 FILTERS
             ===================================================== */}
@@ -344,10 +347,7 @@ function RMApplicationsTable({
                     w-full
                 ">
 
-
-                    {/* =================================================
-                        SEARCH
-                    ================================================= */}
+                    {/* SEARCH */}
 
                     <label className="
                         input
@@ -387,9 +387,7 @@ function RMApplicationsTable({
                     </label>
 
 
-                    {/* =================================================
-                        LOAN TYPE
-                    ================================================= */}
+                    {/* LOAN TYPE */}
 
                     <select
                         value={selectedLoanType}
@@ -410,7 +408,6 @@ function RMApplicationsTable({
                             All Loan Types
                         </option>
 
-
                         {loanTypes.map((loanType) => (
 
                             <option
@@ -425,9 +422,7 @@ function RMApplicationsTable({
                     </select>
 
 
-                    {/* =================================================
-                        RM
-                    ================================================= */}
+                    {/* RM */}
 
                     <div className="
                         relative
@@ -489,7 +484,6 @@ function RMApplicationsTable({
                                 overflow-hidden
                             ">
 
-
                                 {/* SEARCH RM */}
 
                                 <div className="
@@ -542,7 +536,6 @@ function RMApplicationsTable({
                                     overflow-y-auto
                                     p-1
                                 ">
-
 
                                     {/* ALL RMS */}
 
@@ -639,9 +632,7 @@ function RMApplicationsTable({
                     </div>
 
 
-                    {/* =================================================
-                        CLEAR
-                    ================================================= */}
+                    {/* CLEAR */}
 
                     <button
                         type="button"
@@ -657,9 +648,7 @@ function RMApplicationsTable({
                     </button>
 
 
-                    {/* =================================================
-                        REFRESH
-                    ================================================= */}
+                    {/* REFRESH */}
 
                     <button
                         type="button"
@@ -709,11 +698,10 @@ function RMApplicationsTable({
 
                     <table className="
                         w-full
-                        min-w-[1050px]
+                        min-w-[1150px]
                         table-fixed
                         border-collapse
                     ">
-
 
                         {/* =================================================
                             COLUMN WIDTHS
@@ -722,27 +710,17 @@ function RMApplicationsTable({
                         <colgroup>
 
                             <col className="w-[3%]" />
-
                             <col className="w-[10%]" />
-
-                            <col className="w-[10%]" />
-
-                            <col className="w-[10%]" />
-
                             <col className="w-[9%]" />
-
                             <col className="w-[9%]" />
-
+                            <col className="w-[9%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[8%]" />
                             <col className="w-[10%]" />
-
-                            <col className="w-[8%]" />
-
-                            <col className="w-[11%]" />
-
-                            <col className="w-[8%]" />
-
-                            <col className="w-[12%]" />
-
                         </colgroup>
 
 
@@ -765,6 +743,7 @@ function RMApplicationsTable({
                                     'Loan Amount',
                                     'Applied Date',
                                     'Applied By',
+                                    'Referral',
                                     'RM',
                                     'Processing Agent',
                                     'Status',
@@ -803,7 +782,7 @@ function RMApplicationsTable({
                                 <tr>
 
                                     <td
-                                        colSpan="11"
+                                        colSpan="12"
                                         className="
                                             text-center
                                             py-12
@@ -834,7 +813,6 @@ function RMApplicationsTable({
                                                 hover:bg-base-200/30
                                             "
                                         >
-
 
                                             {/* =================================================
                                                 #
@@ -940,7 +918,9 @@ function RMApplicationsTable({
                                                             application
                                                         )
                                                     }
-                                                    title={application.loanType}
+                                                    title={
+                                                        application.loanType
+                                                    }
                                                     className="
                                                         max-w-full
                                                         inline-flex
@@ -972,13 +952,19 @@ function RMApplicationsTable({
                                             <td className="px-3 py-4">
 
                                                 <Cell
-                                                    title={getAmount(application)}
+                                                    title={
+                                                        getAmount(
+                                                            application
+                                                        )
+                                                    }
                                                     className="
                                                         text-sm
                                                         font-medium
                                                     "
                                                 >
-                                                    {getAmount(application)}
+                                                    {getAmount(
+                                                        application
+                                                    )}
                                                 </Cell>
 
                                             </td>
@@ -991,10 +977,16 @@ function RMApplicationsTable({
                                             <td className="px-3 py-4">
 
                                                 <Cell
-                                                    title={getAppliedDate(application)}
+                                                    title={
+                                                        getAppliedDate(
+                                                            application
+                                                        )
+                                                    }
                                                     className="text-sm"
                                                 >
-                                                    {getAppliedDate(application)}
+                                                    {getAppliedDate(
+                                                        application
+                                                    )}
                                                 </Cell>
 
                                             </td>
@@ -1029,16 +1021,46 @@ function RMApplicationsTable({
 
 
                                             {/* =================================================
+                                                REFERRAL
+                                            ================================================= */}
+
+                                            <td className="px-3 py-4">
+
+                                                <Cell
+                                                    title={
+                                                        getReferral(
+                                                            application
+                                                        )
+                                                    }
+                                                    className="
+                                                        text-sm
+                                                    "
+                                                >
+                                                    {getReferral(
+                                                        application
+                                                    )}
+                                                </Cell>
+
+                                            </td>
+
+
+                                            {/* =================================================
                                                 RM
                                             ================================================= */}
 
                                             <td className="px-3 py-4">
 
                                                 <Cell
-                                                    title={getRMName(application)}
+                                                    title={
+                                                        getRMName(
+                                                            application
+                                                        )
+                                                    }
                                                     className="text-sm"
                                                 >
-                                                    {getRMName(application)}
+                                                    {getRMName(
+                                                        application
+                                                    )}
                                                 </Cell>
 
                                             </td>
@@ -1051,10 +1073,16 @@ function RMApplicationsTable({
                                             <td className="px-3 py-4">
 
                                                 <Cell
-                                                    title={getAgentName(application)}
+                                                    title={
+                                                        getAgentName(
+                                                            application
+                                                        )
+                                                    }
                                                     className="text-sm"
                                                 >
-                                                    {getAgentName(application)}
+                                                    {getAgentName(
+                                                        application
+                                                    )}
                                                 </Cell>
 
                                             </td>
@@ -1073,7 +1101,9 @@ function RMApplicationsTable({
                                                             application
                                                         )
                                                     }
-                                                    title={application.status}
+                                                    title={
+                                                        application.status
+                                                    }
                                                     className={`
                                                         max-w-full
                                                         inline-flex
@@ -1091,7 +1121,8 @@ function RMApplicationsTable({
                                                         )}
                                                     `}
                                                 >
-                                                    {application.status || 'N/A'}
+                                                    {application.status ||
+                                                        'N/A'}
                                                 </button>
 
                                             </td>
@@ -1109,7 +1140,6 @@ function RMApplicationsTable({
                                                     justify-center
                                                     gap-0
                                                 ">
-
 
                                                     {/* VIEW */}
 

@@ -7,9 +7,6 @@ import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon'
 
-const PRIMARY_GREEN = '#8BCF00'
-const DARK_GREEN = '#78B300'
-
 function AdminTable({
     admins = [],
     search,

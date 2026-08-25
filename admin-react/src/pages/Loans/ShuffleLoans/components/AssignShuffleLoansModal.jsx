@@ -9,10 +9,6 @@ import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 
 
-const PRIMARY_GREEN = '#8BCF00'
-const DARK_GREEN = '#78B300'
-
-
 function AssignShuffleLoansModal({
     open,
     applications = [],

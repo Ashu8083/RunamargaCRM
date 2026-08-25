@@ -4,6 +4,8 @@
 
 import { lazy } from 'react'
 
+import { PERMISSIONS } from '../app/permissions'
+
 
 // =========================================================
 // MAIN
@@ -52,9 +54,6 @@ const CreateApplication = lazy(
 const RMApplications = lazy(() =>
     import('../pages/Loans/RMApplications/index')
 )
-const ViewApplication = lazy(
-    () => import('../pages/Loans/ViewApplication/index')
-)
 const AgentApplications = lazy(() =>
     import('../pages/Loans/AgentApplications/index')
 )
@@ -66,67 +65,41 @@ const ShuffleLoans = lazy(() =>
     import('../pages/Loans/ShuffleLoans/index')
 )
 
+const RevertedApplications = lazy(() =>
+    import('../pages/Loans/RevertedApplications/index')
+)
+const LoanAssignment = lazy(() =>
+    import('../pages/Loans/LoanAssignment/index')
+)
+
+const DuplicateApproval = lazy(() =>
+    import('../pages/Loans/DuplicateApproval/index')
+)
+
+
+const ViewApplication = lazy(
+    () => import('../pages/Loans/ViewApplication/index')
+)
+
+
+
+
 
 // =========================================================
-// OTHER PAGES
+// Banks & DSA
 // =========================================================
-
-const Welcome = lazy(() =>
-    import('../pages/protected/Welcome')
+const Banks = lazy(
+    () => import('../pages/Banks&DSA/Banks/index')
 )
 
-const Page404 = lazy(() =>
-    import('../pages/protected/404')
+const BankersDirectory = lazy(
+    () => import('../pages/Banks&DSA/BankersDirectory/index')
 )
 
-const Blank = lazy(() =>
-    import('../pages/protected/Blank')
-)
 
-const Charts = lazy(() =>
-    import('../pages/protected/Charts')
+const DSADirectory = lazy(
+    () => import('../pages/Banks&DSA/DSADirectory/index')
 )
-
-const Leads = lazy(() =>
-    import('../pages/protected/Leads')
-)
-
-const Integration = lazy(() =>
-    import('../pages/protected/Integration')
-)
-
-const Calendar = lazy(() =>
-    import('../pages/protected/Calendar')
-)
-
-const Team = lazy(() =>
-    import('../pages/protected/Team')
-)
-
-const Transactions = lazy(() =>
-    import('../pages/protected/Transactions')
-)
-
-const Bills = lazy(() =>
-    import('../pages/protected/Bills')
-)
-
-const ProfileSettings = lazy(() =>
-    import('../pages/protected/ProfileSettings')
-)
-
-const GettingStarted = lazy(() =>
-    import('../pages/GettingStarted')
-)
-
-const DocFeatures = lazy(() =>
-    import('../pages/DocFeatures')
-)
-
-const DocComponents = lazy(() =>
-    import('../pages/DocComponents')
-)
-
 
 // =========================================================
 // ROUTES
@@ -141,16 +114,19 @@ const routes = [
     {
         path: '/dashboard',
         component: Dashboard,
+        permission: PERMISSIONS.DASHBOARD_VIEW,
     },
 
     {
         path: '/filter',
         component: ApplicationFilter,
+        permission: PERMISSIONS.APPLICATION_FILTER_VIEW,
     },
 
     {
         path: '/attendance',
         component: Attendance,
+        permission: PERMISSIONS.ATTENDANCE_VIEW,
     },
 
 
@@ -161,21 +137,25 @@ const routes = [
     {
         path: '/roles',
         component: Roles,
+        permission: PERMISSIONS.ROLES_VIEW,
     },
 
     {
         path: '/team-leads',
         component: TeamLead,
+        permission: PERMISSIONS.TEAM_LEADS_VIEW,
     },
 
     {
         path: '/agents',
         component: Agents,
+        permission: PERMISSIONS.AGENTS_VIEW,
     },
 
     {
         path: '/admins',
         component: Admins,
+        permission: PERMISSIONS.ADMINS_VIEW,
     },
 
 
@@ -186,64 +166,76 @@ const routes = [
     {
         path: '/create-application',
         component: CreateApplication,
+        permission: PERMISSIONS.LOANS_CREATE,
     },
 
     {
         path: '/view-application',
         component: ViewApplication,
+        permission: PERMISSIONS.LOANS_VIEW,
     },
     {
         path: '/rm-applications',
         component: RMApplications,
+        permission: PERMISSIONS.LOANS_RM_VIEW,
     },
 
     {
         path: '/agent-applications',
         component: AgentApplications,
+        permission: PERMISSIONS.LOANS_AGENT_VIEW,
     },
     {
         path: '/pending-applications',
         component: PendingApplications,
+        permission: PERMISSIONS.LOANS_PENDING_VIEW,
     },
     {
         path: '/shuffle-loans',
         component: ShuffleLoans,
+        permission: PERMISSIONS.LOANS_SHUFFLE,
     },
+    {
+        path: '/reverted-applications',
+        component: RevertedApplications,
+        permission: PERMISSIONS.LOANS_REVERTED_VIEW,
+    },
+    {
+        path: '/duplicate-approvals',
+        component: DuplicateApproval,
+        permission: PERMISSIONS.LOANS_DUPLICATE_APPROVE,
+    },
+    {
+        path: '/loan-assignment',
+        component: LoanAssignment,
+        permission: PERMISSIONS.LOANS_ASSIGN,
+    },
+
+
+
+
+
 
 
     // =====================================================
-    // OTHER
+    // Banks and DSA
     // =====================================================
-
     {
-        path: '/features',
-        component: DocFeatures,
+        path: '/banks',
+        component: Banks,
+        permission: PERMISSIONS.BANKS_VIEW,
+    },
+    {
+        path: '/bankers-directory',
+        component: BankersDirectory,
+        permission: PERMISSIONS.BANKERS_VIEW,
+    },
+   {
+        path: '/dsa-directory',
+        component: DSADirectory,
+        permission: PERMISSIONS.DSA_VIEW,
     },
 
-    {
-        path: '/components',
-        component: DocComponents,
-    },
-
-    {
-        path: '/integration',
-        component: Integration,
-    },
-
-    {
-        path: '/charts',
-        component: Charts,
-    },
-
-    {
-        path: '/404',
-        component: Page404,
-    },
-
-    {
-        path: '/blank',
-        component: Blank,
-    },
 
 ]
 

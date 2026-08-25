@@ -29,6 +29,7 @@ function RMApplications() {
             status: 'Inprocess',
             appliedDate: '2026-08-20',
             appliedBy: 'Premalatha N',
+            referral: 'Deepa',
             rmName: 'Premalatha N',
             rmId: 201,
             processingAgent: 'Prashanth',
@@ -45,6 +46,7 @@ function RMApplications() {
             status: 'Docs Pending',
             appliedDate: '2026-08-20',
             appliedBy: 'Premalatha N',
+            referral: 'Suresh',
             rmName: 'Premalatha N',
             rmId: 201,
             processingAgent: 'Kasturi',
@@ -61,6 +63,7 @@ function RMApplications() {
             status: 'Rejected',
             appliedDate: '2026-08-19',
             appliedBy: 'Shubha',
+            referral: 'Mahesh',
             rmName: 'Shubha',
             rmId: 202,
             processingAgent: 'Kasturi',
@@ -77,6 +80,7 @@ function RMApplications() {
             status: 'Inprocess',
             appliedDate: '2026-08-18',
             appliedBy: 'Prasanna Y R',
+            referral: 'Deepa',
             rmName: 'Prasanna Y R',
             rmId: 203,
             processingAgent: 'Nayana',
@@ -458,7 +462,6 @@ function RMApplications() {
             />
 
         </div>
-
     )
 }
 

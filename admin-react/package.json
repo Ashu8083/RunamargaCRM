@@ -1,7 +1,7 @@
 {
-  "name": "admin-dashboard-template-dashwind",
+  "name": "runamarga-loan-crm",
   "version": "1.0.0",
-  "description": "Admin Dashboard template built with create-react-app, tailwind css and daisy UI. Template uses rich tailwind css utility classes and have components of daisy UI, also have redux toolkit implemented for store management.",
+  "description": "Runamarga loan CRM frontend built with React, Tailwind CSS, DaisyUI, and Redux Toolkit.",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
@@ -30,26 +30,12 @@
     "theme-change": "^2.2.0",
     "web-vitals": "^2.1.4"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/srobbin01/tailwind-dashboard-template-dashwind"
-  },
   "keywords": [
-    "reactjs",
-    "tailwind-css",
-    "starter-kit",
-    "saas-starter-kit",
-    "reduxt-toolkit-dashboard-template",
-    "daisyui-template",
-    "dashboard-template",
-    "react-router",
-    "react-charts"
+    "runamarga",
+    "loan-crm",
+    "react"
   ],
-  "author": "srobbin01",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/srobbin01/tailwind-dashboard-template-dashwind/issues"
-  },
+  "private": true,
   "homepage": "",
   "eslintConfig": {
     "extends": [
