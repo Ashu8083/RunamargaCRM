@@ -20,8 +20,11 @@ function Header({ onToggleSidebar, sidebarOpen }) {
   const location = useLocation();
 
   const { noOfNotifications } = useSelector((state) => state.header);
+
   const currentUser = getCurrentUser();
+
   const profileFallback = getDefaultProfileImage(currentUser?.gender);
+
   const profileImage =
     currentUser?.profileImage ||
     currentUser?.profile_image ||
@@ -33,7 +36,9 @@ function Header({ onToggleSidebar, sidebarOpen }) {
   );
 
   const [currentTime, setCurrentTime] = useState(new Date());
+
   const [profileSrc, setProfileSrc] = useState(profileImage);
+
 
   // =========================================================
   // THEME
@@ -41,33 +46,43 @@ function Header({ onToggleSidebar, sidebarOpen }) {
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
+
     const preferredTheme =
       window.matchMedia &&
       window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
+
     const nextTheme = storedTheme || preferredTheme;
 
     setCurrentTheme(nextTheme);
+
     localStorage.setItem("theme", nextTheme);
+
     document.documentElement.setAttribute("data-theme", nextTheme);
   }, []);
 
+
   const updateTheme = (theme) => {
     setCurrentTheme(theme);
+
     localStorage.setItem("theme", theme);
+
     document.documentElement.setAttribute("data-theme", theme);
   };
+
 
   useEffect(() => {
     setProfileSrc(profileImage);
   }, [profileImage]);
+
 
   const handleProfileImageError = () => {
     if (profileSrc !== profileFallback) {
       setProfileSrc(profileFallback);
     }
   };
+
 
   // =========================================================
   // DIGITAL CLOCK
@@ -81,11 +96,13 @@ function Header({ onToggleSidebar, sidebarOpen }) {
     return () => clearInterval(timer);
   }, []);
 
+
   const formattedDate = currentTime.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
+
 
   const formattedTime = currentTime.toLocaleTimeString("en-IN", {
     hour: "2-digit",
@@ -93,58 +110,85 @@ function Header({ onToggleSidebar, sidebarOpen }) {
     hour12: true,
   });
 
+
   // =========================================================
   // FIND CURRENT PAGE
   // =========================================================
 
-  const getCurrentPage = () => {
-    const currentPath = location.pathname;
+  /*
+   * This function searches the sidebar recursively.
+   *
+   * It supports:
+   *
+   * Section
+   *   └── Normal route
+   *
+   * and also:
+   *
+   * Section
+   *   └── Submenu
+   *         └── Normal route
+   *
+   * Example:
+   *
+   * Call Management
+   *   └── Call Analytics
+   *         └── Overview
+   *
+   * Result:
+   *
+   * parentPath = ["Call Management", "Call Analytics"]
+   * name       = "Overview"
+   */
 
-    // -----------------------------------------------------
-    // Check normal routes
-    // -----------------------------------------------------
+  const findCurrentPage = (items, parentPath = []) => {
+    for (const item of items) {
 
-    const normalRoute = routes.find(
-      (route) => route.type !== "section" && route.path === currentPath,
-    );
+      // =====================================================
+      // NORMAL ROUTE
+      // =====================================================
 
-    if (normalRoute) {
-      return {
-        parent: null,
-        name: normalRoute.name,
-      };
-    }
+      if (item.path && item.path === location.pathname) {
+        return {
+          parentPath,
+          name: item.name,
+        };
+      }
 
-    // -----------------------------------------------------
-    // Check section submenu routes
-    // -----------------------------------------------------
 
-    for (const route of routes) {
-      if (route.type === "section") {
-        const submenuItem = route.submenu?.find(
-          (item) => item.path === currentPath,
+      // =====================================================
+      // NESTED SUBMENU
+      // =====================================================
+
+      if (item.submenu && item.submenu.length > 0) {
+
+        const currentPath = item.type === "section"
+          ? [...parentPath]
+          : [...parentPath, item.name];
+
+
+        const result = findCurrentPage(
+          item.submenu,
+          currentPath
         );
 
-        if (submenuItem) {
-          return {
-            parent: submenuItem.parent || route.name,
-            name: submenuItem.name,
-          };
+
+        if (result) {
+          return result;
         }
       }
     }
 
-    // -----------------------------------------------------
-    // Fallback
-    // -----------------------------------------------------
-
-    return {
-      parent: null,
-      name: "Dashboard",
-    };
+    return null;
   };
 
-  const currentPage = getCurrentPage();
+
+  const currentPage =
+    findCurrentPage(routes) || {
+      parentPath: [],
+      name: "Dashboard",
+    };
+
 
   // =========================================================
   // NOTIFICATIONS
@@ -159,6 +203,7 @@ function Header({ onToggleSidebar, sidebarOpen }) {
     );
   };
 
+
   // =========================================================
   // LOGOUT
   // =========================================================
@@ -167,66 +212,144 @@ function Header({ onToggleSidebar, sidebarOpen }) {
     logout();
   }
 
+
   // =========================================================
   // HEADER TITLE
   // =========================================================
 
   const renderPageTitle = () => {
-    if (currentPage.parent) {
+
+    // =====================================================
+    // No parent
+    //
+    // Example:
+    // Dashboard
+    // Profile
+    // =====================================================
+
+    if (currentPage.parentPath.length === 0) {
       return (
-        <div className="flex items-center ml-2">
-          <span className="hidden sm:inline truncate text-sm font-medium text-base-content/60">
-            {currentPage.parent}
-          </span>
-
-          <span className="hidden sm:inline mx-2 text-base-content/40">/</span>
-
-          <span className="truncate text-lg sm:text-2xl font-semibold">
-            {currentPage.name}
-          </span>
-        </div>
+        <h1 className="truncate text-lg sm:text-2xl font-semibold ml-2">
+          {currentPage.name}
+        </h1>
       );
     }
 
+
+    // =====================================================
+    // Parent path exists
+    //
+    // Example:
+    //
+    // Call Management / Call Logs
+    //
+    // or:
+    //
+    // Call Management / Call Analytics / Overview
+    // =====================================================
+
     return (
-      <h1 className="truncate text-lg sm:text-2xl font-semibold ml-2">
-        {currentPage.name}
-      </h1>
+      <div className="flex items-center ml-2 min-w-0">
+
+        {/* =================================================
+                    Parent levels
+            ================================================= */}
+
+        {currentPage.parentPath.map((parent, index) => (
+          <React.Fragment key={`${parent}-${index}`}>
+
+            <span
+              className="
+                hidden
+                sm:inline
+                truncate
+                text-sm
+                font-medium
+                text-base-content/60
+              "
+            >
+              {parent}
+            </span>
+
+            <span className="hidden sm:inline mx-2 text-base-content/40">
+              /
+            </span>
+
+          </React.Fragment>
+        ))}
+
+
+        {/* =================================================
+                    Current page
+            ================================================= */}
+
+        <span className="truncate text-lg sm:text-2xl font-semibold">
+          {currentPage.name}
+        </span>
+
+      </div>
     );
   };
 
+
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
     <div className="navbar sticky top-0 bg-base-100 z-10 border-b border-base-300 shadow-sm px-2 sm:px-4">
+
       {/* =====================================================
                 LEFT SIDE
             ===================================================== */}
 
       <div className="flex-1 min-w-0">
+
+        {/* =================================================
+                    Sidebar Toggle
+            ================================================= */}
+
         <button
           type="button"
           onClick={onToggleSidebar}
           className="btn btn-ghost btn-circle mr-1 sm:mr-2"
-          aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
-          title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+          aria-label={
+            sidebarOpen
+              ? "Hide sidebar"
+              : "Show sidebar"
+          }
+          title={
+            sidebarOpen
+              ? "Hide sidebar"
+              : "Show sidebar"
+          }
         >
           <Bars3Icon className="h-5 inline-block w-5" />
         </button>
 
-        {/* Page title */}
+
+        {/* =================================================
+                    Page Title
+            ================================================= */}
 
         {renderPageTitle()}
+
       </div>
+
 
       {/* =====================================================
                 RIGHT SIDE
             ===================================================== */}
 
       <div className="flex-none flex items-center gap-1 sm:gap-2">
+
+
         {/* =================================================
                     DATE & TIME
-                ================================================= */}
+            ================================================= */}
 
         <div className="hidden lg:flex flex-col items-end mr-5 leading-tight">
+
           <span className="text-xs font-medium text-base-content/60">
             {formattedDate}
           </span>
@@ -234,34 +357,45 @@ function Header({ onToggleSidebar, sidebarOpen }) {
           <span className="text-sm font-semibold text-base-content tabular-nums">
             {formattedTime}
           </span>
+
         </div>
+
 
         {/* =================================================
                     THEME TOGGLE
-                ================================================= */}
+            ================================================= */}
 
         <label className="btn btn-ghost btn-circle swap swap-rotate">
+
           <input
             type="checkbox"
             checked={currentTheme === "dark"}
             onChange={(event) =>
-              updateTheme(event.target.checked ? "dark" : "light")
+              updateTheme(
+                event.target.checked
+                  ? "dark"
+                  : "light"
+              )
             }
             aria-label="Toggle theme"
           />
+
 
           <SunIcon
             className="swap-off fill-current w-5 h-5"
           />
 
+
           <MoonIcon
             className="swap-on fill-current w-5 h-5"
           />
+
         </label>
+
 
         {/* =================================================
                     NOTIFICATIONS
-                ================================================= */}
+            ================================================= */}
 
         <button
           className="btn btn-ghost btn-circle"
@@ -269,7 +403,9 @@ function Header({ onToggleSidebar, sidebarOpen }) {
           type="button"
           aria-label="Open notifications"
         >
+
           <div className="indicator">
+
             <BellIcon className="h-6 w-6" />
 
             {noOfNotifications > 0 && (
@@ -277,42 +413,83 @@ function Header({ onToggleSidebar, sidebarOpen }) {
                 {noOfNotifications}
               </span>
             )}
+
           </div>
+
         </button>
+
 
         {/* =================================================
                     PROFILE
-                ================================================= */}
+            ================================================= */}
 
         <div className="dropdown dropdown-end">
-          <button type="button" tabIndex={0} className="btn btn-ghost btn-circle avatar">
+
+          <button
+            type="button"
+            tabIndex={0}
+            className="btn btn-ghost btn-circle avatar"
+          >
+
             <div className="w-10 rounded-full bg-base-200">
+
               <img
                 src={profileSrc}
-                alt={currentUser?.name || "Profile"}
+                alt={
+                  currentUser?.name ||
+                  "Profile"
+                }
                 className="object-cover"
                 onError={handleProfileImageError}
               />
+
             </div>
+
           </button>
+
 
           <ul
             tabIndex={0}
-            className="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
+            className="
+              menu
+              menu-compact
+              dropdown-content
+              mt-3
+              p-2
+              shadow
+              bg-base-100
+              rounded-box
+              w-52
+            "
           >
+
             <li className="menu-title px-3 py-2">
+
               <span className="truncate text-sm normal-case">
-                {currentUser?.name || "Runamarga User"}
+                {currentUser?.name ||
+                  "Runamarga User"}
               </span>
+
             </li>
+
+
             <li>
-              <button type="button" onClick={logoutUser}>
+
+              <button
+                type="button"
+                onClick={logoutUser}
+              >
                 Logout
               </button>
+
             </li>
+
           </ul>
+
         </div>
+
       </div>
+
     </div>
   );
 }

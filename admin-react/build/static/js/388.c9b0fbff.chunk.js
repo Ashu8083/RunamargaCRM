@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunkrunamarga_loan_crm=self.webpackChunkrunamarga_loan_crm||[]).push([[388],{6388:function(a,n,e){e.r(n);var t=e(184);n.default=function(){return(0,t.jsxs)("div",{children:[(0,t.jsx)("h1",{className:"text-2xl font-semibold",children:"Application Filter"}),(0,t.jsx)("p",{className:"mt-2 text-base-content/60",children:"Filter loan applications."})]})}}}]);
+//# sourceMappingURL=388.c9b0fbff.chunk.js.map

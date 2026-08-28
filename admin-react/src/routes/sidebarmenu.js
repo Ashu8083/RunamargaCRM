@@ -1,219 +1,321 @@
 // admin-react/src/routes/sidebarmenu.js
 /** Icons are imported separately to reduce build time */
 
-import Squares2X2Icon from '@heroicons/react/24/outline/Squares2X2Icon'
-import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
-import UserIcon from '@heroicons/react/24/outline/UserIcon'
-import UsersIcon from '@heroicons/react/24/outline/UsersIcon'
-import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon'
-import DocumentPlusIcon from '@heroicons/react/24/outline/DocumentPlusIcon'
-import DocumentTextIcon from '@heroicons/react/24/outline/DocumentTextIcon'
-import ClipboardDocumentCheckIcon from '@heroicons/react/24/outline/ClipboardDocumentCheckIcon'
-import ClockIcon from '@heroicons/react/24/outline/ClockIcon'
-import ArrowsRightLeftIcon from '@heroicons/react/24/outline/ArrowsRightLeftIcon'
-import ArrowUturnLeftIcon from '@heroicons/react/24/outline/ArrowUturnLeftIcon'
-import BuildingLibraryIcon from '@heroicons/react/24/outline/BuildingLibraryIcon'
-import IdentificationIcon from '@heroicons/react/24/outline/IdentificationIcon'
-import BriefcaseIcon from '@heroicons/react/24/outline/BriefcaseIcon'
-import FunnelIcon from '@heroicons/react/24/outline/FunnelIcon'
-import KeyIcon from '@heroicons/react/24/outline/KeyIcon'
-import DocumentDuplicateIcon from '@heroicons/react/24/outline/DocumentDuplicateIcon'
+import Squares2X2Icon from "@heroicons/react/24/outline/Squares2X2Icon";
+import CalendarDaysIcon from "@heroicons/react/24/outline/CalendarDaysIcon";
+import UserIcon from "@heroicons/react/24/outline/UserIcon";
+import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
+import UsersIcon from "@heroicons/react/24/outline/UsersIcon";
+import UserCircleIcon from "@heroicons/react/24/outline/UserCircleIcon";
+import ShieldCheckIcon from "@heroicons/react/24/outline/ShieldCheckIcon";
+import DocumentPlusIcon from "@heroicons/react/24/outline/DocumentPlusIcon";
+import DocumentTextIcon from "@heroicons/react/24/outline/DocumentTextIcon";
+import ClipboardDocumentCheckIcon from "@heroicons/react/24/outline/ClipboardDocumentCheckIcon";
+import ClockIcon from "@heroicons/react/24/outline/ClockIcon";
+import ArrowsRightLeftIcon from "@heroicons/react/24/outline/ArrowsRightLeftIcon";
+import ArrowUturnLeftIcon from "@heroicons/react/24/outline/ArrowUturnLeftIcon";
+import BuildingLibraryIcon from "@heroicons/react/24/outline/BuildingLibraryIcon";
+import IdentificationIcon from "@heroicons/react/24/outline/IdentificationIcon";
+import BriefcaseIcon from "@heroicons/react/24/outline/BriefcaseIcon";
+import FunnelIcon from "@heroicons/react/24/outline/FunnelIcon";
+import KeyIcon from "@heroicons/react/24/outline/KeyIcon";
+import DocumentDuplicateIcon from "@heroicons/react/24/outline/DocumentDuplicateIcon";
+import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
+import ArrowUpOnSquareIcon from "@heroicons/react/24/outline/ArrowUpOnSquareIcon";
+import ChartBarIcon from "@heroicons/react/24/outline/ChartBarIcon";
+import UserGroupIcon from "@heroicons/react/24/outline/UserGroupIcon";
+import ArrowTrendingUpIcon from "@heroicons/react/24/outline/ArrowTrendingUpIcon";
 
-import { PERMISSIONS } from '../app/permissions'
+import { PERMISSIONS } from "../app/permissions";
 
-const iconClasses = `h-6 w-6`
-const submenuIconClasses = `h-5 w-5`
+const iconClasses = `h-6 w-6`;
+const submenuIconClasses = `h-5 w-5`;
 
 const sidebarmenu = [
-
   // =========================================================
   // MAIN
   // =========================================================
 
   {
-    path: '/crm/dashboard',
+    path: "/crm/dashboard",
     icon: <Squares2X2Icon className={iconClasses} />,
-    name: 'Dashboard',
+    name: "Dashboard",
     permission: PERMISSIONS.DASHBOARD_VIEW,
   },
 
   {
-    path: '/crm/filter',
+    path: "/crm/filter",
     icon: <FunnelIcon className={iconClasses} />,
-    name: 'Application Filter',
+    name: "Application Filter",
     permission: PERMISSIONS.APPLICATION_FILTER_VIEW,
   },
 
   {
-    path: '/crm/attendance',
+    path: "/crm/attendance",
     icon: <CalendarDaysIcon className={iconClasses} />,
-    name: 'Attendance',
+    name: "Attendance",
     permission: PERMISSIONS.ATTENDANCE_VIEW,
   },
 
+  {
+    path: "/crm/profile",
+    icon: <UserCircleIcon className={iconClasses} />,
+    name: "Profile",
+    permission: PERMISSIONS.PROFILE_VIEW,
+  },
 
   // =========================================================
   // TEAMS & ROLES
   // =========================================================
 
   {
-    type: 'section',
-    name: 'Teams & Roles',
+    type: "section",
+    name: "Teams & Roles",
 
     submenu: [
-
       {
-        path: '/crm/roles',
+        path: "/crm/roles",
         icon: <KeyIcon className={submenuIconClasses} />,
-        name: 'Roles',
-        parent: 'Teams & Roles',
+        name: "Roles",
+        parent: "Teams & Roles",
         permission: PERMISSIONS.ROLES_VIEW,
       },
 
       {
-        path: '/crm/team-leads',
+        path: "/crm/team-leads",
         icon: <UsersIcon className={submenuIconClasses} />,
-        name: 'Team Leads',
-        parent: 'Teams & Roles',
+        name: "Team Leads",
+        parent: "Teams & Roles",
         permission: PERMISSIONS.TEAM_LEADS_VIEW,
       },
 
       {
-        path: '/crm/agents',
+        path: "/crm/agents",
         icon: <UserIcon className={submenuIconClasses} />,
-        name: 'Agents',
-        parent: 'Teams & Roles',
+        name: "Agents",
+        parent: "Teams & Roles",
         permission: PERMISSIONS.AGENTS_VIEW,
       },
 
       {
-        path: '/crm/admins',
+        path: "/crm/admins",
         icon: <ShieldCheckIcon className={submenuIconClasses} />,
-        name: 'Admins',
-        parent: 'Teams & Roles',
+        name: "Admins",
+        parent: "Teams & Roles",
         permission: PERMISSIONS.ADMINS_VIEW,
       },
-
-    ]
+    ],
   },
-
 
   // =========================================================
   // LOANS
   // =========================================================
 
   {
-    type: 'section',
-    name: 'Loans',
+    type: "section",
+    name: "Loans",
 
     submenu: [
-
       {
-        path: '/crm/create-application',
+        path: "/crm/create-application",
         icon: <DocumentPlusIcon className={submenuIconClasses} />,
-        name: 'Create Application',
-        parent: 'Loans',
+        name: "Create Application",
+        parent: "Loans",
         permission: PERMISSIONS.LOANS_CREATE,
       },
 
       {
-        path: '/crm/rm-applications',
+        path: "/crm/rm-applications",
         icon: <DocumentTextIcon className={submenuIconClasses} />,
-        name: 'RM Applications',
-        parent: 'Loans',
+        name: "RM Applications",
+        parent: "Loans",
         permission: PERMISSIONS.LOANS_RM_VIEW,
       },
 
       {
-        path: '/crm/agent-applications',
+        path: "/crm/agent-applications",
         icon: <ClipboardDocumentCheckIcon className={submenuIconClasses} />,
-        name: 'Agent Applications',
-        parent: 'Loans',
+        name: "Agent Applications",
+        parent: "Loans",
         permission: PERMISSIONS.LOANS_AGENT_VIEW,
       },
 
       {
-        path: '/crm/pending-applications',
+        path: "/crm/pending-applications",
         icon: <ClockIcon className={submenuIconClasses} />,
-        name: 'Pending Applications',
-        parent: 'Loans',
+        name: "Pending Applications",
+        parent: "Loans",
         permission: PERMISSIONS.LOANS_PENDING_VIEW,
       },
 
       {
-        path: '/crm/shuffle-loans',
+        path: "/crm/shuffle-loans",
         icon: <ArrowsRightLeftIcon className={submenuIconClasses} />,
-        name: 'Shuffle Loans',
-        parent: 'Loans',
+        name: "Shuffle Loans",
+        parent: "Loans",
         permission: PERMISSIONS.LOANS_SHUFFLE,
       },
 
       {
-        path: '/crm/reverted-applications',
+        path: "/crm/reverted-applications",
         icon: <ArrowUturnLeftIcon className={submenuIconClasses} />,
-        name: 'Reverted Applications',
-        parent: 'Loans',
+        name: "Reverted Applications",
+        parent: "Loans",
         permission: PERMISSIONS.LOANS_REVERTED_VIEW,
       },
 
       {
-        path: '/crm/loan-assignment',
+        path: "/crm/loan-assignment",
         icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
-        name: 'Loan Assignment',
-        parent: 'Loans',
+        name: "Loan Assignment",
+        parent: "Loans",
         permission: PERMISSIONS.LOANS_ASSIGN,
       },
 
       {
-        path: '/crm/duplicate-approvals',
+        path: "/crm/duplicate-approvals",
         icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
-        name: 'Duplicate Approvals',
-        parent: 'Loans',
+        name: "Duplicate Approvals",
+        parent: "Loans",
         permission: PERMISSIONS.LOANS_DUPLICATE_APPROVE,
       },
-
-    ]
+    ],
   },
 
+  // =========================================================
+  // CALL MANAGEMENT
+  // =========================================================
+
+  {
+    type: "section",
+    name: "Call Management",
+
+    submenu: [
+      // -----------------------------------------------------
+      // Call Logs
+      // -----------------------------------------------------
+
+      {
+        path: "/crm/call-logs",
+        icon: <PhoneIcon className={submenuIconClasses} />,
+        name: "Call Logs",
+        parent: "Call Management",
+        permission: PERMISSIONS.CALL_LOGS_VIEW,
+      },
+
+      // -----------------------------------------------------
+      // Call Assignment
+      // -----------------------------------------------------
+
+      {
+        path: "/crm/call-assignment",
+        icon: <ArrowUpOnSquareIcon className={submenuIconClasses} />,
+        name: "Call Assignment",
+        parent: "Call Management",
+        permission: PERMISSIONS.CALL_ASSIGNMENT_VIEW,
+      },
+
+      // -----------------------------------------------------
+      // Call Analytics
+      // -----------------------------------------------------
+
+      {
+        type: "submenu",
+        name: "Call Analytics",
+        parent: "Call Management",
+        icon: <ChartBarIcon className={submenuIconClasses} />,
+
+        submenu: [
+          {
+            path: "/crm/call-analytics/overview",
+            icon: <ChartBarIcon className={submenuIconClasses} />,
+            name: "Overview",
+            parent: "Call Analytics",
+            permission: PERMISSIONS.CALL_ANALYTICS_OVERVIEW_VIEW,
+          },
+
+          {
+            path: "/crm/call-analytics/agent-performance",
+            icon: <UserGroupIcon className={submenuIconClasses} />,
+            name: "Agent Performance",
+            parent: "Call Analytics",
+            permission:
+              PERMISSIONS.CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW,
+          },
+
+          {
+            path: "/crm/call-analytics/call-trends",
+            icon: <ArrowTrendingUpIcon className={submenuIconClasses} />,
+            name: "Call Trends",
+            parent: "Call Analytics",
+            permission: PERMISSIONS.CALL_ANALYTICS_CALL_TRENDS_VIEW,
+          },
+        ],
+      },
+    ],
+  },
 
   // =========================================================
   // BANK & DSA
   // =========================================================
 
   {
-    type: 'section',
-    name: 'Bank & DSA',
+    type: "section",
+    name: "Bank & DSA",
 
     submenu: [
-
       {
-        path: '/crm/banks',
+        path: "/crm/banks",
         icon: <BuildingLibraryIcon className={submenuIconClasses} />,
-        name: 'Banks',
-        parent: 'Bank & DSA',
+        name: "Banks",
+        parent: "Bank & DSA",
         permission: PERMISSIONS.BANKS_VIEW,
       },
 
       {
-        path: '/crm/bankers-directory',
+        path: "/crm/bankers-directory",
         icon: <IdentificationIcon className={submenuIconClasses} />,
-        name: 'Banker Directory',
-        parent: 'Bank & DSA',
+        name: "Banker Directory",
+        parent: "Bank & DSA",
         permission: PERMISSIONS.BANKERS_VIEW,
       },
 
       {
-        path: '/crm/dsa-directory',
+        path: "/crm/dsa-directory",
         icon: <BriefcaseIcon className={submenuIconClasses} />,
-        name: 'DSA Directory',
-        parent: 'Bank & DSA',
+        name: "DSA Directory",
+        parent: "Bank & DSA",
         permission: PERMISSIONS.DSA_VIEW,
       },
-
-    ]
+    ],
   },
 
+  // =========================================================
+  // EMPLOYEE MANAGEMENT
+  // =========================================================
 
-]
+  {
+    type: "section",
+    name: "Employee Management",
 
-export default sidebarmenu
+    submenu: [
+      {
+        path: "/crm/employees",
+        icon: <UserCircleIcon className={submenuIconClasses} />,
+        name: "Employees",
+        parent: "Employee Management",
+        permission: PERMISSIONS.EMPLOYEE_VIEW,
+      },
+
+      {
+        path: "/crm/employee-attendance",
+        icon: <CalendarIcon className={submenuIconClasses} />,
+        name: "Employee Attendance",
+        parent: "Employee Management",
+        permission: PERMISSIONS.EMPLOYEE_ATTENDANCE_VIEW,
+      },
+    ],
+  },
+];
+
+export default sidebarmenu;
