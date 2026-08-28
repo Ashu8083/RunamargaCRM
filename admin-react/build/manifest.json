@@ -1,0 +1,28 @@
+{
+  "short_name": "Runamarga",
+  "name": "Runamarga",
+  "icons": [
+    {
+      "src": "logo/favicon_logo.png",
+      "sizes": "782x1118",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "logo/favicon_logo.png",
+      "type": "image/png",
+      "sizes": "782x1118",
+      "purpose": "maskable"
+    },
+    {
+      "src": "logo/favicon_logo.png",
+      "type": "image/png",
+      "sizes": "782x1118",
+      "purpose": "any"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

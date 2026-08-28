@@ -1,7 +1,10 @@
-// admin-react\src\containers\LeftSidebar.js
+// admin-react/src/containers/LeftSidebar.js
+
+import { useState } from 'react'
 import routes from '../routes/sidebarmenu'
 import { NavLink, Link, useLocation } from 'react-router-dom'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
+import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 import { APP_LOGO } from '../constants/assets'
 import { getCurrentUser } from '../app/auth'
 import { hasPermission } from '../app/permissions'
@@ -24,17 +27,40 @@ function LeftSidebar({ onClose }) {
         return hasPermission(route.permission, currentUser)
     }
 
+    // =========================================================
+    // Check whether a nested submenu contains the active route
+    // =========================================================
+
+    const hasActiveChild = (submenu = []) => {
+        return submenu.some((item) => {
+            if (item.path && location.pathname === item.path) {
+                return true
+            }
+
+            if (item.submenu) {
+                return hasActiveChild(item.submenu)
+            }
+
+            return false
+        })
+    }
+
     return (
         <div className="drawer-side z-30">
+
             <label
                 htmlFor="left-sidebar-drawer"
                 className="drawer-overlay"
                 onClick={close}
             ></label>
 
+
             <ul className="menu pt-2 w-72 lg:w-64 bg-base-100 min-h-full text-base-content overflow-y-auto">
 
-                {/* Mobile close button */}
+                {/* =====================================================
+                    Mobile close button
+                ===================================================== */}
+
                 <button
                     className="btn btn-ghost bg-base-300 btn-circle z-50 top-0 right-0 mt-4 mr-2 absolute lg:hidden"
                     onClick={close}
@@ -45,10 +71,14 @@ function LeftSidebar({ onClose }) {
                 </button>
 
 
-                {/* Logo */}
+                {/* =====================================================
+                    Logo
+                ===================================================== */}
+
                 <li className="mb-2 font-semibold text-xl">
 
                     <Link to="/crm/dashboard">
+
                         <img
                             className="h-10 w-8 object-contain"
                             src={APP_LOGO}
@@ -56,12 +86,16 @@ function LeftSidebar({ onClose }) {
                         />
 
                         Runamarga
+
                     </Link>
 
                 </li>
 
 
-                {/* Sidebar routes */}
+                {/* =====================================================
+                    Sidebar routes
+                ===================================================== */}
+
                 {routes.map((route, index) => {
 
                     // =====================================================
@@ -69,57 +103,104 @@ function LeftSidebar({ onClose }) {
                     // =====================================================
 
                     if (route.type === 'section') {
-                        const visibleSubmenu =
-                            route.submenu.filter(canSeeRoute)
+
+                        const visibleSubmenu = route.submenu.filter((item) => {
+
+                            // Normal item
+                            if (!item.submenu) {
+                                return canSeeRoute(item)
+                            }
+
+                            // Nested submenu
+                            return item.submenu.some((child) =>
+                                canSeeRoute(child)
+                            )
+                        })
+
 
                         if (visibleSubmenu.length === 0) {
                             return null
                         }
 
+
                         return (
                             <div key={index}>
 
-                                {/* Section heading */}
+                                {/* =================================================
+                                    Section heading
+                                ================================================= */}
+
                                 <li className="mt-5 mb-1 px-3 pointer-events-none">
+
                                     <span className="text-xs font-semibold uppercase tracking-wider text-base-content/60">
                                         {route.name}
                                     </span>
+
                                 </li>
 
 
-                                {/* Section items */}
-                                {visibleSubmenu.map((item, itemIndex) => (
+                                {/* =================================================
+                                    Section items
+                                ================================================= */}
 
-                                    <li key={itemIndex}>
+                                {visibleSubmenu.map((item, itemIndex) => {
 
-                                        <NavLink
-                                            end
-                                            to={item.path}
-                                            onClick={closeOnMobile}
-                                            className={({ isActive }) =>
-                                                `${isActive
-                                                    ? 'font-semibold bg-base-200'
-                                                    : 'font-normal'
-                                                }`
-                                            }
-                                        >
+                                    // =================================================
+                                    // NESTED SUBMENU
+                                    // =================================================
 
-                                            {item.icon}
+                                    if (item.type === 'submenu') {
 
-                                            {item.name}
+                                        return (
+                                            <NestedSubmenu
+                                                key={itemIndex}
+                                                item={item}
+                                                location={location}
+                                                currentUser={currentUser}
+                                                canSeeRoute={canSeeRoute}
+                                                closeOnMobile={closeOnMobile}
+                                                hasActiveChild={hasActiveChild}
+                                            />
+                                        )
+                                    }
 
-                                            {location.pathname === item.path && (
-                                                <span
-                                                    className="absolute inset-y-0 left-0 w-1 rounded-tr-md rounded-br-md bg-primary"
-                                                    aria-hidden="true"
-                                                ></span>
-                                            )}
 
-                                        </NavLink>
+                                    // =================================================
+                                    // NORMAL SECTION ITEM
+                                    // =================================================
 
-                                    </li>
+                                    return (
+                                        <li key={itemIndex}>
 
-                                ))}
+                                            <NavLink
+                                                end
+                                                to={item.path}
+                                                onClick={closeOnMobile}
+                                                className={({ isActive }) =>
+                                                    `${isActive
+                                                        ? 'font-semibold bg-base-200'
+                                                        : 'font-normal'
+                                                    }`
+                                                }
+                                            >
+
+                                                {item.icon}
+
+                                                {item.name}
+
+
+                                                {location.pathname === item.path && (
+                                                    <span
+                                                        className="absolute inset-y-0 left-0 w-1 rounded-tr-md rounded-br-md bg-primary"
+                                                        aria-hidden="true"
+                                                    ></span>
+                                                )}
+
+                                            </NavLink>
+
+                                        </li>
+                                    )
+                                })}
 
                             </div>
                         )
@@ -133,6 +214,7 @@ function LeftSidebar({ onClose }) {
                     if (!canSeeRoute(route)) {
                         return null
                     }
+
 
                     return (
                         <li key={index}>
@@ -153,6 +235,7 @@ function LeftSidebar({ onClose }) {
 
                                 {route.name}
 
+
                                 {location.pathname === route.path && (
                                     <span
                                         className="absolute inset-y-0 left-0 w-1 rounded-tr-md rounded-br-md bg-primary"
@@ -164,12 +247,175 @@ function LeftSidebar({ onClose }) {
 
                         </li>
                     )
-
                 })}
 
             </ul>
         </div>
     )
 }
+
+
+// =========================================================
+// NESTED SUBMENU COMPONENT
+// =========================================================
+
+function NestedSubmenu({
+    item,
+    location,
+    canSeeRoute,
+    closeOnMobile,
+    hasActiveChild,
+}) {
+
+    const containsActiveRoute = hasActiveChild(item.submenu)
+
+    const [isOpen, setIsOpen] = useState(containsActiveRoute)
+
+
+    // =========================================================
+    // Visible children based on permissions
+    // =========================================================
+
+    const visibleChildren = item.submenu.filter(canSeeRoute)
+
+
+    if (visibleChildren.length === 0) {
+        return null
+    }
+
+
+    // =========================================================
+    // Toggle submenu
+    // =========================================================
+
+    const toggleSubmenu = () => {
+        setIsOpen((previous) => !previous)
+    }
+
+
+    return (
+        <li>
+
+            {/* =====================================================
+                Nested submenu button
+            ===================================================== */}
+
+            <button
+                type="button"
+                onClick={toggleSubmenu}
+                className={`
+                    w-full
+                    flex
+                    items-center
+                    gap-3
+                    font-normal
+                    ${containsActiveRoute
+                        ? 'bg-base-200 font-semibold'
+                        : ''
+                    }
+                `}
+                aria-expanded={isOpen}
+                aria-haspopup="true"
+            >
+
+                {item.icon}
+
+                <span className="flex-1 text-left">
+                    {item.name}
+                </span>
+
+                <ChevronDownIcon
+                    className={`
+                        h-4
+                        w-4
+                        transition-transform
+                        duration-200
+                        ${isOpen ? 'rotate-180' : ''}
+                    `}
+                />
+
+            </button>
+
+
+            {/* =====================================================
+                Nested submenu children
+            ===================================================== */}
+
+            {isOpen && (
+                <ul className="ml-4 mt-1">
+
+                    {visibleChildren.map((child, childIndex) => {
+
+                        // =================================================
+                        // Support another nested submenu if required
+                        // =================================================
+
+                        if (child.type === 'submenu') {
+
+                            return (
+                                <NestedSubmenu
+                                    key={childIndex}
+                                    item={child}
+                                    location={location}
+                                    canSeeRoute={canSeeRoute}
+                                    closeOnMobile={closeOnMobile}
+                                    hasActiveChild={hasActiveChild}
+                                />
+                            )
+                        }
+
+
+                        // =================================================
+                        // Normal nested route
+                        // =================================================
+
+                        const isActive =
+                            location.pathname === child.path
+
+
+                        return (
+                            <li key={childIndex}>
+
+                                <NavLink
+                                    end
+                                    to={child.path}
+                                    onClick={closeOnMobile}
+                                    className={`
+                                        relative
+                                        flex
+                                        items-center
+                                        gap-3
+                                        ${isActive
+                                            ? 'font-semibold bg-base-200'
+                                            : 'font-normal'
+                                        }
+                                    `}
+                                >
+
+                                    {child.icon}
+
+                                    {child.name}
+
+
+                                    {isActive && (
+                                        <span
+                                            className="absolute inset-y-0 left-0 w-1 rounded-tr-md rounded-br-md bg-primary"
+                                            aria-hidden="true"
+                                        ></span>
+                                    )}
+
+                                </NavLink>
+
+                            </li>
+                        )
+                    })}
+
+                </ul>
+            )}
+
+        </li>
+    )
+}
+
 
 export default LeftSidebar

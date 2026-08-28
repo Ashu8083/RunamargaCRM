@@ -4,6 +4,12 @@ export const PERMISSIONS = Object.freeze({
     DASHBOARD_VIEW: 'dashboard:view',
     APPLICATION_FILTER_VIEW: 'application-filter:view',
     ATTENDANCE_VIEW: 'attendance:view',
+    PROFILE_VIEW: 'profile:view',
+    CALL_LOGS_VIEW: 'call-logs:view',
+    CALL_ASSIGNMENT_VIEW: 'call-assignment:view',
+    CALL_ANALYTICS_OVERVIEW_VIEW: 'call-analytics-overview:view',
+    CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW: 'call-analytics-agent-performance:view',
+    CALL_ANALYTICS_CALL_TRENDS_VIEW: 'call-analytics-call-trends:view',
 
     ROLES_VIEW: 'roles:view',
     ROLES_MANAGE: 'roles:manage',
@@ -30,6 +36,8 @@ export const PERMISSIONS = Object.freeze({
     BANKERS_VIEW: 'bankers:view',
     DSA_VIEW: 'dsa:view',
     DSA_MANAGE: 'dsa:manage',
+
+    EMPLOYEE_ATTENDANCE_VIEW: 'employee-attendance:view',
 })
 
 const normalizeRequiredPermissions = (permissions) => {

@@ -4,9 +4,9 @@ import { useMemo, useState } from 'react'
 
 import AgentApplicationsTable from './components/AgentApplicationsTable'
 
-import LoanTypeModal from '../../../components/Loans/LoanTypeModal'
-import StatusModal from '../../../components/Loans/StatusModal'
-import ReminderModal from '../../../components/Loans/ReminderModal'
+import LoanTypeModal from '../../../components/GlobalModels/Loans/LoanTypeModal'
+import StatusModal from '../../../components/GlobalModels/Loans/StatusModal'
+import ReminderModal from '../../../components/GlobalModels/Loans/ReminderModal'
 
 
 function AgentApplications() {

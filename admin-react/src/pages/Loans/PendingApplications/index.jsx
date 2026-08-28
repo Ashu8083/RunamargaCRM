@@ -3,9 +3,9 @@
 import { useMemo, useState } from 'react'
 
 import PendingApplicationsTable from './components/PendingApplicationsTable'
-import LoanTypeModal from '../../../components/Loans/LoanTypeModal'
-import StatusModal from '../../../components/Loans/StatusModal'
-import ReminderModal from '../../../components/Loans/ReminderModal'
+import LoanTypeModal from '../../../components/GlobalModels/Loans/LoanTypeModal'
+import StatusModal from '../../../components/GlobalModels/Loans/StatusModal'
+import ReminderModal from '../../../components/GlobalModels/Loans/ReminderModal'
 
 
 function PendingApplications() {

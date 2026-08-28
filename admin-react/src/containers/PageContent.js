@@ -37,7 +37,8 @@ function PageContent({ onToggleSidebar, sidebarOpen }){
                 onToggleSidebar={onToggleSidebar}
                 sidebarOpen={sidebarOpen}
             />
-            <main className="flex-1 overflow-y-auto pt-4 px-3 sm:px-6 bg-base-200" ref={mainContentRef}>
+            <main className="flex-1 overflow-y-auto bg-base-200" ref={mainContentRef}>
+            {/* <main className="flex-1 overflow-y-auto pt-4 px-3 sm:px-6 bg-base-200" ref={mainContentRef}> */}
                 <Suspense fallback={<SuspenseContent />}>
                         <Routes>
                             {

@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import AdminTable from './components/AdminTable'
 import AdminModal from './components/AdminModal'
-import PermissionsModal from './components/PermissionsModal'
+import PermissionsModal from '../../../components/GlobalModels/PermissionsModal'
 
 
 function Admins() {
