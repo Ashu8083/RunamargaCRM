@@ -21,7 +21,7 @@ import { APP_LOGO } from '../constants/assets'
 // =============================================================
 
 const DEVICE_ID_KEY = 'runamarga_crm_device_id'
-const MOCK_OTP = process.env.REACT_APP_MOCK_OTP || '123456'
+// const MOCK_OTP = process.env.REACT_APP_MOCK_OTP || '123456'
 
 
 // =============================================================
@@ -578,10 +578,10 @@ function Login({ onLogin }) {
         }
 
 
-        if (!/^\d{6}$/.test(enteredOtp)) {
+        if (!/^\d{4}$/.test(enteredOtp)) {
 
             setErrorMessage(
-                'OTP must contain 6 digits.'
+                'OTP must contain 4 digits.'
             )
 
             return
@@ -1051,7 +1051,7 @@ function Login({ onLogin }) {
                                     type="submit"
                                     disabled={
                                         loading ||
-                                        otp.length !== 6
+                                        otp.length !== 4
                                     }
                                     className="
                                         mt-5
@@ -1091,24 +1091,6 @@ function Login({ onLogin }) {
                                         : 'Verify & Login'}
 
                                 </button>
-
-
-                                {/* MOCK OTP */}
-
-                                <p className="
-                                    mt-4
-                                    text-center
-                                    text-xs
-                                    text-base-content/40
-                                ">
-                                    Mock OTP:
-                                    <span className="
-                                        ml-1
-                                        font-semibold
-                                    ">
-                                        {MOCK_OTP}
-                                    </span>
-                                </p>
 
                             </form>
 

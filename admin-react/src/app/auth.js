@@ -5,11 +5,10 @@ export const AUTH_STORAGE_KEYS = Object.freeze({
     refreshToken: 'refresh_token',
     user: 'auth_user',
 })
-
 const authClient = axios.create({
     baseURL: process.env.REACT_APP_BASE_URL || '/api',
+    withCredentials: true,
 })
-
 const AUTH_ENDPOINTS = Object.freeze({
     login: process.env.REACT_APP_AUTH_LOGIN_PATH || '/auth/login',
     requestOtp:
@@ -21,8 +20,14 @@ const AUTH_ENDPOINTS = Object.freeze({
     refresh: process.env.REACT_APP_AUTH_REFRESH_PATH || '/auth/refresh',
     logout: process.env.REACT_APP_AUTH_LOGOUT_PATH || '/auth/logout',
 })
+const isMockApiEnabled = () => {
+    console.log(
+        'REACT_APP_USE_MOCK_API =',
+        process.env.REACT_APP_USE_MOCK_API
+    )
 
-const isMockApiEnabled = () => process.env.REACT_APP_USE_MOCK_API !== 'false'
+    return process.env.REACT_APP_USE_MOCK_API !== 'false'
+}
 const getMockOtp = () => process.env.REACT_APP_MOCK_OTP || '123456'
 
 const wait = (delay = 300) => {
@@ -160,9 +165,8 @@ export const clearAuthSession = () => {
 }
 
 export const isAuthenticated = () => {
-    return Boolean(getAccessToken() || getRefreshToken())
+    return Boolean(getCurrentUser())
 }
-
 export const requestLoginOtp = async (payload) => {
     if (isMockApiEnabled()) {
         console.log('MOCK REQUEST OTP PAYLOAD:', payload)
@@ -178,7 +182,6 @@ export const requestLoginOtp = async (payload) => {
     const response = await authClient.post(AUTH_ENDPOINTS.requestOtp, payload)
     return normalizeStatusResponse(response, 'OTP sent successfully.')
 }
-
 export const verifyLoginOtp = async ({
     emailId,
     otp,
@@ -187,57 +190,37 @@ export const verifyLoginOtp = async ({
     ipAddress,
     location,
 }) => {
-    if (isMockApiEnabled()) {
-        console.log('MOCK VERIFY OTP:', {
+    const response = await authClient.post(
+        AUTH_ENDPOINTS.verifyOtp,
+        {
             emailId,
             otp,
             deviceId,
-        })
-
-        await wait(400)
-
-        if (otp !== getMockOtp()) {
-            return {
-                success: false,
-                message: `Invalid OTP. Use ${getMockOtp()} for mock login.`,
-            }
+            device,
+            ipAddress,
+            location,
         }
+    )
 
-        const session = createMockSession(emailId)
-        setAuthSession(session)
+    const result = normalizeStatusResponse(
+        response,
+        'Login successful.'
+    )
 
-        return {
-            success: true,
-            message: 'Login successful.',
-            ...session,
-        }
+    if (response.data?.employee_id) {
+        result.employee_id = response.data.employee_id
     }
 
-    const response = await authClient.post(AUTH_ENDPOINTS.verifyOtp, {
-        emailId,
-        otp,
-        deviceId,
-        device,
-        ipAddress,
-        location,
-    })
-
-    const result = normalizeStatusResponse(response, 'Login successful.')
-    const session = normalizeAuthResponse(response)
-
-    if (!session.accessToken || !session.refreshToken) {
-        throw new Error(
-            'Verify OTP API must return accessToken and refreshToken'
+    if (response.data?.user) {
+        localStorage.setItem(
+            AUTH_STORAGE_KEYS.user,
+            JSON.stringify(response.data.user)
         )
     }
 
-    setAuthSession(session)
+    notifyAuthChanged()
 
-    return {
-        ...result,
-        ...session,
-        success: result.success !== false,
-    }
+    return result
 }
 
 export const loginWithCredentials = async ({
@@ -272,42 +255,19 @@ export const loginWithCredentials = async ({
 }
 
 export const refreshAccessToken = async () => {
-    const refreshToken = getRefreshToken()
-
-    if (!refreshToken) {
-        throw new Error('Missing refresh token')
-    }
-
     if (isMockApiEnabled()) {
-        const session = {
-            accessToken: `mock-access-token-${Date.now()}`,
-            refreshToken,
-            user: getCurrentUser(),
-        }
-
-        setAuthSession(session)
-
-        return session.accessToken
+        return true
     }
 
-    const response = await authClient.post(AUTH_ENDPOINTS.refresh, {
-        refreshToken,
-    })
+    const response = await authClient.post(
+        AUTH_ENDPOINTS.refresh
+    )
 
-    const session = normalizeAuthResponse(response)
-    const accessToken = session.accessToken
-
-    if (!accessToken) {
-        throw new Error('Refresh API must return accessToken')
+    if (response.data?.message) {
+        return true
     }
 
-    setAuthSession({
-        accessToken,
-        refreshToken: session.refreshToken || refreshToken,
-        user: session.user || getCurrentUser(),
-    })
-
-    return accessToken
+    return true
 }
 
 export const logout = async () => {
@@ -316,7 +276,7 @@ export const logout = async () => {
     if (!isMockApiEnabled() && refreshToken) {
         await axios
             .post(AUTH_ENDPOINTS.logout, { refreshToken })
-            .catch(() => {})
+            .catch(() => { })
     }
 
     clearAuthSession()
