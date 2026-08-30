@@ -84,7 +84,12 @@ apiClient.interceptors.response.use(
                  *
                  * Retry the original request.
                  */
-                return apiClient(originalRequest)
+                const retryRequest = {
+                    ...originalRequest,
+                    headers: undefined,
+                }
+
+                return apiClient(retryRequest)
 
             } catch (refreshError) {
                 refreshRequest = null

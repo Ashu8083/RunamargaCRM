@@ -1,22 +1,43 @@
-import { getCurrentUser } from './auth'
+import { getCurrentUser, getActiveContext } from './auth'
 
 export const PERMISSIONS = Object.freeze({
+    // =========================================================
+    // MAIN
+    // =========================================================
+
     DASHBOARD_VIEW: 'dashboard:view',
     APPLICATION_FILTER_VIEW: 'application-filter:view',
     ATTENDANCE_VIEW: 'attendance:view',
     PROFILE_VIEW: 'profile:view',
-    CALL_LOGS_VIEW: 'call-logs:view',
-    CALL_ASSIGNMENT_VIEW: 'call-assignment:view',
-    CALL_ANALYTICS_OVERVIEW_VIEW: 'call-analytics-overview:view',
-    CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW: 'call-analytics-agent-performance:view',
-    CALL_ANALYTICS_CALL_TRENDS_VIEW: 'call-analytics-call-trends:view',
+
+    // =========================================================
+    // CALL MANAGEMENT
+    // =========================================================
+
+    CALL_LOGS_VIEW: 'calls:logs:view',
+    CALL_ASSIGNMENT_VIEW: 'calls:assignment:view',
+    CALL_ANALYTICS_OVERVIEW_VIEW:
+        'call-analytics-overview:view',
+    CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW:
+        'call-analytics-agent-performance:view',
+    CALL_ANALYTICS_CALL_TRENDS_VIEW:
+        'call-analytics-call-trends:view',
+
+    // =========================================================
+    // TEAMS & ROLES
+    // =========================================================
 
     ROLES_VIEW: 'roles:view',
     ROLES_MANAGE: 'roles:manage',
+
     TEAM_LEADS_VIEW: 'team-leads:view',
     AGENTS_VIEW: 'agents:view',
     ADMINS_VIEW: 'admins:view',
     PERMISSIONS_MANAGE: 'permissions:manage',
+
+    // =========================================================
+    // LOANS
+    // =========================================================
 
     LOANS_CREATE: 'loans:create',
     LOANS_VIEW: 'loans:view',
@@ -26,55 +47,190 @@ export const PERMISSIONS = Object.freeze({
     LOANS_SHUFFLE: 'loans:shuffle',
     LOANS_REVERTED_VIEW: 'loans:reverted:view',
     LOANS_ASSIGN: 'loans:assign',
-    LOANS_DUPLICATE_APPROVE: 'loans:duplicates:approve',
+    LOANS_DUPLICATE_APPROVE:
+        'loans:duplicates:approve',
     LOANS_STATUS_UPDATE: 'loans:status:update',
-    LOANS_REMINDER_CREATE: 'loans:reminder:create',
+    LOANS_REMINDER_CREATE:
+        'loans:reminder:create',
     LOANS_CHAT_VIEW: 'loans:chat:view',
+
+    // =========================================================
+    // BANKS / DSA
+    // =========================================================
 
     BANKS_VIEW: 'banks:view',
     BANKS_MANAGE: 'banks:manage',
+
     BANKERS_VIEW: 'bankers:view',
+
     DSA_VIEW: 'dsa:view',
     DSA_MANAGE: 'dsa:manage',
 
-    EMPLOYEE_ATTENDANCE_VIEW: 'employee-attendance:view',
+    // =========================================================
+    // EMPLOYEES
+    // =========================================================
+
+    EMPLOYEE_VIEW: 'employees:view',
+    EMPLOYEE_CREATE: 'employees:create',
+    EMPLOYEE_EDIT: 'employees:edit',
+    EMPLOYEE_DELETE: 'employees:delete',
+    EMPLOYEE_BLOCK: 'employees:block',
+
+    EMPLOYEE_ATTENDANCE_VIEW:
+        'employee-attendance:view',
 })
 
+
+// =========================================================
+// Normalize required permissions
+// =========================================================
+
 const normalizeRequiredPermissions = (permissions) => {
-    if (!permissions) return []
-    return Array.isArray(permissions) ? permissions : [permissions]
+    if (!permissions) {
+        return []
+    }
+
+    return Array.isArray(permissions)
+        ? permissions
+        : [permissions]
 }
 
-const getUserPermissions = (user = getCurrentUser()) => {
-    return Array.isArray(user?.permissions) ? user.permissions : []
+
+// =========================================================
+// Get permissions for ACTIVE CONTEXT
+// =========================================================
+//
+// Backend:
+//
+// user
+//   └── contexts
+//         ├── AGENT
+//         │     └── permissions[]
+//         │
+//         └── RM
+//               └── permissions[]
+//
+// Frontend:
+//
+// active_context_id
+//        ↓
+// getActiveContext()
+//        ↓
+// context.permissions
+//
+// =========================================================
+
+const getUserPermissions = (
+    user = getCurrentUser()
+) => {
+    if (!user) {
+        return []
+    }
+
+    // =====================================================
+    // NEW RBAC
+    // =====================================================
+
+    if (Array.isArray(user.contexts)) {
+        const activeContext =
+            getActiveContext(user)
+
+        if (!activeContext) {
+            return []
+        }
+
+        return Array.isArray(
+            activeContext.permissions
+        )
+            ? activeContext.permissions
+            : []
+    }
+
+    // =====================================================
+    // BACKWARD COMPATIBILITY
+    // =====================================================
+
+    if (Array.isArray(user.permissions)) {
+        return user.permissions
+    }
+
+    return []
 }
 
-export const hasAnyPermission = (permissions, user = getCurrentUser()) => {
-    const requiredPermissions = normalizeRequiredPermissions(permissions)
 
-    if (requiredPermissions.length === 0) return true
+// =========================================================
+// ANY permission
+// =========================================================
 
-    const userPermissions = getUserPermissions(user)
+export const hasAnyPermission = (
+    permissions,
+    user = getCurrentUser()
+) => {
+    const requiredPermissions =
+        normalizeRequiredPermissions(
+            permissions
+        )
 
-    if (userPermissions.includes('*')) return true
+    if (requiredPermissions.length === 0) {
+        return true
+    }
 
-    return requiredPermissions.some((permission) =>
-        userPermissions.includes(permission)
+    const userPermissions =
+        getUserPermissions(user)
+
+    // =====================================================
+    // SUPER ADMIN
+    // =====================================================
+
+    if (userPermissions.includes('*')) {
+        return true
+    }
+
+    return requiredPermissions.some(
+        (permission) =>
+            userPermissions.includes(permission)
     )
 }
 
-export const hasAllPermissions = (permissions, user = getCurrentUser()) => {
-    const requiredPermissions = normalizeRequiredPermissions(permissions)
 
-    if (requiredPermissions.length === 0) return true
+// =========================================================
+// ALL permissions
+// =========================================================
 
-    const userPermissions = getUserPermissions(user)
+export const hasAllPermissions = (
+    permissions,
+    user = getCurrentUser()
+) => {
+    const requiredPermissions =
+        normalizeRequiredPermissions(
+            permissions
+        )
 
-    if (userPermissions.includes('*')) return true
+    if (requiredPermissions.length === 0) {
+        return true
+    }
 
-    return requiredPermissions.every((permission) =>
-        userPermissions.includes(permission)
+    const userPermissions =
+        getUserPermissions(user)
+
+    // =====================================================
+    // SUPER ADMIN
+    // =====================================================
+
+    if (userPermissions.includes('*')) {
+        return true
+    }
+
+    return requiredPermissions.every(
+        (permission) =>
+            userPermissions.includes(permission)
     )
 }
 
-export const hasPermission = hasAnyPermission
+
+// =========================================================
+// Default permission checker
+// =========================================================
+
+export const hasPermission =
+    hasAnyPermission

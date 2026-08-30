@@ -56,6 +56,9 @@ const Admins = lazy(() =>
 const CreateApplication = lazy(
     () => import('../pages/Loans/CreateApplication/index')
 )
+const Applications = lazy(() =>
+    import('../pages/Loans/CombinedApplications/index')
+)
 
 const RMApplications = lazy(() =>
     import('../pages/Loans/RMApplications/index')
@@ -229,18 +232,22 @@ const routes = [
         component: ViewApplication,
         permission: PERMISSIONS.LOANS_VIEW,
     },
-
     {
-        path: '/rm-applications',
-        component: RMApplications,
-        permission: PERMISSIONS.LOANS_RM_VIEW,
+        path: '/applications',
+        component: Applications,
+        permission: PERMISSIONS.LOANS_VIEW,
     },
+    // {
+    //     path: '/rm-applications',
+    //     component: RMApplications,
+    //     permission: PERMISSIONS.LOANS_RM_VIEW,
+    // },
 
-    {
-        path: '/agent-applications',
-        component: AgentApplications,
-        permission: PERMISSIONS.LOANS_AGENT_VIEW,
-    },
+    // {
+    //     path: '/agent-applications',
+    //     component: AgentApplications,
+    //     permission: PERMISSIONS.LOANS_AGENT_VIEW,
+    // },
 
     {
         path: '/pending-applications',

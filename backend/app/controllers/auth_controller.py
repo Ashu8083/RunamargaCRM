@@ -37,7 +37,7 @@ def verify_otp(
             employee,
             access_token,
             refresh_token,
-            permissions,
+            contexts,
         ) = verify_login_otp(
             db=db,
             email=request.emailId,
@@ -51,7 +51,7 @@ def verify_otp(
             httponly=True,
             secure=False,
             samesite="lax",
-            max_age=30 * 60,
+            max_age=60,
         )
 
         # Refresh token
@@ -72,7 +72,7 @@ def verify_otp(
                 "name": employee.name,
                 "email": employee.email,
                 "role": employee.role.name if employee.role else None,
-                "permissions": permissions,
+                "contexts": contexts,
             },
         }
 

@@ -8,7 +8,12 @@ import SunIcon from "@heroicons/react/24/outline/SunIcon";
 
 import { openRightDrawer } from "../features/common/rightDrawerSlice";
 import { RIGHT_DRAWER_TYPES } from "../utils/globalConstantUtil";
-import { getCurrentUser, logout } from "../app/auth";
+import {
+  getCurrentUser,
+  logout,
+  getActiveContext,
+  setActiveContext,
+} from "../app/auth";
 import { getDefaultProfileImage } from "../constants/assets";
 
 import { useLocation } from "react-router-dom";
@@ -38,8 +43,26 @@ function Header({ onToggleSidebar, sidebarOpen }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [profileSrc, setProfileSrc] = useState(profileImage);
+  const contexts = Array.isArray(currentUser?.contexts)
+    ? currentUser.contexts
+    : [];
 
+  const [activeContext, setActiveContextState] = useState(() =>
+    getActiveContext(currentUser)
+  );
+  // =========================================================
+  // CONTEXT SWITCHING
+  // =========================================================
 
+  const handleContextChange = (context) => {
+    setActiveContext(context);
+
+    setActiveContextState(context);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("auth:changed"));
+    }
+  };
   // =========================================================
   // THEME
   // =========================================================
@@ -49,7 +72,7 @@ function Header({ onToggleSidebar, sidebarOpen }) {
 
     const preferredTheme =
       window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
+        window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
 
@@ -343,7 +366,75 @@ function Header({ onToggleSidebar, sidebarOpen }) {
 
       <div className="flex-none flex items-center gap-1 sm:gap-2">
 
+        {/* =================================================
+            CONTEXT SWITCHER
+    ================================================= */}
 
+        {contexts.length > 1 && (
+          <div className="dropdown dropdown-end">
+
+            <button
+              type="button"
+              tabIndex={0}
+              className="btn btn-ghost btn-sm gap-2"
+              title="Switch context"
+            >
+              <span className="hidden sm:inline text-xs text-base-content/60">
+                Context:
+              </span>
+
+              <span className="font-semibold">
+                {activeContext?.name || "Select Context"}
+              </span>
+
+              <span className="text-xs">
+                ▼
+              </span>
+            </button>
+
+            <ul
+              tabIndex={0}
+              className="
+        menu
+        menu-sm
+        dropdown-content
+        mt-3
+        p-2
+        shadow
+        bg-base-100
+        rounded-box
+        w-56
+        border
+        border-base-300
+      "
+            >
+              <li className="menu-title">
+                <span>Switch Context</span>
+              </li>
+
+              {contexts.map((context) => (
+                <li key={context.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleContextChange(context)}
+                    className="flex items-center justify-between"
+                  >
+                    <span>
+                      {context.name}
+                    </span>
+
+                    {activeContext?.id === context.id && (
+                      <span className="text-success font-bold">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+          </div>
+        )}
         {/* =================================================
                     DATE & TIME
             ================================================= */}

@@ -1,5 +1,5 @@
 # backend/app/routes/auth_routes.py
-from fastapi import APIRouter, Depends,Response,Cookie
+from fastapi import APIRouter, Depends, Response, Cookie, HTTPException
 from sqlalchemy.orm import Session
 from app.controllers.auth_controller import request_otp,verify_otp,refresh_token
 from app.config.database import get_db
@@ -35,10 +35,13 @@ def verify_otp_route(
 @router.post("/refresh")
 def refresh_token_route(
     response: Response,
-    refresh_token: str | None = Cookie(default=None),
+    refresh_token_cookie: str | None = Cookie(
+        default=None,
+        alias="refresh_token",
+    ),
     db: Session = Depends(get_db),
 ):
-    if not refresh_token:
+    if not refresh_token_cookie:
         raise HTTPException(
             status_code=401,
             detail="Refresh token not found",
@@ -46,6 +49,23 @@ def refresh_token_route(
 
     return refresh_token(
         db=db,
-        refresh_token=refresh_token,
+        refresh_token=refresh_token_cookie,
         response=response,
     )
+@router.post("/logout")
+def logout_route(
+    response: Response,
+):
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+    )
+
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+    )
+
+    return {
+        "message": "Logout successful",
+    }

@@ -122,17 +122,54 @@ export const getRefreshToken = () => {
 }
 
 export const getCurrentUser = () => {
-    const user = readJson(localStorage.getItem(AUTH_STORAGE_KEYS.user))
+    return readJson(
+        localStorage.getItem(AUTH_STORAGE_KEYS.user)
+    )
+}
+export const getActiveContext = (user = getCurrentUser()) => {
+    if (!user) return null
 
-    if (user) return user
+    const contexts = Array.isArray(user.contexts)
+        ? user.contexts
+        : []
 
-    if (isMockApiEnabled() && getAccessToken()) {
-        return createMockSession('admin@runamarga.local').user
+    if (contexts.length === 0) {
+        return null
     }
 
-    return null
+    const storedContextId =
+        localStorage.getItem('active_context_id')
+
+    if (storedContextId) {
+        const storedContext = contexts.find(
+            (context) =>
+                String(context.id) === String(storedContextId)
+        )
+
+        if (storedContext) {
+            return storedContext
+        }
+    }
+
+    return (
+        contexts.find((context) => context.is_default) ||
+        contexts[0]
+    )
 }
 
+
+export const setActiveContext = (context) => {
+    if (!context?.id) {
+        return
+    }
+
+    localStorage.setItem(
+        'active_context_id',
+        String(context.id)
+    )
+
+    notifyAuthChanged()
+}
 export const setAuthSession = ({
     accessToken,
     refreshToken,
@@ -160,7 +197,12 @@ export const clearAuthSession = () => {
     localStorage.removeItem(AUTH_STORAGE_KEYS.accessToken)
     localStorage.removeItem(AUTH_STORAGE_KEYS.refreshToken)
     localStorage.removeItem(AUTH_STORAGE_KEYS.user)
+
     localStorage.removeItem('token')
+
+    // Remove selected RBAC context
+    localStorage.removeItem('active_context_id')
+
     notifyAuthChanged()
 }
 
@@ -212,9 +254,11 @@ export const verifyLoginOtp = async ({
     }
 
     if (response.data?.user) {
+        const user = response.data.user
+
         localStorage.setItem(
             AUTH_STORAGE_KEYS.user,
-            JSON.stringify(response.data.user)
+            JSON.stringify(user)
         )
     }
 
@@ -271,12 +315,10 @@ export const refreshAccessToken = async () => {
 }
 
 export const logout = async () => {
-    const refreshToken = getRefreshToken()
-
-    if (!isMockApiEnabled() && refreshToken) {
-        await axios
-            .post(AUTH_ENDPOINTS.logout, { refreshToken })
-            .catch(() => { })
+    if (!isMockApiEnabled()) {
+        await authClient
+            .post(AUTH_ENDPOINTS.logout)
+            .catch(() => {})
     }
 
     clearAuthSession()

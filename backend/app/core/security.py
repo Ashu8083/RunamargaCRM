@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 import hashlib  
 import jwt
-from fastapi import Cookie, Depends
+from fastapi import Cookie, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.models.employees import Employee
 from app.config.database import get_db
@@ -14,7 +14,7 @@ JWT_SECRET_KEY = os.getenv(
 
 JWT_ALGORITHM = "HS256"
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 def hash_token(token: str) -> str:
@@ -86,10 +86,20 @@ def get_current_employee(
     db: Session = Depends(get_db),
     access_token: str | None = Cookie(default=None),
 ) -> Employee:
-    if not access_token:
-        raise ValueError("Authentication required")
 
-    employee_id = get_employee_id_from_token(access_token)
+    if not access_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+        )
+
+    try:
+        employee_id = get_employee_id_from_token(access_token)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=str(exc),
+        )
 
     employee = (
         db.query(Employee)
@@ -101,12 +111,21 @@ def get_current_employee(
     )
 
     if not employee:
-        raise ValueError("Employee not found")
+        raise HTTPException(
+            status_code=401,
+            detail="Employee not found",
+        )
 
     if employee.deactivate:
-        raise ValueError("Account is deactivated")
+        raise HTTPException(
+            status_code=401,
+            detail="Account is deactivated",
+        )
 
     if employee.status != "active":
-        raise ValueError("Account is inactive")
+        raise HTTPException(
+            status_code=401,
+            detail="Account is inactive",
+        )
 
     return employee

@@ -124,21 +124,13 @@ def create_login_otp(
     )
 
     return otp
-def get_employee_permissions(
+def get_employee_contexts(
     db: Session,
     employee_id: int,
-) -> list[str]:
-    permissions = (
-        db.query(Permission.code)
-        .join(
-            EmployeeContextPermission,
-            EmployeeContextPermission.permission_id == Permission.id,
-        )
-        .join(
-            EmployeeContext,
-            EmployeeContextPermission.employee_context_id
-            == EmployeeContext.id,
-        )
+) -> list[dict]:
+
+    employee_contexts = (
+        db.query(EmployeeContext)
         .join(
             Context,
             EmployeeContext.context_id == Context.id,
@@ -147,18 +139,48 @@ def get_employee_permissions(
             EmployeeContext.employee_id == employee_id,
             EmployeeContext.is_active.is_(True),
             Context.is_active.is_(True),
-            Permission.is_active.is_(True),
         )
-        .distinct()
         .all()
     )
 
-    return [permission.code for permission in permissions]
+    result = []
+
+    for employee_context in employee_contexts:
+
+        permissions = (
+            db.query(Permission.code)
+            .join(
+                EmployeeContextPermission,
+                EmployeeContextPermission.permission_id
+                == Permission.id,
+            )
+            .filter(
+                EmployeeContextPermission.employee_context_id
+                == employee_context.id,
+                Permission.is_active.is_(True),
+            )
+            .all()
+        )
+
+        result.append(
+            {
+                "id": employee_context.context.id,
+                "code": employee_context.context.code,
+                "name": employee_context.context.name,
+                "is_default": employee_context.is_default,
+                "permissions": [
+                    permission.code
+                    for permission in permissions
+                ],
+            }
+        )
+
+    return result
 def verify_login_otp(
     db: Session,
     email: str,
     otp: str,
-) -> tuple[Employee, str, str]:
+) -> tuple[Employee, str, str, list[dict]]:
 
     employee = find_employee_by_email(db, email)
 
@@ -193,12 +215,12 @@ def verify_login_otp(
         employee_id=employee.id,
         refresh_token=refresh_token,
     )
-    permissions = get_employee_permissions(
+    contexts = get_employee_contexts(
         db=db,
         employee_id=employee.id,
     )
 
-    return employee, access_token, refresh_token, permissions
+    return employee, access_token, refresh_token, contexts
 
 def save_refresh_token(
     db: Session,

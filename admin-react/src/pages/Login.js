@@ -968,7 +968,7 @@ function Login({ onLogin }) {
                                         type="text"
                                         inputMode="numeric"
                                         autoComplete="one-time-code"
-                                        maxLength={6}
+                                        maxLength={4}
                                         value={otp}
                                         onChange={(event) => {
 
@@ -980,14 +980,14 @@ function Login({ onLogin }) {
                                                     )
                                                     .slice(
                                                         0,
-                                                        6
+                                                        4
                                                     )
 
                                             setOtp(value)
                                             setErrorMessage('')
 
                                         }}
-                                        placeholder="Enter 6-digit OTP"
+                                        placeholder="Enter 4-digit OTP"
                                         autoFocus
                                         className="
                                             input
