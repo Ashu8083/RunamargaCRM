@@ -10,6 +10,10 @@ export const PERMISSIONS = Object.freeze({
     CALL_ANALYTICS_OVERVIEW_VIEW: 'call-analytics-overview:view',
     CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW: 'call-analytics-agent-performance:view',
     CALL_ANALYTICS_CALL_TRENDS_VIEW: 'call-analytics-call-trends:view',
+    AGENT_ANALYTICS_OVERVIEW_VIEW: 'agent-analytics-overview:view',
+    AGENT_Performance_OVERVIEW_VIEW: 'agent-performance-overview:view',
+    PHONE_NUMBERS_VIEW:"phone-numbers-view",
+    ADMIN_LOGS_VIEW:"admin-logs-view",
 
     ROLES_VIEW: 'roles:view',
     ROLES_MANAGE: 'roles:manage',

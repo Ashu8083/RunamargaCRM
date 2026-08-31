@@ -1,4 +1,4 @@
-// admin-react/src/pages/CallManagement/CallAnalytics/Overview/components/CallActivityGraph.jsx
+// admin-react/src/pages/Analytics/CallAnalytics/Overview/components/CallActivityGraph.jsx
 
 import { useMemo } from 'react'
 

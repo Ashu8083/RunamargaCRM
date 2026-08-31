@@ -10,6 +10,7 @@ import {
 import BankersDirectoryTable from './components/BankersDirectoryTable'
 import BankerModal from './components/BankerModal'
 import BankerViewModal from './components/BankerViewModal'
+import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
 
 // =============================================================
@@ -176,7 +177,6 @@ const LOAN_TYPES = [
 // City
 // Bank
 //
-// Loan Type intentionally uses normal select.
 // =============================================================
 
 function SearchableFilterDropdown({
@@ -1416,61 +1416,16 @@ function BankersDirectory() {
 
                         {/* LOAN TYPE */}
 
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                Loan Type
-                            </label>
-
-
-                            <select
-                                value={
-                                    selectedLoanType
-                                }
-                                onChange={(event) =>
-                                    setSelectedLoanType(
-                                        event.target.value
-                                    )
-                                }
-                                className="
-                                    select
-                                    select-bordered
-                                    h-10
-                                    min-h-10
-                                    w-full
-                                "
-                            >
-
-                                <option value="">
-                                    All Loan Types
-                                </option>
-
-                                {LOAN_TYPES.map(
-                                    (loanType) => (
-
-                                        <option
-                                            key={
-                                                loanType
-                                            }
-                                            value={
-                                                loanType
-                                            }
-                                        >
-                                            {loanType}
-                                        </option>
-
-                                    )
-                                )}
-
-                            </select>
-
-                        </div>
+                        <LoanTypeDropdown
+                            value={
+                                selectedLoanType
+                            }
+                            onChange={
+                                setSelectedLoanType
+                            }
+                            options={LOAN_TYPES}
+                            className="min-w-0"
+                        />
 
                     </div>
 

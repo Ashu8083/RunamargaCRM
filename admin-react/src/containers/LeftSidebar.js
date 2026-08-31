@@ -3,50 +3,102 @@
 import { useState } from 'react'
 import routes from '../routes/sidebarmenu'
 import { NavLink, Link, useLocation } from 'react-router-dom'
+
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
+
 import { APP_LOGO } from '../constants/assets'
 import { getCurrentUser } from '../app/auth'
 import { hasPermission } from '../app/permissions'
 
+
 function LeftSidebar({ onClose }) {
+
     const location = useLocation()
     const currentUser = getCurrentUser()
+
+
+    // =========================================================
+    // CLOSE SIDEBAR
+    // =========================================================
 
     const close = () => {
         onClose?.()
     }
 
+
     const closeOnMobile = () => {
-        if (window.matchMedia('(max-width: 1023px)').matches) {
+
+        if (
+            window.matchMedia(
+                '(max-width: 1023px)'
+            ).matches
+        ) {
             close()
         }
     }
 
-    const canSeeRoute = (route) => {
-        return hasPermission(route.permission, currentUser)
-    }
 
     // =========================================================
-    // Check whether a nested submenu contains the active route
+    // PERMISSION CHECK
+    // =========================================================
+
+    const canSeeRoute = (route) => {
+        return hasPermission(
+            route.permission,
+            currentUser
+        )
+    }
+
+
+    // =========================================================
+    // CHECK WHETHER A NESTED SUBMENU CONTAINS
+    // THE CURRENT ACTIVE ROUTE
     // =========================================================
 
     const hasActiveChild = (submenu = []) => {
+
         return submenu.some((item) => {
-            if (item.path && location.pathname === item.path) {
+
+            // -------------------------------------------------
+            // Direct route
+            // -------------------------------------------------
+
+            if (
+                item.path &&
+                location.pathname === item.path
+            ) {
                 return true
             }
 
+
+            // -------------------------------------------------
+            // Nested submenu
+            // -------------------------------------------------
+
             if (item.submenu) {
-                return hasActiveChild(item.submenu)
+
+                return hasActiveChild(
+                    item.submenu
+                )
             }
+
 
             return false
         })
     }
 
+
+    // =========================================================
+    // RENDER
+    // =========================================================
+
     return (
         <div className="drawer-side z-30">
+
+            {/* =================================================
+                Drawer overlay
+            ================================================= */}
 
             <label
                 htmlFor="left-sidebar-drawer"
@@ -55,25 +107,57 @@ function LeftSidebar({ onClose }) {
             ></label>
 
 
-            <ul className="menu pt-2 w-72 lg:w-64 bg-base-100 min-h-full text-base-content overflow-y-auto">
+            {/* =================================================
+                Sidebar
+            ================================================= */}
 
-                {/* =====================================================
+            <ul
+                className="
+                    menu
+                    pt-2
+                    w-72
+                    lg:w-64
+                    bg-base-100
+                    min-h-full
+                    text-base-content
+                    overflow-y-auto
+                "
+            >
+
+
+                {/* =================================================
                     Mobile close button
-                ===================================================== */}
+                ================================================= */}
 
                 <button
-                    className="btn btn-ghost bg-base-300 btn-circle z-50 top-0 right-0 mt-4 mr-2 absolute lg:hidden"
+                    className="
+                        btn
+                        btn-ghost
+                        bg-base-300
+                        btn-circle
+                        z-50
+                        top-0
+                        right-0
+                        mt-4
+                        mr-2
+                        absolute
+                        lg:hidden
+                    "
                     onClick={close}
                     type="button"
                     aria-label="Close sidebar"
                 >
-                    <XMarkIcon className="h-5 inline-block w-5" />
+
+                    <XMarkIcon
+                        className="h-5 inline-block w-5"
+                    />
+
                 </button>
 
 
-                {/* =====================================================
+                {/* =================================================
                     Logo
-                ===================================================== */}
+                ================================================= */}
 
                 <li className="mb-2 font-semibold text-xl">
 
@@ -92,33 +176,48 @@ function LeftSidebar({ onClose }) {
                 </li>
 
 
-                {/* =====================================================
+                {/* =================================================
                     Sidebar routes
-                ===================================================== */}
+                ================================================= */}
 
                 {routes.map((route, index) => {
 
-                    // =====================================================
+
+                    // =================================================
                     // SECTION
-                    // =====================================================
+                    // =================================================
 
                     if (route.type === 'section') {
 
-                        const visibleSubmenu = route.submenu.filter((item) => {
+                        const visibleSubmenu =
+                            route.submenu.filter((item) => {
 
-                            // Normal item
-                            if (!item.submenu) {
-                                return canSeeRoute(item)
-                            }
+                                // -------------------------------------
+                                // Normal section item
+                                // -------------------------------------
 
-                            // Nested submenu
-                            return item.submenu.some((child) =>
-                                canSeeRoute(child)
-                            )
-                        })
+                                if (!item.submenu) {
+                                    return canSeeRoute(item)
+                                }
 
 
-                        if (visibleSubmenu.length === 0) {
+                                // -------------------------------------
+                                // Nested submenu
+                                // -------------------------------------
+
+                                return item.submenu.some((child) =>
+                                    canSeeRoute(child)
+                                )
+                            })
+
+
+                        // -----------------------------------------
+                        // Nothing visible
+                        // -----------------------------------------
+
+                        if (
+                            visibleSubmenu.length === 0
+                        ) {
                             return null
                         }
 
@@ -130,9 +229,24 @@ function LeftSidebar({ onClose }) {
                                     Section heading
                                 ================================================= */}
 
-                                <li className="mt-5 mb-1 px-3 pointer-events-none">
+                                <li
+                                    className="
+                                        mt-5
+                                        mb-1
+                                        px-3
+                                        pointer-events-none
+                                    "
+                                >
 
-                                    <span className="text-xs font-semibold uppercase tracking-wider text-base-content/60">
+                                    <span
+                                        className="
+                                            text-xs
+                                            font-semibold
+                                            uppercase
+                                            tracking-wider
+                                            text-base-content/60
+                                        "
+                                    >
                                         {route.name}
                                     </span>
 
@@ -143,73 +257,94 @@ function LeftSidebar({ onClose }) {
                                     Section items
                                 ================================================= */}
 
-                                {visibleSubmenu.map((item, itemIndex) => {
+                                {visibleSubmenu.map(
+                                    (item, itemIndex) => {
 
-                                    // =================================================
-                                    // NESTED SUBMENU
-                                    // =================================================
 
-                                    if (item.type === 'submenu') {
+                                        // =================================================
+                                        // NESTED SUBMENU
+                                        // =================================================
+
+                                        if (
+                                            item.type === 'submenu'
+                                        ) {
+
+                                            return (
+                                                <NestedSubmenu
+                                                    key={itemIndex}
+                                                    item={item}
+                                                    location={location}
+                                                    currentUser={currentUser}
+                                                    canSeeRoute={canSeeRoute}
+                                                    closeOnMobile={closeOnMobile}
+                                                    hasActiveChild={hasActiveChild}
+                                                />
+                                            )
+                                        }
+
+
+                                        // =================================================
+                                        // NORMAL SECTION ITEM
+                                        // =================================================
 
                                         return (
-                                            <NestedSubmenu
-                                                key={itemIndex}
-                                                item={item}
-                                                location={location}
-                                                currentUser={currentUser}
-                                                canSeeRoute={canSeeRoute}
-                                                closeOnMobile={closeOnMobile}
-                                                hasActiveChild={hasActiveChild}
-                                            />
+                                            <li key={itemIndex}>
+
+                                                <NavLink
+                                                    end
+                                                    to={item.path}
+                                                    onClick={closeOnMobile}
+                                                    className={({ isActive }) => `
+                                                        relative
+                                                        flex
+                                                        items-center
+                                                        gap-3
+                                                        ${isActive
+                                                            ? 'font-semibold !bg-base-200 !text-base-content'
+                                                            : 'font-normal'
+                                                        }
+                                                    `}
+                                                >
+
+                                                    {item.icon}
+
+                                                    {item.name}
+
+
+                                                    {/* =====================================
+                                                        Active indicator
+                                                    ===================================== */}
+
+                                                    {location.pathname === item.path && (
+                                                        <span
+                                                            className="
+                                                                absolute
+                                                                inset-y-0
+                                                                left-0
+                                                                w-1
+                                                                rounded-tr-md
+                                                                rounded-br-md
+                                                                bg-primary
+                                                            "
+                                                            aria-hidden="true"
+                                                        ></span>
+                                                    )}
+
+                                                </NavLink>
+
+                                            </li>
                                         )
                                     }
-
-
-                                    // =================================================
-                                    // NORMAL SECTION ITEM
-                                    // =================================================
-
-                                    return (
-                                        <li key={itemIndex}>
-
-                                            <NavLink
-                                                end
-                                                to={item.path}
-                                                onClick={closeOnMobile}
-                                                className={({ isActive }) =>
-                                                    `${isActive
-                                                        ? 'font-semibold bg-base-200'
-                                                        : 'font-normal'
-                                                    }`
-                                                }
-                                            >
-
-                                                {item.icon}
-
-                                                {item.name}
-
-
-                                                {location.pathname === item.path && (
-                                                    <span
-                                                        className="absolute inset-y-0 left-0 w-1 rounded-tr-md rounded-br-md bg-primary"
-                                                        aria-hidden="true"
-                                                    ></span>
-                                                )}
-
-                                            </NavLink>
-
-                                        </li>
-                                    )
-                                })}
+                                )}
 
                             </div>
                         )
                     }
 
 
-                    // =====================================================
+                    // =================================================
                     // NORMAL SIDEBAR ITEM
-                    // =====================================================
+                    // =================================================
 
                     if (!canSeeRoute(route)) {
                         return null
@@ -223,12 +358,16 @@ function LeftSidebar({ onClose }) {
                                 end
                                 to={route.path}
                                 onClick={closeOnMobile}
-                                className={({ isActive }) =>
-                                    `${isActive
-                                        ? 'font-semibold bg-base-200'
+                                className={({ isActive }) => `
+                                    relative
+                                    flex
+                                    items-center
+                                    gap-3
+                                    ${isActive
+                                        ? 'font-semibold !bg-base-200 !text-base-content'
                                         : 'font-normal'
-                                    }`
-                                }
+                                    }
+                                `}
                             >
 
                                 {route.icon}
@@ -236,9 +375,21 @@ function LeftSidebar({ onClose }) {
                                 {route.name}
 
 
+                                {/* =============================================
+                                    Active indicator
+                                ============================================= */}
+
                                 {location.pathname === route.path && (
                                     <span
-                                        className="absolute inset-y-0 left-0 w-1 rounded-tr-md rounded-br-md bg-primary"
+                                        className="
+                                            absolute
+                                            inset-y-0
+                                            left-0
+                                            w-1
+                                            rounded-tr-md
+                                            rounded-br-md
+                                            bg-primary
+                                        "
                                         aria-hidden="true"
                                     ></span>
                                 )}
@@ -250,6 +401,7 @@ function LeftSidebar({ onClose }) {
                 })}
 
             </ul>
+
         </div>
     )
 }
@@ -267,17 +419,35 @@ function NestedSubmenu({
     hasActiveChild,
 }) {
 
-    const containsActiveRoute = hasActiveChild(item.submenu)
+    // =========================================================
+    // Check if one of the children is active
+    // =========================================================
 
-    const [isOpen, setIsOpen] = useState(containsActiveRoute)
+    const containsActiveRoute =
+        hasActiveChild(item.submenu)
+
+
+    // =========================================================
+    // Automatically open submenu if current page
+    // belongs to it
+    // =========================================================
+
+    const [isOpen, setIsOpen] = useState(
+        containsActiveRoute
+    )
 
 
     // =========================================================
     // Visible children based on permissions
     // =========================================================
 
-    const visibleChildren = item.submenu.filter(canSeeRoute)
+    const visibleChildren =
+        item.submenu.filter(canSeeRoute)
 
+
+    // =========================================================
+    // Don't render if user has no permission
+    // =========================================================
 
     if (visibleChildren.length === 0) {
         return null
@@ -289,12 +459,15 @@ function NestedSubmenu({
     // =========================================================
 
     const toggleSubmenu = () => {
+
         setIsOpen((previous) => !previous)
+
     }
 
 
     return (
         <li>
+
 
             {/* =====================================================
                 Nested submenu button
@@ -310,7 +483,7 @@ function NestedSubmenu({
                     gap-3
                     font-normal
                     ${containsActiveRoute
-                        ? 'bg-base-200 font-semibold'
+                        ? '!bg-base-200 !text-base-content font-semibold'
                         : ''
                     }
                 `}
@@ -320,9 +493,15 @@ function NestedSubmenu({
 
                 {item.icon}
 
+
                 <span className="flex-1 text-left">
                     {item.name}
                 </span>
+
+
+                {/* =================================================
+                    Dropdown arrow
+                ================================================= */}
 
                 <ChevronDownIcon
                     className={`
@@ -330,7 +509,10 @@ function NestedSubmenu({
                         w-4
                         transition-transform
                         duration-200
-                        ${isOpen ? 'rotate-180' : ''}
+                        ${isOpen
+                            ? 'rotate-180'
+                            : ''
+                        }
                     `}
                 />
 
@@ -342,75 +524,117 @@ function NestedSubmenu({
             ===================================================== */}
 
             {isOpen && (
-                <ul className="ml-4 mt-1">
 
-                    {visibleChildren.map((child, childIndex) => {
+                <ul
+                    className="
+                        ml-4
+                        mt-1
+                        border-l
+                        border-base-content/10
+                        pl-1
+                    "
+                >
 
-                        // =================================================
-                        // Support another nested submenu if required
-                        // =================================================
+                    {visibleChildren.map(
+                        (child, childIndex) => {
 
-                        if (child.type === 'submenu') {
+
+                            // =================================================
+                            // Support another nested submenu
+                            // =================================================
+
+                            if (
+                                child.type === 'submenu'
+                            ) {
+
+                                return (
+                                    <NestedSubmenu
+                                        key={childIndex}
+                                        item={child}
+                                        location={location}
+                                        canSeeRoute={canSeeRoute}
+                                        closeOnMobile={closeOnMobile}
+                                        hasActiveChild={hasActiveChild}
+                                    />
+                                )
+                            }
+
+
+                            // =================================================
+                            // Check active child
+                            // =================================================
+
+                            const isActive =
+                                location.pathname === child.path
+
+
+                            // =================================================
+                            // Normal nested route
+                            // =================================================
 
                             return (
-                                <NestedSubmenu
-                                    key={childIndex}
-                                    item={child}
-                                    location={location}
-                                    canSeeRoute={canSeeRoute}
-                                    closeOnMobile={closeOnMobile}
-                                    hasActiveChild={hasActiveChild}
-                                />
+                                <li key={childIndex}>
+
+                                    <NavLink
+                                        end
+                                        to={child.path}
+                                        onClick={closeOnMobile}
+                                        className={`
+                                            relative
+                                            flex
+                                            items-center
+                                            gap-3
+
+                                            ${
+                                                isActive
+                                                    ? `
+                                                        font-semibold
+                                                        !bg-base-200
+                                                        !text-base-content
+                                                    `
+                                                    : `
+                                                        font-normal
+                                                    `
+                                            }
+                                        `}
+                                    >
+
+                                        {child.icon}
+
+
+                                        <span className="truncate">
+                                            {child.name}
+                                        </span>
+
+
+                                        {/* =====================================
+                                            Active indicator
+                                        ===================================== */}
+
+                                        {isActive && (
+                                            <span
+                                                className="
+                                                    absolute
+                                                    inset-y-0
+                                                    left-0
+                                                    w-1
+                                                    rounded-tr-md
+                                                    rounded-br-md
+                                                    bg-primary
+                                                "
+                                                aria-hidden="true"
+                                            ></span>
+                                        )}
+
+                                    </NavLink>
+
+                                </li>
                             )
                         }
-
-
-                        // =================================================
-                        // Normal nested route
-                        // =================================================
-
-                        const isActive =
-                            location.pathname === child.path
-
-
-                        return (
-                            <li key={childIndex}>
-
-                                <NavLink
-                                    end
-                                    to={child.path}
-                                    onClick={closeOnMobile}
-                                    className={`
-                                        relative
-                                        flex
-                                        items-center
-                                        gap-3
-                                        ${isActive
-                                            ? 'font-semibold bg-base-200'
-                                            : 'font-normal'
-                                        }
-                                    `}
-                                >
-
-                                    {child.icon}
-
-                                    {child.name}
-
-
-                                    {isActive && (
-                                        <span
-                                            className="absolute inset-y-0 left-0 w-1 rounded-tr-md rounded-br-md bg-primary"
-                                            aria-hidden="true"
-                                        ></span>
-                                    )}
-
-                                </NavLink>
-
-                            </li>
-                        )
-                    })}
+                    )}
 
                 </ul>
+
             )}
 
         </li>

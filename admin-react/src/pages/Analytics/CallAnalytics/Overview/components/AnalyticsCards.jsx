@@ -1,4 +1,4 @@
-// admin-react/src/pages/CallManagement/CallAnalytics/Overview/components/AnalyticsCards.jsx
+// admin-react/src/pages/Analytics/CallAnalytics/Overview/components/AnalyticsCards.jsx
 
 import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
 import PhoneArrowDownLeftIcon from '@heroicons/react/24/outline/PhoneArrowDownLeftIcon'

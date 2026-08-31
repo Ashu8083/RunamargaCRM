@@ -1,92 +1,230 @@
 // admin-react/src/pages/Role-management/TeamLead/components/AssignedAgentsModal.jsx
-import { useEffect, useState } from 'react'
+
+import { useEffect, useMemo, useState } from 'react'
+
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
+import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 
 
 function AssignedAgentsModal({
     open,
     teamLead,
+    employees = [],
     onClose,
 }) {
 
-    const [agents, setAgents] = useState([])
+    const [search, setSearch] = useState('')
 
+
+    // =========================================================
+    // RESET SEARCH
+    // =========================================================
 
     useEffect(() => {
 
         if (!open || !teamLead) {
-            setAgents([])
+            setSearch('')
             return
+        }
+
+        setSearch('')
+
+    }, [open, teamLead])
+
+
+    // =========================================================
+    // GET ASSIGNED EMPLOYEES
+    // =========================================================
+
+    const assignedEmployees = useMemo(() => {
+
+        if (!teamLead) {
+            return []
         }
 
 
         /*
-         * Temporary local data.
+         * Team Lead stores assigned employee IDs.
          *
-         * Later replace this with the API call:
+         * Example:
          *
-         * GET /team-leads/{teamLead.id}/agents
+         * assignedAgentIds: [101, 102]
+         *
+         * Resolve those IDs against the employee list.
          */
 
-        setAgents(
-            teamLead.assignedAgents || [
-                {
-                    id: 1,
-                    name: 'Agent One',
-                    phone: '9876543210',
-                    email: 'agent1@example.com',
-                    loanType: 'Personal Loan',
-                },
-                {
-                    id: 2,
-                    name: 'Agent Two',
-                    phone: '9876543211',
-                    email: 'agent2@example.com',
-                    loanType: 'Business Loan',
-                },
-            ]
+
+        if (
+            Array.isArray(
+                teamLead.assignedAgentIds
+            )
+        ) {
+
+            return employees.filter(
+                (employee) =>
+                    teamLead.assignedAgentIds.some(
+                        (id) =>
+                            String(id) ===
+                            String(employee.id)
+                    )
+            )
+
+        }
+
+
+        /*
+         * Backward compatibility if assignedAgents
+         * objects are already present.
+         */
+
+        return teamLead.assignedAgents || []
+
+    }, [employees, teamLead])
+
+
+    // =========================================================
+    // FILTER ASSIGNED EMPLOYEES
+    // =========================================================
+
+    const filteredEmployees = useMemo(() => {
+
+        const searchValue =
+            search.trim().toLowerCase()
+
+
+        if (!searchValue) {
+            return assignedEmployees
+        }
+
+
+        return assignedEmployees.filter(
+            (employee) => {
+
+                return (
+
+                    employee.name
+                        ?.toLowerCase()
+                        .includes(searchValue)
+
+                    ||
+
+                    employee.employeeId
+                        ?.toLowerCase()
+                        .includes(searchValue)
+
+                    ||
+
+                    employee.phone
+                        ?.toLowerCase()
+                        .includes(searchValue)
+
+                    ||
+
+                    employee.email
+                        ?.toLowerCase()
+                        .includes(searchValue)
+
+                )
+
+            }
         )
 
-    }, [open, teamLead])
+    }, [
+        assignedEmployees,
+        search,
+    ])
 
+
+    // =========================================================
+    // CLOSED
+    // =========================================================
 
     if (!open || !teamLead) {
         return null
     }
 
 
+    // =========================================================
+    // MODAL
+    // =========================================================
+
     return (
+
         <dialog
             open
-            className="modal modal-bottom sm:modal-middle"
+            className="
+                modal
+                modal-bottom
+                sm:modal-middle
+            "
         >
 
-            <div className="modal-box w-11/12 max-w-3xl p-0 bg-base-100 border border-base-300">
+            <div className="
+                modal-box
+                w-11/12
+                max-w-3xl
+                border
+                border-base-300
+                bg-base-100
+                p-0
+            ">
 
-                {/* =====================================================
+                {/* =================================================
                     HEADER
-                ===================================================== */}
+                ================================================= */}
 
-                <div className="flex items-center justify-between p-5 border-b border-base-300">
+                <div className="
+                    flex
+                    items-center
+                    justify-between
+                    border-b
+                    border-base-300
+                    p-5
+                ">
 
-                    <div className="flex items-center gap-3">
+                    <div className="
+                        flex
+                        items-center
+                        gap-3
+                    ">
 
-                        <div className="w-9 h-9 rounded-lg bg-[#8BCF00]/10 flex items-center justify-center">
+                        <div className="
+                            flex
+                            h-9
+                            w-9
+                            items-center
+                            justify-center
+                            rounded-lg
+                            bg-[#8BCF00]/10
+                        ">
 
-                            <UserGroupIcon className="w-5 h-5 text-[#78B300]" />
+                            <UserGroupIcon className="
+                                h-5
+                                w-5
+                                text-[#78B300]
+                            " />
 
                         </div>
 
 
                         <div>
 
-                            <h3 className="text-lg font-semibold">
+                            <h3 className="
+                                text-lg
+                                font-semibold
+                            ">
                                 Assigned Agents
                             </h3>
 
-                            <p className="text-xs text-base-content/50 mt-1">
-                                Agents assigned to {teamLead.name}
+
+                            <p className="
+                                mt-1
+                                text-xs
+                                text-base-content/50
+                            ">
+                                Agents assigned to{' '}
+                                {teamLead.name}
                             </p>
 
                         </div>
@@ -97,144 +235,297 @@ function AssignedAgentsModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="btn btn-sm btn-ghost btn-circle"
+                        className="
+                            btn
+                            btn-sm
+                            btn-ghost
+                            btn-circle
+                        "
                         aria-label="Close"
                     >
-                        <XMarkIcon className="w-5 h-5" />
+
+                        <XMarkIcon className="
+                            h-5
+                            w-5
+                        " />
+
                     </button>
 
                 </div>
 
 
-                {/* =====================================================
-                    AGENTS
-                ===================================================== */}
+                {/* =================================================
+                    SUMMARY
+                ================================================= */}
 
-                <div className="p-5">
+                <div className="px-5 pt-5">
 
-                    {agents.length === 0 ? (
+                    <div className="
+                        rounded-lg
+                        border
+                        border-base-300
+                        bg-base-200/30
+                        px-4
+                        py-3
+                    ">
 
-                        <div className="text-center py-12">
+                        <p className="
+                            text-xs
+                            text-base-content/50
+                        ">
+                            Assigned Agents
+                        </p>
 
-                            <UserGroupIcon className="w-9 h-9 mx-auto text-base-content/30" />
 
-                            <p className="text-sm font-medium mt-3">
-                                No agents assigned
+                        <p className="
+                            mt-1
+                            text-lg
+                            font-semibold
+                        ">
+                            {assignedEmployees.length}
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                {/* =================================================
+                    SEARCH
+                ================================================= */}
+
+                <div className="px-5 pt-4">
+
+                    <label className="
+                        input
+                        input-bordered
+                        flex
+                        items-center
+                        gap-3
+                    ">
+
+                        <MagnifyingGlassIcon className="
+                            h-4
+                            w-4
+                            text-base-content/40
+                        " />
+
+
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(event) =>
+                                setSearch(
+                                    event.target.value
+                                )
+                            }
+                            placeholder="Search assigned agents..."
+                            className="grow"
+                        />
+
+                    </label>
+
+                </div>
+
+
+                {/* =================================================
+                    ASSIGNED AGENTS
+                ================================================= */}
+
+                <div className="
+                    max-h-[55vh]
+                    overflow-y-auto
+                    p-5
+                ">
+
+                    {filteredEmployees.length === 0 ? (
+
+                        <div className="
+                            py-12
+                            text-center
+                        ">
+
+                            <UserGroupIcon className="
+                                mx-auto
+                                h-9
+                                w-9
+                                text-base-content/30
+                            " />
+
+
+                            <p className="
+                                mt-3
+                                text-sm
+                                font-medium
+                            ">
+
+                                {assignedEmployees.length === 0
+                                    ? 'No agents assigned'
+                                    : 'No agents found'
+                                }
+
                             </p>
 
-                            <p className="text-xs text-base-content/50 mt-1">
-                                Agents assigned to this team lead will appear here.
+
+                            <p className="
+                                mt-1
+                                text-xs
+                                text-base-content/50
+                            ">
+
+                                {assignedEmployees.length === 0
+                                    ? 'Agents assigned to this team lead will appear here.'
+                                    : 'Try changing your search.'
+                                }
+
                             </p>
 
                         </div>
 
                     ) : (
 
-                        <div className="overflow-x-auto">
+                        <div className="
+                            overflow-hidden
+                            rounded-lg
+                            border
+                            border-base-300
+                        ">
 
-                            <table className="table">
+                            {filteredEmployees.map(
+                                (employee, index) => (
 
-                                <thead>
+                                    <div
+                                        key={
+                                            employee.id ||
+                                            employee.employeeId ||
+                                            index
+                                        }
+                                        className="
+                                            flex
+                                            items-center
+                                            justify-between
+                                            gap-4
+                                            border-b
+                                            border-base-300
+                                            px-4
+                                            py-3
+                                            last:border-b-0
+                                        "
+                                    >
 
-                                    <tr>
+                                        {/* =================================
+                                            EMPLOYEE INFORMATION
+                                        ================================= */}
 
-                                        <th className="w-14 text-center">
-                                            #
-                                        </th>
+                                        <div className="
+                                            flex
+                                            min-w-0
+                                            items-center
+                                            gap-3
+                                        ">
 
-                                        <th>
-                                            Agent
-                                        </th>
+                                            {/* Employee Icon */}
 
-                                        <th>
-                                            Contact Info
-                                        </th>
+                                            <div className="
+                                                flex
+                                                h-9
+                                                w-9
+                                                shrink-0
+                                                items-center
+                                                justify-center
+                                                rounded-lg
+                                                bg-[#8BCF00]/10
+                                            ">
 
-                                        <th>
-                                            Loan Type
-                                        </th>
+                                                <UserGroupIcon className="
+                                                    h-4
+                                                    w-4
+                                                    text-[#78B300]
+                                                " />
 
-                                    </tr>
-
-                                </thead>
-
-
-                                <tbody>
-
-                                    {agents.map((agent, index) => (
-
-                                        <tr key={agent.id}>
-
-                                            {/* Index */}
-
-                                            <td className="text-center">
-
-                                                <span className="text-sm text-base-content/60">
-                                                    {index + 1}
-                                                </span>
-
-                                            </td>
+                                            </div>
 
 
-                                            {/* Agent */}
+                                            {/* Employee */}
 
-                                            <td>
+                                            <div className="
+                                                min-w-0
+                                            ">
 
-                                                <span className="font-semibold">
-                                                    {agent.name}
-                                                </span>
+                                                <p className="
+                                                    truncate
+                                                    text-sm
+                                                    font-semibold
+                                                ">
+                                                    {employee.name ||
+                                                        'N/A'
+                                                    }
+                                                </p>
 
-                                            </td>
+
+                                                <div className="
+                                                    mt-0.5
+                                                    flex
+                                                    flex-wrap
+                                                    items-center
+                                                    gap-x-3
+                                                    gap-y-1
+                                                ">
+
+                                                    <span className="
+                                                        text-xs
+                                                        text-base-content/50
+                                                    ">
+                                                        ID:{' '}
+                                                        {employee.employeeId ||
+                                                            employee.id ||
+                                                            'N/A'
+                                                        }
+                                                    </span>
 
 
-                                            {/* Contact */}
+                                                    {employee.phone && (
 
-                                            <td>
+                                                        <span className="
+                                                            text-xs
+                                                            text-base-content/50
+                                                        ">
+                                                            {employee.phone}
+                                                        </span>
 
-                                                <div className="space-y-0.5">
-
-                                                    <p className="text-sm">
-                                                        {agent.phone || 'N/A'}
-                                                    </p>
-
-                                                    <p className="text-xs text-base-content/50">
-                                                        {agent.email || 'N/A'}
-                                                    </p>
+                                                    )}
 
                                                 </div>
 
-                                            </td>
+                                            </div>
+
+                                        </div>
 
 
-                                            {/* Loan Type */}
+                                        {/* =================================
+                                            EMAIL
+                                        ================================= */}
 
-                                            <td>
+                                        <div className="
+                                            hidden
+                                            max-w-[240px]
+                                            shrink-0
+                                            truncate
+                                            text-xs
+                                            text-base-content/50
+                                            sm:block
+                                        ">
 
-                                                <span className="
-                                                    inline-flex
-                                                    items-center
-                                                    px-2.5
-                                                    py-1
-                                                    rounded-full
-                                                    border
-                                                    border-[#8BCF00]/40
-                                                    bg-[#8BCF00]/10
-                                                    text-[#78B300]
-                                                    text-xs
-                                                    font-medium
-                                                ">
-                                                    {agent.loanType || 'N/A'}
-                                                </span>
+                                            {employee.email ||
+                                                'N/A'
+                                            }
 
-                                            </td>
+                                        </div>
 
-                                        </tr>
+                                    </div>
 
-                                    ))}
-
-                                </tbody>
-
-                            </table>
+                                )
+                            )}
 
                         </div>
 
@@ -243,16 +534,26 @@ function AssignedAgentsModal({
                 </div>
 
 
-                {/* =====================================================
+                {/* =================================================
                     FOOTER
-                ===================================================== */}
+                ================================================= */}
 
-                <div className="flex justify-end p-4 border-t border-base-300">
+                <div className="
+                    flex
+                    justify-end
+                    border-t
+                    border-base-300
+                    p-4
+                ">
 
                     <button
                         type="button"
                         onClick={onClose}
-                        className="btn btn-sm btn-ghost"
+                        className="
+                            btn
+                            btn-sm
+                            btn-ghost
+                        "
                     >
                         Close
                     </button>
@@ -262,22 +563,26 @@ function AssignedAgentsModal({
             </div>
 
 
-            {/* =====================================================
+            {/* =================================================
                 BACKDROP
-            ===================================================== */}
+            ================================================= */}
 
             <form
                 method="dialog"
                 className="modal-backdrop"
                 onClick={onClose}
             >
+
                 <button type="button">
                     close
                 </button>
+
             </form>
 
         </dialog>
+
     )
+
 }
 
 

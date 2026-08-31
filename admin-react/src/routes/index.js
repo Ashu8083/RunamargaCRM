@@ -102,23 +102,39 @@ const CallAssignment = lazy(
     () => import('../pages/CallManagement/CallAssignment')
 )
 
+const PhoneNumbers = lazy(
+    () => import('../pages/CallManagement/PhoneNumbers')
+)
 
 // =========================================================
 // Call Analytics
 // =========================================================
 
+
+// ******************** Call Analytics *****************************
 const CallAnalyticsOverview = lazy(
-    () => import('../pages/CallManagement/CallAnalytics/Overview')
+    () => import('../pages/Analytics/CallAnalytics/Overview')
 )
 
-const AgentPerformance = lazy(
-    () => import('../pages/CallManagement/CallAnalytics/AgentPerformance')
+const CallPerformance = lazy(
+    () => import('../pages/Analytics/CallAnalytics/Performance')
 )
 
 const CallTrends = lazy(
-    () => import('../pages/CallManagement/CallAnalytics/CallTrends')
+    () => import('../pages/Analytics/CallAnalytics/Trends')
 )
 
+
+// ******************** Agent Analytics *****************************
+const AgentAnalyticsOverview = lazy(
+    () => import('../pages/Analytics/AgentAnalytics/Overview')
+)
+const AgentAnalyticsPerformance = lazy(
+    () => import('../pages/Analytics/AgentAnalytics/Performance')
+)
+const AgentAnalyticsTrends = lazy(
+    () => import('../pages/Analytics/AgentAnalytics/Trends')
+)
 
 // =========================================================
 // Banks & DSA
@@ -147,6 +163,15 @@ const Employees = lazy(
 
 const EmployeeAttendance = lazy(
     () => import('../pages/EmployeeManagement/Attendance/index')
+)
+
+
+// =========================================================
+// Logs
+// =========================================================
+
+const AdminLogs = lazy(
+    () => import('../pages/Logs/AdminLogs')
 )
 
 
@@ -288,6 +313,11 @@ const routes = [
         component: CallAssignment,
         permission: PERMISSIONS.CALL_ASSIGNMENT_VIEW,
     },
+    {
+        path: '/phone-numbers',
+        component: PhoneNumbers,
+        permission: PERMISSIONS.PHONE_NUMBERS_VIEW,
+    },
 
 
     // =====================================================
@@ -295,14 +325,14 @@ const routes = [
     // =====================================================
 
     {
-        path: '/call-analytics/overview',
+        path: '/call-analytics/call-overview',
         component: CallAnalyticsOverview,
         permission: PERMISSIONS.CALL_ANALYTICS_OVERVIEW_VIEW,
     },
 
     {
-        path: '/call-analytics/agent-performance',
-        component: AgentPerformance,
+        path: '/call-analytics/call-performance',
+        component: CallPerformance,
         permission: PERMISSIONS.CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW,
     },
 
@@ -313,6 +343,24 @@ const routes = [
     },
 
 
+    // =====================================================
+    // Agent Analytics
+    // =====================================================
+    {
+        path: '/agent-analytics/agent-overview',
+        component: AgentAnalyticsOverview,
+        permission: PERMISSIONS.AGENT_ANALYTICS_OVERVIEW_VIEW,
+    },
+    {
+        path: '/agent-analytics/agent-performance',
+        component: AgentAnalyticsPerformance,
+        permission: PERMISSIONS.AGENT_Performance_OVERVIEW_VIEW,
+    },
+    {
+        path: '/agent-analytics/agent-trends',
+        component: AgentAnalyticsTrends,
+        permission: PERMISSIONS.AGENT_Performance_OVERVIEW_VIEW,
+    },
     // =====================================================
     // Banks and DSA
     // =====================================================
@@ -352,6 +400,16 @@ const routes = [
         permission: PERMISSIONS.EMPLOYEE_ATTENDANCE_VIEW,
     },
 
+
+    // =====================================================
+    // Logs
+    // =====================================================
+
+    {
+        path: '/admin-logs',
+        component: AdminLogs,
+        permission: PERMISSIONS.ADMINS_VIEW_VIEW,
+    },
 ]
 
 

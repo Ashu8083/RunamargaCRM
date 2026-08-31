@@ -7,6 +7,8 @@ import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 
+import RmDropdown from '../../../components/GlobalModels/Filters/RmDropdown'
+
 import CallLogsTable from './components/CallLogsTable'
 import CallHistoryModal from './components/CallHistoryModal'
 
@@ -1119,12 +1121,11 @@ function CallLogs() {
                         AGENT
                     ================================================= */}
 
-                    <SearchableDropdown
-                        label="Agent"
+                    <RmDropdown
                         value={agent}
                         options={agentOptions}
-                        placeholder="All Agents"
                         onChange={setAgent}
+                        className="min-w-0"
                     />
 
 

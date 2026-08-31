@@ -25,13 +25,17 @@ import ArrowUpOnSquareIcon from "@heroicons/react/24/outline/ArrowUpOnSquareIcon
 import ChartBarIcon from "@heroicons/react/24/outline/ChartBarIcon";
 import UserGroupIcon from "@heroicons/react/24/outline/UserGroupIcon";
 import ArrowTrendingUpIcon from "@heroicons/react/24/outline/ArrowTrendingUpIcon";
+import DevicePhoneMobileIcon from "@heroicons/react/24/outline/DevicePhoneMobileIcon";
 
 import { PERMISSIONS } from "../app/permissions";
+
 
 const iconClasses = `h-6 w-6`;
 const submenuIconClasses = `h-5 w-5`;
 
+
 const sidebarmenu = [
+
   // =========================================================
   // MAIN
   // =========================================================
@@ -64,6 +68,7 @@ const sidebarmenu = [
     permission: PERMISSIONS.PROFILE_VIEW,
   },
 
+
   // =========================================================
   // TEAMS & ROLES
   // =========================================================
@@ -73,6 +78,7 @@ const sidebarmenu = [
     name: "Teams & Roles",
 
     submenu: [
+
       {
         path: "/crm/roles",
         icon: <KeyIcon className={submenuIconClasses} />,
@@ -104,8 +110,10 @@ const sidebarmenu = [
         parent: "Teams & Roles",
         permission: PERMISSIONS.ADMINS_VIEW,
       },
+
     ],
   },
+
 
   // =========================================================
   // LOANS
@@ -116,6 +124,7 @@ const sidebarmenu = [
     name: "Loans",
 
     submenu: [
+
       {
         path: "/crm/create-application",
         icon: <DocumentPlusIcon className={submenuIconClasses} />,
@@ -179,8 +188,10 @@ const sidebarmenu = [
         parent: "Loans",
         permission: PERMISSIONS.LOANS_DUPLICATE_APPROVE,
       },
+
     ],
   },
+
 
   // =========================================================
   // CALL MANAGEMENT
@@ -191,6 +202,7 @@ const sidebarmenu = [
     name: "Call Management",
 
     submenu: [
+
       // -----------------------------------------------------
       // Call Logs
       // -----------------------------------------------------
@@ -202,6 +214,7 @@ const sidebarmenu = [
         parent: "Call Management",
         permission: PERMISSIONS.CALL_LOGS_VIEW,
       },
+
 
       // -----------------------------------------------------
       // Call Assignment
@@ -216,44 +229,146 @@ const sidebarmenu = [
       },
 
       // -----------------------------------------------------
-      // Call Analytics
+      // Phone Numbers
       // -----------------------------------------------------
+
+      {
+        path: "/crm/phone-numbers",
+        icon: <DevicePhoneMobileIcon className={submenuIconClasses} />,
+        name: "Phone Numbers",
+        parent: "Call Management",
+        permission: PERMISSIONS.PHONE_NUMBERS_VIEW,
+      },
+
+    ],
+  },
+
+
+  // =========================================================
+  // ANALYTICS
+  // =========================================================
+
+  {
+    type: "section",
+    name: "Analytics",
+
+    submenu: [
+
+      // =====================================================
+      // CALL ANALYTICS
+      // =====================================================
 
       {
         type: "submenu",
         name: "Call Analytics",
-        parent: "Call Management",
+        parent: "Analytics",
         icon: <ChartBarIcon className={submenuIconClasses} />,
 
         submenu: [
-          {
-            path: "/crm/call-analytics/overview",
-            icon: <ChartBarIcon className={submenuIconClasses} />,
-            name: "Overview",
-            parent: "Call Analytics",
-            permission: PERMISSIONS.CALL_ANALYTICS_OVERVIEW_VIEW,
-          },
+
+          // -------------------------------------------------
+          // Call Analytics - Overview
+          // -------------------------------------------------
 
           {
-            path: "/crm/call-analytics/agent-performance",
+            path: "/crm/call-analytics/call-overview",
+            icon: <ChartBarIcon className={submenuIconClasses} />,
+            name: "Call Overview",
+            parent: "Call Analytics",
+            permission:
+              PERMISSIONS.CALL_ANALYTICS_OVERVIEW_VIEW,
+          },
+
+
+          // -------------------------------------------------
+          // Call Analytics - Agent Performance
+          // -------------------------------------------------
+
+          {
+            path: "/crm/call-analytics/call-performance",
             icon: <UserGroupIcon className={submenuIconClasses} />,
-            name: "Agent Performance",
+            name: "Call Performance",
             parent: "Call Analytics",
             permission:
               PERMISSIONS.CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW,
           },
+
+
+          // -------------------------------------------------
+          // Call Analytics - Call Trends
+          // -------------------------------------------------
 
           {
             path: "/crm/call-analytics/call-trends",
             icon: <ArrowTrendingUpIcon className={submenuIconClasses} />,
             name: "Call Trends",
             parent: "Call Analytics",
-            permission: PERMISSIONS.CALL_ANALYTICS_CALL_TRENDS_VIEW,
+            permission:
+              PERMISSIONS.CALL_ANALYTICS_CALL_TRENDS_VIEW,
           },
+
         ],
       },
+
+
+      // =====================================================
+      // AGENT ANALYTICS
+      // =====================================================
+
+      {
+        type: "submenu",
+        name: "Agent Analytics",
+        parent: "Analytics",
+        icon: <UserGroupIcon className={submenuIconClasses} />,
+
+        submenu: [
+
+          // -------------------------------------------------
+          // Agent Analytics - Overview
+          // -------------------------------------------------
+
+          {
+            path: "/crm/agent-analytics/agent-overview",
+            icon: <ChartBarIcon className={submenuIconClasses} />,
+            name: "Agent Overview",
+            parent: "Agent Analytics",
+            permission:
+              PERMISSIONS.AGENT_ANALYTICS_OVERVIEW_VIEW,
+          },
+          // -------------------------------------------------
+          // Agent Analytics - Agent Performance
+          // -------------------------------------------------
+
+          {
+            path: "/crm/agent-analytics/agent-performance",
+            icon: <UserGroupIcon className={submenuIconClasses} />,
+            name: "Agent Performance",
+            parent: "Agent Analytics",
+             permission:
+              PERMISSIONS.AGENT_Performance_OVERVIEW_VIEW,
+          },
+
+
+          // -------------------------------------------------
+          // Agent Analytics - Applications Trends
+          // -------------------------------------------------
+
+          {
+            path: "/crm/agent-analytics/agent-trends",
+            icon: <ArrowTrendingUpIcon className={submenuIconClasses} />,
+            name: "Agent Trends",
+            parent: "Agent Analytics",
+
+            permission:
+              PERMISSIONS.CALL_ANALYTICS_CALL_TRENDS_VIEW,
+          },
+
+        ],
+      },
+
     ],
   },
+
 
   // =========================================================
   // BANK & DSA
@@ -264,6 +379,7 @@ const sidebarmenu = [
     name: "Bank & DSA",
 
     submenu: [
+
       {
         path: "/crm/banks",
         icon: <BuildingLibraryIcon className={submenuIconClasses} />,
@@ -287,8 +403,10 @@ const sidebarmenu = [
         parent: "Bank & DSA",
         permission: PERMISSIONS.DSA_VIEW,
       },
+
     ],
   },
+
 
   // =========================================================
   // EMPLOYEE MANAGEMENT
@@ -299,6 +417,7 @@ const sidebarmenu = [
     name: "Employee Management",
 
     submenu: [
+
       {
         path: "/crm/employees",
         icon: <UserCircleIcon className={submenuIconClasses} />,
@@ -312,10 +431,35 @@ const sidebarmenu = [
         icon: <CalendarIcon className={submenuIconClasses} />,
         name: "Employee Attendance",
         parent: "Employee Management",
-        permission: PERMISSIONS.EMPLOYEE_ATTENDANCE_VIEW,
+        permission:
+          PERMISSIONS.EMPLOYEE_ATTENDANCE_VIEW,
       },
+
     ],
   },
+
+  // =========================================================
+  // Logs
+  // =========================================================
+
+  {
+    type: "section",
+    name: "Logs",
+
+    submenu: [
+
+      {
+        path: "/crm/admin-logs",
+        icon: <UserCircleIcon className={submenuIconClasses} />,
+        name: "Admin Logs",
+        parent: "Logs",
+        permission: PERMISSIONS.ADMIN_LOGS_VIEW,
+      },
+
+    ],
+  },
+
 ];
+
 
 export default sidebarmenu;

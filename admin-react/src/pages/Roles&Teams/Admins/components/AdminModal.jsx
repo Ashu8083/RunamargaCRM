@@ -1,21 +1,27 @@
 // admin-react/src/pages/Roles&Teams/Admins/components/AdminModal.jsx
+
 import { useEffect, useState } from 'react'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon'
 
+import EmployeeDropdown from '../../../../components/GlobalModels/Filters/EmployeeDropdown'
+
 
 function AdminModal({
     open,
-    admin,
+    admin = null,
+    employees = [],
     onClose,
     onSubmit,
 }) {
 
+    // =========================================================
+    // FORM STATE
+    // =========================================================
+
     const [formData, setFormData] = useState({
-        name: '',
-        phone: '',
-        email: '',
+        employeeId: '',
         status: 'Active',
     })
 
@@ -24,53 +30,116 @@ function AdminModal({
 
 
     // =========================================================
-    // LOAD ADMIN DATA
+    // MODE
+    // =========================================================
+
+    const isEditMode =
+        Boolean(admin)
+
+
+    // =========================================================
+    // SELECTED EMPLOYEE
+    // =========================================================
+
+    const selectedEmployee =
+        employees.find(
+            (employee) =>
+                String(employee.id) ===
+                String(formData.employeeId)
+        )
+
+
+    // =========================================================
+    // INITIALIZE FORM
     // =========================================================
 
     useEffect(() => {
 
+        if (!open) {
+            return
+        }
+
+
+        // -----------------------------------------------------
+        // EDIT EXISTING ADMIN
+        // -----------------------------------------------------
+
         if (admin) {
 
             setFormData({
-                name: admin.name || '',
-                phone: admin.phone || '',
-                email: admin.email || '',
-                status: admin.status || 'Active',
-            })
 
-        } else {
+                employeeId:
+                    admin.employeeId !== null &&
+                    admin.employeeId !== undefined
+                        ? String(admin.employeeId)
+                        : '',
 
-            setFormData({
-                name: '',
-                phone: '',
-                email: '',
-                status: 'Active',
+                status:
+                    admin.status ||
+                    'Active',
+
             })
 
         }
 
+        // -----------------------------------------------------
+        // CREATE ADMIN
+        // -----------------------------------------------------
+
+        else {
+
+            setFormData({
+
+                employeeId: '',
+
+                status: 'Active',
+
+            })
+
+        }
+
+
         setError('')
 
-    }, [admin, open])
+    }, [open, admin])
 
 
-    if (!open) {
-        return null
+    // =========================================================
+    // EMPLOYEE CHANGE
+    // =========================================================
+
+    const handleEmployeeChange = (value) => {
+
+        setFormData((previous) => ({
+
+            ...previous,
+
+            employeeId:
+                value,
+
+        }))
+
+
+        setError('')
+
     }
 
 
     // =========================================================
-    // HANDLE CHANGE
+    // STATUS CHANGE
     // =========================================================
 
-    const handleChange = (event) => {
-
-        const { name, value } = event.target
+    const handleStatusChange = (event) => {
 
         setFormData((previous) => ({
+
             ...previous,
-            [name]: value,
+
+            status:
+                event.target.value,
+
         }))
+
 
         setError('')
 
@@ -86,96 +155,180 @@ function AdminModal({
         event.preventDefault()
 
 
-        const name = formData.name.trim()
-        const phone = formData.phone.trim()
-        const email = formData.email.trim()
+        // -----------------------------------------------------
+        // CREATE VALIDATION
+        // -----------------------------------------------------
 
-
-        if (!name) {
-
-            setError('Admin name is required.')
-
-            return
-        }
-
-
-        if (name.length < 2) {
+        if (!isEditMode && !formData.employeeId) {
 
             setError(
-                'Admin name must contain at least 2 characters.'
+                'Please select an employee.'
             )
 
             return
+
         }
 
 
-        if (!phone) {
+        // -----------------------------------------------------
+        // EDIT VALIDATION
+        // -----------------------------------------------------
 
-            setError('Phone number is required.')
-
-            return
-        }
-
-
-        if (!/^[0-9]{10}$/.test(phone)) {
+        if (isEditMode && !admin) {
 
             setError(
-                'Please enter a valid 10-digit phone number.'
+                'Unable to update admin.'
             )
 
             return
+
         }
 
 
-        if (!email) {
+        // -----------------------------------------------------
+        // CREATE
+        // -----------------------------------------------------
 
-            setError('Email address is required.')
+        if (!isEditMode) {
+
+            if (!selectedEmployee) {
+
+                setError(
+                    'Selected employee could not be found.'
+                )
+
+                return
+
+            }
+
+
+            onSubmit?.({
+
+                employeeId:
+                    selectedEmployee.id,
+
+                name:
+                    selectedEmployee.name ||
+                    '',
+
+                phone:
+                    selectedEmployee.phone ||
+                    '',
+
+                email:
+                    selectedEmployee.email ||
+                    '',
+
+                status:
+                    formData.status,
+
+            })
 
             return
+
         }
 
 
-        if (
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-        ) {
-
-            setError(
-                'Please enter a valid email address.'
-            )
-
-            return
-        }
-
+        // -----------------------------------------------------
+        // EDIT
+        //
+        // Only status is submitted.
+        // Employee details cannot be changed.
+        // -----------------------------------------------------
 
         onSubmit?.({
-            name,
-            phone,
-            email,
-            status: formData.status,
+
+            status:
+                formData.status,
+
         })
 
     }
 
 
+    // =========================================================
+    // CLOSED
+    // =========================================================
+
+    if (!open) {
+        return null
+    }
+
+
+    // =========================================================
+    // DISPLAY EMPLOYEE DATA
+    // =========================================================
+
+    const displayName =
+        isEditMode
+            ? admin?.name || 'N/A'
+            : selectedEmployee?.name || 'Select an employee'
+
+
+    const displayPhone =
+        isEditMode
+            ? admin?.phone || 'N/A'
+            : selectedEmployee?.phone || 'N/A'
+
+
+    const displayEmail =
+        isEditMode
+            ? admin?.email || 'N/A'
+            : selectedEmployee?.email || 'N/A'
+
+
+    // =========================================================
+    // MODAL
+    // =========================================================
+
     return (
 
-        <dialog
-            open
-            className="
-                modal
-                modal-bottom
-                sm:modal-middle
-            "
-        >
+        <div className="
+            fixed
+            inset-0
+            z-[999]
+        ">
+
+            {/* =================================================
+                BACKDROP
+            ================================================= */}
+
+            <button
+                type="button"
+                aria-label="Close"
+                onClick={onClose}
+                className="
+                    absolute
+                    inset-0
+                    h-full
+                    w-full
+                    cursor-default
+                    bg-black/30
+                "
+            />
+
+
+            {/* =================================================
+                MODAL
+            ================================================= */}
 
             <div className="
-                modal-box
-                w-11/12
+                absolute
+                left-1/2
+                top-1/2
+                flex
+                max-h-[90vh]
+                w-[calc(100%-2rem)]
                 max-w-lg
-                p-0
-                bg-base-100
+                -translate-x-1/2
+                -translate-y-1/2
+                flex-col
+                overflow-hidden
+                rounded-xl
                 border
                 border-base-300
+                bg-base-100
+                shadow-2xl
             ">
 
                 {/* =================================================
@@ -184,47 +337,56 @@ function AdminModal({
 
                 <div className="
                     flex
+                    shrink-0
                     items-center
                     justify-between
-                    p-5
                     border-b
                     border-base-300
+                    px-5
+                    py-4
                 ">
 
                     <div className="
                         flex
+                        min-w-0
                         items-center
                         gap-3
                     ">
 
+                        {/* Icon */}
+
                         <div className="
-                            w-9
-                            h-9
-                            rounded-lg
-                            bg-[#8BCF00]/10
                             flex
+                            h-9
+                            w-9
+                            shrink-0
                             items-center
                             justify-center
+                            rounded-lg
+                            bg-[#8BCF00]/10
                         ">
 
-                            <ShieldCheckIcon
-                                className="
-                                    w-5
-                                    h-5
-                                    text-[#78B300]
-                                "
-                            />
+                            <ShieldCheckIcon className="
+                                h-5
+                                w-5
+                                text-[#78B300]
+                            " />
 
                         </div>
 
 
-                        <div>
+                        {/* Title */}
+
+                        <div className="
+                            min-w-0
+                        ">
 
                             <h3 className="
                                 text-lg
                                 font-semibold
+                                leading-tight
                             ">
-                                {admin
+                                {isEditMode
                                     ? 'Edit Admin'
                                     : 'Create Admin'
                                 }
@@ -232,13 +394,13 @@ function AdminModal({
 
 
                             <p className="
+                                mt-1
                                 text-xs
                                 text-base-content/50
-                                mt-1
                             ">
-                                {admin
-                                    ? 'Update the admin details.'
-                                    : 'Create a new admin account.'
+                                {isEditMode
+                                    ? 'Update the admin account status.'
+                                    : 'Select an employee to create an admin account.'
                                 }
                             </p>
 
@@ -246,6 +408,8 @@ function AdminModal({
 
                     </div>
 
+
+                    {/* Close */}
 
                     <button
                         type="button"
@@ -255,11 +419,16 @@ function AdminModal({
                             btn-sm
                             btn-ghost
                             btn-circle
+                            ml-3
+                            shrink-0
                         "
                         aria-label="Close"
                     >
 
-                        <XMarkIcon className="w-5 h-5" />
+                        <XMarkIcon className="
+                            h-5
+                            w-5
+                        " />
 
                     </button>
 
@@ -270,72 +439,41 @@ function AdminModal({
                     FORM
                 ================================================= */}
 
-                <form onSubmit={handleSubmit}>
+                <form
+                    onSubmit={handleSubmit}
+                    className="
+                        flex
+                        min-h-0
+                        flex-1
+                        flex-col
+                    "
+                >
+
+                    {/* =================================================
+                        CONTENT
+                    ================================================= */}
 
                     <div className="
-                        p-5
+                        min-h-0
+                        flex-1
                         space-y-5
+                        overflow-y-auto
+                        px-5
+                        py-5
                     ">
 
                         {/* =================================================
-                            NAME
+                            EMPLOYEE
                         ================================================= */}
 
-                        <div>
-
-                            <label className="
-                                label
-                                px-0
-                            ">
-
-                                <span className="
-                                    label-text
-                                    text-sm
-                                    font-medium
-                                ">
-                                    Admin Name
-                                </span>
-
-                            </label>
-
-
-                            <input
-                                type="text"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                placeholder="Enter admin name"
-                                className="
-                                    input
-                                    input-bordered
-                                    w-full
-                                    focus:border-[#8BCF00]
-                                    focus:outline-[#8BCF00]
-                                "
-                                autoFocus
-                            />
-
-                        </div>
-
-
-                        {/* =================================================
-                            CONTACT
-                        ================================================= */}
-
-                        <div className="
-                            grid
-                            grid-cols-1
-                            sm:grid-cols-2
-                            gap-4
-                        ">
-
-                            {/* Phone */}
+                        {!isEditMode && (
 
                             <div>
 
                                 <label className="
                                     label
                                     px-0
+                                    pb-2
                                 ">
 
                                     <span className="
@@ -343,65 +481,166 @@ function AdminModal({
                                         text-sm
                                         font-medium
                                     ">
-                                        Phone
+                                        Employee
                                     </span>
 
                                 </label>
 
 
-                                <input
-                                    type="tel"
-                                    name="phone"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    placeholder="10-digit phone"
-                                    maxLength={10}
-                                    className="
-                                        input
-                                        input-bordered
-                                        w-full
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
-                                    "
+                                <EmployeeDropdown
+                                    value={
+                                        formData.employeeId
+                                    }
+                                    onChange={
+                                        handleEmployeeChange
+                                    }
+                                    employees={
+                                        employees
+                                    }
+                                    allLabel="Select Employee"
+                                    placeholder="Select Employee"
+                                    searchPlaceholder="Search employee"
                                 />
 
                             </div>
 
+                        )}
 
-                            {/* Email */}
 
-                            <div>
+                        {/* =================================================
+                            EMPLOYEE DETAILS
+                        ================================================= */}
 
-                                <label className="
-                                    label
-                                    px-0
+                        <div>
+
+                            <div className="
+                                mb-3
+                                flex
+                                items-center
+                                justify-between
+                            ">
+
+                                <h4 className="
+                                    text-sm
+                                    font-semibold
                                 ">
+                                    Employee Details
+                                </h4>
+
+
+                                {!isEditMode && selectedEmployee && (
 
                                     <span className="
-                                        label-text
+                                        rounded-full
+                                        bg-[#8BCF00]/10
+                                        px-2.5
+                                        py-1
+                                        text-xs
+                                        font-medium
+                                        text-[#78B300]
+                                    ">
+                                        Selected
+                                    </span>
+
+                                )}
+
+                            </div>
+
+
+                            <div className="
+                                overflow-hidden
+                                rounded-lg
+                                border
+                                border-base-300
+                            ">
+
+                                {/* =================================================
+                                    NAME
+                                ================================================= */}
+
+                                <div className="
+                                    border-b
+                                    border-base-300
+                                    px-4
+                                    py-3
+                                ">
+
+                                    <p className="
+                                        text-xs
+                                        text-base-content/50
+                                    ">
+                                        Name
+                                    </p>
+
+
+                                    <p className="
+                                        mt-1
                                         text-sm
                                         font-medium
                                     ">
+                                        {displayName}
+                                    </p>
+
+                                </div>
+
+
+                                {/* =================================================
+                                    PHONE
+                                ================================================= */}
+
+                                <div className="
+                                    border-b
+                                    border-base-300
+                                    px-4
+                                    py-3
+                                ">
+
+                                    <p className="
+                                        text-xs
+                                        text-base-content/50
+                                    ">
+                                        Phone
+                                    </p>
+
+
+                                    <p className="
+                                        mt-1
+                                        text-sm
+                                        font-medium
+                                    ">
+                                        {displayPhone}
+                                    </p>
+
+                                </div>
+
+
+                                {/* =================================================
+                                    EMAIL
+                                ================================================= */}
+
+                                <div className="
+                                    px-4
+                                    py-3
+                                ">
+
+                                    <p className="
+                                        text-xs
+                                        text-base-content/50
+                                    ">
                                         Email
-                                    </span>
-
-                                </label>
+                                    </p>
 
 
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="admin@example.com"
-                                    className="
-                                        input
-                                        input-bordered
-                                        w-full
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
-                                    "
-                                />
+                                    <p className="
+                                        mt-1
+                                        break-all
+                                        text-sm
+                                        font-medium
+                                    ">
+                                        {displayEmail}
+                                    </p>
+
+                                </div>
 
                             </div>
 
@@ -417,6 +656,7 @@ function AdminModal({
                             <label className="
                                 label
                                 px-0
+                                pb-2
                             ">
 
                                 <span className="
@@ -432,8 +672,12 @@ function AdminModal({
 
                             <select
                                 name="status"
-                                value={formData.status}
-                                onChange={handleChange}
+                                value={
+                                    formData.status
+                                }
+                                onChange={
+                                    handleStatusChange
+                                }
                                 className="
                                     select
                                     select-bordered
@@ -461,6 +705,35 @@ function AdminModal({
 
 
                         {/* =================================================
+                            EDIT MODE INFORMATION
+                        ================================================= */}
+
+                        {isEditMode && (
+
+                            <div className="
+                                rounded-lg
+                                border
+                                border-base-300
+                                bg-base-200/30
+                                px-3
+                                py-2.5
+                            ">
+
+                                <p className="
+                                    text-xs
+                                    text-base-content/60
+                                ">
+                                    Employee details cannot be changed from
+                                    the admin screen. Only the account status
+                                    can be updated.
+                                </p>
+
+                            </div>
+
+                        )}
+
+
+                        {/* =================================================
                             ERROR
                         ================================================= */}
 
@@ -472,7 +745,7 @@ function AdminModal({
                                 border-error/20
                                 bg-error/5
                                 px-3
-                                py-2
+                                py-2.5
                             ">
 
                                 <p className="
@@ -495,11 +768,14 @@ function AdminModal({
 
                     <div className="
                         flex
+                        shrink-0
                         justify-end
                         gap-2
-                        p-4
                         border-t
                         border-base-300
+                        bg-base-100
+                        px-5
+                        py-4
                     ">
 
                         <button
@@ -523,12 +799,12 @@ function AdminModal({
                                 border-[#8BCF00]
                                 bg-[#8BCF00]
                                 text-white
-                                hover:bg-[#6FA800]
                                 hover:border-[#6FA800]
+                                hover:bg-[#6FA800]
                             "
                         >
-                            {admin
-                                ? 'Update Admin'
+                            {isEditMode
+                                ? 'Update Status'
                                 : 'Create Admin'
                             }
                         </button>
@@ -539,24 +815,7 @@ function AdminModal({
 
             </div>
 
-
-            {/* =================================================
-                BACKDROP
-            ================================================= */}
-
-            <form
-                method="dialog"
-                className="modal-backdrop"
-                onClick={onClose}
-            >
-
-                <button type="button">
-                    close
-                </button>
-
-            </form>
-
-        </dialog>
+        </div>
 
     )
 

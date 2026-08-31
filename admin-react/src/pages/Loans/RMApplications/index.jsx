@@ -92,38 +92,134 @@ function RMApplications() {
   const [selectedApplication, setSelectedApplication] = useState(null);
 
   // =========================================================
-  // LOAN TYPE MODAL
+  // LOAN TYPES
   // =========================================================
 
-  const [showLoanTypeModal, setShowLoanTypeModal] = useState(false);
+  const loanTypes = useMemo(() => {
+    return [
+      ...new Set(
+        applications
+          .map((application) => application.loanType ?? application.loan_type)
+          .filter(Boolean),
+      ),
+    ];
+  }, [applications]);
+
+  // =========================================================
+  // RMS
+  // =========================================================
+
+  const rms = useMemo(() => {
+    const map = new Map();
+
+    applications.forEach((application) => {
+      const id =
+        application.rmId ??
+        application.rm_id ??
+        application.rm?.id ??
+        application.rmName ??
+        application.rm_name ??
+        application.rm?.name;
+
+      const name =
+        application.rmName ??
+        application.rm_name ??
+        application.rm?.name ??
+        application.rm ??
+        "Unknown RM";
+
+      if (!id && !name) {
+        return;
+      }
+
+      const key = String(id ?? name);
+
+      if (!map.has(key)) {
+        map.set(key, {
+          id: id ?? name,
+          name,
+        });
+      }
+    });
+
+    return [...map.values()];
+  }, [applications]);
+
+  // =========================================================
+  // FILTER APPLICATIONS
+  // =========================================================
+
   const filteredApplications = useMemo(() => {
     const searchValue = search.trim().toLowerCase();
 
     return applications.filter((application) => {
-      if (!searchValue) {
-        return true;
+      if (searchValue) {
+        const searchableValues = [
+          application.name,
+          application.phone,
+          application.email,
+          application.loanType,
+          application.loan_type,
+          application.loanId,
+          application.loan_id,
+          application.appliedBy,
+          application.applied_by,
+          application.referral,
+          application.referralName,
+          application.referral_name,
+          application.rmName,
+          application.rm_name,
+          application.rm?.name,
+          application.processingAgent,
+          application.processing_agent,
+          application.agentName,
+          application.agent_name,
+          application.agent?.name,
+          application.id,
+        ];
+
+        const matchesSearch = searchableValues.some(
+          (value) =>
+            value !== null &&
+            value !== undefined &&
+            String(value).toLowerCase().includes(searchValue),
+        );
+
+        if (!matchesSearch) {
+          return false;
+        }
       }
 
-      const searchableValues = [
-        application.name,
-        application.phone,
-        application.email,
-        application.loanType,
-        application.loanId,
-        application.appliedBy,
-        application.referral,
-        application.rmName,
-        application.processingAgent,
-      ];
+      if (
+        selectedLoanType &&
+        (application.loanType ?? application.loan_type) !== selectedLoanType
+      ) {
+        return false;
+      }
 
-      return searchableValues.some(
-        (value) =>
-          value !== null &&
-          value !== undefined &&
-          String(value).toLowerCase().includes(searchValue),
-      );
+      if (selectedRM) {
+        const applicationRM =
+          application.rmId ??
+          application.rm_id ??
+          application.rm?.id ??
+          application.rmName ??
+          application.rm_name ??
+          application.rm?.name;
+
+        if (String(applicationRM) !== String(selectedRM)) {
+          return false;
+        }
+      }
+
+      return true;
     });
-  }, [applications, search]);
+  }, [applications, search, selectedLoanType, selectedRM]);
+
+  // =========================================================
+  // LOAN TYPE MODAL
+  // =========================================================
+
+  const [showLoanTypeModal, setShowLoanTypeModal] = useState(false);
 
   const handleLoanTypeChange = (application) => {
     setSelectedApplication(application);
@@ -304,6 +400,8 @@ function RMApplications() {
         applications={filteredApplications}
         search={search}
         setSearch={setSearch}
+        loanTypes={loanTypes}
+        rms={rms}
         selectedLoanType={selectedLoanType}
         setSelectedLoanType={setSelectedLoanType}
         selectedRM={selectedRM}

@@ -2,6 +2,10 @@
 
 import { useMemo, useState } from 'react'
 
+import AgentDropdown from '../../../components/GlobalModels/Filters/AgentDropdown'
+import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeDropdown'
+import RmDropdown from '../../../components/GlobalModels/Filters/RmDropdown'
+
 import ShuffleLoansTable from './components/ShuffleLoansTable'
 import AssignShuffleLoansModal from './components/AssignShuffleLoansModal'
 
@@ -672,116 +676,35 @@ function ShuffleLoans() {
 
                     {/* AGENT FILTER */}
 
-                    <select
+                    <AgentDropdown
                         value={selectedAgent}
-                        onChange={(event) =>
-                            setSelectedAgent(
-                                event.target.value
-                            )
-                        }
-                        className="
-                            select
-                            select-bordered
-                            w-full
-                            lg:w-44
-                            focus:border-[#8BCF00]
-                            focus:outline-[#8BCF00]
-                        "
-                    >
-
-                        <option value="">
-                            All Agents
-                        </option>
-
-
-                        {agents.map((agent) => (
-
-                            <option
-                                key={agent.id}
-                                value={agent.id}
-                            >
-                                {agent.name}
-                            </option>
-
-                        ))}
-
-                    </select>
+                        onChange={setSelectedAgent}
+                        options={agents}
+                        showLabel={false}
+                        className="w-full lg:w-44 lg:flex-none"
+                    />
 
 
                     {/* RM FILTER */}
 
-                    <select
+                    <RmDropdown
                         value={selectedRM}
-                        onChange={(event) =>
-                            setSelectedRM(
-                                event.target.value
-                            )
-                        }
-                        className="
-                            select
-                            select-bordered
-                            w-full
-                            lg:w-44
-                            focus:border-[#8BCF00]
-                            focus:outline-[#8BCF00]
-                        "
-                    >
-
-                        <option value="">
-                            All RMs
-                        </option>
-
-
-                        {rms.map((rm) => (
-
-                            <option
-                                key={rm.id}
-                                value={rm.id}
-                            >
-                                {rm.name}
-                            </option>
-
-                        ))}
-
-                    </select>
+                        onChange={setSelectedRM}
+                        options={rms}
+                        showLabel={false}
+                        className="w-full lg:w-44 lg:flex-none"
+                    />
 
 
                     {/* LOAN TYPE FILTER */}
 
-                    <select
+                    <LoanTypeDropdown
                         value={selectedLoanType}
-                        onChange={(event) =>
-                            setSelectedLoanType(
-                                event.target.value
-                            )
-                        }
-                        className="
-                            select
-                            select-bordered
-                            w-full
-                            lg:w-44
-                            focus:border-[#8BCF00]
-                            focus:outline-[#8BCF00]
-                        "
-                    >
-
-                        <option value="">
-                            All Loan Types
-                        </option>
-
-
-                        {loanTypes.map((loanType) => (
-
-                            <option
-                                key={loanType}
-                                value={loanType}
-                            >
-                                {loanType}
-                            </option>
-
-                        ))}
-
-                    </select>
+                        onChange={setSelectedLoanType}
+                        options={loanTypes}
+                        showLabel={false}
+                        className="w-full lg:w-44 lg:flex-none"
+                    />
 
 
                     {/* STATUS FILTER */}

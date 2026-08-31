@@ -1,8 +1,16 @@
 // admin-react/src/pages/Roles&Teams/Agents/components/AgentModal.jsx
+
 import { useEffect, useState } from 'react'
+
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import UserIcon from '@heroicons/react/24/outline/UserIcon'
 
+import AgentDropdown from '../../../../components/GlobalModels/Filters/AgentDropdown'
+
+
+// =============================================================
+// COMPONENT
+// =============================================================
 
 function AgentModal({
     open,
@@ -12,141 +20,226 @@ function AgentModal({
 }) {
 
     const [formData, setFormData] = useState({
-        name: '',
-        phone: '',
-        email: '',
+        employeeId: '',
         status: 'Active',
     })
 
     const [error, setError] = useState('')
 
 
+    // =========================================================
+    // INITIALIZE
+    // =========================================================
+
     useEffect(() => {
+
+        if (!open) {
+            return
+        }
+
 
         if (agent) {
 
+            /*
+             * Editing an existing agent:
+             *
+             * Only status can be changed.
+             */
+
             setFormData({
-                name: agent.name || '',
-                phone: agent.phone || '',
-                email: agent.email || '',
-                status: agent.status || 'Active',
+                employeeId:
+                    agent.employeeId ??
+                    agent.id ??
+                    '',
+
+                status:
+                    agent.status ||
+                    'Active',
             })
 
         } else {
 
+            /*
+             * Creating an agent:
+             *
+             * Select an existing employee.
+             */
+
             setFormData({
-                name: '',
-                phone: '',
-                email: '',
+                employeeId: '',
                 status: 'Active',
             })
 
         }
+
 
         setError('')
 
     }, [agent, open])
 
 
+    // =========================================================
+    // CLOSE
+    // =========================================================
+
     if (!open) {
         return null
     }
 
 
-    const handleChange = (event) => {
+    // =========================================================
+    // CHANGE
+    // =========================================================
 
-        const { name, value } = event.target
+    const handleEmployeeChange = (value) => {
 
         setFormData((previous) => ({
             ...previous,
-            [name]: value,
+            employeeId: value,
         }))
 
         setError('')
+
     }
 
+
+    const handleStatusChange = (event) => {
+
+        setFormData((previous) => ({
+            ...previous,
+            status: event.target.value,
+        }))
+
+        setError('')
+
+    }
+
+
+    // =========================================================
+    // SUBMIT
+    // =========================================================
 
     const handleSubmit = (event) => {
 
         event.preventDefault()
 
-        const name = formData.name.trim()
-        const phone = formData.phone.trim()
-        const email = formData.email.trim()
 
-        if (!name) {
-            setError('Agent name is required.')
+        if (!agent && !formData.employeeId) {
+
+            setError(
+                'Please select an employee.'
+            )
+
             return
         }
 
-        if (name.length < 2) {
-            setError('Agent name must contain at least 2 characters.')
-            return
-        }
-
-        if (!phone) {
-            setError('Phone number is required.')
-            return
-        }
-
-        if (!/^\d{10}$/.test(phone)) {
-            setError('Please enter a valid 10-digit phone number.')
-            return
-        }
-
-        if (!email) {
-            setError('Email address is required.')
-            return
-        }
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            setError('Please enter a valid email address.')
-            return
-        }
 
         onSubmit?.({
-            name,
-            phone,
-            email,
-            status: formData.status,
+            employeeId:
+                formData.employeeId,
+
+            status:
+                formData.status,
         })
+
     }
 
 
+    // =========================================================
+    // RENDER
+    // =========================================================
+
     return (
+
         <dialog
             open
-            className="modal modal-bottom sm:modal-middle"
+            className="
+                modal
+                modal-bottom
+                sm:modal-middle
+            "
         >
 
-            <div className="modal-box w-11/12 max-w-lg p-0 bg-base-100 border border-base-300">
+            <div
+                className="
+                    modal-box
+                    w-11/12
+                    max-w-lg
+                    p-0
+                    bg-base-100
+                    border
+                    border-base-300
+                "
+            >
 
-                {/* =====================================================
+                {/* =================================================
                     HEADER
-                ===================================================== */}
+                ================================================= */}
 
-                <div className="flex items-center justify-between p-5 border-b border-base-300">
+                <div
+                    className="
+                        flex
+                        items-center
+                        justify-between
+                        p-5
+                        border-b
+                        border-base-300
+                    "
+                >
 
-                    <div className="flex items-center gap-3">
+                    <div className="
+                        flex
+                        items-center
+                        gap-3
+                    ">
 
-                        <div className="w-9 h-9 rounded-lg bg-[#8BCF00]/10 flex items-center justify-center">
+                        <div
+                            className="
+                                w-9
+                                h-9
+                                rounded-lg
+                                bg-[#8BCF00]/10
+                                flex
+                                items-center
+                                justify-center
+                            "
+                        >
 
-                            <UserIcon className="w-5 h-5 text-[#78B300]" />
+                            <UserIcon
+                                className="
+                                    w-5
+                                    h-5
+                                    text-[#78B300]
+                                "
+                            />
 
                         </div>
 
 
                         <div>
 
-                            <h3 className="text-lg font-semibold">
-                                {agent ? 'Edit Agent' : 'Add Agent'}
+                            <h3 className="
+                                text-lg
+                                font-semibold
+                            ">
+
+                                {agent
+                                    ? 'Edit Agent'
+                                    : 'Add Agent'}
+
                             </h3>
 
-                            <p className="text-xs text-base-content/50 mt-1">
+
+                            <p className="
+                                text-xs
+                                text-base-content/50
+                                mt-1
+                            ">
+
                                 {agent
-                                    ? 'Update the agent details.'
-                                    : 'Create a new agent account.'
-                                }
+                                    ? 'Update agent status.'
+                                    : 'Select an existing employee as an agent.'}
+
                             </p>
 
                         </div>
@@ -157,139 +250,146 @@ function AgentModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="btn btn-sm btn-ghost btn-circle"
+                        className="
+                            btn
+                            btn-sm
+                            btn-ghost
+                            btn-circle
+                        "
                         aria-label="Close"
                     >
 
-                        <XMarkIcon className="w-5 h-5" />
+                        <XMarkIcon
+                            className="
+                                w-5
+                                h-5
+                            "
+                        />
 
                     </button>
 
                 </div>
 
 
-                {/* =====================================================
+                {/* =================================================
                     FORM
-                ===================================================== */}
+                ================================================= */}
 
                 <form onSubmit={handleSubmit}>
 
-                    <div className="p-5 space-y-5">
+                    <div className="
+                        p-5
+                        space-y-5
+                    ">
 
-                        {/* Name */}
+                        {/* =================================================
+                            EMPLOYEE
+                        ================================================= */}
 
-                        <div>
+                        {!agent && (
 
-                            <label className="label px-0">
+                            <div>
 
-                                <span className="label-text text-sm font-medium">
-                                    Agent Name
-                                </span>
+                                <AgentDropdown
+                                    label="Employee"
+                                    value={
+                                        formData.employeeId
+                                    }
+                                    onChange={
+                                        handleEmployeeChange
+                                    }
+                                    allLabel="Select Employee"
+                                    placeholder="Select Employee"
+                                    searchPlaceholder="Search employee"
+                                    emptyMessage="No employees found"
+                                />
 
-                            </label>
+                            </div>
 
-                            <input
-                                type="text"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                placeholder="Enter agent name"
+                        )}
+
+
+                        {/* =================================================
+                            EXISTING AGENT
+                        ================================================= */}
+
+                        {agent && (
+
+                            <div
                                 className="
-                                    input
-                                    input-bordered
-                                    w-full
-                                    focus:border-[#8BCF00]
-                                    focus:outline-[#8BCF00]
+                                    rounded-lg
+                                    border
+                                    border-base-300
+                                    bg-base-200/30
+                                    px-4
+                                    py-3
                                 "
-                                autoFocus
-                            />
+                            >
 
-                        </div>
+                                <p className="
+                                    text-[10px]
+                                    uppercase
+                                    tracking-wide
+                                    text-base-content/40
+                                ">
+                                    Employee
+                                </p>
 
 
-                        {/* Contact Information */}
+                                <p className="
+                                    mt-1
+                                    text-sm
+                                    font-semibold
+                                ">
+                                    {agent.name}
+                                </p>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-                            {/* Phone */}
-
-                            <div>
-
-                                <label className="label px-0">
-
-                                    <span className="label-text text-sm font-medium">
-                                        Phone Number
-                                    </span>
-
-                                </label>
-
-                                <input
-                                    type="tel"
-                                    name="phone"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    placeholder="10-digit phone number"
-                                    maxLength={10}
-                                    className="
-                                        input
-                                        input-bordered
-                                        w-full
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
-                                    "
-                                />
+                                <p className="
+                                    mt-0.5
+                                    text-xs
+                                    text-base-content/50
+                                ">
+                                    {agent.phone || 'N/A'}
+                                    {' · '}
+                                    {agent.email || 'N/A'}
+                                </p>
 
                             </div>
 
-
-                            {/* Email */}
-
-                            <div>
-
-                                <label className="label px-0">
-
-                                    <span className="label-text text-sm font-medium">
-                                        Email
-                                    </span>
-
-                                </label>
-
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="agent@example.com"
-                                    className="
-                                        input
-                                        input-bordered
-                                        w-full
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
-                                    "
-                                />
-
-                            </div>
-
-                        </div>
+                        )}
 
 
-                        {/* Status */}
+                        {/* =================================================
+                            STATUS
+                        ================================================= */}
 
                         <div>
 
-                            <label className="label px-0">
+                            <label className="
+                                label
+                                px-0
+                            ">
 
-                                <span className="label-text text-sm font-medium">
+                                <span className="
+                                    label-text
+                                    text-sm
+                                    font-medium
+                                ">
                                     Status
                                 </span>
 
                             </label>
 
+
                             <select
                                 name="status"
-                                value={formData.status}
-                                onChange={handleChange}
+                                value={
+                                    formData.status
+                                }
+                                onChange={
+                                    handleStatusChange
+                                }
                                 className="
                                     select
                                     select-bordered
@@ -316,13 +416,27 @@ function AgentModal({
                         </div>
 
 
-                        {/* Error */}
+                        {/* =================================================
+                            ERROR
+                        ================================================= */}
 
                         {error && (
 
-                            <div className="rounded-lg border border-error/20 bg-error/5 px-3 py-2">
+                            <div
+                                className="
+                                    rounded-lg
+                                    border
+                                    border-error/20
+                                    bg-error/5
+                                    px-3
+                                    py-2
+                                "
+                            >
 
-                                <p className="text-xs text-error">
+                                <p className="
+                                    text-xs
+                                    text-error
+                                ">
                                     {error}
                                 </p>
 
@@ -333,16 +447,29 @@ function AgentModal({
                     </div>
 
 
-                    {/* =====================================================
+                    {/* =================================================
                         FOOTER
-                    ===================================================== */}
+                    ================================================= */}
 
-                    <div className="flex justify-end gap-2 p-4 border-t border-base-300">
+                    <div
+                        className="
+                            flex
+                            justify-end
+                            gap-2
+                            p-4
+                            border-t
+                            border-base-300
+                        "
+                    >
 
                         <button
                             type="button"
                             onClick={onClose}
-                            className="btn btn-sm btn-ghost"
+                            className="
+                                btn
+                                btn-sm
+                                btn-ghost
+                            "
                         >
                             Cancel
                         </button>
@@ -360,7 +487,11 @@ function AgentModal({
                                 hover:border-[#6FA800]
                             "
                         >
-                            {agent ? 'Update Agent' : 'Create Agent'}
+
+                            {agent
+                                ? 'Update Status'
+                                : 'Add Agent'}
+
                         </button>
 
                     </div>
@@ -370,22 +501,26 @@ function AgentModal({
             </div>
 
 
-            {/* =====================================================
+            {/* =================================================
                 BACKDROP
-            ===================================================== */}
+            ================================================= */}
 
             <form
                 method="dialog"
                 className="modal-backdrop"
                 onClick={onClose}
             >
+
                 <button type="button">
                     close
                 </button>
+
             </form>
 
         </dialog>
+
     )
+
 }
 
 

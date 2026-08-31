@@ -1,6 +1,7 @@
 // admin-react/src/pages/Roles&Teams/Agents/components/AssignedTeamLeadsModal.jsx
 
 import { useEffect, useState } from 'react'
+
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
 
@@ -17,10 +18,13 @@ function AssignedTeamLeadsModal({
         agent: [],
     })
 
-
     const [selectedRM, setSelectedRM] = useState([])
     const [selectedAgent, setSelectedAgent] = useState([])
 
+
+    // =========================================================
+    // LOAD TEAM LEADS
+    // =========================================================
 
     useEffect(() => {
 
@@ -39,58 +43,61 @@ function AssignedTeamLeadsModal({
 
 
         /*
-         * Later replace this with API call.
+         * Temporary data.
          *
-         * GET /team-leads/available
+         * Replace this section with API data later.
          *
-         * Expected:
+         * Example:
+         *
+         * GET /agents/{agent.id}/team-leads
+         *
+         * Response:
          *
          * {
-         *     rm: [
-         *         {
-         *             id: 1,
-         *             name: 'John Doe',
-         *             loanTypes: ['Personal Loan', 'Home Loan']
-         *         }
-         *     ],
-         *
-         *     agent: [
-         *         {
-         *             id: 2,
-         *             name: 'Rahul Kumar',
-         *             loanTypes: ['Business Loan']
-         *         }
-         *     ]
+         *     rm: [],
+         *     agent: []
          * }
          */
 
 
-        const rmTeamLeads = agent.availableRMTeamLeads || [
-            {
-                id: 1,
-                name: 'RM Team Lead One',
-                loanTypes: ['Personal Loan', 'Home Loan'],
-            },
-            {
-                id: 2,
-                name: 'RM Team Lead Two',
-                loanTypes: ['Business Loan'],
-            },
-        ]
+        const rmTeamLeads =
+            agent.availableRMTeamLeads || [
+                {
+                    id: 1,
+                    name: 'RM Team Lead One',
+                    loanTypes: [
+                        'Personal Loan',
+                        'Home Loan',
+                    ],
+                },
+                {
+                    id: 2,
+                    name: 'RM Team Lead Two',
+                    loanTypes: [
+                        'Business Loan',
+                    ],
+                },
+            ]
 
 
-        const agentTeamLeads = agent.availableAgentTeamLeads || [
-            {
-                id: 3,
-                name: 'Agent Team Lead One',
-                loanTypes: ['Personal Loan'],
-            },
-            {
-                id: 4,
-                name: 'Agent Team Lead Two',
-                loanTypes: ['Business Loan', 'Personal Loan'],
-            },
-        ]
+        const agentTeamLeads =
+            agent.availableAgentTeamLeads || [
+                {
+                    id: 3,
+                    name: 'Agent Team Lead One',
+                    loanTypes: [
+                        'Personal Loan',
+                    ],
+                },
+                {
+                    id: 4,
+                    name: 'Agent Team Lead Two',
+                    loanTypes: [
+                        'Business Loan',
+                        'Personal Loan',
+                    ],
+                },
+            ]
 
 
         setTeamLeads({
@@ -100,19 +107,8 @@ function AssignedTeamLeadsModal({
 
 
         /*
-         * Existing assignments from backend.
-         *
-         * Example:
-         *
-         * rmTeamLeads:
-         * [
-         *     {
-         *         id: 1,
-         *         loanType: 'Personal Loan'
-         *     }
-         * ]
+         * Existing assignments.
          */
-
 
         setSelectedRM(
             (agent.rmTeamLeads || []).map(
@@ -136,49 +132,44 @@ function AssignedTeamLeadsModal({
     }, [open, agent])
 
 
-    if (!open || !agent) {
-        return null
-    }
-
-
     // =========================================================
-    // TOGGLE RM TEAM LEAD
+    // RM TEAM LEAD TOGGLE
     // =========================================================
 
-    const handleRMToggle = (teamLead, loanType) => {
+    const handleRMToggle = (
+        teamLead,
+        loanType
+    ) => {
 
         setSelectedRM((previous) => {
 
-            const exists = previous.some(
-                (item) =>
-                    item.id === teamLead.id &&
-                    item.loanType === loanType
-            )
+            const exists =
+                previous.some(
+                    (item) =>
+                        String(item.id) ===
+                            String(teamLead.id) &&
+                        item.loanType === loanType
+                )
 
 
-            let updated
+            const updated = exists
 
-
-            if (exists) {
-
-                updated = previous.filter(
+                ? previous.filter(
                     (item) =>
                         !(
-                            item.id === teamLead.id &&
+                            String(item.id) ===
+                                String(teamLead.id) &&
                             item.loanType === loanType
                         )
                 )
 
-            } else {
-
-                updated = [
+                : [
                     ...previous,
                     {
                         id: teamLead.id,
                         loanType,
                     },
                 ]
-            }
 
 
             onAssignmentChange?.({
@@ -188,48 +179,50 @@ function AssignedTeamLeadsModal({
 
 
             return updated
+
         })
+
     }
 
 
     // =========================================================
-    // TOGGLE AGENT TEAM LEAD
+    // AGENT TEAM LEAD TOGGLE
     // =========================================================
 
-    const handleAgentToggle = (teamLead, loanType) => {
+    const handleAgentToggle = (
+        teamLead,
+        loanType
+    ) => {
 
         setSelectedAgent((previous) => {
 
-            const exists = previous.some(
-                (item) =>
-                    item.id === teamLead.id &&
-                    item.loanType === loanType
-            )
+            const exists =
+                previous.some(
+                    (item) =>
+                        String(item.id) ===
+                            String(teamLead.id) &&
+                        item.loanType === loanType
+                )
 
 
-            let updated
+            const updated = exists
 
-
-            if (exists) {
-
-                updated = previous.filter(
+                ? previous.filter(
                     (item) =>
                         !(
-                            item.id === teamLead.id &&
+                            String(item.id) ===
+                                String(teamLead.id) &&
                             item.loanType === loanType
                         )
                 )
 
-            } else {
-
-                updated = [
+                : [
                     ...previous,
                     {
                         id: teamLead.id,
                         loanType,
                     },
                 ]
-            }
 
 
             onAssignmentChange?.({
@@ -239,266 +232,405 @@ function AssignedTeamLeadsModal({
 
 
             return updated
+
         })
+
     }
 
 
     // =========================================================
-    // TEAM LEAD LIST
+    // CHECK SELECTION
+    // =========================================================
+
+    const isSelected = (
+        selected,
+        teamLeadId,
+        loanType
+    ) => {
+
+        return selected.some(
+            (item) =>
+                String(item.id) ===
+                    String(teamLeadId) &&
+                item.loanType === loanType
+        )
+
+    }
+
+
+    // =========================================================
+    // TEAM LEAD GROUP
     // =========================================================
 
     const renderTeamLeads = (
         items,
-        type,
         selected,
         onToggle
     ) => {
 
-        if (items.length === 0) {
+        if (!items.length) {
 
             return (
-                <div className="rounded-lg border border-base-300 py-8 text-center">
 
-                    <UserGroupIcon className="w-8 h-8 mx-auto text-base-content/30" />
+                <div className="
+                    rounded-lg
+                    border
+                    border-base-300
+                    py-8
+                    text-center
+                ">
 
-                    <p className="text-sm font-medium mt-3">
+                    <UserGroupIcon className="
+                        mx-auto
+                        h-8
+                        w-8
+                        text-base-content/30
+                    " />
+
+
+                    <p className="
+                        mt-3
+                        text-sm
+                        font-medium
+                    ">
                         No team leads available
                     </p>
 
-                    <p className="text-xs text-base-content/50 mt-1">
+
+                    <p className="
+                        mt-1
+                        text-xs
+                        text-base-content/50
+                    ">
                         Available team leads will appear here.
                     </p>
 
                 </div>
+
             )
+
         }
 
 
         return (
-            <div className="border border-base-300 rounded-lg overflow-hidden">
 
-                {items.map((teamLead, index) => (
+            <div className="
+                overflow-hidden
+                rounded-lg
+                border
+                border-base-300
+            ">
 
-                    <div
-                        key={teamLead.id}
-                        className={`
-                            px-4
-                            py-3
-                            ${
-                                index !== items.length - 1
-                                    ? 'border-b border-base-300'
-                                    : ''
-                            }
-                        `}
-                    >
+                {items.map(
+                    (teamLead, index) => {
 
-                        {/* Team Lead */}
+                        const hasSelection =
+                            teamLead.loanTypes.some(
+                                (loanType) =>
+                                    isSelected(
+                                        selected,
+                                        teamLead.id,
+                                        loanType
+                                    )
+                            )
 
-                        <div className="flex items-center gap-3">
 
-                            <input
-                                type="checkbox"
-                                checked={teamLead.loanTypes.some(
-                                    (loanType) =>
-                                        selected.some(
-                                            (item) =>
-                                                item.id === teamLead.id &&
-                                                item.loanType === loanType
-                                        )
-                                )}
-                                onChange={() => {
+                        return (
 
-                                    /*
-                                     * This checkbox represents the
-                                     * team lead as a whole.
-                                     *
-                                     * If any loan type is selected,
-                                     * remove all.
-                                     *
-                                     * Otherwise select the first
-                                     * available loan type.
-                                     */
+                            <div
+                                key={teamLead.id}
+                                className={`
+                                    px-4
+                                    py-3
+                                    ${
+                                        index !==
+                                        items.length - 1
+                                            ? 'border-b border-base-300'
+                                            : ''
+                                    }
+                                `}
+                            >
 
-                                    const hasSelection =
-                                        teamLead.loanTypes.some(
-                                            (loanType) =>
-                                                selected.some(
-                                                    (item) =>
-                                                        item.id === teamLead.id &&
-                                                        item.loanType === loanType
+                                {/* =================================================
+                                    TEAM LEAD
+                                ================================================= */}
+
+                                <div className="
+                                    flex
+                                    items-center
+                                    gap-3
+                                ">
+
+                                    <input
+                                        type="checkbox"
+                                        checked={hasSelection}
+                                        onChange={() => {
+
+                                            if (hasSelection) {
+
+                                                teamLead.loanTypes.forEach(
+                                                    (loanType) => {
+
+                                                        if (
+                                                            isSelected(
+                                                                selected,
+                                                                teamLead.id,
+                                                                loanType
+                                                            )
+                                                        ) {
+
+                                                            onToggle(
+                                                                teamLead,
+                                                                loanType
+                                                            )
+
+                                                        }
+
+                                                    }
                                                 )
-                                        )
 
+                                            } else if (
+                                                teamLead.loanTypes.length
+                                            ) {
 
-                                    if (hasSelection) {
-
-                                        teamLead.loanTypes.forEach(
-                                            (loanType) => {
-
-                                                if (
-                                                    selected.some(
-                                                        (item) =>
-                                                            item.id === teamLead.id &&
-                                                            item.loanType === loanType
-                                                    )
-                                                ) {
-                                                    onToggle(
-                                                        teamLead,
-                                                        loanType
-                                                    )
-                                                }
+                                                onToggle(
+                                                    teamLead,
+                                                    teamLead.loanTypes[0]
+                                                )
 
                                             }
-                                        )
 
-                                    } else {
-
-                                        onToggle(
-                                            teamLead,
-                                            teamLead.loanTypes[0]
-                                        )
-                                    }
-                                }}
-                                className="
-                                    checkbox
-                                    checkbox-sm
-                                    border-base-300
-                                    checked:border-[#8BCF00]
-                                    checked:bg-[#8BCF00]
-                                    shrink-0
-                                "
-                            />
+                                        }}
+                                        className="
+                                            checkbox
+                                            checkbox-sm
+                                            shrink-0
+                                            border-base-300
+                                            checked:border-[#8BCF00]
+                                            checked:bg-[#8BCF00]
+                                        "
+                                    />
 
 
-                            <div className="flex-1 min-w-0">
+                                    <div className="
+                                        min-w-0
+                                        flex-1
+                                    ">
 
-                                <p className="text-sm font-semibold">
-                                    {teamLead.name}
-                                </p>
+                                        <p className="
+                                            text-sm
+                                            font-semibold
+                                        ">
+                                            {teamLead.name}
+                                        </p>
 
-                                <p className="text-xs text-base-content/50 mt-0.5">
-                                    Select loan type below
-                                </p>
+
+                                        <p className="
+                                            mt-0.5
+                                            text-xs
+                                            text-base-content/50
+                                        ">
+                                            Select applicable loan types
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                                {/* =================================================
+                                    LOAN TYPES
+                                ================================================= */}
+
+                                {teamLead.loanTypes?.length > 0 && (
+
+                                    <div className="
+                                        ml-8
+                                        mt-3
+                                        flex
+                                        flex-wrap
+                                        gap-2
+                                    ">
+
+                                        {teamLead.loanTypes.map(
+                                            (loanType) => {
+
+                                                const checked =
+                                                    isSelected(
+                                                        selected,
+                                                        teamLead.id,
+                                                        loanType
+                                                    )
+
+
+                                                return (
+
+                                                    <label
+                                                        key={loanType}
+                                                        className={`
+                                                            inline-flex
+                                                            cursor-pointer
+                                                            items-center
+                                                            gap-2
+                                                            rounded-lg
+                                                            border
+                                                            px-3
+                                                            py-1.5
+                                                            transition
+                                                            ${
+                                                                checked
+                                                                    ? 'border-[#8BCF00] bg-[#8BCF00]/10'
+                                                                    : 'border-base-300 hover:bg-base-200'
+                                                            }
+                                                        `}
+                                                    >
+
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={checked}
+                                                            onChange={() =>
+                                                                onToggle(
+                                                                    teamLead,
+                                                                    loanType
+                                                                )
+                                                            }
+                                                            className="
+                                                                checkbox
+                                                                checkbox-xs
+                                                                border-base-300
+                                                                checked:border-[#8BCF00]
+                                                                checked:bg-[#8BCF00]
+                                                            "
+                                                        />
+
+
+                                                        <span
+                                                            className={`
+                                                                text-xs
+                                                                ${
+                                                                    checked
+                                                                        ? 'font-medium text-[#78B300]'
+                                                                        : 'text-base-content/70'
+                                                                }
+                                                            `}
+                                                        >
+                                                            {loanType}
+                                                        </span>
+
+                                                    </label>
+
+                                                )
+
+                                            }
+                                        )}
+
+                                    </div>
+
+                                )}
 
                             </div>
 
-                        </div>
+                        )
 
-
-                        {/* Loan Types */}
-
-                        <div className="ml-8 mt-3 flex flex-wrap gap-2">
-
-                            {teamLead.loanTypes.map(
-                                (loanType) => {
-
-                                    const checked =
-                                        selected.some(
-                                            (item) =>
-                                                item.id === teamLead.id &&
-                                                item.loanType === loanType
-                                        )
-
-
-                                    return (
-                                        <label
-                                            key={loanType}
-                                            className={`
-                                                inline-flex
-                                                items-center
-                                                gap-2
-                                                px-3
-                                                py-1.5
-                                                rounded-lg
-                                                border
-                                                cursor-pointer
-                                                transition
-                                                ${
-                                                    checked
-                                                        ? 'border-[#8BCF00] bg-[#8BCF00]/10'
-                                                        : 'border-base-300 hover:bg-base-200'
-                                                }
-                                            `}
-                                        >
-
-                                            <input
-                                                type="checkbox"
-                                                checked={checked}
-                                                onChange={() =>
-                                                    onToggle(
-                                                        teamLead,
-                                                        loanType
-                                                    )
-                                                }
-                                                className="
-                                                    checkbox
-                                                    checkbox-xs
-                                                    border-base-300
-                                                    checked:border-[#8BCF00]
-                                                    checked:bg-[#8BCF00]
-                                                "
-                                            />
-
-                                            <span
-                                                className={`
-                                                    text-xs
-                                                    ${
-                                                        checked
-                                                            ? 'text-[#78B300] font-medium'
-                                                            : 'text-base-content/70'
-                                                    }
-                                                `}
-                                            >
-                                                {loanType}
-                                            </span>
-
-                                        </label>
-                                    )
-                                }
-                            )}
-
-                        </div>
-
-                    </div>
-
-                ))}
+                    }
+                )}
 
             </div>
+
         )
+
     }
 
 
+    // =========================================================
+    // CLOSED
+    // =========================================================
+
+    if (!open || !agent) {
+        return null
+    }
+
+
+    // =========================================================
+    // MODAL
+    // =========================================================
+
     return (
+
         <dialog
             open
-            className="modal modal-bottom sm:modal-middle"
+            className="
+                modal
+                modal-bottom
+                sm:modal-middle
+            "
         >
 
-            <div className="modal-box w-11/12 max-w-3xl p-0 bg-base-100 border border-base-300">
+            <div className="
+                modal-box
+                w-11/12
+                max-w-3xl
+                border
+                border-base-300
+                bg-base-100
+                p-0
+            ">
 
-                {/* =====================================================
+                {/* =================================================
                     HEADER
-                ===================================================== */}
+                ================================================= */}
 
-                <div className="flex items-center justify-between p-5 border-b border-base-300">
+                <div className="
+                    flex
+                    items-center
+                    justify-between
+                    border-b
+                    border-base-300
+                    p-5
+                ">
 
-                    <div className="flex items-center gap-3">
+                    <div className="
+                        flex
+                        items-center
+                        gap-3
+                    ">
 
-                        <div className="w-9 h-9 rounded-lg bg-[#8BCF00]/10 flex items-center justify-center">
+                        <div className="
+                            flex
+                            h-9
+                            w-9
+                            items-center
+                            justify-center
+                            rounded-lg
+                            bg-[#8BCF00]/10
+                        ">
 
-                            <UserGroupIcon className="w-5 h-5 text-[#78B300]" />
+                            <UserGroupIcon className="
+                                h-5
+                                w-5
+                                text-[#78B300]
+                            " />
 
                         </div>
 
 
                         <div>
 
-                            <h3 className="text-lg font-semibold">
+                            <h3 className="
+                                text-lg
+                                font-semibold
+                            ">
                                 Assign Team Leads
                             </h3>
 
-                            <p className="text-xs text-base-content/50 mt-1">
-                                Manage team lead assignments for {agent.name}
+
+                            <p className="
+                                mt-1
+                                text-xs
+                                text-base-content/50
+                            ">
+                                Manage team lead assignments for{' '}
+                                {agent.name}
                             </p>
 
                         </div>
@@ -509,22 +641,35 @@ function AssignedTeamLeadsModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="btn btn-sm btn-ghost btn-circle"
+                        className="
+                            btn
+                            btn-sm
+                            btn-ghost
+                            btn-circle
+                        "
                         aria-label="Close"
                     >
 
-                        <XMarkIcon className="w-5 h-5" />
+                        <XMarkIcon className="
+                            h-5
+                            w-5
+                        " />
 
                     </button>
 
                 </div>
 
 
-                {/* =====================================================
+                {/* =================================================
                     CONTENT
-                ===================================================== */}
+                ================================================= */}
 
-                <div className="p-5 space-y-6">
+                <div className="
+                    max-h-[65vh]
+                    space-y-6
+                    overflow-y-auto
+                    p-5
+                ">
 
                     {/* =================================================
                         RM TEAM LEADS
@@ -534,12 +679,20 @@ function AssignedTeamLeadsModal({
 
                         <div className="mb-3">
 
-                            <h4 className="text-sm font-semibold">
+                            <h4 className="
+                                text-sm
+                                font-semibold
+                            ">
                                 RM Team Leads
                             </h4>
 
-                            <p className="text-xs text-base-content/50 mt-1">
-                                Assign RM team leads and their applicable loan types.
+
+                            <p className="
+                                mt-1
+                                text-xs
+                                text-base-content/50
+                            ">
+                                Assign RM team leads and applicable loan types.
                             </p>
 
                         </div>
@@ -547,7 +700,6 @@ function AssignedTeamLeadsModal({
 
                         {renderTeamLeads(
                             teamLeads.rm,
-                            'rm',
                             selectedRM,
                             handleRMToggle
                         )}
@@ -563,12 +715,20 @@ function AssignedTeamLeadsModal({
 
                         <div className="mb-3">
 
-                            <h4 className="text-sm font-semibold">
+                            <h4 className="
+                                text-sm
+                                font-semibold
+                            ">
                                 Agent Team Leads
                             </h4>
 
-                            <p className="text-xs text-base-content/50 mt-1">
-                                Assign agent team leads and their applicable loan types.
+
+                            <p className="
+                                mt-1
+                                text-xs
+                                text-base-content/50
+                            ">
+                                Assign agent team leads and applicable loan types.
                             </p>
 
                         </div>
@@ -576,7 +736,6 @@ function AssignedTeamLeadsModal({
 
                         {renderTeamLeads(
                             teamLeads.agent,
-                            'agent',
                             selectedAgent,
                             handleAgentToggle
                         )}
@@ -586,16 +745,26 @@ function AssignedTeamLeadsModal({
                 </div>
 
 
-                {/* =====================================================
+                {/* =================================================
                     FOOTER
-                ===================================================== */}
+                ================================================= */}
 
-                <div className="flex justify-end p-4 border-t border-base-300">
+                <div className="
+                    flex
+                    justify-end
+                    border-t
+                    border-base-300
+                    p-4
+                ">
 
                     <button
                         type="button"
                         onClick={onClose}
-                        className="btn btn-sm btn-ghost"
+                        className="
+                            btn
+                            btn-sm
+                            btn-ghost
+                        "
                     >
                         Close
                     </button>
@@ -605,9 +774,9 @@ function AssignedTeamLeadsModal({
             </div>
 
 
-            {/* =====================================================
+            {/* =================================================
                 BACKDROP
-            ===================================================== */}
+            ================================================= */}
 
             <form
                 method="dialog"
@@ -622,7 +791,9 @@ function AssignedTeamLeadsModal({
             </form>
 
         </dialog>
+
     )
+
 }
 
 

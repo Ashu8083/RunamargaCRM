@@ -1,4 +1,4 @@
-// admin-react/src/pages/CallManagement/CallAnalytics/Overview/index.jsx
+// admin-react/src/pages/Analytics/CallAnalytics/Overview/index.jsx
 
 import { useEffect, useMemo, useState } from 'react'
 
@@ -6,6 +6,7 @@ import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 
 import AgentDropdown from '../../../../components/GlobalModels/Filters/AgentDropdown'
+import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
 
 import AnalyticsCards from './components/AnalyticsCards'
 import CallActivityGraph from './components/CallActivityGraph'
@@ -187,12 +188,6 @@ const fetchCallAnalytics = async () => {
 const TEAMS = [
     'Bangalore Team',
     'Mysore Team',
-]
-
-
-const RMS = [
-    'Priya Nair',
-    'Rajesh Rao',
 ]
 
 
@@ -463,6 +458,69 @@ function Overview() {
 
     const [activeKpi, setActiveKpi] =
         useState('')
+
+
+    const agentOptions = useMemo(() => {
+
+        const map = new Map()
+
+
+        calls.forEach((call) => {
+
+            const id =
+                call.agentId ??
+                call.agent_id ??
+                call.agent
+
+
+            const name =
+                call.agent ??
+                call.agentName ??
+                call.agent_name ??
+                'Unknown Agent'
+
+
+            if (!id && !name) {
+                return
+            }
+
+
+            const key =
+                String(id ?? name)
+
+
+            if (!map.has(key)) {
+
+                map.set(key, {
+                    id: id ?? name,
+                    name,
+                })
+
+            }
+
+        })
+
+
+        return [...map.values()]
+
+    }, [
+        calls,
+    ])
+
+
+    const rmOptions = useMemo(() => {
+
+        return [
+            ...new Set(
+                calls
+                    .map((call) => call.rm)
+                    .filter(Boolean)
+            ),
+        ]
+
+    }, [
+        calls,
+    ])
 
 
     // =========================================================
@@ -787,16 +845,16 @@ function Overview() {
                     <AgentDropdown
                         value={agent}
                         onChange={setAgent}
+                        options={agentOptions}
                     />
 
 
                     {/* RM */}
 
-                    <FilterDropdown
-                        label="RM"
+                    <RmDropdown
                         value={rm}
-                        options={RMS}
                         onChange={setRm}
+                        options={rmOptions}
                     />
 
 

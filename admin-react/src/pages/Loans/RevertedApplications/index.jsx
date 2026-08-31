@@ -3,8 +3,10 @@
 import { useMemo, useState } from 'react'
 
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
-import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
+
+import AgentDropdown from '../../../components/GlobalModels/Filters/AgentDropdown'
+import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
 import RevertedApplicationsTable from './components/RevertedApplicationsTable'
 import RevertDateModal from './components/RevertDateModal'
@@ -130,17 +132,6 @@ function RevertedApplications() {
 
 
     // =========================================================
-    // AGENT DROPDOWN STATE
-    // =========================================================
-
-    const [agentSearch, setAgentSearch] =
-        useState('')
-
-    const [showAgentDropdown, setShowAgentDropdown] =
-        useState(false)
-
-
-    // =========================================================
     // MODAL STATE
     // =========================================================
 
@@ -223,61 +214,6 @@ function RevertedApplications() {
         return [...map.values()]
 
     }, [applications])
-
-
-    // =========================================================
-    // FILTERED AGENTS
-    // =========================================================
-
-    const filteredAgents = useMemo(() => {
-
-        const value =
-            agentSearch
-                .trim()
-                .toLowerCase()
-
-
-        if (!value) {
-            return agents
-        }
-
-
-        return agents.filter((agent) =>
-            String(agent.name)
-                .toLowerCase()
-                .includes(value)
-        )
-
-    }, [
-        agents,
-        agentSearch,
-    ])
-
-
-    // =========================================================
-    // SELECTED AGENT NAME
-    // =========================================================
-
-    const selectedAgentName = useMemo(() => {
-
-        if (!selectedAgent) {
-            return 'All Agents'
-        }
-
-
-        return (
-            agents.find(
-                (agent) =>
-                    String(agent.id) ===
-                    String(selectedAgent)
-            )?.name ||
-            'All Agents'
-        )
-
-    }, [
-        agents,
-        selectedAgent,
-    ])
 
 
     // =========================================================
@@ -472,25 +408,6 @@ function RevertedApplications() {
         setSelectedAgent('')
 
         setSelectedDate('')
-
-        setAgentSearch('')
-
-        setShowAgentDropdown(false)
-
-    }
-
-
-    // =========================================================
-    // AGENT SELECTION
-    // =========================================================
-
-    const handleAgentSelect = (agentId) => {
-
-        setSelectedAgent(agentId)
-
-        setAgentSearch('')
-
-        setShowAgentDropdown(false)
 
     }
 
@@ -778,266 +695,32 @@ function RevertedApplications() {
                             LOAN TYPE
                         ================================================= */}
 
-                        <select
+                        <LoanTypeDropdown
                             value={
                                 selectedLoanType
                             }
-                            onChange={(event) =>
-                                setSelectedLoanType(
-                                    event.target.value
-                                )
+                            onChange={
+                                setSelectedLoanType
                             }
-                            className="
-                                select
-                                select-bordered
-                                w-full
-                            "
-                        >
-
-                            <option value="">
-                                All Loan Types
-                            </option>
-
-
-                            {loanTypes.map(
-                                (loanType) => (
-
-                                    <option
-                                        key={loanType}
-                                        value={loanType}
-                                    >
-                                        {loanType}
-                                    </option>
-
-                                )
-                            )}
-
-                        </select>
+                            options={loanTypes}
+                            showLabel={false}
+                            className="min-w-0"
+                            buttonClassName="h-12 min-h-12 px-4"
+                        />
 
 
                         {/* =================================================
                             AGENT SEARCH DROPDOWN
                         ================================================= */}
 
-                        <div className="
-                            relative
-                        ">
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setShowAgentDropdown(
-                                        (previous) =>
-                                            !previous
-                                    )
-                                }
-                                className="
-                                    flex
-                                    h-12
-                                    w-full
-                                    items-center
-                                    justify-between
-                                    rounded-lg
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    px-4
-                                    text-left
-                                    text-sm
-                                    transition
-                                    hover:border-base-content/30
-                                "
-                            >
-
-                                <span className="
-                                    truncate
-                                    text-base-content
-                                ">
-                                    {selectedAgentName}
-                                </span>
-
-
-                                <ChevronDownIcon className="
-                                    h-4
-                                    w-4
-                                    shrink-0
-                                    text-base-content/50
-                                " />
-
-                            </button>
-
-
-                            {showAgentDropdown && (
-
-                                <div className="
-                                    absolute
-                                    left-0
-                                    right-0
-                                    top-full
-                                    z-50
-                                    mt-1
-                                    overflow-hidden
-                                    rounded-xl
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    shadow-xl
-                                ">
-
-                                    {/* AGENT SEARCH */}
-
-                                    <div className="
-                                        border-b
-                                        border-base-300
-                                        p-2
-                                    ">
-
-                                        <div className="
-                                            relative
-                                        ">
-
-                                            <MagnifyingGlassIcon className="
-                                                pointer-events-none
-                                                absolute
-                                                left-3
-                                                top-1/2
-                                                h-4
-                                                w-4
-                                                -translate-y-1/2
-                                                text-base-content/40
-                                            " />
-
-
-                                            <input
-                                                type="text"
-                                                value={
-                                                    agentSearch
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setAgentSearch(
-                                                        event.target.value
-                                                    )
-                                                }
-                                                onClick={(event) =>
-                                                    event.stopPropagation()
-                                                }
-                                                autoFocus
-                                                placeholder="Search agent..."
-                                                className="
-                                                    input
-                                                    input-sm
-                                                    input-bordered
-                                                    w-full
-                                                    pl-9
-                                                "
-                                            />
-
-                                        </div>
-
-                                    </div>
-
-
-                                    {/* AGENT LIST */}
-
-                                    <div className="
-                                        max-h-56
-                                        overflow-y-auto
-                                        p-1
-                                    ">
-
-                                        {/* ALL AGENTS */}
-
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                handleAgentSelect(
-                                                    ''
-                                                )
-                                            }
-                                            className={[
-                                                'w-full',
-                                                'rounded-lg',
-                                                'px-3',
-                                                'py-2',
-                                                'text-left',
-                                                'text-sm',
-                                                'transition',
-                                                'hover:bg-base-200',
-                                                !selectedAgent
-                                                    ? 'bg-[#8BCF00]/10 font-medium text-[#78B300]'
-                                                    : 'text-base-content',
-                                            ].join(' ')}
-                                        >
-                                            All Agents
-                                        </button>
-
-
-                                        {/* AGENTS */}
-
-                                        {filteredAgents.map(
-                                            (agent) => (
-
-                                                <button
-                                                    key={
-                                                        agent.id
-                                                    }
-                                                    type="button"
-                                                    onClick={() =>
-                                                        handleAgentSelect(
-                                                            agent.id
-                                                        )
-                                                    }
-                                                    className={[
-                                                        'w-full',
-                                                        'rounded-lg',
-                                                        'px-3',
-                                                        'py-2',
-                                                        'text-left',
-                                                        'text-sm',
-                                                        'transition',
-                                                        'hover:bg-base-200',
-                                                        String(
-                                                            selectedAgent
-                                                        ) ===
-                                                        String(
-                                                            agent.id
-                                                        )
-                                                            ? 'bg-[#8BCF00]/10 font-medium text-[#78B300]'
-                                                            : 'text-base-content',
-                                                    ].join(' ')}
-                                                >
-                                                    {agent.name}
-                                                </button>
-
-                                            )
-                                        )}
-
-
-                                        {/* NO AGENT */}
-
-                                        {!filteredAgents.length && (
-
-                                            <div className="
-                                                px-3
-                                                py-4
-                                                text-center
-                                                text-xs
-                                                text-base-content/50
-                                            ">
-                                                No agent found
-                                            </div>
-
-                                        )}
-
-                                    </div>
-
-                                </div>
-
-                            )}
-
-                        </div>
+                        <AgentDropdown
+                            value={selectedAgent}
+                            onChange={setSelectedAgent}
+                            options={agents}
+                            showLabel={false}
+                            className="min-w-0"
+                            buttonClassName="h-12 min-h-12 px-4"
+                        />
 
 
                         {/* =================================================

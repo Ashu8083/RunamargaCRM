@@ -7,6 +7,10 @@ import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 
+import AgentDropdown from '../../components/GlobalModels/Filters/AgentDropdown'
+import LoanTypeDropdown from '../../components/GlobalModels/Filters/LoanTypeDropdown'
+import RmDropdown from '../../components/GlobalModels/Filters/RmDropdown'
+
 import ApplicationFilterTable from './components/ApplicationFilterTable'
 import ApplicationDisbursementModal from './components/ApplicationDisbursementModal'
 
@@ -1126,12 +1130,11 @@ function ApplicationFilter() {
                         AGENT
                     ================================================= */}
 
-                    <SearchableDropdown
-                        label="Agent"
+                    <AgentDropdown
                         value={agent}
                         options={agentOptions}
-                        placeholder="All Agents"
                         onChange={setAgent}
+                        className="min-w-0"
                     />
 
 
@@ -1139,12 +1142,11 @@ function ApplicationFilter() {
                         RM
                     ================================================= */}
 
-                    <SearchableDropdown
-                        label="RM"
+                    <RmDropdown
                         value={rm}
                         options={rmOptions}
-                        placeholder="All RMs"
                         onChange={setRm}
+                        className="min-w-0"
                     />
 
 
@@ -1152,14 +1154,13 @@ function ApplicationFilter() {
                         LOAN TYPE
                     ================================================= */}
 
-                    <SearchableDropdown
-                        label="Loan Type"
+                    <LoanTypeDropdown
                         value={loanType}
                         options={
                             loanTypeOptions
                         }
-                        placeholder="All Loan Types"
                         onChange={setLoanType}
+                        className="min-w-0"
                     />
 
 

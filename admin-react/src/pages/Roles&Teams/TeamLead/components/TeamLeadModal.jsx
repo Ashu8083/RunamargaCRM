@@ -1,50 +1,150 @@
 // admin-react/src/pages/Role-management/TeamLead/components/TeamLeadModal.jsx
+
 import { useEffect, useState } from 'react'
+
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
+
 
 function TeamLeadModal({
     open,
     teamLead,
+    employees = [],
+    assignedEmployeeIds = [],
     onClose,
     onSubmit,
 }) {
 
     const [formData, setFormData] = useState({
-        name: '',
-        phone: '',
-        email: '',
+        employeeId: '',
         status: 'Active',
     })
 
     const [error, setError] = useState('')
 
 
+    // =========================================================
+    // LOAD FORM
+    // =========================================================
+
     useEffect(() => {
+
+        if (!open) {
+
+            setFormData({
+                employeeId: '',
+                status: 'Active',
+            })
+
+            setError('')
+
+            return
+        }
+
 
         if (teamLead) {
 
             setFormData({
-                name: teamLead.name || '',
-                phone: teamLead.phone || '',
-                email: teamLead.email || '',
+                employeeId: String(
+                    teamLead.employeeId || teamLead.id || ''
+                ),
+
                 status: teamLead.status || 'Active',
             })
 
         } else {
 
             setFormData({
-                name: '',
-                phone: '',
-                email: '',
+                employeeId: '',
                 status: 'Active',
             })
 
         }
 
+
         setError('')
 
-    }, [teamLead, open])
+    }, [open, teamLead])
+
+
+    // =========================================================
+    // CHANGE
+    // =========================================================
+
+    const handleChange = (event) => {
+
+        const {
+            name,
+            value,
+        } = event.target
+
+
+        setFormData((previous) => ({
+            ...previous,
+            [name]: value,
+        }))
+
+
+        setError('')
+
+    }
+
+
+    // =========================================================
+    // SUBMIT
+    // =========================================================
+
+    const handleSubmit = (event) => {
+
+        event.preventDefault()
+
+
+        const employeeId =
+            formData.employeeId
+
+
+        if (!employeeId) {
+
+            setError(
+                'Please select an employee.'
+            )
+
+            return
+        }
+
+
+        const selectedEmployee =
+            employees.find(
+                (employee) =>
+                    String(employee.id) ===
+                    String(employeeId)
+            )
+
+
+        if (!selectedEmployee) {
+
+            setError(
+                'Selected employee could not be found.'
+            )
+
+            return
+        }
+
+
+        onSubmit?.({
+
+            employeeId:
+                selectedEmployee.id,
+
+            employee:
+                selectedEmployee,
+
+            status:
+                formData.status,
+
+        })
+
+    }
 
 
     if (!open) {
@@ -52,101 +152,116 @@ function TeamLeadModal({
     }
 
 
-    const handleChange = (event) => {
+    // =========================================================
+    // AVAILABLE EMPLOYEES
+    // =========================================================
 
-        const { name, value } = event.target
+    const availableEmployees =
+        employees.filter((employee) => {
 
-        setFormData((previous) => ({
-            ...previous,
-            [name]: value,
-        }))
+            /*
+             * While editing, the currently selected employee
+             * must remain available in the dropdown.
+             */
 
-        setError('')
-    }
+            if (
+                teamLead &&
+                String(employee.id) ===
+                    String(teamLead.employeeId)
+            ) {
+                return true
+            }
 
 
-    const handleSubmit = (event) => {
+            return !assignedEmployeeIds.some(
+                (id) =>
+                    String(id) ===
+                    String(employee.id)
+            )
 
-        event.preventDefault()
-
-        const name = formData.name.trim()
-        const phone = formData.phone.trim()
-        const email = formData.email.trim()
-
-        if (!name) {
-            setError('Team lead name is required.')
-            return
-        }
-
-        if (name.length < 2) {
-            setError('Team lead name must contain at least 2 characters.')
-            return
-        }
-
-        if (!phone) {
-            setError('Phone number is required.')
-            return
-        }
-
-        if (!/^[0-9]{10}$/.test(phone)) {
-            setError('Please enter a valid 10-digit phone number.')
-            return
-        }
-
-        if (!email) {
-            setError('Email address is required.')
-            return
-        }
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            setError('Please enter a valid email address.')
-            return
-        }
-
-        onSubmit?.({
-            name,
-            phone,
-            email,
-            status: formData.status,
         })
-    }
 
 
     return (
+
         <dialog
             open
-            className="modal modal-bottom sm:modal-middle"
+            className="
+                modal
+                modal-bottom
+                sm:modal-middle
+            "
         >
 
-            <div className="modal-box w-11/12 max-w-lg p-0 bg-base-100 border border-base-300">
+            <div className="
+                modal-box
+                w-11/12
+                max-w-lg
+                border
+                border-base-300
+                bg-base-100
+                p-0
+            ">
 
-                {/* =====================================================
+                {/* =================================================
                     HEADER
-                ===================================================== */}
+                ================================================= */}
 
-                <div className="flex items-center justify-between p-5 border-b border-base-300">
+                <div className="
+                    flex
+                    items-center
+                    justify-between
+                    border-b
+                    border-base-300
+                    p-5
+                ">
 
-                    <div className="flex items-center gap-3">
+                    <div className="
+                        flex
+                        items-center
+                        gap-3
+                    ">
 
-                        <div className="w-9 h-9 rounded-lg bg-[#8BCF00]/10 flex items-center justify-center">
+                        <div className="
+                            flex
+                            h-9
+                            w-9
+                            items-center
+                            justify-center
+                            rounded-lg
+                            bg-[#8BCF00]/10
+                        ">
 
-                            <UserGroupIcon className="w-5 h-5 text-[#78B300]" />
+                            <UserGroupIcon className="
+                                h-5
+                                w-5
+                                text-[#78B300]
+                            " />
 
                         </div>
 
+
                         <div>
 
-                            <h3 className="text-lg font-semibold">
+                            <h3 className="
+                                text-lg
+                                font-semibold
+                            ">
                                 {teamLead
-                                    ? 'Edit Team Lead'
+                                    ? 'Team Lead Details'
                                     : 'Add Team Lead'
                                 }
                             </h3>
 
-                            <p className="text-xs text-base-content/50 mt-1">
+
+                            <p className="
+                                mt-1
+                                text-xs
+                                text-base-content/50
+                            ">
                                 {teamLead
-                                    ? 'Update the team lead details.'
-                                    : 'Create a new team lead.'
+                                    ? 'Update the team lead status.'
+                                    : 'Select an existing employee as a team lead.'
                                 }
                             </p>
 
@@ -158,132 +273,286 @@ function TeamLeadModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="btn btn-sm btn-ghost btn-circle"
+                        className="
+                            btn
+                            btn-sm
+                            btn-ghost
+                            btn-circle
+                        "
                         aria-label="Close"
                     >
-                        <XMarkIcon className="w-5 h-5" />
+
+                        <XMarkIcon className="
+                            h-5
+                            w-5
+                        " />
+
                     </button>
 
                 </div>
 
 
-                {/* =====================================================
+                {/* =================================================
                     FORM
-                ===================================================== */}
+                ================================================= */}
 
                 <form onSubmit={handleSubmit}>
 
-                    <div className="p-5 space-y-5">
+                    <div className="
+                        space-y-5
+                        p-5
+                    ">
 
-                        {/* Name */}
+                        {/* =============================================
+                            EMPLOYEE
+                        ============================================= */}
 
                         <div>
 
-                            <label className="label px-0">
+                            <label className="
+                                label
+                                px-0
+                            ">
 
-                                <span className="label-text text-sm font-medium">
-                                    Name
+                                <span className="
+                                    label-text
+                                    text-sm
+                                    font-medium
+                                ">
+                                    Employee
                                 </span>
 
                             </label>
 
-                            <input
-                                type="text"
-                                name="name"
-                                value={formData.name}
+
+                            <select
+                                name="employeeId"
+                                value={formData.employeeId}
                                 onChange={handleChange}
-                                placeholder="Enter team lead name"
+                                disabled={Boolean(teamLead)}
                                 className="
-                                    input
-                                    input-bordered
+                                    select
+                                    select-bordered
                                     w-full
                                     focus:border-[#8BCF00]
                                     focus:outline-[#8BCF00]
+                                    disabled:cursor-not-allowed
+                                    disabled:opacity-70
                                 "
-                                autoFocus
-                            />
+                            >
+
+                                <option value="">
+                                    Select employee
+                                </option>
+
+
+                                {availableEmployees.map(
+                                    (employee) => (
+
+                                        <option
+                                            key={employee.id}
+                                            value={employee.id}
+                                        >
+                                            {employee.name}
+                                            {employee.employeeId
+                                                ? ` (${employee.employeeId})`
+                                                : ''
+                                            }
+                                        </option>
+
+                                    )
+                                )}
+
+                            </select>
+
+
+                            {teamLead && (
+
+                                <p className="
+                                    mt-1.5
+                                    text-xs
+                                    text-base-content/45
+                                ">
+                                    Employee cannot be changed after
+                                    the team lead is created.
+                                </p>
+
+                            )}
+
+
+                            {!teamLead &&
+                                availableEmployees.length === 0 && (
+
+                                    <p className="
+                                        mt-1.5
+                                        text-xs
+                                        text-warning
+                                    ">
+                                        No employees are available
+                                        to assign as a team lead.
+                                    </p>
+
+                                )}
 
                         </div>
 
 
-                        {/* Phone + Email */}
+                        {/* =============================================
+                            SELECTED EMPLOYEE DETAILS
+                        ============================================= */}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {formData.employeeId && (
 
-                            {/* Phone */}
+                            <div className="
+                                rounded-lg
+                                border
+                                border-base-300
+                                bg-base-200/30
+                                p-4
+                            ">
 
-                            <div>
+                                {(() => {
 
-                                <label className="label px-0">
+                                    const employee =
+                                        employees.find(
+                                            (item) =>
+                                                String(item.id) ===
+                                                String(
+                                                    formData.employeeId
+                                                )
+                                        )
 
-                                    <span className="label-text text-sm font-medium">
-                                        Phone
-                                    </span>
 
-                                </label>
+                                    if (!employee) {
+                                        return null
+                                    }
 
-                                <input
-                                    type="tel"
-                                    name="phone"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    placeholder="10-digit phone"
-                                    maxLength={10}
-                                    className="
-                                        input
-                                        input-bordered
-                                        w-full
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
-                                    "
-                                />
+
+                                    return (
+
+                                        <div>
+
+                                            <p className="
+                                                text-sm
+                                                font-semibold
+                                            ">
+                                                {employee.name}
+                                            </p>
+
+
+                                            <div className="
+                                                mt-2
+                                                grid
+                                                grid-cols-1
+                                                gap-2
+                                                sm:grid-cols-2
+                                            ">
+
+                                                <div>
+
+                                                    <span className="
+                                                        text-[10px]
+                                                        uppercase
+                                                        tracking-wide
+                                                        text-base-content/40
+                                                    ">
+                                                        Employee ID
+                                                    </span>
+
+                                                    <p className="
+                                                        mt-0.5
+                                                        text-xs
+                                                    ">
+                                                        {employee.employeeId ||
+                                                            employee.id ||
+                                                            'N/A'
+                                                        }
+                                                    </p>
+
+                                                </div>
+
+
+                                                <div>
+
+                                                    <span className="
+                                                        text-[10px]
+                                                        uppercase
+                                                        tracking-wide
+                                                        text-base-content/40
+                                                    ">
+                                                        Phone
+                                                    </span>
+
+                                                    <p className="
+                                                        mt-0.5
+                                                        text-xs
+                                                    ">
+                                                        {employee.phone ||
+                                                            'N/A'
+                                                        }
+                                                    </p>
+
+                                                </div>
+
+
+                                                <div className="
+                                                    sm:col-span-2
+                                                ">
+
+                                                    <span className="
+                                                        text-[10px]
+                                                        uppercase
+                                                        tracking-wide
+                                                        text-base-content/40
+                                                    ">
+                                                        Email
+                                                    </span>
+
+                                                    <p className="
+                                                        mt-0.5
+                                                        text-xs
+                                                    ">
+                                                        {employee.email ||
+                                                            'N/A'
+                                                        }
+                                                    </p>
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    )
+
+                                })()}
 
                             </div>
 
-
-                            {/* Email */}
-
-                            <div>
-
-                                <label className="label px-0">
-
-                                    <span className="label-text text-sm font-medium">
-                                        Email
-                                    </span>
-
-                                </label>
-
-                                <input
-                                    type="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="Email address"
-                                    className="
-                                        input
-                                        input-bordered
-                                        w-full
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
-                                    "
-                                />
-
-                            </div>
-
-                        </div>
+                        )}
 
 
-                        {/* Status */}
+                        {/* =============================================
+                            STATUS
+                        ============================================= */}
 
                         <div>
 
-                            <label className="label px-0">
+                            <label className="
+                                label
+                                px-0
+                            ">
 
-                                <span className="label-text text-sm font-medium">
+                                <span className="
+                                    label-text
+                                    text-sm
+                                    font-medium
+                                ">
                                     Status
                                 </span>
 
                             </label>
+
 
                             <select
                                 name="status"
@@ -315,13 +584,25 @@ function TeamLeadModal({
                         </div>
 
 
-                        {/* Error */}
+                        {/* =============================================
+                            ERROR
+                        ============================================= */}
 
                         {error && (
 
-                            <div className="rounded-lg border border-error/20 bg-error/5 px-3 py-2">
+                            <div className="
+                                rounded-lg
+                                border
+                                border-error/20
+                                bg-error/5
+                                px-3
+                                py-2
+                            ">
 
-                                <p className="text-xs text-error">
+                                <p className="
+                                    text-xs
+                                    text-error
+                                ">
                                     {error}
                                 </p>
 
@@ -332,16 +613,27 @@ function TeamLeadModal({
                     </div>
 
 
-                    {/* =====================================================
+                    {/* =================================================
                         FOOTER
-                    ===================================================== */}
+                    ================================================= */}
 
-                    <div className="flex justify-end gap-2 p-4 border-t border-base-300">
+                    <div className="
+                        flex
+                        justify-end
+                        gap-2
+                        border-t
+                        border-base-300
+                        p-4
+                    ">
 
                         <button
                             type="button"
                             onClick={onClose}
-                            className="btn btn-sm btn-ghost"
+                            className="
+                                btn
+                                btn-sm
+                                btn-ghost
+                            "
                         >
                             Cancel
                         </button>
@@ -355,13 +647,13 @@ function TeamLeadModal({
                                 border-[#8BCF00]
                                 bg-[#8BCF00]
                                 text-white
-                                hover:bg-[#6FA800]
                                 hover:border-[#6FA800]
+                                hover:bg-[#6FA800]
                             "
                         >
                             {teamLead
-                                ? 'Update Team Lead'
-                                : 'Create Team Lead'
+                                ? 'Save Status'
+                                : 'Add Team Lead'
                             }
                         </button>
 
@@ -372,22 +664,27 @@ function TeamLeadModal({
             </div>
 
 
-            {/* =====================================================
+            {/* =================================================
                 BACKDROP
-            ===================================================== */}
+            ================================================= */}
 
             <form
                 method="dialog"
                 className="modal-backdrop"
                 onClick={onClose}
             >
+
                 <button type="button">
                     close
                 </button>
+
             </form>
 
         </dialog>
+
     )
+
 }
+
 
 export default TeamLeadModal
