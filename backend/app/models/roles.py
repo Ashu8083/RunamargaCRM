@@ -58,3 +58,8 @@ class Role(Base):
         "Employee",
         back_populates="role",
     )
+    employee_roles = relationship(
+        "EmployeeRole",
+        back_populates="role",
+        cascade="all, delete-orphan",
+    )

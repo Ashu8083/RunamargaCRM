@@ -119,3 +119,8 @@ class Employee(Base):
         foreign_keys="EmployeeContext.reports_to_id",
         back_populates="reports_to",
     )
+    employee_roles = relationship(
+        "EmployeeRole",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+    )

@@ -1,3 +1,4 @@
+# app/models/employee_context_permissions.py
 from sqlalchemy import (
     Column,
     ForeignKey,

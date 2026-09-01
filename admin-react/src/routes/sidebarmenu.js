@@ -311,7 +311,7 @@ const sidebarmenu = [
         icon: <UserCircleIcon className={submenuIconClasses} />,
         name: "Employees",
         parent: "Employee Management",
-        permission: PERMISSIONS.EMPLOYEE_VIEW,
+        permission: PERMISSIONS.EMPLOYEES_VIEW,
       },
 
       {

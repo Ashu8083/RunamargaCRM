@@ -70,11 +70,11 @@ export const PERMISSIONS = Object.freeze({
     // EMPLOYEES
     // =========================================================
 
-    EMPLOYEE_VIEW: 'employees:view',
-    EMPLOYEE_CREATE: 'employees:create',
-    EMPLOYEE_EDIT: 'employees:edit',
-    EMPLOYEE_DELETE: 'employees:delete',
-    EMPLOYEE_BLOCK: 'employees:block',
+    EMPLOYEES_VIEW: 'employees:view',
+    EMPLOYEES_CREATE: 'employees:create',
+    EMPLOYEES_EDIT: 'employees:edit',
+    EMPLOYEES_DELETE: 'employees:delete',
+    EMPLOYEES_BLOCK: 'employees:block',
 
     EMPLOYEE_ATTENDANCE_VIEW:
         'employee-attendance:view',

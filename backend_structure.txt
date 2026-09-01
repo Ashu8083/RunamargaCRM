@@ -704,3 +704,307 @@ React stores auth session
 permissions.js checks permissions
  ↓
 Dashboard ✅
+
+
+
+Employee
+   ↓
+EmployeeContext
+   ↓
+Context
+   ↓
+EmployeeContextPermission
+   ↓
+Permission
+
+
+                         LOGIN
+                           │
+                           ▼
+                  POST /auth/login
+                           │
+                           ▼
+                     Backend checks
+                     employee/account
+                           │
+                           ▼
+                 Generate auth tokens
+                           │
+                           ▼
+                 Load employee contexts
+                           │
+                           ▼
+                 Load context permissions
+                           │
+                           ▼
+                     Return user
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │      auth_user         │
+              │                        │
+              │ user                   │
+              │  ├── GLOBAL context    │
+              │  │     permissions     │
+              │  │                     │
+              │  └── RM context        │
+              │        permissions     │
+              └────────────────────────┘
+                           │
+                           ▼
+                  Select active context
+                           │
+                           ▼
+                 getActiveContext()
+                           │
+                           ▼
+                  Active context
+                           │
+                           ▼
+                    permissions[]
+                           │
+                           ▼
+                    PermissionGate
+                           │
+                 ┌─────────┴─────────┐
+                 │                   │
+              allowed             denied
+                 │                   │
+                 ▼                   ▼
+          Render page          Access restricted
+
+
+API REQUEST
+    │
+    ▼
+Access token valid?
+    │
+ ┌──┴───┐
+YES     NO
+ │       │
+ ▼       ▼
+200     401
+         │
+         ▼
+      /auth/refresh
+         │
+         ▼
+   New access token
+         │
+         ▼
+   Retry original API
+
+
+
+
+
+
+
+
+
+
+
+index.js — WHAT PAGE EXISTS AND WHAT PERMISSION IT NEEDS - "There is an Employees page. Its URL is /employees, its component is Employees, and you need employees:view to access it."
+PageContent.js — ACTUALLY PROTECTS THE PAGE
+
+This is where your routes are rendered.
+This is extremely important.
+
+Suppose RM manually types:
+
+/crm/employees
+
+into the browser.
+
+The sidebar isn't involved.
+
+So we need another protection layer.
+
+The flow becomes:
+User types /crm/employees
+          ↓
+PageContent
+          ↓
+Find /employees route
+          ↓
+PermissionGate
+          ↓
+"Does current context have employees:view?"
+          ↓
+       NO
+          ↓
+Access restricted
+
+
+PermissionGate.js — THE SECURITY GUARD
+
+This is the actual component that says:
+
+"Are you allowed to enter?"
+
+permissions.js asks:
+
+"Does this user have this permission?"
+
+PermissionGate asks:
+
+"What should I render based on that answer?"
+
+
+
+permissions.js — FIGURES OUT WHAT THE USER CAN DO
+
+This is the heart of your frontend RBAC.
+
+You have:
+
+const getUserPermissions = (user = getCurrentUser()) => {
+
+Then it gets the active context:
+
+const activeContext = getActiveContext(user)
+
+and returns:
+
+activeContext.permissions
+
+So imagine your user has:
+
+Test Admin
+
+with:
+
+GLOBAL
+    employees:view
+    employees:create
+    employees:edit
+    ...
+
+RM
+    loans:view
+    loans:assign
+    ...
+
+If the user selects:
+
+GLOBAL
+
+then:
+
+getUserPermissions()
+
+returns GLOBAL permissions.
+
+If they select:
+
+RM
+
+then it returns RM permissions.
+
+Therefore:
+
+hasPermission('employees:view')
+
+can change depending on the selected context.
+
+This is why context is so important.
+
+Same employee:
+
+Test Admin
+
+can become:
+
+GLOBAL
+    ↓
+many permissions
+
+or:
+
+RM
+    ↓
+different permissions
+
+without changing the employee itself.
+
+5. apiClient — TALKS TO THE BACKEND
+
+This one is different from all the others.
+
+apiClient isn't primarily an RBAC file.
+
+Its job is:
+
+"How does the frontend communicate with our FastAPI backend?"
+
+For example:
+
+React
+  │
+  │ GET /employees
+  ▼
+apiClient
+  │
+  ▼
+FastAPI
+  │
+  ▼
+Database
+
+It handles things such as:
+
+API base URL
+cookies
+authentication
+refresh token
+retrying requests
+common headers
+handling 401
+sending requests consistently
+React
+  │
+  │ request
+  ▼
+API Client
+  │
+  │ access_token cookie
+  ▼
+FastAPI
+  │
+  ▼
+get_current_employee()
+  │
+  ▼
+employee
+
+
+If access token expires:
+
+API request
+     ↓
+401
+     ↓
+apiClient
+     ↓
+refresh token
+     ↓
+new access token
+     ↓
+retry original request
+     ↓
+200
+
+
+                 CREATE EMPLOYEE
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+       Employee     Details      Contexts
+       table        table          │
+                                   │
+                    ┌──────────────┼──────────────┐
+                    ▼              ▼              ▼
+                 GLOBAL           RM            AGENT
+                    │              │              │
+                    ▼              ▼              ▼
+               permissions    permissions    permissions

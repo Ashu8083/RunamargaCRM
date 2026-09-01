@@ -18,7 +18,6 @@ function EmployeeTable({
   onEdit,
   onDelete,
   onRefresh,
-  onStatusChange,
   onBlockChange,
 }) {
   // =========================================================
@@ -38,27 +37,20 @@ function EmployeeTable({
         employee.email?.toLowerCase().includes(value) ||
         employee.phone?.toLowerCase().includes(value) ||
         employee.employeeId?.toLowerCase().includes(value) ||
-        employee.role?.toLowerCase().includes(value),
+        employee.role?.name?.toLowerCase().includes(value),
     );
   }, [employees, search]);
 
-  // =========================================================
-  // STATUS
-  // =========================================================
-
-  const handleStatusClick = (employee) => {
-    const nextStatus = employee.status === "Active" ? "Inactive" : "Active";
-
-    onStatusChange?.(employee, nextStatus);
-  };
 
   // =========================================================
   // BLOCK
   // =========================================================
 
   const handleBlockClick = (employee) => {
+    console.log('clicked')
     onBlockChange?.(employee, !employee.blocked);
   };
+
   const handleSearch = () => {
     // Filtering is already handled through `search`
     setSearch(search.trim());
@@ -446,7 +438,7 @@ function EmployeeTable({
                                                     text-base-content
                                                 "
                       >
-                        {employee.role}
+                        {employee.role?.name || "—"}
                       </span>
                     </td>
 
@@ -460,7 +452,6 @@ function EmployeeTable({
                     >
                       <button
                         type="button"
-                        onClick={() => handleStatusClick(employee)}
                         title={
                           employee.status === "Active"
                             ? "Set Inactive"

@@ -13,3 +13,4 @@ from app.models.employee_context_permissions import EmployeeContextPermission
 from app.models.employee_face_profiles import EmployeeFaceProfile
 from app.models.loan_types import LoanType
 from app.models.loan_applications import LoanApplication
+from app.models.employee_roles import EmployeeRole

@@ -18,12 +18,12 @@ ROLES = [
         "description": "Full system administrator",
     },
     {
-        "name": "team_lead",
-        "description": "Manages and monitors team members",
+        "name": "Guest",
+        "description": "Guest",
     },
     {
-        "name": "agent",
-        "description": "Handles assigned and RM leads",
+        "name": "HR",
+        "description": "Handles HRMS",
     },
     {
         "name": "accountant",
@@ -56,8 +56,8 @@ PERMISSIONS = [
         "dashboard:loan-distribution",
     ),
     ("Profile View", "profile:view"),
+    ("Attendance", "user-attendance:view"),
     ("Application Filter", "application-filter:view"),
-
     # Team Leads
     ("Team Lead View", "team-leads:view"),
     ("Team Lead Create", "team-leads:create"),
@@ -66,7 +66,6 @@ PERMISSIONS = [
         "Team Lead Permission Manage",
         "team-leads:permissions:manage",
     ),
-
     # Agents
     ("Agent View", "agents:view"),
     ("Agent Create", "agents:create"),
@@ -76,7 +75,6 @@ PERMISSIONS = [
         "Agent Permission Manage",
         "agents:permissions:manage",
     ),
-
     # Applications / Loans
     ("Application View", "loans:view"),
     ("Application Create", "loans:create"),
