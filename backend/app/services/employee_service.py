@@ -14,6 +14,9 @@ from app.models.employee_contexts import EmployeeContext
 from app.models.employee_context_permissions import (
     EmployeeContextPermission,
 )
+from app.services.employee_face_profile_service import (
+    EmployeeFaceProfileService,
+)
 from app.models.contexts import Context
 from app.models.permissions import Permission
 from app.models.roles import Role
@@ -471,7 +474,13 @@ def create_employee(
 
             details.profile_image = path
             saved_files.append(path)
-
+        if details.profile_image:
+            EmployeeFaceProfileService.upsert_face_profile(
+                db=db,
+                employee_id=new_employee.id,
+                image_path=details.profile_image,
+                updated_by=employee.id,
+            )
         if aadhaar_card:
             path = save_file(
                 aadhaar_card,
@@ -828,7 +837,13 @@ def update_employee(
                 old_files_to_delete.append(
                     old_profile_image
                 )
-
+            if new_profile_image:
+                EmployeeFaceProfileService.upsert_face_profile(
+                    db=db,
+                    employee_id=target.id,
+                    image_path=new_profile_image,
+                    updated_by=employee.id,
+                )
         if aadhaar_card:
             new_aadhar_card = save_file(
                 aadhaar_card,

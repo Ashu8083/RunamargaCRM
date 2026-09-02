@@ -7,10 +7,11 @@ import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
 import BellAlertIcon from "@heroicons/react/24/outline/BellAlertIcon";
 import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftRightIcon";
 import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
-import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 
 import GlobalChat from "../../../../components/GlobalModels/Loans/GlobalChat";
+import AgentDropdown from "../../../../components/GlobalModels/Filters/AgentDropdown";
+import LoanTypeDropdown from "../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 
 function AgentApplicationsTable({
   applications = [],
@@ -36,28 +37,12 @@ function AgentApplicationsTable({
   onRefresh,
 }) {
   // =========================================================
-  // AGENT DROPDOWN
-  // =========================================================
-
-  const [agentSearch, setAgentSearch] = useState("");
-
-  const [showAgentMenu, setShowAgentMenu] = useState(false);
-
-  // =========================================================
   // CHAT
   // =========================================================
 
   const [chatOpen, setChatOpen] = useState(false);
 
   const [selectedChatApplication, setSelectedChatApplication] = useState(null);
-
-  // =========================================================
-  // FILTERED AGENTS
-  // =========================================================
-
-  const filteredAgents = agents.filter((agent) =>
-    agent.name?.toLowerCase().includes(agentSearch.trim().toLowerCase()),
-  );
 
   // =========================================================
   // HELPERS
@@ -192,19 +177,11 @@ function AgentApplicationsTable({
     }
   };
 
-  const selectedAgentName =
-    agents.find((agent) => String(agent.id) === String(selectedAgent))?.name ||
-    "All Agents";
-
   // =========================================================
   // CLEAR
   // =========================================================
 
   const handleClear = () => {
-    setAgentSearch("");
-
-    setShowAgentMenu(false);
-
     onClearFilters?.();
   };
 
@@ -310,209 +287,23 @@ function AgentApplicationsTable({
 
           {/* LOAN TYPE */}
 
-          <select
+          <LoanTypeDropdown
             value={selectedLoanType}
-            onChange={(event) => setSelectedLoanType(event.target.value)}
-            className="
-                            select
-                            select-bordered
-                            w-44
-                            shrink-0
-                        "
-          >
-            <option value="">All Loan Types</option>
-
-            {loanTypes.map((loanType) => (
-              <option key={loanType} value={loanType}>
-                {loanType}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedLoanType}
+            options={loanTypes}
+            showLabel={false}
+            className="w-44 shrink-0"
+          />
 
           {/* AGENT */}
 
-          <div
-            className="
-                        relative
-                        w-48
-                        shrink-0
-                    "
-          >
-            <button
-              type="button"
-              onClick={() => setShowAgentMenu((value) => !value)}
-              className="
-                                select
-                                select-bordered
-                                w-full
-                                flex
-                                items-center
-                                justify-between
-                                text-left
-                                font-normal
-                            "
-            >
-              <span
-                className="
-                                truncate
-                                min-w-0
-                            "
-              >
-                {selectedAgentName}
-              </span>
-
-              <ChevronDownIcon
-                className="
-                                w-4
-                                h-4
-                                shrink-0
-                                text-base-content/50
-                            "
-              />
-            </button>
-
-            {showAgentMenu && (
-              <div
-                className="
-                                absolute
-                                z-50
-                                top-full
-                                left-0
-                                right-0
-                                mt-1
-                                bg-base-100
-                                border
-                                border-base-300
-                                rounded-lg
-                                shadow-lg
-                                overflow-hidden
-                            "
-              >
-                {/* SEARCH AGENT */}
-
-                <div
-                  className="
-                                    p-2
-                                    border-b
-                                    border-base-300
-                                "
-                >
-                  <label
-                    className="
-                                        input
-                                        input-sm
-                                        input-bordered
-                                        flex
-                                        items-center
-                                        gap-2
-                                    "
-                  >
-                    <SearchIcon
-                      className="
-                                            w-4
-                                            h-4
-                                            text-base-content/40
-                                        "
-                    />
-
-                    <input
-                      autoFocus
-                      type="text"
-                      value={agentSearch}
-                      onChange={(event) => setAgentSearch(event.target.value)}
-                      placeholder="Search Agent..."
-                      className="
-                                                grow
-                                                min-w-0
-                                            "
-                    />
-                  </label>
-                </div>
-
-                {/* AGENT LIST */}
-
-                <div
-                  className="
-                                    max-h-52
-                                    overflow-y-auto
-                                    p-1
-                                "
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedAgent("");
-
-                      setAgentSearch("");
-
-                      setShowAgentMenu(false);
-                    }}
-                    className={`
-                                            w-full
-                                            text-left
-                                            px-3
-                                            py-2
-                                            rounded
-                                            text-sm
-                                            hover:bg-base-200
-                                            ${
-                                              !selectedAgent
-                                                ? "bg-[#8BCF00]/10 text-[#78B300] font-medium"
-                                                : ""
-                                            }
-                                        `}
-                  >
-                    All Agents
-                  </button>
-
-                  {filteredAgents.map((agent) => (
-                    <button
-                      key={agent.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedAgent(agent.id);
-
-                        setAgentSearch("");
-
-                        setShowAgentMenu(false);
-                      }}
-                      className={`
-                                                w-full
-                                                text-left
-                                                px-3
-                                                py-2
-                                                rounded
-                                                text-sm
-                                                truncate
-                                                hover:bg-base-200
-                                                ${
-                                                  String(selectedAgent) ===
-                                                  String(agent.id)
-                                                    ? "bg-[#8BCF00]/10 text-[#78B300] font-medium"
-                                                    : ""
-                                                }
-                                            `}
-                    >
-                      {agent.name}
-                    </button>
-                  ))}
-
-                  {!filteredAgents.length && (
-                    <div
-                      className="
-                                            text-center
-                                            text-xs
-                                            text-base-content/50
-                                            py-3
-                                        "
-                    >
-                      No agent found
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <AgentDropdown
+            value={selectedAgent}
+            onChange={setSelectedAgent}
+            options={agents}
+            showLabel={false}
+            className="w-48 shrink-0"
+          />
 
           {/* CLEAR */}
 

@@ -6,6 +6,8 @@ import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 
+import RmDropdown from '../../../components/GlobalModels/Filters/RmDropdown'
+
 import AssignNumbersModal from './components/AssignNumbersModal'
 import CallAssignmentTable from './components/CallAssignmentTable'
 import CallHistoryModal from './components/CallHistoryModal'
@@ -1358,56 +1360,12 @@ function CallAssignment() {
                         RM
                     ================================================= */}
 
-                    <div className="w-full xl:w-48">
-
-                        <label className="
-                            mb-1.5
-                            block
-                            text-xs
-                            font-medium
-                            text-base-content/60
-                        ">
-                            RM
-                        </label>
-
-
-                        <select
-                            value={rm}
-                            onChange={(event) =>
-                                setRM(
-                                    event.target.value
-                                )
-                            }
-                            className="
-                                select
-                                select-bordered
-                                h-10
-                                min-h-10
-                                w-full
-                            "
-                        >
-
-                            <option value="">
-                                All RMs
-                            </option>
-
-
-                            {RM_OPTIONS.map(
-                                (item) => (
-
-                                    <option
-                                        key={item.id}
-                                        value={item.id}
-                                    >
-                                        {item.name}
-                                    </option>
-
-                                )
-                            )}
-
-                        </select>
-
-                    </div>
+                    <RmDropdown
+                        value={rm}
+                        onChange={setRM}
+                        options={RM_OPTIONS}
+                        className="w-full xl:w-48"
+                    />
 
 
                     {/* =================================================

@@ -9,23 +9,15 @@ export const PERMISSIONS = Object.freeze({
     APPLICATION_FILTER_VIEW: 'application-filter:view',
     ATTENDANCE_VIEW: 'attendance:view',
     PROFILE_VIEW: 'profile:view',
-
-    // =========================================================
-    // CALL MANAGEMENT
-    // =========================================================
-
-    CALL_LOGS_VIEW: 'calls:logs:view',
-    CALL_ASSIGNMENT_VIEW: 'calls:assignment:view',
-    CALL_ANALYTICS_OVERVIEW_VIEW:
-        'call-analytics-overview:view',
-    CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW:
-        'call-analytics-agent-performance:view',
-    CALL_ANALYTICS_CALL_TRENDS_VIEW:
-        'call-analytics-call-trends:view',
-
-    // =========================================================
-    // TEAMS & ROLES
-    // =========================================================
+    CALL_LOGS_VIEW: 'call-logs:view',
+    CALL_ASSIGNMENT_VIEW: 'call-assignment:view',
+    CALL_ANALYTICS_OVERVIEW_VIEW: 'call-analytics-overview:view',
+    CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW: 'call-analytics-agent-performance:view',
+    CALL_ANALYTICS_CALL_TRENDS_VIEW: 'call-analytics-call-trends:view',
+    AGENT_ANALYTICS_OVERVIEW_VIEW: 'agent-analytics-overview:view',
+    AGENT_Performance_OVERVIEW_VIEW: 'agent-performance-overview:view',
+    PHONE_NUMBERS_VIEW:"phone-numbers-view",
+    ADMIN_LOGS_VIEW:"admin-logs-view",
 
     ROLES_VIEW: 'roles:view',
     ROLES_MANAGE: 'roles:manage',

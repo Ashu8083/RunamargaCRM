@@ -1,3 +1,4 @@
+// admin-react/src/app/apiClient.js
 import axios from 'axios'
 
 import {
@@ -5,8 +6,9 @@ import {
     refreshAccessToken,
 } from './auth'
 
+import { API_BASE_URL } from '../config/url'
 const apiClient = axios.create({
-    baseURL: process.env.REACT_APP_BASE_URL || '',
+    baseURL: API_BASE_URL,
     withCredentials: true,
 })
 

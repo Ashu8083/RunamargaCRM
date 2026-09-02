@@ -1,12 +1,63 @@
 // admin-react/src/pages/Loans/ShuffleLoans/components/AssignShuffleLoansModal.jsx
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import UserIcon from '@heroicons/react/24/outline/UserIcon'
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
-import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
-import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
+
+import AgentDropdown from '../../../../components/GlobalModels/Filters/AgentDropdown'
+import LoanTypeDropdown from '../../../../components/GlobalModels/Filters/LoanTypeDropdown'
+import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
+
+
+const getCommonValue = (items, getter) => {
+
+    if (!items.length) {
+        return ''
+    }
+
+
+    const values = items
+        .map(getter)
+        .filter(
+            (value) =>
+                value !== null &&
+                value !== undefined &&
+                value !== ''
+        )
+        .map((value) => String(value))
+
+
+    if (!values.length) {
+        return ''
+    }
+
+
+    const firstValue = values[0]
+
+
+    return values.every((value) => value === firstValue)
+        ? firstValue
+        : ''
+
+}
+
+
+const getAgentValue = (agent) =>
+    agent?.id ??
+    agent?.agentId ??
+    agent?.employeeId ??
+    agent?.name ??
+    ''
+
+
+const getRmValue = (rm) =>
+    rm?.id ??
+    rm?.rmId ??
+    rm?.employeeId ??
+    rm?.name ??
+    ''
 
 
 function AssignShuffleLoansModal({
@@ -19,10 +70,6 @@ function AssignShuffleLoansModal({
     onSubmit,
 }) {
 
-    // =========================================================
-    // FORM STATE
-    // =========================================================
-
     const [selectedAgent, setSelectedAgent] =
         useState('')
 
@@ -33,34 +80,6 @@ function AssignShuffleLoansModal({
         useState('')
 
 
-    // =========================================================
-    // DROPDOWN STATE
-    // =========================================================
-
-    const [openDropdown, setOpenDropdown] =
-        useState(null)
-
-    const [agentSearch, setAgentSearch] =
-        useState('')
-
-    const [rmSearch, setRMSearch] =
-        useState('')
-
-    const [loanTypeSearch, setLoanTypeSearch] =
-        useState('')
-
-
-    // =========================================================
-    // DROPDOWN REF
-    // =========================================================
-
-    const dropdownRef = useRef(null)
-
-
-    // =========================================================
-    // LOAD DEFAULT VALUES
-    // =========================================================
-
     useEffect(() => {
 
         if (!open) {
@@ -69,67 +88,12 @@ function AssignShuffleLoansModal({
             setSelectedRM('')
             setSelectedLoanType('')
 
-            setOpenDropdown(null)
-
-            setAgentSearch('')
-            setRMSearch('')
-            setLoanTypeSearch('')
-
             return
 
         }
 
 
-        /*
-         * When multiple applications are selected,
-         * only use a value if all selected applications
-         * currently have the same value.
-         */
-
-        const getCommonValue = (items, getter) => {
-
-            if (!items.length) {
-                return ''
-            }
-
-
-            const values = items
-                .map(getter)
-                .filter(
-                    (value) =>
-                        value !== null &&
-                        value !== undefined &&
-                        value !== ''
-                )
-                .map((value) => String(value))
-
-
-            if (!values.length) {
-                return ''
-            }
-
-
-            const firstValue = values[0]
-
-
-            if (
-                values.every(
-                    (value) =>
-                        value === firstValue
-                )
-            ) {
-
-                return firstValue
-
-            }
-
-
-            return ''
-
-        }
-
-
-        const commonAgent =
+        setSelectedAgent(
             getCommonValue(
                 applications,
                 (application) =>
@@ -140,9 +104,10 @@ function AssignShuffleLoansModal({
                     application.agent_name ??
                     application.agent?.name
             )
+        )
 
 
-        const commonRM =
+        setSelectedRM(
             getCommonValue(
                 applications,
                 (application) =>
@@ -153,243 +118,79 @@ function AssignShuffleLoansModal({
                     application.rm_name ??
                     application.rm?.name
             )
+        )
 
 
-        const commonLoanType =
+        setSelectedLoanType(
             getCommonValue(
                 applications,
                 (application) =>
-                    application.loanType
+                    application.loanType ??
+                    application.loan_type
             )
+        )
+
+    }, [
+        open,
+        applications,
+    ])
 
 
-        setSelectedAgent(commonAgent)
+    const selectedAgentName = useMemo(() => {
 
-        setSelectedRM(commonRM)
-
-        setSelectedLoanType(commonLoanType)
-
-    }, [open, applications])
-
-
-    // =========================================================
-    // CLOSE DROPDOWN ON OUTSIDE CLICK
-    // =========================================================
-
-    useEffect(() => {
-
-        const handleOutsideClick = (event) => {
-
-            if (
-                dropdownRef.current &&
-                !dropdownRef.current.contains(
-                    event.target
-                )
-            ) {
-
-                setOpenDropdown(null)
-
-            }
-
+        if (!selectedAgent) {
+            return ''
         }
 
 
-        if (openDropdown) {
-
-            document.addEventListener(
-                'mousedown',
-                handleOutsideClick
-            )
-
-        }
-
-
-        return () => {
-
-            document.removeEventListener(
-                'mousedown',
-                handleOutsideClick
-            )
-
-        }
-
-    }, [openDropdown])
-
-
-    // =========================================================
-    // FILTER AGENTS
-    // =========================================================
-
-    const filteredAgents = useMemo(() => {
-
-        const value =
-            agentSearch
-                .trim()
-                .toLowerCase()
-
-
-        if (!value) {
-            return agents
-        }
-
-
-        return agents.filter(
+        return agents.find(
             (agent) =>
-                String(
-                    agent.name || ''
-                )
-                    .toLowerCase()
-                    .includes(value)
-        )
-
-    }, [agents, agentSearch])
-
-
-    // =========================================================
-    // FILTER RMS
-    // =========================================================
-
-    const filteredRMs = useMemo(() => {
-
-        const value =
-            rmSearch
-                .trim()
-                .toLowerCase()
-
-
-        if (!value) {
-            return rms
-        }
-
-
-        return rms.filter(
-            (rm) =>
-                String(
-                    rm.name || ''
-                )
-                    .toLowerCase()
-                    .includes(value)
-        )
-
-    }, [rms, rmSearch])
-
-
-    // =========================================================
-    // FILTER LOAN TYPES
-    // =========================================================
-
-    const filteredLoanTypes = useMemo(() => {
-
-        const value =
-            loanTypeSearch
-                .trim()
-                .toLowerCase()
-
-
-        if (!value) {
-            return loanTypes
-        }
-
-
-        return loanTypes.filter(
-            (loanType) =>
-                String(loanType)
-                    .toLowerCase()
-                    .includes(value)
-        )
-
-    }, [loanTypes, loanTypeSearch])
-
-
-    // =========================================================
-    // SELECT AGENT
-    // =========================================================
-
-    const handleAgentSelect = (agent) => {
-
-        setSelectedAgent(
-            String(agent.id)
-        )
-
-        setOpenDropdown(null)
-
-        setAgentSearch('')
-
-    }
-
-
-    // =========================================================
-    // SELECT RM
-    // =========================================================
-
-    const handleRMSelect = (rm) => {
-
-        setSelectedRM(
-            String(rm.id)
-        )
-
-        setOpenDropdown(null)
-
-        setRMSearch('')
-
-    }
-
-
-    // =========================================================
-    // SELECT LOAN TYPE
-    // =========================================================
-
-    const handleLoanTypeSelect = (loanType) => {
-
-        setSelectedLoanType(loanType)
-
-        setOpenDropdown(null)
-
-        setLoanTypeSearch('')
-
-    }
-
-
-    // =========================================================
-    // GET SELECTED NAMES
-    // =========================================================
-
-    const selectedAgentName =
-        agents.find(
-            (agent) =>
-                String(agent.id) ===
+                String(getAgentValue(agent)) ===
                 String(selectedAgent)
         )?.name || ''
 
+    }, [
+        agents,
+        selectedAgent,
+    ])
 
-    const selectedRMName =
-        rms.find(
+
+    const selectedRMName = useMemo(() => {
+
+        if (!selectedRM) {
+            return ''
+        }
+
+
+        return rms.find(
             (rm) =>
-                String(rm.id) ===
+                String(getRmValue(rm)) ===
                 String(selectedRM)
         )?.name || ''
 
+    }, [
+        rms,
+        selectedRM,
+    ])
 
-    // =========================================================
-    // SUBMIT
-    // =========================================================
+
+    const canSubmit =
+        Boolean(selectedAgent) ||
+        Boolean(selectedRM) ||
+        Boolean(selectedLoanType)
+
 
     const handleSubmit = (event) => {
 
         event.preventDefault()
 
 
-        if (
-            !selectedAgent &&
-            !selectedRM &&
-            !selectedLoanType
-        ) {
+        if (!canSubmit) {
             return
         }
 
 
         onSubmit?.({
-
             agentId:
                 selectedAgent || null,
 
@@ -404,28 +205,17 @@ function AssignShuffleLoansModal({
 
             loanType:
                 selectedLoanType || null,
-
         })
 
     }
 
 
-    // =========================================================
-    // CLOSE
-    // =========================================================
-
     const handleClose = () => {
-
-        setOpenDropdown(null)
 
         onClose?.()
 
     }
 
-
-    // =========================================================
-    // MODAL
-    // =========================================================
 
     if (!open) {
         return null
@@ -447,15 +237,11 @@ function AssignShuffleLoansModal({
                 modal-box
                 w-11/12
                 max-w-xl
-                p-0
                 border
                 border-base-300
                 bg-base-100
+                p-0
             ">
-
-                {/* =================================================
-                    HEADER
-                ================================================= */}
 
                 <div className="
                     flex
@@ -523,9 +309,9 @@ function AssignShuffleLoansModal({
                         onClick={handleClose}
                         className="
                             btn
-                            btn-sm
-                            btn-ghost
                             btn-circle
+                            btn-ghost
+                            btn-sm
                         "
                         aria-label="Close"
                     >
@@ -540,20 +326,12 @@ function AssignShuffleLoansModal({
                 </div>
 
 
-                {/* =================================================
-                    FORM
-                ================================================= */}
-
                 <form onSubmit={handleSubmit}>
 
                     <div className="
                         space-y-5
                         p-5
                     ">
-
-                        {/* =================================================
-                            SELECTED APPLICATIONS
-                        ================================================= */}
 
                         <div className="
                             rounded-xl
@@ -590,8 +368,7 @@ function AssignShuffleLoansModal({
                                         {applications.length} application
                                         {applications.length !== 1
                                             ? 's'
-                                            : ''
-                                        }
+                                            : ''}
                                     </p>
 
                                 </div>
@@ -608,704 +385,53 @@ function AssignShuffleLoansModal({
                         </div>
 
 
-                        {/* =================================================
-                            AGENT
-                        ================================================= */}
+                        <AgentDropdown
+                            label="Agent"
+                            value={selectedAgent}
+                            onChange={setSelectedAgent}
+                            options={agents}
+                            placeholder="Select Agent"
+                            searchPlaceholder="Search agent"
+                            emptyMessage="No agents found"
+                            includeAllOption={false}
+                            className="min-w-0"
+                            buttonClassName="h-11 min-h-11 hover:border-[#8BCF00]"
+                            getOptionValue={(agent) =>
+                                String(getAgentValue(agent))
+                            }
+                        />
+
+
+                        <RmDropdown
+                            label="RM"
+                            value={selectedRM}
+                            onChange={setSelectedRM}
+                            options={rms}
+                            placeholder="Select RM"
+                            searchPlaceholder="Search RM"
+                            emptyMessage="No RMs found"
+                            includeAllOption={false}
+                            className="min-w-0"
+                            buttonClassName="h-11 min-h-11 hover:border-[#8BCF00]"
+                            getOptionValue={(rm) =>
+                                String(getRmValue(rm))
+                            }
+                        />
+
+
+                        <LoanTypeDropdown
+                            label="Loan Type"
+                            value={selectedLoanType}
+                            onChange={setSelectedLoanType}
+                            options={loanTypes}
+                            placeholder="Select Loan Type"
+                            searchPlaceholder="Search loan type"
+                            emptyMessage="No loan types found"
+                            includeAllOption={false}
+                            className="min-w-0"
+                            buttonClassName="h-11 min-h-11 hover:border-[#8BCF00]"
+                        />
 
-                        <div
-                            ref={dropdownRef}
-                            className="
-                                relative
-                            "
-                        >
-
-                            <label className="
-                                mb-2
-                                block
-                                text-sm
-                                font-medium
-                                text-base-content
-                            ">
-                                Agent
-                            </label>
-
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setOpenDropdown(
-                                        openDropdown === 'agent'
-                                            ? null
-                                            : 'agent'
-                                    )
-
-                                    setRMSearch('')
-                                    setLoanTypeSearch('')
-
-                                }}
-                                className="
-                                    flex
-                                    h-11
-                                    w-full
-                                    items-center
-                                    justify-between
-                                    rounded-lg
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    px-3
-                                    text-left
-                                    transition
-                                    hover:border-[#8BCF00]
-                                "
-                            >
-
-                                <span className={`
-                                    truncate
-                                    text-sm
-                                    ${
-                                        selectedAgentName
-                                            ? 'text-base-content'
-                                            : 'text-base-content/45'
-                                    }
-                                `}>
-
-                                    {selectedAgentName ||
-                                        'Select Agent'
-                                    }
-
-                                </span>
-
-
-                                <ChevronDownIcon className="
-                                    h-4
-                                    w-4
-                                    shrink-0
-                                    text-base-content/50
-                                " />
-
-                            </button>
-
-
-                            {openDropdown === 'agent' && (
-
-                                <div className="
-                                    absolute
-                                    left-0
-                                    right-0
-                                    top-full
-                                    z-[100]
-                                    mt-1
-                                    overflow-hidden
-                                    rounded-xl
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    shadow-xl
-                                ">
-
-                                    {/* SEARCH */}
-
-                                    <div className="
-                                        border-b
-                                        border-base-300
-                                        p-2
-                                    ">
-
-                                        <div className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            rounded-lg
-                                            border
-                                            border-base-300
-                                            px-3
-                                        ">
-
-                                            <MagnifyingGlassIcon className="
-                                                h-4
-                                                w-4
-                                                shrink-0
-                                                text-base-content/40
-                                            " />
-
-
-                                            <input
-                                                type="text"
-                                                value={agentSearch}
-                                                onChange={(event) =>
-                                                    setAgentSearch(
-                                                        event.target.value
-                                                    )
-                                                }
-                                                placeholder="Search agent..."
-                                                autoFocus
-                                                className="
-                                                    w-full
-                                                    bg-transparent
-                                                    py-2
-                                                    text-sm
-                                                    outline-none
-                                                    placeholder:text-base-content/40
-                                                "
-                                            />
-
-                                        </div>
-
-                                    </div>
-
-
-                                    {/* OPTIONS */}
-
-                                    <div className="
-                                        max-h-52
-                                        overflow-y-auto
-                                        p-1
-                                    ">
-
-                                        {filteredAgents.length === 0 ? (
-
-                                            <div className="
-                                                px-3
-                                                py-6
-                                                text-center
-                                                text-xs
-                                                text-base-content/45
-                                            ">
-                                                No agents found
-                                            </div>
-
-                                        ) : (
-
-                                            filteredAgents.map((agent) => (
-
-                                                <button
-                                                    key={agent.id}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        handleAgentSelect(
-                                                            agent
-                                                        )
-                                                    }
-                                                    className={`
-                                                        flex
-                                                        w-full
-                                                        items-center
-                                                        justify-between
-                                                        rounded-lg
-                                                        px-3
-                                                        py-2.5
-                                                        text-left
-                                                        text-sm
-                                                        transition
-                                                        hover:bg-base-200
-                                                        ${
-                                                            String(
-                                                                selectedAgent
-                                                            ) ===
-                                                            String(agent.id)
-                                                                ? 'bg-[#8BCF00]/10 text-[#398A2F]'
-                                                                : 'text-base-content'
-                                                        }
-                                                    `}
-                                                >
-
-                                                    <span>
-                                                        {agent.name}
-                                                    </span>
-
-
-                                                    {String(
-                                                        selectedAgent
-                                                    ) ===
-                                                    String(agent.id) && (
-
-                                                        <span className="
-                                                            text-xs
-                                                            font-medium
-                                                        ">
-                                                            Selected
-                                                        </span>
-
-                                                    )}
-
-                                                </button>
-
-                                            ))
-
-                                        )}
-
-                                    </div>
-
-                                </div>
-
-                            )}
-
-                        </div>
-
-
-                        {/* =================================================
-                            RM
-                        ================================================= */}
-
-                        <div
-                            className="
-                                relative
-                            "
-                        >
-
-                            <label className="
-                                mb-2
-                                block
-                                text-sm
-                                font-medium
-                                text-base-content
-                            ">
-                                RM
-                            </label>
-
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setOpenDropdown(
-                                        openDropdown === 'rm'
-                                            ? null
-                                            : 'rm'
-                                    )
-
-                                    setAgentSearch('')
-                                    setLoanTypeSearch('')
-
-                                }}
-                                className="
-                                    flex
-                                    h-11
-                                    w-full
-                                    items-center
-                                    justify-between
-                                    rounded-lg
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    px-3
-                                    text-left
-                                    transition
-                                    hover:border-[#8BCF00]
-                                "
-                            >
-
-                                <span className={`
-                                    truncate
-                                    text-sm
-                                    ${
-                                        selectedRMName
-                                            ? 'text-base-content'
-                                            : 'text-base-content/45'
-                                    }
-                                `}>
-
-                                    {selectedRMName ||
-                                        'Select RM'
-                                    }
-
-                                </span>
-
-
-                                <ChevronDownIcon className="
-                                    h-4
-                                    w-4
-                                    shrink-0
-                                    text-base-content/50
-                                " />
-
-                            </button>
-
-
-                            {openDropdown === 'rm' && (
-
-                                <div className="
-                                    absolute
-                                    left-0
-                                    right-0
-                                    z-[100]
-                                    mt-1
-                                    overflow-hidden
-                                    rounded-xl
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    shadow-xl
-                                ">
-
-                                    <div className="
-                                        border-b
-                                        border-base-300
-                                        p-2
-                                    ">
-
-                                        <div className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            rounded-lg
-                                            border
-                                            border-base-300
-                                            px-3
-                                        ">
-
-                                            <MagnifyingGlassIcon className="
-                                                h-4
-                                                w-4
-                                                shrink-0
-                                                text-base-content/40
-                                            " />
-
-
-                                            <input
-                                                type="text"
-                                                value={rmSearch}
-                                                onChange={(event) =>
-                                                    setRMSearch(
-                                                        event.target.value
-                                                    )
-                                                }
-                                                placeholder="Search RM..."
-                                                autoFocus
-                                                className="
-                                                    w-full
-                                                    bg-transparent
-                                                    py-2
-                                                    text-sm
-                                                    outline-none
-                                                    placeholder:text-base-content/40
-                                                "
-                                            />
-
-                                        </div>
-
-                                    </div>
-
-
-                                    <div className="
-                                        max-h-52
-                                        overflow-y-auto
-                                        p-1
-                                    ">
-
-                                        {filteredRMs.length === 0 ? (
-
-                                            <div className="
-                                                px-3
-                                                py-6
-                                                text-center
-                                                text-xs
-                                                text-base-content/45
-                                            ">
-                                                No RMs found
-                                            </div>
-
-                                        ) : (
-
-                                            filteredRMs.map((rm) => (
-
-                                                <button
-                                                    key={rm.id}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        handleRMSelect(
-                                                            rm
-                                                        )
-                                                    }
-                                                    className={`
-                                                        flex
-                                                        w-full
-                                                        items-center
-                                                        justify-between
-                                                        rounded-lg
-                                                        px-3
-                                                        py-2.5
-                                                        text-left
-                                                        text-sm
-                                                        transition
-                                                        hover:bg-base-200
-                                                        ${
-                                                            String(
-                                                                selectedRM
-                                                            ) ===
-                                                            String(rm.id)
-                                                                ? 'bg-[#8BCF00]/10 text-[#398A2F]'
-                                                                : 'text-base-content'
-                                                        }
-                                                    `}
-                                                >
-
-                                                    <span>
-                                                        {rm.name}
-                                                    </span>
-
-
-                                                    {String(
-                                                        selectedRM
-                                                    ) ===
-                                                    String(rm.id) && (
-
-                                                        <span className="
-                                                            text-xs
-                                                            font-medium
-                                                        ">
-                                                            Selected
-                                                        </span>
-
-                                                    )}
-
-                                                </button>
-
-                                            ))
-
-                                        )}
-
-                                    </div>
-
-                                </div>
-
-                            )}
-
-                        </div>
-
-
-                        {/* =================================================
-                            LOAN TYPE
-                        ================================================= */}
-
-                        <div className="
-                            relative
-                        ">
-
-                            <label className="
-                                mb-2
-                                block
-                                text-sm
-                                font-medium
-                                text-base-content
-                            ">
-                                Loan Type
-                            </label>
-
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setOpenDropdown(
-                                        openDropdown === 'loanType'
-                                            ? null
-                                            : 'loanType'
-                                    )
-
-                                    setAgentSearch('')
-                                    setRMSearch('')
-
-                                }}
-                                className="
-                                    flex
-                                    h-11
-                                    w-full
-                                    items-center
-                                    justify-between
-                                    rounded-lg
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    px-3
-                                    text-left
-                                    transition
-                                    hover:border-[#8BCF00]
-                                "
-                            >
-
-                                <span className={`
-                                    truncate
-                                    text-sm
-                                    ${
-                                        selectedLoanType
-                                            ? 'text-base-content'
-                                            : 'text-base-content/45'
-                                    }
-                                `}>
-
-                                    {selectedLoanType ||
-                                        'Select Loan Type'
-                                    }
-
-                                </span>
-
-
-                                <ChevronDownIcon className="
-                                    h-4
-                                    w-4
-                                    shrink-0
-                                    text-base-content/50
-                                " />
-
-                            </button>
-
-
-                            {openDropdown === 'loanType' && (
-
-                                <div className="
-                                    absolute
-                                    left-0
-                                    right-0
-                                    z-[100]
-                                    mt-1
-                                    overflow-hidden
-                                    rounded-xl
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    shadow-xl
-                                ">
-
-                                    <div className="
-                                        border-b
-                                        border-base-300
-                                        p-2
-                                    ">
-
-                                        <div className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                            rounded-lg
-                                            border
-                                            border-base-300
-                                            px-3
-                                        ">
-
-                                            <MagnifyingGlassIcon className="
-                                                h-4
-                                                w-4
-                                                shrink-0
-                                                text-base-content/40
-                                            " />
-
-
-                                            <input
-                                                type="text"
-                                                value={loanTypeSearch}
-                                                onChange={(event) =>
-                                                    setLoanTypeSearch(
-                                                        event.target.value
-                                                    )
-                                                }
-                                                placeholder="Search loan type..."
-                                                autoFocus
-                                                className="
-                                                    w-full
-                                                    bg-transparent
-                                                    py-2
-                                                    text-sm
-                                                    outline-none
-                                                    placeholder:text-base-content/40
-                                                "
-                                            />
-
-                                        </div>
-
-                                    </div>
-
-
-                                    <div className="
-                                        max-h-52
-                                        overflow-y-auto
-                                        p-1
-                                    ">
-
-                                        {filteredLoanTypes.length === 0 ? (
-
-                                            <div className="
-                                                px-3
-                                                py-6
-                                                text-center
-                                                text-xs
-                                                text-base-content/45
-                                            ">
-                                                No loan types found
-                                            </div>
-
-                                        ) : (
-
-                                            filteredLoanTypes.map(
-                                                (loanType) => (
-
-                                                    <button
-                                                        key={loanType}
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleLoanTypeSelect(
-                                                                loanType
-                                                            )
-                                                        }
-                                                        className={`
-                                                            flex
-                                                            w-full
-                                                            items-center
-                                                            justify-between
-                                                            rounded-lg
-                                                            px-3
-                                                            py-2.5
-                                                            text-left
-                                                            text-sm
-                                                            transition
-                                                            hover:bg-base-200
-                                                            ${
-                                                                selectedLoanType ===
-                                                                loanType
-                                                                    ? 'bg-[#8BCF00]/10 text-[#398A2F]'
-                                                                    : 'text-base-content'
-                                                            }
-                                                        `}
-                                                    >
-
-                                                        <span>
-                                                            {loanType}
-                                                        </span>
-
-
-                                                        {selectedLoanType ===
-                                                            loanType && (
-
-                                                            <span className="
-                                                                text-xs
-                                                                font-medium
-                                                            ">
-                                                                Selected
-                                                            </span>
-
-                                                        )}
-
-                                                    </button>
-
-                                                )
-                                            )
-
-                                        )}
-
-                                    </div>
-
-                                </div>
-
-                            )}
-
-                        </div>
-
-
-                        {/* =================================================
-                            NOTE
-                        ================================================= */}
 
                         <div className="
                             rounded-lg
@@ -1330,10 +456,6 @@ function AssignShuffleLoansModal({
                     </div>
 
 
-                    {/* =================================================
-                        FOOTER
-                    ================================================= */}
-
                     <div className="
                         flex
                         justify-end
@@ -1348,8 +470,8 @@ function AssignShuffleLoansModal({
                             onClick={handleClose}
                             className="
                                 btn
-                                btn-sm
                                 btn-ghost
+                                btn-sm
                             "
                         >
                             Cancel
@@ -1358,11 +480,7 @@ function AssignShuffleLoansModal({
 
                         <button
                             type="submit"
-                            disabled={
-                                !selectedAgent &&
-                                !selectedRM &&
-                                !selectedLoanType
-                            }
+                            disabled={!canSubmit}
                             className="
                                 btn
                                 btn-sm
@@ -1385,10 +503,6 @@ function AssignShuffleLoansModal({
 
             </div>
 
-
-            {/* =================================================
-                BACKDROP
-            ================================================= */}
 
             <form
                 method="dialog"

@@ -7,10 +7,11 @@ import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
 import BellAlertIcon from "@heroicons/react/24/outline/BellAlertIcon";
 import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftRightIcon";
 import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
-import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 
 import GlobalChat from "../../../../components/GlobalModels/Loans/GlobalChat";
+import LoanTypeDropdown from "../../../../components/GlobalModels/Filters/LoanTypeDropdown";
+import RmDropdown from "../../../../components/GlobalModels/Filters/RmDropdown";
 
 function RMApplicationsTable({
   applications = [],
@@ -36,28 +37,12 @@ function RMApplicationsTable({
   onRefresh,
 }) {
   // =========================================================
-  // RM DROPDOWN
-  // =========================================================
-
-  const [rmSearch, setRmSearch] = useState("");
-
-  const [showRMMenu, setShowRMMenu] = useState(false);
-
-  // =========================================================
   // CHAT
   // =========================================================
 
   const [chatOpen, setChatOpen] = useState(false);
 
   const [selectedChatApplication, setSelectedChatApplication] = useState(null);
-
-  // =========================================================
-  // FILTERED RMS
-  // =========================================================
-
-  const filteredRMs = rms.filter((rm) =>
-    rm.name?.toLowerCase().includes(rmSearch.trim().toLowerCase()),
-  );
 
   // =========================================================
   // HELPERS
@@ -184,18 +169,11 @@ function RMApplicationsTable({
     }
   };
 
-  const selectedRMName =
-    rms.find((rm) => String(rm.id) === String(selectedRM))?.name || "All RMs";
-
   // =========================================================
   // CLEAR
   // =========================================================
 
   const handleClear = () => {
-    setRmSearch("");
-
-    setShowRMMenu(false);
-
     onClearFilters?.();
   };
 
@@ -301,213 +279,23 @@ function RMApplicationsTable({
 
           {/* LOAN TYPE */}
 
-          <select
+          <LoanTypeDropdown
             value={selectedLoanType}
-            onChange={(event) => setSelectedLoanType(event.target.value)}
-            className="
-                            select
-                            select-bordered
-                            w-44
-                            shrink-0
-                        "
-          >
-            <option value="">All Loan Types</option>
-
-            {loanTypes.map((loanType) => (
-              <option key={loanType} value={loanType}>
-                {loanType}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedLoanType}
+            options={loanTypes}
+            showLabel={false}
+            className="w-44 shrink-0"
+          />
 
           {/* RM */}
 
-          <div
-            className="
-                        relative
-                        w-48
-                        shrink-0
-                    "
-          >
-            <button
-              type="button"
-              onClick={() => setShowRMMenu((value) => !value)}
-              className="
-                                select
-                                select-bordered
-                                w-full
-                                flex
-                                items-center
-                                justify-between
-                                text-left
-                                font-normal
-                            "
-            >
-              <span
-                className="
-                                truncate
-                                min-w-0
-                            "
-              >
-                {selectedRMName}
-              </span>
-
-              <ChevronDownIcon
-                className="
-                                w-4
-                                h-4
-                                shrink-0
-                                text-base-content/50
-                            "
-              />
-            </button>
-
-            {showRMMenu && (
-              <div
-                className="
-                                absolute
-                                z-50
-                                top-full
-                                left-0
-                                right-0
-                                mt-1
-                                bg-base-100
-                                border
-                                border-base-300
-                                rounded-lg
-                                shadow-lg
-                                overflow-hidden
-                            "
-              >
-                {/* SEARCH RM */}
-
-                <div
-                  className="
-                                    p-2
-                                    border-b
-                                    border-base-300
-                                "
-                >
-                  <label
-                    className="
-                                        input
-                                        input-sm
-                                        input-bordered
-                                        flex
-                                        items-center
-                                        gap-2
-                                    "
-                  >
-                    <MagnifyingGlassIcon
-                      className="
-                                            w-4
-                                            h-4
-                                            text-base-content/40
-                                        "
-                    />
-
-                    <input
-                      autoFocus
-                      type="text"
-                      value={rmSearch}
-                      onChange={(event) => setRmSearch(event.target.value)}
-                      placeholder="Search RM..."
-                      className="
-                                                grow
-                                                min-w-0
-                                            "
-                    />
-                  </label>
-                </div>
-
-                {/* RM LIST */}
-
-                <div
-                  className="
-                                    max-h-52
-                                    overflow-y-auto
-                                    p-1
-                                "
-                >
-                  {/* ALL RMS */}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedRM("");
-
-                      setRmSearch("");
-
-                      setShowRMMenu(false);
-                    }}
-                    className={`
-                                            w-full
-                                            text-left
-                                            px-3
-                                            py-2
-                                            rounded
-                                            text-sm
-                                            hover:bg-base-200
-                                            ${
-                                              !selectedRM
-                                                ? "bg-[#8BCF00]/10 text-[#78B300] font-medium"
-                                                : ""
-                                            }
-                                        `}
-                  >
-                    All RMs
-                  </button>
-
-                  {/* RMS */}
-
-                  {filteredRMs.map((rm) => (
-                    <button
-                      key={rm.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedRM(rm.id);
-
-                        setRmSearch("");
-
-                        setShowRMMenu(false);
-                      }}
-                      className={`
-                                                w-full
-                                                text-left
-                                                px-3
-                                                py-2
-                                                rounded
-                                                text-sm
-                                                truncate
-                                                hover:bg-base-200
-                                                ${
-                                                  String(selectedRM) ===
-                                                  String(rm.id)
-                                                    ? "bg-[#8BCF00]/10 text-[#78B300] font-medium"
-                                                    : ""
-                                                }
-                                            `}
-                    >
-                      {rm.name}
-                    </button>
-                  ))}
-
-                  {!filteredRMs.length && (
-                    <div
-                      className="
-                                            text-center
-                                            text-xs
-                                            text-base-content/50
-                                            py-3
-                                        "
-                    >
-                      No RM found
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <RmDropdown
+            value={selectedRM}
+            onChange={setSelectedRM}
+            options={rms}
+            showLabel={false}
+            className="w-48 shrink-0"
+          />
 
           {/* CLEAR */}
 

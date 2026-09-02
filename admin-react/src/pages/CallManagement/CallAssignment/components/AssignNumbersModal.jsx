@@ -6,7 +6,8 @@ import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import ExclamationTriangleIcon from '@heroicons/react/24/outline/ExclamationTriangleIcon'
 import CheckCircleIcon from '@heroicons/react/24/outline/CheckCircleIcon'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
-import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
+
+import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
 
 
 // =============================================================
@@ -33,6 +34,7 @@ function AssignNumbersModal({
     open = false,
     entries = [],
     employees = [],
+    rms = [],
     onClose,
     onAssign,
 }) {
@@ -46,10 +48,6 @@ function AssignNumbersModal({
     const [toDate, setToDate] = useState('')
 
     const [count, setCount] = useState(1)
-
-    const [rmSearch, setRmSearch] = useState('')
-
-    const [showRmDropdown, setShowRmDropdown] = useState(false)
 
     const [showDateDropdown, setShowDateDropdown] = useState(false)
 
@@ -75,9 +73,13 @@ function AssignNumbersModal({
 
     const rmList = useMemo(() => {
 
-        const list = Array.isArray(employees)
-            ? employees
-            : []
+        const list =
+            Array.isArray(employees) &&
+            employees.length
+                ? employees
+                : Array.isArray(rms)
+                    ? rms
+                    : []
 
         return list.filter((employee) => {
 
@@ -93,38 +95,10 @@ function AssignNumbersModal({
 
         })
 
-    }, [employees])
-
-
-    const filteredRms = useMemo(() => {
-
-        const value =
-            rmSearch
-                .trim()
-                .toLowerCase()
-
-        if (!value) {
-            return rmList
-        }
-
-        return rmList.filter((employee) => {
-
-            return [
-                employee.name,
-                employee.email,
-                employee.employeeId,
-                employee.id,
-            ]
-                .filter(Boolean)
-                .some((field) =>
-                    String(field)
-                        .toLowerCase()
-                        .includes(value)
-                )
-
-        })
-
-    }, [rmList, rmSearch])
+    }, [
+        employees,
+        rms,
+    ])
 
 
     // =========================================================
@@ -146,8 +120,6 @@ function AssignNumbersModal({
                 ? 1
                 : 0
         )
-        setRmSearch('')
-        setShowRmDropdown(false)
         setShowDateDropdown(false)
 
     }, [
@@ -172,27 +144,6 @@ function AssignNumbersModal({
 
     const exceedsAvailable =
         Number(count) > availableCount
-
-
-    // =========================================================
-    // SELECT RM
-    // =========================================================
-
-    const handleSelectRm = (employee) => {
-
-        setSelectedRm(
-            employee.id ??
-            employee.employeeId ??
-            employee.name
-        )
-
-        setRmSearch(
-            employee.name || ''
-        )
-
-        setShowRmDropdown(false)
-
-    }
 
 
     // =========================================================
@@ -245,36 +196,45 @@ function AssignNumbersModal({
             return
         }
 
-        onAssign?.({
+        const selectedEntries =
+            entries.slice(
+                0,
+                safeCount
+            )
 
-            rm:
-                selectedEmployee,
 
-            rmId:
+        onAssign?.(
+            selectedEntries.map(
+                (entry) => entry.id
+            ),
+            selectedRm,
+            {
+                rm:
+                    selectedEmployee,
+
+                rmId:
                 selectedRm,
 
-            dateRange,
+                dateRange,
 
-            fromDate:
-                dateRange === 'custom'
-                    ? fromDate
-                    : null,
+                fromDate:
+                    dateRange === 'custom'
+                        ? fromDate
+                        : null,
 
-            toDate:
-                dateRange === 'custom'
-                    ? toDate
-                    : null,
+                toDate:
+                    dateRange === 'custom'
+                        ? toDate
+                        : null,
 
-            count:
-                safeCount,
+                count:
+                    safeCount,
 
-            entries:
-                entries.slice(
-                    0,
-                    safeCount
-                ),
+                entries:
+                    selectedEntries,
 
-        })
+            }
+        )
 
     }
 
@@ -285,7 +245,6 @@ function AssignNumbersModal({
 
     const handleClose = () => {
 
-        setShowRmDropdown(false)
         setShowDateDropdown(false)
 
         onClose?.()
@@ -482,180 +441,24 @@ function AssignNumbersModal({
                         RM
                     ================================================= */}
 
-                    <div className="relative mb-6">
-
-                        <label className="
-                            mb-2
-                            block
-                            text-sm
-                            font-medium
-                            text-base-content/70
-                        ">
-                            Agent / RM *
-                        </label>
-
-
-                        <div className="relative">
-
-                            <MagnifyingGlassIcon className="
-                                pointer-events-none
-                                absolute
-                                left-4
-                                top-1/2
-                                z-10
-                                h-5
-                                w-5
-                                -translate-y-1/2
-                                text-base-content/40
-                            " />
-
-
-                            <input
-                                type="text"
-                                value={rmSearch}
-                                onChange={(event) => {
-
-                                    setRmSearch(
-                                        event.target.value
-                                    )
-
-                                    setSelectedRm('')
-
-                                    setShowRmDropdown(true)
-
-                                }}
-                                onFocus={() =>
-                                    setShowRmDropdown(true)
-                                }
-                                placeholder="Search agent / RM..."
-                                className="
-                                    input
-                                    input-bordered
-                                    h-14
-                                    min-h-14
-                                    w-full
-                                    pl-12
-                                    pr-12
-                                    text-base
-                                "
-                            />
-
-
-                            <ChevronDownIcon className="
-                                pointer-events-none
-                                absolute
-                                right-4
-                                top-1/2
-                                h-5
-                                w-5
-                                -translate-y-1/2
-                                text-base-content/50
-                            " />
-
-                        </div>
-
-
-                        {showRmDropdown && (
-
-                            <div className="
-                                absolute
-                                left-0
-                                right-0
-                                top-[88px]
-                                z-30
-                                max-h-52
-                                overflow-y-auto
-                                rounded-xl
-                                border
-                                border-base-300
-                                bg-base-100
-                                shadow-xl
-                            ">
-
-                                {filteredRms.length ? (
-
-                                    filteredRms.map(
-                                        (employee) => {
-
-                                            const employeeId =
-                                                employee.id ??
-                                                employee.employeeId ??
-                                                employee.name
-
-                                            return (
-
-                                                <button
-                                                    key={
-                                                        employeeId
-                                                    }
-                                                    type="button"
-                                                    onClick={() =>
-                                                        handleSelectRm(
-                                                            employee
-                                                        )
-                                                    }
-                                                    className="
-                                                        block
-                                                        w-full
-                                                        px-4
-                                                        py-3
-                                                        text-left
-                                                        transition
-                                                        hover:bg-base-200
-                                                    "
-                                                >
-
-                                                    <p className="
-                                                        text-sm
-                                                        font-medium
-                                                        text-base-content
-                                                    ">
-                                                        {
-                                                            employee.name ||
-                                                            'Unnamed'
-                                                        }
-                                                    </p>
-
-
-                                                    {employee.email && (
-
-                                                        <p className="
-                                                            mt-0.5
-                                                            text-xs
-                                                            text-base-content/45
-                                                        ">
-                                                            {
-                                                                employee.email
-                                                            }
-                                                        </p>
-
-                                                    )}
-
-                                                </button>
-
-                                            )
-
-                                        }
-                                    )
-
-                                ) : (
-
-                                    <p className="
-                                        px-4
-                                        py-4
-                                        text-sm
-                                        text-base-content/45
-                                    ">
-                                        No agents / RMs found
-                                    </p>
-
-                                )}
-
-                            </div>
-
-                        )}
-
-                    </div>
+                    <RmDropdown
+                        label="Agent / RM *"
+                        value={selectedRm}
+                        onChange={setSelectedRm}
+                        options={rmList}
+                        placeholder="Search agent / RM..."
+                        searchPlaceholder="Search agent / RM"
+                        emptyMessage="No agents / RMs found"
+                        includeAllOption={false}
+                        className="mb-6 min-w-0"
+                        buttonClassName="h-14 min-h-14 rounded-xl px-4 text-base"
+                        getOptionValue={(employee) =>
+                            employee.id ??
+                            employee.employeeId ??
+                            employee.name ??
+                            ''
+                        }
+                    />
 
 
                     {/* =================================================
