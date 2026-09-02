@@ -173,6 +173,61 @@ const EmployeeAttendance = lazy(
 const AdminLogs = lazy(
     () => import('../pages/Logs/AdminLogs')
 )
+const ApplicationStatusLogs = lazy(
+    () => import('../pages/Logs/ApplicationStatusLogs')
+)
+const AgentAssignmentLogs = lazy(
+    () => import('../pages/Logs/AgentAssignmentLogs')
+)
+const LeadCreationLogs = lazy(
+    () => import('../pages/Logs/LeadCreationLogs')
+)
+const LoanTypeChangeLogs = lazy(
+    () => import('../pages/Logs/LoanTypeChangeLogs')
+)
+const ApplicationDeleteLogs = lazy(
+    () => import('../pages/Logs/ApplicationDeleteLogs')
+)
+const ApplicationEditLogs = lazy(
+    () => import('../pages/Logs/ApplicationEditLogs')
+)
+const BankProcessingLogs = lazy(
+    () => import('../pages/Logs/BankProcessingLogs')
+)
+const LoanAssignmentLogs = lazy(
+    () => import('../pages/Logs/LoanAssignmentLogs')
+)
+const DuplicateLeadLogs = lazy(
+    () => import('../pages/Logs/DuplicateLeadLogs')
+)
+const CallAssignmentLogs = lazy(
+    () => import('../pages/Logs/CallAssignmentLogs')
+)
+const CallReassignmentLogs = lazy(
+    () => import('../pages/Logs/CallReassignmentLogs')
+)
+const EmployeeLogs = lazy(
+    () => import('../pages/Logs/EmployeeLogs')
+)
+const PhoneNumberLogs = lazy(
+    () => import('../pages/Logs/PhoneNumberLogs')
+)
+const LoanShuffleLogs = lazy(
+    () => import('../pages/Logs/LoanShuffleLogs')
+)
+const RevertedHistoryLogs = lazy(
+    () => import('../pages/Logs/RevertedHistoryLogs')
+)
+const AgentLogs = lazy(
+    () => import('../pages/Logs/AgentLogs')
+)
+const TeamLeadLogs = lazy(
+    () => import('../pages/Logs/TeamLeadLogs')
+)
+const RoleLogs = lazy(
+    () => import('../pages/Logs/RoleLogs')
+)
+
 
 
 // =========================================================
@@ -410,6 +465,98 @@ const routes = [
         component: AdminLogs,
         permission: PERMISSIONS.ADMINS_VIEW_VIEW,
     },
+    {
+        path: '/application-status-logs',
+        component: ApplicationStatusLogs,
+        permission: PERMISSIONS.APPLICATION_STATUS_LOGS_VIEW,
+    },
+    {
+        path: '/agent-assignment-logs',
+        component: AgentAssignmentLogs,
+        permission: PERMISSIONS.AGENT_ASSIGNMENT_LOGS_VIEW,
+    },
+    {
+        path: '/lead-creation-logs',
+        component: LeadCreationLogs,
+        permission: PERMISSIONS.LEAD_CREATION_LOGS_VIEW,
+    },
+    {
+        path: '/loan-type-change-logs',
+        component: LoanTypeChangeLogs,
+        permission: PERMISSIONS.LOAN_TYPE_CHANGE_LOGS_VIEW,
+    },
+    {
+        path: '/application-delete-logs',
+        component: ApplicationDeleteLogs,
+        permission: PERMISSIONS.APPLICATION_DELETE_LOGS_VIEW,
+    },
+    {
+        path: '/application-edit-logs',
+        component: ApplicationEditLogs,
+        permission: PERMISSIONS.APPLICATION_EDIT_LOGS_VIEW,
+    },
+    {
+        path: '/bank-processing-logs',
+        component: BankProcessingLogs,
+        permission: PERMISSIONS.BANK_PROCESSING_LOGS_VIEW,
+    },
+    {
+        path: '/loan-assignment-logs',
+        component: LoanAssignmentLogs,
+        permission: PERMISSIONS.LOAN_ASSIGNMENT_LOGS_VIEW,
+    },
+    {
+        path: '/duplicate-lead-logs',
+        component: DuplicateLeadLogs,
+        permission: PERMISSIONS.DUPLICATE_LEAD_LOGS_VIEW,
+    },
+    {
+        path: '/call-assignment-logs',
+        component: CallAssignmentLogs,
+        permission: PERMISSIONS.CALL_ASSIGNMENT_LOGS_VIEW,
+    },
+    {
+        path: '/call-reassignment-logs',
+        component: CallReassignmentLogs,
+        permission: PERMISSIONS.CALL_REASSIGNMENT_LOGS_VIEW,
+    },
+    {
+        path: '/employee-logs',
+        component: EmployeeLogs,
+        permission: PERMISSIONS.EMPLOYEE_LOGS_VIEW,
+    },
+    {
+        path: '/phone-number-logs',
+        component: PhoneNumberLogs,
+        permission: PERMISSIONS.PHONE_NUMBER_LOGS_VIEW,
+    },
+    {
+        path: '/loan-shuffle-logs',
+        component: LoanShuffleLogs,
+        permission: PERMISSIONS.LOAN_SHUFFLE_LOGS_VIEW,
+    },
+    {
+        path: '/reverted-history-logs',
+        component: RevertedHistoryLogs,
+        permission: PERMISSIONS.REVERTED_HISTORY_LOGS_VIEW,
+    },
+    {
+        path: '/agent-logs',
+        component: AgentLogs,
+        permission: PERMISSIONS.AGENT_LOGS_VIEW,
+    },
+    {
+        path: '/team-lead-logs',
+        component: TeamLeadLogs,
+        permission: PERMISSIONS.TEAM_LEAD_LOGS_VIEW,
+    },
+    {
+        path: '/role-logs',
+        component: RoleLogs,
+        permission: PERMISSIONS.ROLE_LOGS_VIEW,
+    }
+
+
 ]
 
 
