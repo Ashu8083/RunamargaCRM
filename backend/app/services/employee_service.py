@@ -7,12 +7,15 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.core.access_control import AccessControl
-
+from app.models.permissions import Permission
 from app.models.employees import Employee
 from app.models.employee_details import EmployeeDetails
 from app.models.employee_contexts import EmployeeContext
 from app.models.employee_context_permissions import (
     EmployeeContextPermission,
+)
+from app.services.employee_face_profile_service import (
+    EmployeeFaceProfileService,
 )
 from app.models.contexts import Context
 from app.models.permissions import Permission
@@ -70,7 +73,47 @@ def _get_global_context(db: Session) -> Context:
 
     return context
 
+@staticmethod
+def get_roles(db, employee):
+    if not AccessControl.has_permission(
+        db=db,
+        employee=employee,
+        permission="employees:view",
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied",
+        )
 
+    return (
+        db.query(Role)
+        .order_by(Role.id)
+        .all()
+    )
+@staticmethod
+def get_common_permissions(
+    db: Session,
+    employee: Employee,
+):
+    if not AccessControl.has_permission(
+        db=db,
+        employee=employee,
+        permission="employees:view",
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied",
+        )
+
+    return (
+        db.query(Permission)
+        .filter(
+            Permission.is_active.is_(True),
+            Permission.description.ilike("common"),
+        )
+        .order_by(Permission.id)
+        .all()
+    )
 def _validate_employee_role(
     db: Session,
     role_id: int,
@@ -471,7 +514,13 @@ def create_employee(
 
             details.profile_image = path
             saved_files.append(path)
-
+        if details.profile_image:
+            EmployeeFaceProfileService.upsert_face_profile(
+                db=db,
+                employee_id=new_employee.id,
+                image_path=details.profile_image,
+                updated_by=employee.id,
+            )
         if aadhaar_card:
             path = save_file(
                 aadhaar_card,
@@ -828,7 +877,13 @@ def update_employee(
                 old_files_to_delete.append(
                     old_profile_image
                 )
-
+            if new_profile_image:
+                EmployeeFaceProfileService.upsert_face_profile(
+                    db=db,
+                    employee_id=target.id,
+                    image_path=new_profile_image,
+                    updated_by=employee.id,
+                )
         if aadhaar_card:
             new_aadhar_card = save_file(
                 aadhaar_card,

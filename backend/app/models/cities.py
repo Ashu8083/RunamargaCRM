@@ -1,4 +1,4 @@
-# app\models\categories.py
+# app\models\cities.py
 from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship

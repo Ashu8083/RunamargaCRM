@@ -707,44 +707,6 @@ function ShuffleLoans() {
                     />
 
 
-                    {/* STATUS FILTER */}
-
-                    <select
-                        value={selectedStatus}
-                        onChange={(event) =>
-                            setSelectedStatus(
-                                event.target.value
-                            )
-                        }
-                        className="
-                            select
-                            select-bordered
-                            w-full
-                            lg:w-44
-                            focus:border-[#8BCF00]
-                            focus:outline-[#8BCF00]
-                        "
-                    >
-
-                        <option value="">
-                            All Statuses
-                        </option>
-
-
-                        {statuses.map((status) => (
-
-                            <option
-                                key={status}
-                                value={status}
-                            >
-                                {status}
-                            </option>
-
-                        ))}
-
-                    </select>
-
-
                     {/* ASSIGN BUTTON */}
 
                     <button

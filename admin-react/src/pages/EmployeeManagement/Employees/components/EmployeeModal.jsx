@@ -5,6 +5,7 @@ import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 import CloudArrowUpIcon from "@heroicons/react/24/outline/CloudArrowUpIcon";
 import PlusIcon from "@heroicons/react/24/outline/PlusIcon";
 import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
+import { STATIC_BASE_URL } from "../../../../config/url";
 // =============================================================
 // DEFAULT FORM
 // =============================================================
@@ -52,9 +53,6 @@ function EmployeeModal({
     ["admin", "business"].includes(
       employee.role?.name?.trim().toLowerCase()
     );
-  const API_BASE_URL =
-    process.env.REACT_APP_BASE_URL ||
-    "http://localhost:8000";
   const getFileUrl = (filePath) => {
     if (!filePath) {
       return null;
@@ -67,7 +65,7 @@ function EmployeeModal({
       return filePath;
     }
 
-    return `${API_BASE_URL}${filePath}`;
+    return `${STATIC_BASE_URL}${filePath}`;
   };
   // =========================================================
   // FORM

@@ -117,6 +117,24 @@ def upgrade() -> None:
     op.create_index(op.f('ix_employee_contexts_employee_id'), 'employee_contexts', ['employee_id'], unique=False)
     op.create_index(op.f('ix_employee_contexts_id'), 'employee_contexts', ['id'], unique=False)
     op.create_index(op.f('ix_employee_contexts_reports_to_id'), 'employee_contexts', ['reports_to_id'], unique=False)
+    gender_enum = postgresql.ENUM(
+        'male',
+        'female',
+        'others',
+        name='gender_enum',
+    )
+
+    marital_status_enum = postgresql.ENUM(
+        'married',
+        'single',
+        'divorced',
+        'die hard single',
+        'live in',
+        name='marital_status_enum',
+    )
+
+    gender_enum.create(op.get_bind(), checkfirst=True)
+    marital_status_enum.create(op.get_bind(), checkfirst=True)
     op.create_table('employee_details',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('employee_id', sa.Integer(), nullable=False),

@@ -9,24 +9,29 @@ export const PERMISSIONS = Object.freeze({
     APPLICATION_FILTER_VIEW: 'application-filter:view',
     ATTENDANCE_VIEW: 'attendance:view',
     PROFILE_VIEW: 'profile:view',
-
-    // =========================================================
-    // CALL MANAGEMENT
-    // =========================================================
-
-    CALL_LOGS_VIEW: 'calls:logs:view',
-    CALL_ASSIGNMENT_VIEW: 'calls:assignment:view',
-    CALL_ANALYTICS_OVERVIEW_VIEW:
-        'call-analytics-overview:view',
-    CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW:
-        'call-analytics-agent-performance:view',
-    CALL_ANALYTICS_CALL_TRENDS_VIEW:
-        'call-analytics-call-trends:view',
-
-    // =========================================================
-    // TEAMS & ROLES
-    // =========================================================
-
+    CALL_LOGS_VIEW: 'call-logs:view',
+    EMPLOYEE_LOGS_VIEW: 'employee-logs:view',
+    CALL_ASSIGNMENT_LOGS_VIEW: 'call-assignment-logs:view',
+    CALL_ASSIGNMENT_VIEW: 'call-assignment:view',
+    CALL_ANALYTICS_OVERVIEW_VIEW: 'call-analytics-overview:view',
+    CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW: 'call-analytics-agent-performance:view',
+    CALL_ANALYTICS_CALL_TRENDS_VIEW: 'call-analytics-call-trends:view',
+    AGENT_ANALYTICS_OVERVIEW_VIEW: 'agent-analytics-overview:view',
+    AGENT_Performance_OVERVIEW_VIEW: 'agent-performance-overview:view',
+    PHONE_NUMBERS_VIEW:"phone-numbers-view",
+    ADMIN_LOGS_VIEW:"admin-logs-view",
+    APPLICATION_STATUS_LOGS_VIEW:"application-status-logs-view",
+    AGENT_ASSIGNMENT_LOGS_VIEW:"agent-assignment-logs-view",
+    LEAD_CREATION_LOGS_VIEW:"lead-creation-logs-view",
+    LOAN_TYPE_CHANGE_LOGS_VIEW:"loan-type-change-logs-view",
+    APPLICATION_DELETE_LOGS_VIEW:"application-delete-logs-view",
+    APPLICATION_EDIT_LOGS_VIEW:"application-edit-logs-view",
+    BANK_PROCESSING_LOGS_VIEW:"bank-processing-logs-view",
+    LOAN_ASSIGNMENT_LOGS_VIEW:"loan-assignment-logs-view",
+    DUPLICATE_LEAD_LOGS_VIEW:"duplicate-lead-logs-view",
+    CALL_REASSIGNMENT_LOGS_VIEW:"call-reassignment-logs-view",
+    PHONE_NUMBER_LOGS_VIEW:"phone-number-logs-view",
+    LOAN_SHUFFLE_LOGS_VIEW:"loan-shuffle-logs-view",
     ROLES_VIEW: 'roles:view',
     ROLES_MANAGE: 'roles:manage',
 
@@ -34,11 +39,10 @@ export const PERMISSIONS = Object.freeze({
     AGENTS_VIEW: 'agents:view',
     ADMINS_VIEW: 'admins:view',
     PERMISSIONS_MANAGE: 'permissions:manage',
-
-    // =========================================================
-    // LOANS
-    // =========================================================
-
+    REVERTED_HISTORY_LOGS_VIEW: 'reverted-history-logs:view',
+    AGENT_LOGS_VIEW: 'agent-logs:view',
+    TEAM_LEAD_LOGS_VIEW: 'team-lead-logs:view',
+    ROLE_LOGS_VIEW: 'role-logs:view',
     LOANS_CREATE: 'loans:create',
     LOANS_VIEW: 'loans:view',
     LOANS_RM_VIEW: 'loans:rm:view',

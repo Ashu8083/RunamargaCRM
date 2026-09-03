@@ -8,7 +8,10 @@ import ApplicationsTable from './components/ApplicationsTable'
 import LoanTypeModal from '../../../components/GlobalModels/Loans/LoanTypeModal'
 import StatusModal from '../../../components/GlobalModels/Loans/StatusModal'
 import ReminderModal from '../../../components/GlobalModels/Loans/ReminderModal'
-
+import {
+    getLoanTypes,
+    getEmployeesByContext,
+} from '../../../services/commonservice'
 
 function Applications() {
 
@@ -109,9 +112,11 @@ function Applications() {
     }
     useEffect(() => {
         fetchApplications()
+        fetchDropdownData()
 
         const handleContextChange = () => {
             fetchApplications()
+            fetchDropdownData()
         }
 
         window.addEventListener(
@@ -129,7 +134,17 @@ function Applications() {
     // =========================================================
     // FILTER STATE
     // =========================================================
+    const [loanTypes, setLoanTypes] =
+        useState([])
 
+    const [rms, setRms] =
+        useState([])
+
+    const [agents, setAgents] =
+        useState([])
+
+    const [teamLeads, setTeamLeads] =
+        useState([])
     const [search, setSearch] = useState('')
 
     const [selectedLoanType, setSelectedLoanType] =
@@ -138,81 +153,20 @@ function Applications() {
     const [selectedAgent, setSelectedAgent] =
         useState('')
 
+    const [selectedRM, setSelectedRM] =
+        useState('')
 
+    const [selectedTeamLead, setSelectedTeamLead] =
+        useState('')
+
+    const [selectedStatus, setSelectedStatus] =
+        useState('')
     // =========================================================
     // SELECTED APPLICATION
     // =========================================================
 
     const [selectedApplication, setSelectedApplication] =
         useState(null)
-
-
-    // =========================================================
-    // LOAN TYPES
-    // =========================================================
-
-    const loanTypes = useMemo(() => {
-
-        return [
-            ...new Set(
-                applications
-                    .map(
-                        (application) =>
-                            application.loanType
-                    )
-                    .filter(Boolean)
-            ),
-        ]
-
-    }, [applications])
-
-
-    // =========================================================
-    // AGENTS
-    // =========================================================
-
-    const agents = useMemo(() => {
-
-        const map = new Map()
-
-        applications.forEach((application) => {
-
-            const id =
-                application.agentId ??
-                application.agent_id ??
-                application.processingAgentId ??
-                application.processing_agent_id ??
-                application.agent?.id ??
-                application.processingAgent?.id
-
-            const name =
-                application.agentName ??
-                application.agent_name ??
-                application.processingAgent ??
-                application.processing_agent ??
-                application.agent?.name ??
-                application.processingAgent?.name
-
-            if (!id && !name) {
-                return
-            }
-
-            const key = String(id ?? name)
-
-            if (!map.has(key)) {
-
-                map.set(key, {
-                    id: id ?? name,
-                    name: name || 'Unknown Agent',
-                })
-
-            }
-
-        })
-
-        return [...map.values()]
-
-    }, [applications])
 
 
     // =========================================================
@@ -306,7 +260,35 @@ function Applications() {
         selectedAgent,
     ])
 
+    const fetchDropdownData = async () => {
+        try {
+            const activeContext = getActiveContext()
 
+            if (!activeContext?.id) {
+                return
+            }
+
+            const [loanTypesData, rmData, agentData] =
+                await Promise.all([
+                    getLoanTypes(),
+                    getEmployeesByContext(3),
+                    getEmployeesByContext(2),
+                ])
+
+            setLoanTypes(loanTypesData || [])
+            setRms(rmData || [])
+            setAgents(agentData || [])
+        } catch (error) {
+            console.error(
+                'Failed to fetch application dropdown data:',
+                error
+            )
+
+            setLoanTypes([])
+            setRms([])
+            setAgents([])
+        }
+    }
     // =========================================================
     // CLEAR FILTERS
     // =========================================================

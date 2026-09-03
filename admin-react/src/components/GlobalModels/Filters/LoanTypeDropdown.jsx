@@ -1,49 +1,112 @@
+import React, { useEffect, useState } from 'react'
+
 import SearchableFilterDropdown from './SearchableFilterDropdown'
+import { API_BASE_URL } from '../../../config/url'
 
-
-const DEFAULT_LOAN_TYPES = [
-    {
-        id: 401,
-        name: 'Personal Loan',
-    },
-    {
-        id: 402,
-        name: 'Home Loan',
-    },
-    {
-        id: 403,
-        name: 'Business Loan',
-    },
-    {
-        id: 404,
-        name: 'Vehicle Loan',
-    },
-    {
-        id: 405,
-        name: 'Education Loan',
-    },
-    {
-        id: 406,
-        name: 'Gold Loan',
-    },
-]
-
-
-// =============================================================
-// COMPONENT
-// =============================================================
 
 function LoanTypeDropdown({
     label = 'Loan Type',
     value = '',
     onChange,
     options,
-    allLabel = 'All Loan Types',
-    placeholder = allLabel,
+    placeholder = 'Select loan type',
     searchPlaceholder = 'Search loan type',
     emptyMessage = 'No loan types found',
     ...props
 }) {
+
+    const [loanTypes, setLoanTypes] = useState([])
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
+
+
+    // =============================================================
+    // FETCH LOAN TYPES
+    // =============================================================
+
+    useEffect(() => {
+
+        let isMounted = true
+
+        const fetchLoanTypes = async () => {
+
+            try {
+
+                setLoading(true)
+                setError('')
+
+                const response = await fetch(
+                    `${API_BASE_URL}/loan-types`,
+                    {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    }
+                )
+
+                if (!response.ok) {
+                    throw new Error(
+                        `Failed to fetch loan types (${response.status})`
+                    )
+                }
+
+                const data = await response.json()
+
+                if (!isMounted) {
+                    return
+                }
+
+                const formattedLoanTypes = Array.isArray(data)
+                    ? data.map((loanType) => ({
+                        id: Number(loanType.id),
+                        name: loanType.name,
+                    }))
+                    : []
+
+                setLoanTypes(formattedLoanTypes)
+
+            } catch (err) {
+
+                console.error(
+                    'Failed to fetch loan types:',
+                    err
+                )
+
+                if (isMounted) {
+                    setError('Unable to load loan types')
+                    setLoanTypes([])
+                }
+
+            } finally {
+
+                if (isMounted) {
+                    setLoading(false)
+                }
+
+            }
+        }
+
+        fetchLoanTypes()
+
+        return () => {
+            isMounted = false
+        }
+
+    }, [])
+
+
+    // =============================================================
+    // OPTIONS
+    // =============================================================
+
+    const dropdownOptions = options ?? loanTypes
+
+
+    // =============================================================
+    // COMPONENT
+    // =============================================================
 
     return (
 
@@ -51,12 +114,17 @@ function LoanTypeDropdown({
             label={label}
             value={value}
             onChange={onChange}
-            options={options}
-            defaultOptions={DEFAULT_LOAN_TYPES}
-            allLabel={allLabel}
-            placeholder={placeholder}
+            options={dropdownOptions}
+            placeholder={
+                loading
+                    ? 'Loading loan types...'
+                    : error
+                        ? error
+                        : placeholder
+            }
             searchPlaceholder={searchPlaceholder}
             emptyMessage={emptyMessage}
+            disabled={loading || !!error}
             {...props}
         />
 

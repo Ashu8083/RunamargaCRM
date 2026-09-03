@@ -11,7 +11,10 @@ import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 
 import GlobalChat from "../../../../components/GlobalModels/Loans/GlobalChat";
 import AgentDropdown from "../../../../components/GlobalModels/Filters/AgentDropdown";
+import RmDropdown from "../../../../components/GlobalModels/Filters/RmDropdown";
+import TeamLeadDropdown from "../../../../components/GlobalModels/Filters/TeamLeadDropdown";
 import LoanTypeDropdown from "../../../../components/GlobalModels/Filters/LoanTypeDropdown";
+import StatusDropdown from '../../../../components/GlobalModels/Filters/StatusDropdown'
 
 function PendingApplicationsTable({
   applications = [],
@@ -20,13 +23,20 @@ function PendingApplicationsTable({
   setSearch,
 
   loanTypes = [],
+  rms = [],
+  teamLeads = [],
   agents = [],
-
+  statuses = [],
   selectedLoanType,
   setSelectedLoanType,
-
+  selectedRM,
+  setSelectedRM,
+  selectedTeamLead,
+  setSelectedTeamLead,
   selectedAgent,
   setSelectedAgent,
+  selectedStatus,
+  setSelectedStatus,
 
   onClearFilters,
   onLoanTypeChange,
@@ -134,9 +144,9 @@ function PendingApplicationsTable({
   const getAppliedDate = (application) =>
     formatDate(
       application.appliedDate ??
-        application.applied_at ??
-        application.createdAt ??
-        application.created_at,
+      application.applied_at ??
+      application.createdAt ??
+      application.created_at,
     );
 
   const getStatusClass = (status) => {
@@ -296,6 +306,27 @@ function PendingApplicationsTable({
             showLabel={false}
             className="w-44 shrink-0"
           />
+          <RmDropdown
+            label=""
+            value={selectedRM}
+            onChange={setSelectedRM}
+            options={rms}
+            allLabel="All RMs"
+            placeholder="All RMs"
+            searchPlaceholder="Search RM"
+            emptyMessage="No RMs found"
+          />
+
+          <TeamLeadDropdown
+            label=""
+            value={selectedTeamLead}
+            onChange={setSelectedTeamLead}
+            options={teamLeads}
+            allLabel="All Team Leads"
+            placeholder="All Team Leads"
+            searchPlaceholder="Search team lead"
+            emptyMessage="No team leads found"
+          />
 
           {/* AGENT */}
 
@@ -307,6 +338,16 @@ function PendingApplicationsTable({
             className="w-48 shrink-0"
           />
 
+          <StatusDropdown
+            label=""
+            value={selectedStatus}
+            onChange={setSelectedStatus}
+            options={statuses}
+            allLabel="All Statuses"
+            placeholder="All Statuses"
+            searchPlaceholder="Search status"
+            emptyMessage="No statuses found"
+          />
           {/* CLEAR */}
 
           <button
@@ -651,8 +692,8 @@ function PendingApplicationsTable({
                                                         truncate
                                                         hover:opacity-80
                                                         ${getStatusClass(
-                                                          application.status,
-                                                        )}
+                          application.status,
+                        )}
                                                     `}
                       >
                         {application.status || "N/A"}

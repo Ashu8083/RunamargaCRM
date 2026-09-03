@@ -1,38 +1,22 @@
+// src/app/auth.js
 import axios from 'axios'
 
-export const AUTH_STORAGE_KEYS = Object.freeze({
-    accessToken: 'access_token',
-    refreshToken: 'refresh_token',
-    user: 'auth_user',
-})
+import { API_BASE_URL } from '../config/url'
+
 const authClient = axios.create({
-    baseURL: process.env.REACT_APP_BASE_URL || '/api',
+    baseURL: API_BASE_URL,
     withCredentials: true,
 })
+
 const AUTH_ENDPOINTS = Object.freeze({
-    login: process.env.REACT_APP_AUTH_LOGIN_PATH || '/auth/login',
-    requestOtp:
-        process.env.REACT_APP_AUTH_REQUEST_OTP_PATH ||
-        '/auth/request-otp',
-    verifyOtp:
-        process.env.REACT_APP_AUTH_VERIFY_OTP_PATH ||
-        '/auth/verify-otp',
-    refresh: process.env.REACT_APP_AUTH_REFRESH_PATH || '/auth/refresh',
-    logout: process.env.REACT_APP_AUTH_LOGOUT_PATH || '/auth/logout',
+    login: '/auth/login',
+    requestOtp: '/auth/request-otp',
+    verifyOtp: '/auth/verify-otp',
+    refresh: '/auth/refresh',
+    logout: '/auth/logout',
 })
-const isMockApiEnabled = () => {
-    console.log(
-        'REACT_APP_USE_MOCK_API =',
-        process.env.REACT_APP_USE_MOCK_API
-    )
 
-    return process.env.REACT_APP_USE_MOCK_API !== 'false'
-}
-const getMockOtp = () => process.env.REACT_APP_MOCK_OTP || '123456'
-
-const wait = (delay = 300) => {
-    return new Promise((resolve) => setTimeout(resolve, delay))
-}
+const AUTH_USER_KEY = 'auth_user'
 
 const notifyAuthChanged = () => {
     if (typeof window !== 'undefined') {
@@ -50,44 +34,20 @@ const readJson = (value) => {
     }
 }
 
-const normalizeAuthResponse = (response) => {
-    const body = response?.data ?? response ?? {}
-    const data = body?.data ?? body
-
-    return {
-        accessToken:
-            data?.accessToken ||
-            body?.accessToken ||
-            data?.access_token ||
-            body?.access_token ||
-            data?.token ||
-            body?.token ||
-            '',
-        refreshToken:
-            data?.refreshToken ||
-            body?.refreshToken ||
-            data?.refresh_token ||
-            body?.refresh_token ||
-            '',
-        user:
-            data?.user ||
-            body?.user ||
-            data?.admin ||
-            body?.admin ||
-            data?.profile ||
-            body?.profile ||
-            null,
-    }
-}
-
 const normalizeStatusResponse = (response, fallbackMessage) => {
     const body = response?.data ?? response ?? {}
     const data = body?.data ?? body
-    const source = typeof data === 'object' && data !== null ? data : {}
+    const source =
+        typeof data === 'object' && data !== null
+            ? data
+            : {}
 
     return {
         ...source,
-        success: body?.success ?? source?.success ?? true,
+        success:
+            body?.success ??
+            source?.success ??
+            true,
         message:
             body?.message ||
             source?.message ||
@@ -95,38 +55,15 @@ const normalizeStatusResponse = (response, fallbackMessage) => {
     }
 }
 
-const createMockSession = (email) => ({
-    accessToken: `mock-access-token-${Date.now()}`,
-    refreshToken: `mock-refresh-token-${Date.now()}`,
-    user: {
-        id: 'admin_001',
-        name: 'Runamarga Admin',
-        email,
-        gender: 'male',
-        role: 'admin',
-        permissions: ['*'],
-        profileImage: '',
-    },
-})
-
-export const getAccessToken = () => {
-    return (
-        localStorage.getItem(AUTH_STORAGE_KEYS.accessToken) ||
-        localStorage.getItem('token') ||
-        ''
-    )
-}
-
-export const getRefreshToken = () => {
-    return localStorage.getItem(AUTH_STORAGE_KEYS.refreshToken) || ''
-}
-
 export const getCurrentUser = () => {
     return readJson(
-        localStorage.getItem(AUTH_STORAGE_KEYS.user)
+        localStorage.getItem(AUTH_USER_KEY)
     )
 }
-export const getActiveContext = (user = getCurrentUser()) => {
+
+export const getActiveContext = (
+    user = getCurrentUser()
+) => {
     if (!user) return null
 
     const contexts = Array.isArray(user.contexts)
@@ -143,7 +80,8 @@ export const getActiveContext = (user = getCurrentUser()) => {
     if (storedContextId) {
         const storedContext = contexts.find(
             (context) =>
-                String(context.id) === String(storedContextId)
+                String(context.id) ===
+                String(storedContextId)
         )
 
         if (storedContext) {
@@ -152,16 +90,14 @@ export const getActiveContext = (user = getCurrentUser()) => {
     }
 
     return (
-        contexts.find((context) => context.is_default) ||
-        contexts[0]
+        contexts.find(
+            (context) => context.is_default
+        ) || contexts[0]
     )
 }
 
-
 export const setActiveContext = (context) => {
-    if (!context?.id) {
-        return
-    }
+    if (!context?.id) return
 
     localStorage.setItem(
         'active_context_id',
@@ -170,37 +106,9 @@ export const setActiveContext = (context) => {
 
     notifyAuthChanged()
 }
-export const setAuthSession = ({
-    accessToken,
-    refreshToken,
-    user,
-}) => {
-    if (!accessToken) {
-        throw new Error('Auth session requires an access token')
-    }
-
-    localStorage.setItem(AUTH_STORAGE_KEYS.accessToken, accessToken)
-    localStorage.setItem('token', accessToken)
-
-    if (refreshToken) {
-        localStorage.setItem(AUTH_STORAGE_KEYS.refreshToken, refreshToken)
-    }
-
-    if (user) {
-        localStorage.setItem(AUTH_STORAGE_KEYS.user, JSON.stringify(user))
-    }
-
-    notifyAuthChanged()
-}
 
 export const clearAuthSession = () => {
-    localStorage.removeItem(AUTH_STORAGE_KEYS.accessToken)
-    localStorage.removeItem(AUTH_STORAGE_KEYS.refreshToken)
-    localStorage.removeItem(AUTH_STORAGE_KEYS.user)
-
-    localStorage.removeItem('token')
-
-    // Remove selected RBAC context
+    localStorage.removeItem(AUTH_USER_KEY)
     localStorage.removeItem('active_context_id')
 
     notifyAuthChanged()
@@ -209,21 +117,19 @@ export const clearAuthSession = () => {
 export const isAuthenticated = () => {
     return Boolean(getCurrentUser())
 }
+
 export const requestLoginOtp = async (payload) => {
-    if (isMockApiEnabled()) {
-        console.log('MOCK REQUEST OTP PAYLOAD:', payload)
-        await wait(500)
+    const response = await authClient.post(
+        AUTH_ENDPOINTS.requestOtp,
+        payload
+    )
 
-        return {
-            success: true,
-            message: 'OTP sent successfully.',
-            mockOtp: getMockOtp(),
-        }
-    }
-
-    const response = await authClient.post(AUTH_ENDPOINTS.requestOtp, payload)
-    return normalizeStatusResponse(response, 'OTP sent successfully.')
+    return normalizeStatusResponse(
+        response,
+        'OTP sent successfully.'
+    )
 }
+
 export const verifyLoginOtp = async ({
     emailId,
     otp,
@@ -250,15 +156,14 @@ export const verifyLoginOtp = async ({
     )
 
     if (response.data?.employee_id) {
-        result.employee_id = response.data.employee_id
+        result.employee_id =
+            response.data.employee_id
     }
 
     if (response.data?.user) {
-        const user = response.data.user
-
         localStorage.setItem(
-            AUTH_STORAGE_KEYS.user,
-            JSON.stringify(user)
+            AUTH_USER_KEY,
+            JSON.stringify(response.data.user)
         )
     }
 
@@ -267,59 +172,18 @@ export const verifyLoginOtp = async ({
     return result
 }
 
-export const loginWithCredentials = async ({
-    emailId,
-    password,
-}) => {
-    if (isMockApiEnabled()) {
-        await wait(250)
-
-        const session = createMockSession(emailId)
-        setAuthSession(session)
-
-        return session
-    }
-
-    const response = await authClient.post(AUTH_ENDPOINTS.login, {
-        email: emailId,
-        password,
-    })
-
-    const session = normalizeAuthResponse(response)
-
-    if (!session.accessToken || !session.refreshToken) {
-        throw new Error(
-            'Login API must return accessToken and refreshToken'
-        )
-    }
-
-    setAuthSession(session)
-
-    return session
-}
-
 export const refreshAccessToken = async () => {
-    if (isMockApiEnabled()) {
-        return true
-    }
-
-    const response = await authClient.post(
+    await authClient.post(
         AUTH_ENDPOINTS.refresh
     )
-
-    if (response.data?.message) {
-        return true
-    }
 
     return true
 }
 
 export const logout = async () => {
-    if (!isMockApiEnabled()) {
-        await authClient
-            .post(AUTH_ENDPOINTS.logout)
-            .catch(() => {})
-    }
+    await authClient
+        .post(AUTH_ENDPOINTS.logout)
+        .catch(() => {})
 
     clearAuthSession()
 
