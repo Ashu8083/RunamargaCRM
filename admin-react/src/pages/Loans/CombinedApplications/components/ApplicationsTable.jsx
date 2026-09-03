@@ -1,5 +1,4 @@
 // admin-react/src/pages/Loans/AgentApplications/components/ApplicationsTable.jsx
-
 import { useState } from "react";
 
 import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
@@ -7,26 +6,39 @@ import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
 import BellAlertIcon from "@heroicons/react/24/outline/BellAlertIcon";
 import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftRightIcon";
 import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
-import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 
 import GlobalChat from "../../../../components/GlobalModels/Loans/GlobalChat";
 
+import AgentDropdown from "../../../../components/GlobalModels/Filters/AgentDropdown";
+import RmDropdown from "../../../../components/GlobalModels/Filters/RmDropdown";
+import TeamLeadDropdown from "../../../../components/GlobalModels/Filters/TeamLeadDropdown";
+import LoanTypeDropdown from "../../../../components/GlobalModels/Filters/LoanTypeDropdown";
+import StatusDropdown from '../../../../components/GlobalModels/Filters/StatusDropdown'
+
+// =============================================================
+// COMPONENT
+// =============================================================
+
 function ApplicationsTable({
   applications = [],
-
   search,
   setSearch,
-
   loanTypes = [],
+  rms = [],
+  teamLeads = [],
   agents = [],
-
+  statuses = [],
   selectedLoanType,
   setSelectedLoanType,
-
+  selectedRM,
+  setSelectedRM,
+  selectedTeamLead,
+  setSelectedTeamLead,
   selectedAgent,
   setSelectedAgent,
-
+  selectedStatus,
+  setSelectedStatus,
   onClearFilters,
   onLoanTypeChange,
   onStatusChange,
@@ -35,13 +47,6 @@ function ApplicationsTable({
   onViewApplication,
   onRefresh,
 }) {
-  // =========================================================
-  // AGENT DROPDOWN
-  // =========================================================
-
-  const [agentSearch, setAgentSearch] = useState("");
-
-  const [showAgentMenu, setShowAgentMenu] = useState(false);
 
   // =========================================================
   // CHAT
@@ -49,15 +54,9 @@ function ApplicationsTable({
 
   const [chatOpen, setChatOpen] = useState(false);
 
-  const [selectedChatApplication, setSelectedChatApplication] = useState(null);
+  const [selectedChatApplication, setSelectedChatApplication] =
+    useState(null);
 
-  // =========================================================
-  // FILTERED AGENTS
-  // =========================================================
-
-  const filteredAgents = agents.filter((agent) =>
-    agent.name?.toLowerCase().includes(agentSearch.trim().toLowerCase()),
-  );
 
   // =========================================================
   // HELPERS
@@ -72,6 +71,7 @@ function ApplicationsTable({
     application.processingAgent?.name ??
     "N/A";
 
+
   const getRMName = (application) =>
     application.rmName ??
     application.rm?.name ??
@@ -79,12 +79,22 @@ function ApplicationsTable({
     application.rm ??
     "N/A";
 
+
+  const getTeamLeadName = (application) =>
+    application.teamLeadName ??
+    application.team_lead_name ??
+    application.teamLead?.name ??
+    application.team_lead?.name ??
+    "N/A";
+
+
   const getAppliedBy = (application) =>
     application.appliedBy ??
     application.applied_by ??
     application.createdBy ??
     application.created_by ??
     "N/A";
+
 
   const getReferral = (application) =>
     application.referral ??
@@ -97,8 +107,13 @@ function ApplicationsTable({
     application.referrer_name ??
     "N/A";
 
+
   const getLoanId = (application) =>
-    application.loanId ?? application.loan_id ?? application.id ?? null;
+    application.loanId ??
+    application.loan_id ??
+    application.id ??
+    null;
+
 
   const getAgentId = (application) =>
     application.agentId ??
@@ -109,24 +124,37 @@ function ApplicationsTable({
     application.processingAgent?.id ??
     null;
 
-  const getAmount = (application) => {
-    const amount =
-      application.loanAmount ?? application.amount ?? application.loan_amount;
 
-    if (amount === null || amount === undefined || amount === "") {
+  const getAmount = (application) => {
+
+    const amount =
+      application.loanAmount ??
+      application.amount ??
+      application.loan_amount;
+
+    if (
+      amount === null ||
+      amount === undefined ||
+      amount === ""
+    ) {
       return "N/A";
     }
 
     const numericAmount = Number(
-      String(amount).replace(/,/g, "").replace(/₹/g, ""),
+      String(amount)
+        .replace(/,/g, "")
+        .replace(/₹/g, "")
     );
 
     return Number.isNaN(numericAmount)
       ? String(amount)
       : `₹${numericAmount.toLocaleString("en-IN")}`;
+
   };
 
+
   const formatDate = (value) => {
+
     if (!value) {
       return "N/A";
     }
@@ -142,97 +170,112 @@ function ApplicationsTable({
       String(date.getMonth() + 1).padStart(2, "0"),
       date.getFullYear(),
     ].join("/");
+
   };
+
 
   const getAppliedDate = (application) =>
     formatDate(
       application.appliedDate ??
-        application.applied_at ??
-        application.createdAt ??
-        application.created_at,
+      application.applied_at ??
+      application.createdAt ??
+      application.created_at
     );
 
+
   const getStatusClass = (status) => {
+
     switch (status) {
+
       case "Inprocess":
       case "In Process":
+
         return `
                     text-[#78B300]
                     border-[#8BCF00]/40
                     bg-[#8BCF00]/10
                 `;
 
+
       case "Docs Pending":
+
         return `
                     text-orange-600
                     border-orange-300
                     bg-orange-50
                 `;
 
+
       case "Rejected":
+
         return `
                     text-error
                     border-error/30
                     bg-error/5
                 `;
 
+
       case "Revert Rejected":
+
         return `
                     text-[#78B300]
                     border-[#8BCF00]/40
                     bg-[#8BCF00]/10
                 `;
 
+
       default:
+
         return `
                     text-base-content/60
                     border-base-300
                     bg-base-200/50
                 `;
+
     }
+
   };
 
-  const selectedAgentName =
-    agents.find((agent) => String(agent.id) === String(selectedAgent))?.name ||
-    "All Agents";
-
-  // =========================================================
-  // CLEAR
-  // =========================================================
-
-  const handleClear = () => {
-    setAgentSearch("");
-
-    setShowAgentMenu(false);
-
-    onClearFilters?.();
-  };
 
   // =========================================================
   // CHAT
   // =========================================================
 
   const handleOpenChat = (application) => {
+
     setSelectedChatApplication(application);
 
     setChatOpen(true);
 
     onChat?.(application);
+
   };
 
+
   const handleCloseChat = () => {
+
     setChatOpen(false);
 
     setSelectedChatApplication(null);
+
   };
+
 
   // =========================================================
   // TABLE CELL
   // =========================================================
 
-  const Cell = ({ children, title, className = "" }) => (
+  const Cell = ({
+    children,
+    title,
+    className = "",
+  }) => (
+
     <span
-      title={title ?? String(children ?? "")}
+      title={
+        title ??
+        String(children ?? "")
+      }
       className={`
                 block
                 min-w-0
@@ -244,290 +287,187 @@ function ApplicationsTable({
     >
       {children}
     </span>
+
   );
+
 
   // =========================================================
   // RENDER
   // =========================================================
 
   return (
+
     <div className="space-y-4">
+
       {/* =====================================================
                 FILTERS
             ===================================================== */}
 
       <div
         className="
-                card
-                bg-base-100
-                border
-                border-base-300
-                shadow-sm
-            "
+                    card
+                    bg-base-100
+                    border
+                    border-base-300
+                    shadow-sm
+                "
       >
+
         <div
           className="
-                    p-3
-                    flex
-                    items-center
-                    gap-2
-                    w-full
-                "
+        p-3
+        flex
+        items-center
+        gap-2
+        w-full
+    "
         >
           {/* SEARCH */}
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
+
             <div className="relative">
+
               <SearchIcon
                 className="
-                pointer-events-none
-                absolute
-                left-3
-                top-1/2
-                h-4
-                w-4
-                -translate-y-1/2
-                text-base-content/35
-            "
+                    pointer-events-none
+                    absolute
+                    left-3
+                    top-1/2
+                    h-4
+                    w-4
+                    -translate-y-1/2
+                    text-base-content/35
+                "
               />
 
               <input
                 type="text"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
                 placeholder="Search name, loan ID, email or Agent..."
                 className="
-                input
-                input-bordered
-                h-10
-                min-h-10
-                w-full
-                pl-9
-            "
+                    input
+                    input-bordered
+                    h-10
+                    min-h-10
+                    w-full
+                    pl-9
+                "
               />
+
             </div>
+
           </div>
+
 
           {/* LOAN TYPE */}
 
-          <select
-            value={selectedLoanType}
-            onChange={(event) => setSelectedLoanType(event.target.value)}
-            className="
-                            select
-                            select-bordered
-                            w-44
-                            shrink-0
-                        "
-          >
-            <option value="">All Loan Types</option>
+          <div className="w-44 shrink-0">
 
-            {loanTypes.map((loanType) => (
-              <option key={loanType} value={loanType}>
-                {loanType}
-              </option>
-            ))}
-          </select>
+            <LoanTypeDropdown
+              label=""
+              value={selectedLoanType}
+              onChange={setSelectedLoanType}
+              options={loanTypes}
+              allLabel="All Loan Types"
+              placeholder="All Loan Types"
+              searchPlaceholder="Search loan type"
+              emptyMessage="No loan types found"
+            />
+
+          </div>
+
+
+          {/* RM */}
+
+          <div className="w-44 shrink-0">
+
+            <RmDropdown
+              label=""
+              value={selectedRM}
+              onChange={setSelectedRM}
+              options={rms}
+              allLabel="All RMs"
+              placeholder="All RMs"
+              searchPlaceholder="Search RM"
+              emptyMessage="No RMs found"
+            />
+
+          </div>
+
+
+          {/* TEAM LEAD */}
+
+          <div className="w-44 shrink-0">
+
+            <TeamLeadDropdown
+              label=""
+              value={selectedTeamLead}
+              onChange={setSelectedTeamLead}
+              options={teamLeads}
+              allLabel="All Team Leads"
+              placeholder="All Team Leads"
+              searchPlaceholder="Search team lead"
+              emptyMessage="No team leads found"
+            />
+
+          </div>
+
 
           {/* AGENT */}
 
-          <div
-            className="
-                        relative
-                        w-48
-                        shrink-0
-                    "
-          >
-            <button
-              type="button"
-              onClick={() => setShowAgentMenu((value) => !value)}
-              className="
-                                select
-                                select-bordered
-                                w-full
-                                flex
-                                items-center
-                                justify-between
-                                text-left
-                                font-normal
-                            "
-            >
-              <span
-                className="
-                                truncate
-                                min-w-0
-                            "
-              >
-                {selectedAgentName}
-              </span>
+          <div className="w-44 shrink-0">
 
-              <ChevronDownIcon
-                className="
-                                w-4
-                                h-4
-                                shrink-0
-                                text-base-content/50
-                            "
-              />
-            </button>
+            <AgentDropdown
+              label=""
+              value={selectedAgent}
+              onChange={setSelectedAgent}
+              options={agents}
+              allLabel="All Agents"
+              placeholder="All Agents"
+              searchPlaceholder="Search agent"
+              emptyMessage="No agents found"
+            />
 
-            {showAgentMenu && (
-              <div
-                className="
-                                absolute
-                                z-50
-                                top-full
-                                left-0
-                                right-0
-                                mt-1
-                                bg-base-100
-                                border
-                                border-base-300
-                                rounded-lg
-                                shadow-lg
-                                overflow-hidden
-                            "
-              >
-                {/* SEARCH AGENT */}
-
-                <div
-                  className="
-                                    p-2
-                                    border-b
-                                    border-base-300
-                                "
-                >
-                  <label
-                    className="
-                                        input
-                                        input-sm
-                                        input-bordered
-                                        flex
-                                        items-center
-                                        gap-2
-                                    "
-                  >
-                    <SearchIcon
-                      className="
-                                            w-4
-                                            h-4
-                                            text-base-content/40
-                                        "
-                    />
-
-                    <input
-                      autoFocus
-                      type="text"
-                      value={agentSearch}
-                      onChange={(event) => setAgentSearch(event.target.value)}
-                      placeholder="Search Agent..."
-                      className="
-                                                grow
-                                                min-w-0
-                                            "
-                    />
-                  </label>
-                </div>
-
-                {/* AGENT LIST */}
-
-                <div
-                  className="
-                                    max-h-52
-                                    overflow-y-auto
-                                    p-1
-                                "
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedAgent("");
-
-                      setAgentSearch("");
-
-                      setShowAgentMenu(false);
-                    }}
-                    className={`
-                                            w-full
-                                            text-left
-                                            px-3
-                                            py-2
-                                            rounded
-                                            text-sm
-                                            hover:bg-base-200
-                                            ${
-                                              !selectedAgent
-                                                ? "bg-[#8BCF00]/10 text-[#78B300] font-medium"
-                                                : ""
-                                            }
-                                        `}
-                  >
-                    All Agents
-                  </button>
-
-                  {filteredAgents.map((agent) => (
-                    <button
-                      key={agent.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedAgent(agent.id);
-
-                        setAgentSearch("");
-
-                        setShowAgentMenu(false);
-                      }}
-                      className={`
-                                                w-full
-                                                text-left
-                                                px-3
-                                                py-2
-                                                rounded
-                                                text-sm
-                                                truncate
-                                                hover:bg-base-200
-                                                ${
-                                                  String(selectedAgent) ===
-                                                  String(agent.id)
-                                                    ? "bg-[#8BCF00]/10 text-[#78B300] font-medium"
-                                                    : ""
-                                                }
-                                            `}
-                    >
-                      {agent.name}
-                    </button>
-                  ))}
-
-                  {!filteredAgents.length && (
-                    <div
-                      className="
-                                            text-center
-                                            text-xs
-                                            text-base-content/50
-                                            py-3
-                                        "
-                    >
-                      No agent found
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
+          {/* Status */}
+
+          <div className="w-44 shrink-0">
+
+            <StatusDropdown
+              label=""
+              value={selectedStatus}
+              onChange={setSelectedStatus}
+              options={statuses}
+              allLabel="All Statuses"
+              placeholder="All Statuses"
+              searchPlaceholder="Search status"
+              emptyMessage="No statuses found"
+            />
+
+          </div>
+
 
           {/* CLEAR */}
 
           <button
             type="button"
-            onClick={handleClear}
+            onClick={onClearFilters}
             className="
-                            btn
-                            btn-ghost
-                            btn-sm
-                            shrink-0
-                        "
+            btn
+            btn-ghost
+            btn-sm
+            h-10
+            min-h-10
+            shrink-0
+        "
           >
             Clear
           </button>
+
 
           {/* REFRESH */}
 
@@ -536,20 +476,25 @@ function ApplicationsTable({
             onClick={onRefresh}
             title="Refresh applications"
             className="
-                            btn
-                            btn-sm
-                            btn-square
-                            shrink-0
-                            border-[#8BCF00]
-                            text-[#78B300]
-                            hover:bg-[#8BCF00]
-                            hover:text-white
-                        "
+            btn
+            btn-sm
+            btn-square
+            h-10
+            min-h-10
+            shrink-0
+            border-[#8BCF00]
+            text-[#78B300]
+            hover:bg-[#8BCF00]
+            hover:text-white
+        "
           >
             <ArrowPathIcon className="w-4 h-4" />
           </button>
+
         </div>
+
       </div>
+
 
       {/* =====================================================
                 TABLE
@@ -557,32 +502,36 @@ function ApplicationsTable({
 
       <div
         className="
-                card
-                bg-base-100
-                border
-                border-base-300
-                shadow-sm
-                w-full
-                overflow-hidden
-            "
+                    card
+                    bg-base-100
+                    border
+                    border-base-300
+                    shadow-sm
+                    w-full
+                    overflow-hidden
+                "
       >
+
         <div
           className="
-                    w-full
-                    overflow-x-auto
-                    touch-pan-x
-                    overscroll-x-contain
-                "
+                        w-full
+                        overflow-x-auto
+                        touch-pan-x
+                        overscroll-x-contain
+                    "
         >
+
           <table
             className="
-                        w-full
-                        min-w-[1150px]
-                        table-fixed
-                        border-collapse
-                    "
+                            w-full
+                            min-w-[1150px]
+                            table-fixed
+                            border-collapse
+                        "
           >
+
             <colgroup>
+
               <col className="w-[3%]" />
               <col className="w-[10%]" />
               <col className="w-[9%]" />
@@ -595,17 +544,21 @@ function ApplicationsTable({
               <col className="w-[8%]" />
               <col className="w-[9%]" />
               <col className="w-[8%]" />
+
             </colgroup>
+
 
             {/* HEADER */}
 
             <thead>
+
               <tr
                 className="
-                                border-b
-                                border-base-300
-                            "
+                                    border-b
+                                    border-base-300
+                                "
               >
+
                 {[
                   "#",
                   "Name",
@@ -620,6 +573,7 @@ function ApplicationsTable({
                   "Status",
                   "Actions",
                 ].map((heading) => (
+
                   <th
                     key={heading}
                     className="
@@ -633,15 +587,22 @@ function ApplicationsTable({
                   >
                     {heading}
                   </th>
+
                 ))}
+
               </tr>
+
             </thead>
+
 
             {/* BODY */}
 
             <tbody>
+
               {!applications.length ? (
+
                 <tr>
+
                   <td
                     colSpan="12"
                     className="
@@ -653,72 +614,112 @@ function ApplicationsTable({
                   >
                     No applications found
                   </td>
+
                 </tr>
+
               ) : (
-                applications.map((application, index) => (
-                  <tr
-                    key={application.id ?? application.loanId ?? index}
-                    className="
+
+                applications.map(
+                  (application, index) => (
+
+                    <tr
+                      key={
+                        application.id ??
+                        application.loanId ??
+                        index
+                      }
+                      className="
                                                 border-b
                                                 border-base-300
                                                 last:border-b-0
                                                 hover:bg-base-200/30
                                             "
-                  >
-                    {/* # */}
+                    >
 
-                    <td className="px-3 py-4">
-                      <Cell
-                        className="
-                                                    text-sm
-                                                    text-base-content/70
-                                                "
-                      >
-                        {index + 1}
-                      </Cell>
-                    </td>
+                      {/* # */}
 
-                    {/* NAME */}
+                      <td className="px-3 py-4">
 
-                    <td className="px-3 py-4">
-                      <Cell
-                        title={application.name}
-                        className="
+                        <Cell
+                          className="
+                                                        text-sm
+                                                        text-base-content/70
+                                                    "
+                        >
+                          {index + 1}
+                        </Cell>
+
+                      </td>
+
+
+                      {/* NAME */}
+
+                      <td className="px-3 py-4">
+
+                        <Cell
+                          title={
+                            application.name
+                          }
+                          className="
                                                         text-sm
                                                         font-medium
                                                     "
-                      >
-                        {application.name || "N/A"}
-                      </Cell>
-                    </td>
+                        >
+                          {
+                            application.name ||
+                            "N/A"
+                          }
+                        </Cell>
 
-                    {/* PHONE */}
+                      </td>
 
-                    <td className="px-3 py-4">
-                      <div
-                        className="
-                                                    flex
-                                                    items-center
-                                                    gap-1
-                                                    min-w-0
-                                                "
-                      >
-                        <Cell
-                          title={application.phone}
+
+                      {/* PHONE */}
+
+                      <td className="px-3 py-4">
+
+                        <div
                           className="
+                                                        flex
+                                                        items-center
+                                                        gap-1
+                                                        min-w-0
+                                                    "
+                        >
+
+                          <Cell
+                            title={
+                              application.phone
+                            }
+                            className="
                                                             text-sm
                                                             flex-1
                                                         "
-                        >
-                          {application.phone || "N/A"}
-                        </Cell>
+                          >
+                            {
+                              application.phone ||
+                              "N/A"
+                            }
+                          </Cell>
 
-                        {application.phone && (
-                          <a
-                            href={`tel:${application.phone}`}
-                            title={`Call ${application.name || application.phone}`}
-                            aria-label={`Call ${application.name || application.phone}`}
-                            className="
+
+                          {application.phone && (
+
+                            <a
+                              href={
+                                `tel:${application.phone}`
+                              }
+                              title={
+                                `Call ${application.name ||
+                                application.phone
+                                }`
+                              }
+                              aria-label={
+                                `Call ${application.name ||
+                                application.phone
+                                }`
+                              }
+                              className="
                                                                 btn
                                                                 btn-ghost
                                                                 btn-xs
@@ -728,26 +729,39 @@ function ApplicationsTable({
                                                                 text-[#78B300]
                                                                 hover:bg-[#8BCF00]/10
                                                             "
-                          >
-                            <PhoneIcon
-                              className="
-                                                                w-4
-                                                                h-4
-                                                            "
-                            />
-                          </a>
-                        )}
-                      </div>
-                    </td>
+                            >
 
-                    {/* LOAN TYPE */}
+                              <PhoneIcon
+                                className="
+                                                                    w-4
+                                                                    h-4
+                                                                "
+                              />
 
-                    <td className="px-3 py-4">
-                      <button
-                        type="button"
-                        onClick={() => onLoanTypeChange?.(application)}
-                        title={application.loanType}
-                        className="
+                            </a>
+
+                          )}
+
+                        </div>
+
+                      </td>
+
+
+                      {/* LOAN TYPE */}
+
+                      <td className="px-3 py-4">
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onLoanTypeChange?.(
+                              application
+                            )
+                          }
+                          title={
+                            application.loanType
+                          }
+                          className="
                                                         max-w-full
                                                         inline-flex
                                                         items-center
@@ -763,85 +777,168 @@ function ApplicationsTable({
                                                         truncate
                                                         hover:bg-[#8BCF00]/20
                                                     "
-                      >
-                        {application.loanType || "Not Assigned"}
-                      </button>
-                    </td>
+                        >
 
-                    {/* LOAN AMOUNT */}
+                          {
+                            application.loanType ||
+                            "Not Assigned"
+                          }
 
-                    <td className="px-3 py-4">
-                      <Cell
-                        title={getAmount(application)}
-                        className="
+                        </button>
+
+                      </td>
+
+
+                      {/* LOAN AMOUNT */}
+
+                      <td className="px-3 py-4">
+
+                        <Cell
+                          title={
+                            getAmount(
+                              application
+                            )
+                          }
+                          className="
                                                         text-sm
                                                         font-medium
                                                     "
-                      >
-                        {getAmount(application)}
-                      </Cell>
-                    </td>
+                        >
+                          {
+                            getAmount(
+                              application
+                            )
+                          }
+                        </Cell>
 
-                    {/* APPLIED DATE */}
+                      </td>
 
-                    <td className="px-3 py-4">
-                      <Cell
-                        title={getAppliedDate(application)}
-                        className="text-sm"
-                      >
-                        {getAppliedDate(application)}
-                      </Cell>
-                    </td>
 
-                    {/* APPLIED BY */}
+                      {/* APPLIED DATE */}
 
-                    <td className="px-3 py-4">
-                      <Cell
-                        title={getAppliedBy(application)}
-                        className="text-sm"
-                      >
-                        {getAppliedBy(application)}
-                      </Cell>
-                    </td>
+                      <td className="px-3 py-4">
 
-                    {/* REFERRAL */}
+                        <Cell
+                          title={
+                            getAppliedDate(
+                              application
+                            )
+                          }
+                          className="text-sm"
+                        >
+                          {
+                            getAppliedDate(
+                              application
+                            )
+                          }
+                        </Cell>
 
-                    <td className="px-3 py-4">
-                      <Cell
-                        title={getReferral(application)}
-                        className="text-sm"
-                      >
-                        {getReferral(application)}
-                      </Cell>
-                    </td>
+                      </td>
 
-                    {/* RM */}
 
-                    <td className="px-3 py-4">
-                      <Cell title={getRMName(application)} className="text-sm">
-                        {getRMName(application)}
-                      </Cell>
-                    </td>
+                      {/* APPLIED BY */}
 
-                    {/* PROCESSING AGENT */}
+                      <td className="px-3 py-4">
 
-                    <td className="px-3 py-4">
-                      <Cell
-                        title={getAgentName(application)}
-                        className="text-sm"
-                      >
-                        {getAgentName(application)}
-                      </Cell>
-                    </td>
+                        <Cell
+                          title={
+                            getAppliedBy(
+                              application
+                            )
+                          }
+                          className="text-sm"
+                        >
+                          {
+                            getAppliedBy(
+                              application
+                            )
+                          }
+                        </Cell>
 
-                    {/* STATUS */}
+                      </td>
 
-                    <td className="px-3 py-4">
-                      <button
-                        type="button"
-                        onClick={() => onStatusChange?.(application)}
-                        title={application.status}
-                        className={`
+
+                      {/* REFERRAL */}
+
+                      <td className="px-3 py-4">
+
+                        <Cell
+                          title={
+                            getReferral(
+                              application
+                            )
+                          }
+                          className="text-sm"
+                        >
+                          {
+                            getReferral(
+                              application
+                            )
+                          }
+                        </Cell>
+
+                      </td>
+
+
+                      {/* RM */}
+
+                      <td className="px-3 py-4">
+
+                        <Cell
+                          title={
+                            getRMName(
+                              application
+                            )
+                          }
+                          className="text-sm"
+                        >
+                          {
+                            getRMName(
+                              application
+                            )
+                          }
+                        </Cell>
+
+                      </td>
+
+
+                      {/* PROCESSING AGENT */}
+
+                      <td className="px-3 py-4">
+
+                        <Cell
+                          title={
+                            getAgentName(
+                              application
+                            )
+                          }
+                          className="text-sm"
+                        >
+                          {
+                            getAgentName(
+                              application
+                            )
+                          }
+                        </Cell>
+
+                      </td>
+
+
+                      {/* STATUS */}
+
+                      <td className="px-3 py-4">
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onStatusChange?.(
+                              application
+                            )
+                          }
+                          title={
+                            application.status
+                          }
+                          className={`
                                                         max-w-full
                                                         inline-flex
                                                         items-center
@@ -854,32 +951,43 @@ function ApplicationsTable({
                                                         truncate
                                                         hover:opacity-80
                                                         ${getStatusClass(
-                                                          application.status,
-                                                        )}
+                            application.status
+                          )}
                                                     `}
-                      >
-                        {application.status || "N/A"}
-                      </button>
-                    </td>
+                        >
+                          {
+                            application.status ||
+                            "N/A"
+                          }
+                        </button>
 
-                    {/* ACTIONS */}
+                      </td>
 
-                    <td className="px-2 py-4">
-                      <div
-                        className="
-                                                    flex
-                                                    items-center
-                                                    justify-center
-                                                    gap-0
-                                                "
-                      >
-                        {/* VIEW */}
 
-                        <button
-                          type="button"
-                          onClick={() => onViewApplication?.(application)}
-                          title="View application"
+                      {/* ACTIONS */}
+
+                      <td className="px-2 py-4">
+
+                        <div
                           className="
+                                                        flex
+                                                        items-center
+                                                        justify-center
+                                                        gap-0
+                                                    "
+                        >
+
+                          {/* VIEW */}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onViewApplication?.(
+                                application
+                              )
+                            }
+                            title="View application"
+                            className="
                                                             btn
                                                             btn-ghost
                                                             btn-sm
@@ -887,22 +995,29 @@ function ApplicationsTable({
                                                             hover:bg-[#8BCF00]/10
                                                             hover:text-[#78B300]
                                                         "
-                        >
-                          <EyeIcon
+                          >
+
+                            <EyeIcon
+                              className="
+                                                                w-4
+                                                                h-4
+                                                            "
+                            />
+
+                          </button>
+
+
+                          {/* REMINDER */}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onReminder?.(
+                                application
+                              )
+                            }
+                            title="Add reminder"
                             className="
-                                                            w-4
-                                                            h-4
-                                                        "
-                          />
-                        </button>
-
-                        {/* REMINDER */}
-
-                        <button
-                          type="button"
-                          onClick={() => onReminder?.(application)}
-                          title="Add reminder"
-                          className="
                                                             btn
                                                             btn-ghost
                                                             btn-sm
@@ -910,22 +1025,29 @@ function ApplicationsTable({
                                                             hover:bg-[#8BCF00]/10
                                                             hover:text-[#78B300]
                                                         "
-                        >
-                          <BellAlertIcon
+                          >
+
+                            <BellAlertIcon
+                              className="
+                                                                w-4
+                                                                h-4
+                                                            "
+                            />
+
+                          </button>
+
+
+                          {/* CHAT */}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleOpenChat(
+                                application
+                              )
+                            }
+                            title="Open chat"
                             className="
-                                                            w-4
-                                                            h-4
-                                                        "
-                          />
-                        </button>
-
-                        {/* CHAT */}
-
-                        <button
-                          type="button"
-                          onClick={() => handleOpenChat(application)}
-                          title="Open chat"
-                          className="
                                                             btn
                                                             btn-ghost
                                                             btn-sm
@@ -933,40 +1055,73 @@ function ApplicationsTable({
                                                             hover:bg-[#8BCF00]/10
                                                             hover:text-[#78B300]
                                                         "
-                        >
-                          <ChatBubbleLeftRightIcon
-                            className="
-                                                            w-4
-                                                            h-4
-                                                        "
-                          />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          >
+
+                            <ChatBubbleLeftRightIcon
+                              className="
+                                                                w-4
+                                                                h-4
+                                                            "
+                            />
+
+                          </button>
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+
+                  )
+                )
+
               )}
+
             </tbody>
+
           </table>
+
         </div>
+
       </div>
+
 
       {/* =====================================================
                 GLOBAL CHAT
             ===================================================== */}
 
       {selectedChatApplication && (
+
         <GlobalChat
           open={chatOpen}
           onClose={handleCloseChat}
-          loanId={getLoanId(selectedChatApplication)}
-          agentId={getAgentId(selectedChatApplication)}
-          customerName={selectedChatApplication.name || "Customer"}
-          customerPhone={selectedChatApplication.phone || ""}
+          loanId={
+            getLoanId(
+              selectedChatApplication
+            )
+          }
+          agentId={
+            getAgentId(
+              selectedChatApplication
+            )
+          }
+          customerName={
+            selectedChatApplication.name ||
+            "Customer"
+          }
+          customerPhone={
+            selectedChatApplication.phone ||
+            ""
+          }
         />
+
       )}
+
     </div>
+
   );
+
 }
+
 
 export default ApplicationsTable;

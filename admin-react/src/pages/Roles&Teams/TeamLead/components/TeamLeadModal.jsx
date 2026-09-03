@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
+import { getRoles } from '../../../../../src/services/commonservice'
 
 
 function TeamLeadModal({
@@ -14,13 +15,15 @@ function TeamLeadModal({
     onClose,
     onSubmit,
 }) {
-
     const [formData, setFormData] = useState({
         employeeId: '',
+        roleId: '',
         status: 'Active',
     })
 
     const [error, setError] = useState('')
+
+    const [roles, setRoles] = useState([])
 
 
     // =========================================================
@@ -33,6 +36,7 @@ function TeamLeadModal({
 
             setFormData({
                 employeeId: '',
+                roleId: '',
                 status: 'Active',
             })
 
@@ -40,6 +44,17 @@ function TeamLeadModal({
 
             return
         }
+        const loadRoles = async () => {
+            try {
+                const data = await getRoles()
+                setRoles(data)
+            } catch (error) {
+                console.error('Failed to load roles:', error)
+                setRoles([])
+            }
+        }
+
+        loadRoles()
 
 
         if (teamLead) {
@@ -56,6 +71,7 @@ function TeamLeadModal({
 
             setFormData({
                 employeeId: '',
+                roleId: '',
                 status: 'Active',
             })
 
@@ -138,7 +154,8 @@ function TeamLeadModal({
 
             employee:
                 selectedEmployee,
-
+            roleId:
+                formData.roleId,
             status:
                 formData.status,
 
@@ -167,7 +184,7 @@ function TeamLeadModal({
             if (
                 teamLead &&
                 String(employee.id) ===
-                    String(teamLead.employeeId)
+                String(teamLead.employeeId)
             ) {
                 return true
             }
@@ -530,6 +547,64 @@ function TeamLeadModal({
                             </div>
 
                         )}
+                        {/* =================================================
+                                ROLE
+                            ================================================= */}
+
+                        <div>
+
+                            <label className="
+                                label
+                                px-0
+                            ">
+
+                                <span className="
+                                    label-text
+                                    text-sm
+                                    font-medium
+                                ">
+                                    Role
+                                </span>
+
+                            </label>
+
+
+                            <select
+                                name="roleId"
+                                value={formData.roleId}
+                                onChange={(event) => {
+                                    setFormData((previous) => ({
+                                        ...previous,
+                                        roleId: event.target.value,
+                                    }))
+
+                                    setError('')
+                                }}
+                                className="
+                                    select
+                                    select-bordered
+                                    w-full
+                                    focus:border-[#8BCF00]
+                                    focus:outline-[#8BCF00]
+                                "
+                            >
+
+                                <option value="">
+                                    Select Role
+                                </option>
+
+                                {roles.map((role) => (
+                                    <option
+                                        key={role.id}
+                                        value={role.id}
+                                    >
+                                        {role.name}
+                                    </option>
+                                ))}
+
+                            </select>
+
+                        </div>
 
 
                         {/* =============================================

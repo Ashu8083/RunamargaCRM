@@ -1,0 +1,1319 @@
+// admin-react/src/pages/Logs/ApplicationEditLogs/index.jsx
+
+import { useMemo, useState } from 'react'
+
+import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
+import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
+
+import ApplicationEditLogTable from './components/ApplicationEditLogTable'
+
+import EmployeeDropdown from '../../../components/GlobalModels/Filters/EmployeeDropdown'
+import TeamLeadDropdown from '../../../components/GlobalModels/Filters/TeamLeadDropdown'
+
+
+function ApplicationEditLogs() {
+
+    // =========================================================
+    // MOCK EMPLOYEES
+    // =========================================================
+
+    const employees = [
+        {
+            id: 105,
+            name: 'Rahul Sharma',
+            employeeId: '105',
+            role: 'agent',
+        },
+
+        {
+            id: 108,
+            name: 'Anil Kumar',
+            employeeId: '108',
+            role: 'rm',
+        },
+
+        {
+            id: 110,
+            name: 'Vikram Singh',
+            employeeId: '110',
+            role: 'agent',
+        },
+
+        {
+            id: 112,
+            name: 'Arjun Rao',
+            employeeId: '112',
+            role: 'rm',
+        },
+
+        {
+            id: 115,
+            name: 'Kiran Kumar',
+            employeeId: '115',
+            role: 'agent',
+        },
+    ]
+
+
+    // =========================================================
+    // MOCK TEAM LEADS
+    // =========================================================
+
+    const teamLeads = [
+        {
+            id: 301,
+            name: 'Suresh Kumar',
+            employeeId: '301',
+        },
+
+        {
+            id: 302,
+            name: 'Priya Singh',
+            employeeId: '302',
+        },
+
+        {
+            id: 303,
+            name: 'Rajesh Kumar',
+            employeeId: '303',
+        },
+
+        {
+            id: 304,
+            name: 'Manoj Rao',
+            employeeId: '304',
+        },
+    ]
+
+
+    // =========================================================
+    // MOCK APPLICATION EDIT LOGS
+    // =========================================================
+
+    const [logs] = useState([
+        {
+            id: 9001,
+
+            loanId: '10245',
+
+            editedById: 105,
+
+            editedByName:
+                'Rahul Sharma',
+
+            editedByRole:
+                'agent',
+
+            reportsToId: 301,
+
+            reportsToName:
+                'Suresh Kumar',
+
+            event:
+                'Address changed from 12 MG Road to 45 Brigade Road',
+
+            createdAt:
+                '01 Sep 2026, 09:42:12',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9002,
+
+            loanId: '10245',
+
+            editedById: 105,
+
+            editedByName:
+                'Rahul Sharma',
+
+            editedByRole:
+                'agent',
+
+            reportsToId: 301,
+
+            reportsToName:
+                'Suresh Kumar',
+
+            event:
+                'Monthly Salary changed from 40,000 to 50,000',
+
+            createdAt:
+                '01 Sep 2026, 10:15:43',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9003,
+
+            loanId: '10246',
+
+            editedById: 108,
+
+            editedByName:
+                'Anil Kumar',
+
+            editedByRole:
+                'rm',
+
+            reportsToId: 302,
+
+            reportsToName:
+                'Priya Singh',
+
+            event:
+                'Phone Number changed from 9876543210 to 9988776655',
+
+            createdAt:
+                '02 Sep 2026, 11:21:08',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9004,
+
+            loanId: '10247',
+
+            editedById: 110,
+
+            editedByName:
+                'Vikram Singh',
+
+            editedByRole:
+                'agent',
+
+            reportsToId: 303,
+
+            reportsToName:
+                'Rajesh Kumar',
+
+            event:
+                'Email changed from old@example.com to new@example.com',
+
+            createdAt:
+                '02 Sep 2026, 12:03:51',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9005,
+
+            loanId: '10248',
+
+            editedById: 112,
+
+            editedByName:
+                'Arjun Rao',
+
+            editedByRole:
+                'rm',
+
+            reportsToId: 301,
+
+            reportsToName:
+                'Suresh Kumar',
+
+            event:
+                'Loan Amount changed from 500,000 to 750,000',
+
+            createdAt:
+                '03 Sep 2026, 09:30:25',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9006,
+
+            loanId: '10249',
+
+            editedById: 115,
+
+            editedByName:
+                'Kiran Kumar',
+
+            editedByRole:
+                'agent',
+
+            reportsToId: 304,
+
+            reportsToName:
+                'Manoj Rao',
+
+            event:
+                'Occupation changed from Business to Salaried',
+
+            createdAt:
+                '03 Sep 2026, 10:10:14',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9007,
+
+            loanId: '10250',
+
+            editedById: 105,
+
+            editedByName:
+                'Rahul Sharma',
+
+            editedByRole:
+                'agent',
+
+            reportsToId: 302,
+
+            reportsToName:
+                'Priya Singh',
+
+            event:
+                'Address changed from Mysore Road to Bannerghatta Road',
+
+            createdAt:
+                '04 Sep 2026, 11:05:37',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9008,
+
+            loanId: '10251',
+
+            editedById: 108,
+
+            editedByName:
+                'Anil Kumar',
+
+            editedByRole:
+                'rm',
+
+            reportsToId: 303,
+
+            reportsToName:
+                'Rajesh Kumar',
+
+            event:
+                'Employment Type changed from Self Employed to Salaried',
+
+            createdAt:
+                '04 Sep 2026, 12:42:19',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9009,
+
+            loanId: '10252',
+
+            editedById: 110,
+
+            editedByName:
+                'Vikram Singh',
+
+            editedByRole:
+                'agent',
+
+            reportsToId: 304,
+
+            reportsToName:
+                'Manoj Rao',
+
+            event:
+                'Monthly Salary changed from 35,000 to 45,000',
+
+            createdAt:
+                '05 Sep 2026, 09:12:44',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9010,
+
+            loanId: '10253',
+
+            editedById: 112,
+
+            editedByName:
+                'Arjun Rao',
+
+            editedByRole:
+                'rm',
+
+            reportsToId: 301,
+
+            reportsToName:
+                'Suresh Kumar',
+
+            event:
+                'Loan Amount changed from 300,000 to 450,000',
+
+            createdAt:
+                '05 Sep 2026, 10:45:22',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9011,
+
+            loanId: '10254',
+
+            editedById: 115,
+
+            editedByName:
+                'Kiran Kumar',
+
+            editedByRole:
+                'agent',
+
+            reportsToId: 302,
+
+            reportsToName:
+                'Priya Singh',
+
+            event:
+                'Phone Number changed from 9123456780 to 9988123456',
+
+            createdAt:
+                '06 Sep 2026, 11:18:09',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9012,
+
+            loanId: '10255',
+
+            editedById: 105,
+
+            editedByName:
+                'Rahul Sharma',
+
+            editedByRole:
+                'agent',
+
+            reportsToId: 303,
+
+            reportsToName:
+                'Rajesh Kumar',
+
+            event:
+                'Address changed from Indiranagar to Koramangala',
+
+            createdAt:
+                '06 Sep 2026, 12:52:31',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9013,
+
+            loanId: '10256',
+
+            editedById: 108,
+
+            editedByName:
+                'Anil Kumar',
+
+            editedByRole:
+                'rm',
+
+            reportsToId: 304,
+
+            reportsToName:
+                'Manoj Rao',
+
+            event:
+                'Monthly Salary changed from 55,000 to 65,000',
+
+            createdAt:
+                '07 Sep 2026, 09:25:16',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9014,
+
+            loanId: '10257',
+
+            editedById: 110,
+
+            editedByName:
+                'Vikram Singh',
+
+            editedByRole:
+                'agent',
+
+            reportsToId: 301,
+
+            reportsToName:
+                'Suresh Kumar',
+
+            event:
+                'Loan Purpose changed from Personal to Business',
+
+            createdAt:
+                '07 Sep 2026, 10:14:42',
+
+            deletedAt:
+                null,
+        },
+
+        {
+            id: 9015,
+
+            loanId: '10258',
+
+            editedById: 112,
+
+            editedByName:
+                'Arjun Rao',
+
+            editedByRole:
+                'rm',
+
+            reportsToId: 302,
+
+            reportsToName:
+                'Priya Singh',
+
+            event:
+                'Loan Amount changed from 800,000 to 1,000,000',
+
+            createdAt:
+                '08 Sep 2026, 10:36:28',
+
+            deletedAt:
+                null,
+        },
+    ])
+
+
+    // =========================================================
+    // FILTER STATE
+    // =========================================================
+
+    const [search, setSearch] =
+        useState('')
+
+
+    const [editedById, setEditedById] =
+        useState('')
+
+
+    const [reportsToId, setReportsToId] =
+        useState('')
+
+
+    const [fromDate, setFromDate] =
+        useState('')
+
+
+    const [toDate, setToDate] =
+        useState('')
+
+
+    // =========================================================
+    // PAGINATION
+    // =========================================================
+
+    const [currentPage, setCurrentPage] =
+        useState(1)
+
+
+    const pageSize = 10
+
+
+    // =========================================================
+    // FILTER LOGS
+    // =========================================================
+
+    const filteredLogs = useMemo(() => {
+
+        const searchValue =
+            search
+                .trim()
+                .toLowerCase()
+
+
+        return logs.filter((log) => {
+
+            // -------------------------------------------------
+            // SEARCH
+            // -------------------------------------------------
+
+            const matchesSearch =
+                !searchValue ||
+                String(log.loanId)
+                    .toLowerCase()
+                    .includes(searchValue) ||
+                log.editedByName
+                    ?.toLowerCase()
+                    .includes(searchValue) ||
+                String(log.editedById)
+                    .toLowerCase()
+                    .includes(searchValue) ||
+                log.reportsToName
+                    ?.toLowerCase()
+                    .includes(searchValue) ||
+                String(log.reportsToId)
+                    .toLowerCase()
+                    .includes(searchValue)
+
+
+            // -------------------------------------------------
+            // EDITED BY
+            // -------------------------------------------------
+
+            const matchesEditedBy =
+                !editedById ||
+                String(log.editedById) ===
+                    String(editedById)
+
+
+            // -------------------------------------------------
+            // REPORTS TO
+            // -------------------------------------------------
+
+            const matchesReportsTo =
+                !reportsToId ||
+                String(log.reportsToId) ===
+                    String(reportsToId)
+
+
+            // -------------------------------------------------
+            // LOG DATE
+            // -------------------------------------------------
+
+            const logDate =
+                log.createdAt
+                    ? new Date(log.createdAt)
+                    : null
+
+
+            // -------------------------------------------------
+            // FROM DATE
+            // -------------------------------------------------
+
+            const matchesFromDate =
+                !fromDate ||
+                (
+                    logDate &&
+                    logDate >=
+                        new Date(
+                            `${fromDate}T00:00:00`
+                        )
+                )
+
+
+            // -------------------------------------------------
+            // TO DATE
+            // -------------------------------------------------
+
+            const matchesToDate =
+                !toDate ||
+                (
+                    logDate &&
+                    logDate <=
+                        new Date(
+                            `${toDate}T23:59:59`
+                        )
+                )
+
+
+            return (
+                matchesSearch &&
+                matchesEditedBy &&
+                matchesReportsTo &&
+                matchesFromDate &&
+                matchesToDate
+            )
+
+        })
+
+    }, [
+        logs,
+        search,
+        editedById,
+        reportsToId,
+        fromDate,
+        toDate,
+    ])
+
+
+    // =========================================================
+    // TOTAL PAGES
+    // =========================================================
+
+    const totalPages =
+        Math.max(
+            1,
+            Math.ceil(
+                filteredLogs.length /
+                pageSize
+            )
+        )
+
+
+    // =========================================================
+    // SAFE CURRENT PAGE
+    // =========================================================
+
+    const safeCurrentPage =
+        Math.min(
+            currentPage,
+            totalPages
+        )
+
+
+    // =========================================================
+    // PAGINATED DATA
+    // =========================================================
+
+    const paginatedLogs =
+        filteredLogs.slice(
+            (safeCurrentPage - 1) *
+                pageSize,
+
+            safeCurrentPage *
+                pageSize
+        )
+
+
+    // =========================================================
+    // RESET
+    // =========================================================
+
+    const handleReset = () => {
+
+        setSearch('')
+
+        setEditedById('')
+
+        setReportsToId('')
+
+        setFromDate('')
+
+        setToDate('')
+
+        setCurrentPage(1)
+
+    }
+
+
+    // =========================================================
+    // SEARCH
+    // =========================================================
+
+    const handleSearchChange = (
+        value
+    ) => {
+
+        setSearch(value)
+
+        setCurrentPage(1)
+
+    }
+
+
+    // =========================================================
+    // EDITED BY
+    // =========================================================
+
+    const handleEditedByChange = (
+        value
+    ) => {
+
+        setEditedById(value)
+
+        setCurrentPage(1)
+
+    }
+
+
+    // =========================================================
+    // REPORTS TO
+    // =========================================================
+
+    const handleReportsToChange = (
+        value
+    ) => {
+
+        setReportsToId(value)
+
+        setCurrentPage(1)
+
+    }
+
+
+    // =========================================================
+    // FROM DATE
+    // =========================================================
+
+    const handleFromDateChange = (
+        event
+    ) => {
+
+        setFromDate(
+            event.target.value
+        )
+
+        setCurrentPage(1)
+
+    }
+
+
+    // =========================================================
+    // TO DATE
+    // =========================================================
+
+    const handleToDateChange = (
+        event
+    ) => {
+
+        setToDate(
+            event.target.value
+        )
+
+        setCurrentPage(1)
+
+    }
+
+
+    // =========================================================
+    // REFRESH
+    // =========================================================
+
+    const handleRefresh = () => {
+
+        /*
+         * Replace with API call later.
+         */
+
+        console.log(
+            'Refresh application edit logs'
+        )
+
+    }
+
+
+    // =========================================================
+    // PAGE CHANGE
+    // =========================================================
+
+    const handlePageChange = (
+        page
+    ) => {
+
+        if (
+            page < 1 ||
+            page > totalPages
+        ) {
+            return
+        }
+
+
+        setCurrentPage(page)
+
+    }
+
+
+    // =========================================================
+    // RENDER
+    // =========================================================
+
+    return (
+
+        <div className="
+            space-y-5
+            p-4
+            sm:p-6
+        ">
+
+         
+
+
+            {/* =====================================================
+                FILTER CARD
+            ===================================================== */}
+
+            <div className="
+                card
+                border
+                border-base-300
+                bg-base-100
+                shadow-sm
+            ">
+
+                <div className="
+                    card-body
+                    p-4
+                ">
+
+                    <div className="
+                        flex
+                        w-full
+                        flex-wrap
+                        items-center
+                        gap-3
+                    ">
+
+                        {/* =========================================
+                            SEARCH
+                        ========================================= */}
+
+                        <div className="
+                            min-w-0
+                            w-full
+                            sm:flex-1
+                            lg:min-w-[220px]
+                            lg:flex-[1.5]
+                        ">
+
+                            <label className="
+                                input
+                                input-bordered
+                                flex
+                                w-full
+                                items-center
+                                gap-3
+                            ">
+
+                                <SearchIcon className="
+                                    h-4
+                                    w-4
+                                    shrink-0
+                                    text-base-content/40
+                                " />
+
+
+                                <input
+                                    type="text"
+                                    value={search}
+                                    onChange={(event) =>
+                                        handleSearchChange(
+                                            event.target.value
+                                        )
+                                    }
+                                    placeholder="Search loan ID / employee..."
+                                    className="
+                                        min-w-0
+                                        grow
+                                    "
+                                />
+
+                            </label>
+
+                        </div>
+
+
+                        {/* =========================================
+                            EDITED BY
+                        ========================================= */}
+
+                        <div className="
+                            min-w-0
+                            w-full
+                            sm:flex-1
+                            lg:min-w-[165px]
+                            lg:flex-1
+                        ">
+
+                            <EmployeeDropdown
+                                label=""
+                                value={editedById}
+                                onChange={
+                                    handleEditedByChange
+                                }
+                                options={employees}
+                                allLabel="All Employees"
+                                placeholder="Edited By"
+                            />
+
+                        </div>
+
+
+                        {/* =========================================
+                            REPORTS TO
+                        ========================================= */}
+
+                        <div className="
+                            min-w-0
+                            w-full
+                            sm:flex-1
+                            lg:min-w-[165px]
+                            lg:flex-1
+                        ">
+
+                            <TeamLeadDropdown
+                                label=""
+                                value={reportsToId}
+                                onChange={
+                                    handleReportsToChange
+                                }
+                                options={teamLeads}
+                                allLabel="All Team Leads"
+                                placeholder="Reports To"
+                            />
+
+                        </div>
+
+
+                        {/* =========================================
+                            FROM DATE
+                        ========================================= */}
+
+                        <div className="
+                            min-w-0
+                            w-full
+                            sm:flex-1
+                            lg:min-w-[145px]
+                            lg:flex-1
+                        ">
+
+                            <input
+                                type="date"
+                                value={fromDate}
+                                onChange={
+                                    handleFromDateChange
+                                }
+                                className="
+                                    input
+                                    input-bordered
+                                    w-full
+                                "
+                                title="From date"
+                            />
+
+                        </div>
+
+
+                        {/* =========================================
+                            TO DATE
+                        ========================================= */}
+
+                        <div className="
+                            min-w-0
+                            w-full
+                            sm:flex-1
+                            lg:min-w-[145px]
+                            lg:flex-1
+                        ">
+
+                            <input
+                                type="date"
+                                value={toDate}
+                                onChange={
+                                    handleToDateChange
+                                }
+                                className="
+                                    input
+                                    input-bordered
+                                    w-full
+                                "
+                                title="To date"
+                            />
+
+                        </div>
+
+
+                        {/* =========================================
+                            RESET + REFRESH
+                        ========================================= */}
+
+                        <div className="
+                            flex
+                            w-full
+                            shrink-0
+                            items-center
+                            sm:w-auto
+                        ">
+
+                            <div className="
+                                flex
+                                w-full
+                                items-center
+                                overflow-hidden
+                                rounded-lg
+                                border
+                                border-base-300
+                                sm:w-auto
+                            ">
+
+                                {/* Reset */}
+
+                                <button
+                                    type="button"
+                                    onClick={handleReset}
+                                    className="
+                                        btn
+                                        btn-ghost
+                                        rounded-none
+                                        border-0
+                                    "
+                                >
+                                    Reset
+                                </button>
+
+
+                                {/* Divider */}
+
+                                <div className="
+                                    h-6
+                                    w-px
+                                    bg-base-300
+                                " />
+
+
+                                {/* Refresh */}
+
+                                <button
+                                    type="button"
+                                    onClick={handleRefresh}
+                                    className="
+                                        btn
+                                        btn-ghost
+                                        rounded-none
+                                        border-0
+                                    "
+                                    title="Refresh logs"
+                                >
+
+                                    <ArrowPathIcon className="
+                                        h-4
+                                        w-4
+                                    " />
+
+                                    <span>
+                                        Refresh
+                                    </span>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            {/* =====================================================
+                TABLE
+            ===================================================== */}
+
+            <ApplicationEditLogTable
+                logs={paginatedLogs}
+            />
+
+
+            {/* =====================================================
+                PAGINATION
+            ===================================================== */}
+
+            {filteredLogs.length > 0 && (
+
+                <div className="
+                    flex
+                    flex-col
+                    items-center
+                    justify-between
+                    gap-3
+                    rounded-lg
+                    border
+                    border-base-300
+                    bg-base-100
+                    px-4
+                    py-3
+                    sm:flex-row
+                ">
+
+                    {/* =============================================
+                        RESULT INFO
+                    ============================================= */}
+
+                    <p className="
+                        text-xs
+                        text-base-content/60
+                    ">
+
+                        Showing{' '}
+
+                        <span className="
+                            font-medium
+                            text-base-content
+                        ">
+                            {(safeCurrentPage - 1) *
+                                pageSize +
+                                1
+                            }
+                        </span>
+
+                        {' '}to{' '}
+
+                        <span className="
+                            font-medium
+                            text-base-content
+                        ">
+                            {Math.min(
+                                safeCurrentPage *
+                                    pageSize,
+                                filteredLogs.length
+                            )}
+                        </span>
+
+                        {' '}of{' '}
+
+                        <span className="
+                            font-medium
+                            text-base-content
+                        ">
+                            {filteredLogs.length}
+                        </span>
+
+                        {' '}logs
+
+                    </p>
+
+
+                    {/* =============================================
+                        PAGINATION CONTROLS
+                    ============================================= */}
+
+                    <div className="
+                        flex
+                        items-center
+                        gap-1
+                    ">
+
+                        {/* Previous */}
+
+                        <button
+                            type="button"
+                            disabled={
+                                safeCurrentPage === 1
+                            }
+                            onClick={() =>
+                                handlePageChange(
+                                    safeCurrentPage - 1
+                                )
+                            }
+                            className="
+                                btn
+                                btn-sm
+                                btn-ghost
+                            "
+                        >
+                            Previous
+                        </button>
+
+
+                        {/* Page Numbers */}
+
+                        {Array.from(
+                            {
+                                length:
+                                    totalPages,
+                            },
+                            (_, index) =>
+                                index + 1
+                        ).map(
+                            (page) => (
+
+                                <button
+                                    key={page}
+                                    type="button"
+                                    onClick={() =>
+                                        handlePageChange(
+                                            page
+                                        )
+                                    }
+                                    className={`
+                                        btn
+                                        btn-sm
+                                        ${
+                                            safeCurrentPage ===
+                                            page
+                                                ? `
+                                                    border-[#8BCF00]
+                                                    bg-[#8BCF00]
+                                                    text-white
+                                                    hover:border-[#6FA800]
+                                                    hover:bg-[#6FA800]
+                                                `
+                                                : `
+                                                    btn-ghost
+                                                `
+                                        }
+                                    `}
+                                >
+                                    {page}
+                                </button>
+
+                            )
+                        )}
+
+
+                        {/* Next */}
+
+                        <button
+                            type="button"
+                            disabled={
+                                safeCurrentPage ===
+                                totalPages
+                            }
+                            onClick={() =>
+                                handlePageChange(
+                                    safeCurrentPage + 1
+                                )
+                            }
+                            className="
+                                btn
+                                btn-sm
+                                btn-ghost
+                            "
+                        >
+                            Next
+                        </button>
+
+                    </div>
+
+                </div>
+
+            )}
+
+        </div>
+
+    )
+
+}
+
+
+export default ApplicationEditLogs

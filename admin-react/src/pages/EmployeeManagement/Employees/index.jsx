@@ -1,228 +1,191 @@
-// admin-react/src/pages/EmployeeManagement/Employees/index.jsx
-import { useEffect, useState } from 'react'
-import apiClient from '../../../app/apiClient'
+import { useCallback, useEffect, useState } from 'react'
 
+import { employeeService } from '../../../services/employeeService'
 import EmployeeTable from './components/EmployeeTable'
 import EmployeeModal from './components/EmployeeModal'
 import { useToast } from '../../../components/Toast/ToastProvider'
 
 
-// =============================================================
-// DATE FORMATTER
-// =============================================================
-
-const getCurrentTimestamp = () => {
-
-    return new Date().toLocaleString(
-        'en-IN',
-        {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            second: '2-digit',
-        }
-    )
-
-}
-
-
-// =============================================================
-// EMPLOYEES
-// =============================================================
-
 function Employees() {
+
     const {
         showSuccess,
         showError,
     } = useToast()
 
-    // =========================================================
-    // SEARCH
-    // =========================================================
-
-    const [search, setSearch] =
-        useState('')
-
+    const [search, setSearch] = useState('')
+    const [employees, setEmployees] = useState([])
     const [roles, setRoles] = useState([])
-    // =========================================================
-    // EMPLOYEE DATA
-    // =========================================================
     const [permissions, setPermissions] = useState([])
-    const [employees, setEmployees] =
-        useState([])
+    const [showModal, setShowModal] = useState(false)
+    const [editingEmployee, setEditingEmployee] = useState(null)
+
+
+    // =========================================================
+    // LOAD EMPLOYEES
+    // =========================================================
+
+    const loadEmployees = useCallback(async () => {
+
+        try {
+
+            const { data } =
+                await employeeService.getAll()
+
+            setEmployees(
+                Array.isArray(data) ? data : []
+            )
+
+        } catch (error) {
+
+            console.error(
+                'Failed to fetch employees:',
+                error.response?.data || error
+            )
+
+            showError(
+                error.response?.data?.detail ||
+                'Failed to load employees'
+            )
+        }
+
+    }, [showError])
+
+
+    // =========================================================
+    // LOAD OPTIONS
+    // =========================================================
+
+    const loadOptions = useCallback(async () => {
+
+        try {
+
+            const [
+                rolesResponse,
+                permissionsResponse,
+            ] = await employeeService.getOptions()
+
+            setRoles(rolesResponse.data)
+            setPermissions(permissionsResponse.data)
+
+        } catch (error) {
+
+            console.error(
+                'Failed to fetch employee options:',
+                error
+            )
+        }
+
+    }, [])
+
+
+    // =========================================================
+    // INITIAL LOAD
+    // =========================================================
+
+    useEffect(() => {
+
+        loadEmployees()
+        loadOptions()
+
+    }, [loadEmployees, loadOptions])
 
 
     // =========================================================
     // MODAL
     // =========================================================
 
-    const [showModal, setShowModal] =
-        useState(false)
-
-
-    const [editingEmployee, setEditingEmployee] =
-        useState(null)
-    const fetchEmployees = async () => {
-        try {
-            const response = await apiClient.get("/employees");
-
-            setEmployees(
-                Array.isArray(response.data)
-                    ? response.data
-                    : []
-            );
-        } catch (error) {
-            console.error(
-                "Failed to fetch employees:",
-                error.response?.data || error
-            );
-
-            showError(
-                error.response?.data?.detail ||
-                "Failed to load employees"
-            );
-        }
-    };
-    useEffect(() => {
-        fetchEmployees()
-        fetchEmployeeOptions()
-    }, [])
-    const fetchEmployeeOptions = async () => {
-        try {
-            const [
-                rolesResponse,
-                permissionsResponse,
-            ] = await Promise.all([
-                apiClient.get('/employees/roles'),
-                apiClient.get('/employees/permissions'),
-            ])
-
-            setRoles(rolesResponse.data)
-            setPermissions(permissionsResponse.data)
-
-        } catch (error) {
-            console.error(
-                'Failed to fetch employee options:',
-                error
-            )
-        }
-    }
-    // =========================================================
-    // CREATE
-    // =========================================================
-
     const handleCreate = () => {
 
         setEditingEmployee(null)
-
         setShowModal(true)
 
     }
 
-
-    // =========================================================
-    // EDIT
-    // =========================================================
 
     const handleEdit = (employee) => {
 
         setEditingEmployee(employee)
-
         setShowModal(true)
 
     }
 
 
-    // =========================================================
-    // CLOSE MODAL
-    // =========================================================
-
     const handleCloseModal = () => {
 
         setShowModal(false)
-
         setEditingEmployee(null)
 
     }
 
 
     // =========================================================
-    // CREATE / UPDATE EMPLOYEE
+    // CREATE / UPDATE
     // =========================================================
 
     const handleSubmit = async (data) => {
+
         try {
 
             if (editingEmployee) {
 
-                await apiClient.put(
-                    `/employees/${editingEmployee.id}`,
+                await employeeService.update(
+                    editingEmployee.id,
                     data
-                );
-
-                await fetchEmployees();
-                handleCloseModal();
+                )
 
                 showSuccess(
-                    "Employee updated successfully"
-                );
+                    'Employee updated successfully'
+                )
 
-                return;
+            } else {
+
+                await employeeService.create(data)
+
+                showSuccess(
+                    'Employee created successfully'
+                )
             }
 
-            await apiClient.post(
-                "/employees",
-                data
-            );
-
-            await fetchEmployees();
-            handleCloseModal();
-
-            showSuccess(
-                "Employee created successfully"
-            );
+            await loadEmployees()
+            handleCloseModal()
 
         } catch (error) {
 
             console.error(
-                "EMPLOYEE API ERROR:",
+                'Employee save failed:',
                 error.response?.data || error
-            );
+            )
 
             showError(
                 error.response?.data?.detail ||
-                "Failed to save employee"
-            );
+                'Failed to save employee'
+            )
         }
-    };
+    }
+
+
     // =========================================================
     // DELETE
     // =========================================================
 
     const handleDelete = async (employee) => {
 
-        const confirmed = window.confirm(
-            `Delete employee "${employee.name}"?`
-        )
-
-        if (!confirmed) {
+        if (
+            !window.confirm(
+                `Delete employee "${employee.name}"?`
+            )
+        ) {
             return
         }
 
         try {
 
-            const response = await apiClient.delete(
-                `/employees/${employee.id}`
+            await employeeService.delete(
+                employee.id
             )
 
-            console.log(
-                'DELETE EMPLOYEE API:',
-                response.data
-            )
-
-            await fetchEmployees()
+            await loadEmployees()
 
         } catch (error) {
 
@@ -231,8 +194,13 @@ function Employees() {
                 error.response?.data || error
             )
 
+            showError(
+                error.response?.data?.detail ||
+                'Failed to delete employee'
+            )
         }
     }
+
 
     // =========================================================
     // BLOCK / UNBLOCK
@@ -245,22 +213,12 @@ function Employees() {
 
         try {
 
-            const response = await apiClient.patch(
-                `/employees/${employee.id}/block`,
-                null,
-                {
-                    params: {
-                        blocked: blocked,
-                    },
-                }
+            await employeeService.setBlocked(
+                employee.id,
+                blocked
             )
 
-            console.log(
-                "BLOCK API RESPONSE:",
-                response.data
-            )
-
-            await fetchEmployees()
+            await loadEmployees()
 
             showSuccess(
                 blocked
@@ -271,29 +229,15 @@ function Employees() {
         } catch (error) {
 
             console.error(
-                "BLOCK API FAILED:",
-                error.response?.status
-            )
-
-            console.error(
-                "BLOCK API ERROR:",
-                error.response?.data
+                'Failed to update block status:',
+                error.response?.data || error
             )
 
             showError(
                 error.response?.data?.detail ||
-                "Failed to update employee block status"
+                'Failed to update employee block status'
             )
-
         }
-    }
-
-    // =========================================================
-    // REFRESH
-    // =========================================================
-
-    const handleRefresh = () => {
-        fetchEmployees();
     }
 
 
@@ -309,10 +253,6 @@ function Employees() {
             sm:p-6
         ">
 
-            {/* =====================================================
-                PAGE HEADER
-            ===================================================== */}
-
             <div>
 
                 <h1 className="
@@ -323,7 +263,6 @@ function Employees() {
                 ">
                     Employees
                 </h1>
-
 
                 <p className="
                     mt-1
@@ -336,10 +275,6 @@ function Employees() {
             </div>
 
 
-            {/* =====================================================
-                EMPLOYEE TABLE
-            ===================================================== */}
-
             <EmployeeTable
                 employees={employees}
                 search={search}
@@ -347,14 +282,10 @@ function Employees() {
                 onCreate={handleCreate}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
-                onRefresh={handleRefresh}
+                onRefresh={loadEmployees}
                 onBlockChange={handleBlockChange}
             />
 
-
-            {/* =====================================================
-                ADD / EDIT MODAL
-            ===================================================== */}
 
             <EmployeeModal
                 open={showModal}
@@ -367,9 +298,7 @@ function Employees() {
             />
 
         </div>
-
     )
-
 }
 
 

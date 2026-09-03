@@ -5,14 +5,9 @@ import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 import ShieldCheckIcon from "@heroicons/react/24/outline/ShieldCheckIcon";
 import CheckIcon from "@heroicons/react/24/outline/CheckIcon";
 import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
-
+import { getPermissions } from "../../services/commonservice";
 function PermissionsModal({ open, admin, onClose }) {
-  const [permissionGroups, setPermissionGroups] = useState({
-    rm: [],
-    agent: [],
-    common: [],
-  });
-
+  const [permissions, setPermissions] = useState([]);
   const [assignedPermissions, setAssignedPermissions] = useState([]);
 
   const [search, setSearch] = useState("");
@@ -23,157 +18,43 @@ function PermissionsModal({ open, admin, onClose }) {
 
   useEffect(() => {
     if (!open || !admin) {
-      setPermissionGroups({
-        rm: [],
-        agent: [],
-        common: [],
-      });
-
+      setPermissions([]);
       setAssignedPermissions([]);
-
       setSearch("");
-
       return;
     }
 
-    /*
-     * TEMPORARY DATA
-     *
-     * Replace this with backend API later.
-     *
-     * Example:
-     *
-     * GET /permissions
-     *
-     * Backend can return:
-     *
-     * {
-     *     rm: [],
-     *     agent: [],
-     *     common: []
-     * }
-     */
+    const loadPermissions = async () => {
+      try {
+        const data = await getPermissions();
 
-    const defaultPermissions = {
-      rm: [
-        {
-          id: 1,
-          name: "View RM Applications",
-        },
-        {
-          id: 2,
-          name: "Create RM Applications",
-        },
-        {
-          id: 3,
-          name: "Edit RM Applications",
-        },
-        {
-          id: 4,
-          name: "Assign RM Applications",
-        },
-        {
-          id: 5,
-          name: "View RM Reports",
-        },
-      ],
-
-      agent: [
-        {
-          id: 6,
-          name: "View Agent Applications",
-        },
-        {
-          id: 7,
-          name: "Create Agent Applications",
-        },
-        {
-          id: 8,
-          name: "Edit Agent Applications",
-        },
-        {
-          id: 9,
-          name: "Assign Agent Applications",
-        },
-        {
-          id: 10,
-          name: "View Agent Reports",
-        },
-      ],
-
-      common: [
-        {
-          id: 11,
-          name: "View Dashboard",
-        },
-        {
-          id: 12,
-          name: "View Profile",
-        },
-        {
-          id: 13,
-          name: "View Notifications",
-        },
-        {
-          id: 14,
-          name: "View Attendance",
-        },
-      ],
+        setPermissions(data);
+      } catch (error) {
+        console.error("Failed to load permissions:", error);
+        setPermissions([]);
+      }
     };
 
-    /*
-     * Later the backend can directly provide:
-     *
-     * admin.availablePermissionGroups
-     */
-
-    setPermissionGroups(admin.availablePermissionGroups || defaultPermissions);
-
-    /*
-     * Existing permissions assigned to this admin.
-     *
-     * Expected format:
-     *
-     * [
-     *     {
-     *         id: 1,
-     *         name: 'View RM Applications',
-     *         group: 'RM'
-     *     }
-     * ]
-     */
+    loadPermissions();
 
     setAssignedPermissions(admin.permissions || []);
-
     setSearch("");
   }, [open, admin]);
-
   // =========================================================
   // FILTER PERMISSIONS
   // =========================================================
 
-  const filteredGroups = useMemo(() => {
+  const filteredPermissions = useMemo(() => {
     const searchValue = search.trim().toLowerCase();
 
-    const filterPermissions = (permissions) => {
-      if (!searchValue) {
-        return permissions;
-      }
+    if (!searchValue) {
+      return permissions;
+    }
 
-      return permissions.filter((permission) =>
-        permission.name?.toLowerCase().includes(searchValue),
-      );
-    };
-
-    return {
-      rm: filterPermissions(permissionGroups.rm),
-
-      agent: filterPermissions(permissionGroups.agent),
-
-      common: filterPermissions(permissionGroups.common),
-    };
-  }, [permissionGroups, search]);
-
+    return permissions.filter((permission) =>
+      permission.name?.toLowerCase().includes(searchValue),
+    );
+  }, [permissions, search]);
   // =========================================================
   // CHECK PERMISSION
   // =========================================================
@@ -188,7 +69,7 @@ function PermissionsModal({ open, admin, onClose }) {
   // TOGGLE PERMISSION
   // =========================================================
 
-  const togglePermission = (permission, group) => {
+  const togglePermission = (permission) => {
     setAssignedPermissions((previous) => {
       const alreadyAssigned = previous.some(
         (item) => String(item.id) === String(permission.id),
@@ -203,8 +84,7 @@ function PermissionsModal({ open, admin, onClose }) {
       return [
         ...previous,
         {
-          ...permission,
-          group,
+          ...permission
         },
       ];
     });
@@ -213,12 +93,7 @@ function PermissionsModal({ open, admin, onClose }) {
   // =========================================================
   // COUNTS
   // =========================================================
-
-  const totalPermissions =
-    permissionGroups.rm.length +
-    permissionGroups.agent.length +
-    permissionGroups.common.length;
-
+  const totalPermissions = permissions.length;
   const assignedCount = assignedPermissions.length;
 
   // =========================================================
@@ -251,192 +126,6 @@ function PermissionsModal({ open, admin, onClose }) {
     console.log("Assigned permission IDs:", permissionIds);
 
     onClose?.();
-  };
-
-  // =========================================================
-  // PERMISSION GROUP
-  // =========================================================
-
-  const renderPermissionGroup = (title, group, permissions) => {
-    if (permissions.length === 0) {
-      return null;
-    }
-
-    return (
-      <div
-        className="
-                border
-                border-base-300
-                rounded-lg
-                overflow-hidden
-            "
-      >
-        {/* Group Header */}
-
-        <div
-          className="
-                    px-4
-                    py-3
-                    bg-base-200/40
-                    border-b
-                    border-base-300
-                "
-        >
-          <h4
-            className="
-                        text-sm
-                        font-semibold
-                    "
-          >
-            {title}
-          </h4>
-
-          <p
-            className="
-                        text-xs
-                        text-base-content/50
-                        mt-0.5
-                    "
-          >
-            {permissions.length} permission
-            {permissions.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-
-        {/* Permission List */}
-
-        <div>
-          {permissions.map((permission) => {
-            const isAssigned = isPermissionAssigned(permission.id);
-
-            return (
-              <button
-                key={permission.id}
-                type="button"
-                onClick={() => togglePermission(permission, group)}
-                className={`
-                                        w-full
-                                        flex
-                                        items-center
-                                        justify-between
-                                        gap-3
-                                        px-4
-                                        py-3
-                                        text-left
-                                        transition-colors
-                                        border-b
-                                        last:border-b-0
-                                        border-base-300
-                                        ${
-                                          isAssigned
-                                            ? "bg-[#8BCF00]/10"
-                                            : "hover:bg-base-200/50"
-                                        }
-                                    `}
-              >
-                {/* Permission */}
-
-                <div
-                  className="
-                                        flex
-                                        items-center
-                                        gap-3
-                                        min-w-0
-                                    "
-                >
-                  <div
-                    className={`
-                                                w-8
-                                                h-8
-                                                rounded-lg
-                                                flex
-                                                items-center
-                                                justify-center
-                                                shrink-0
-                                                ${
-                                                  isAssigned
-                                                    ? "bg-[#8BCF00]/15"
-                                                    : "bg-base-200"
-                                                }
-                                            `}
-                  >
-                    <ShieldCheckIcon
-                      className={`
-                                                    w-4
-                                                    h-4
-                                                    ${
-                                                      isAssigned
-                                                        ? "text-[#78B300]"
-                                                        : "text-base-content/50"
-                                                    }
-                                                `}
-                    />
-                  </div>
-
-                  <div className="min-w-0">
-                    <span
-                      className={`
-                                                    block
-                                                    text-sm
-                                                    truncate
-                                                    ${
-                                                      isAssigned
-                                                        ? "font-semibold"
-                                                        : "font-medium"
-                                                    }
-                                                `}
-                    >
-                      {permission.name}
-                    </span>
-
-                    <span
-                      className="
-                                                block
-                                                text-[11px]
-                                                text-base-content/40
-                                                mt-0.5
-                                            "
-                    >
-                      {title}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Checkbox */}
-
-                <div
-                  className={`
-                                            w-5
-                                            h-5
-                                            rounded
-                                            border
-                                            flex
-                                            items-center
-                                            justify-center
-                                            shrink-0
-                                            ${
-                                              isAssigned
-                                                ? "bg-[#8BCF00] border-[#8BCF00]"
-                                                : "border-base-300"
-                                            }
-                                        `}
-                >
-                  {isAssigned && (
-                    <CheckIcon
-                      className="
-                                                    w-3.5
-                                                    h-3.5
-                                                    text-white
-                                                "
-                    />
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
   };
 
   // =========================================================
@@ -656,67 +345,103 @@ function PermissionsModal({ open, admin, onClose }) {
                     PERMISSIONS
                 ================================================= */}
 
-        <div
-          className="
-                    p-5
-                    space-y-4
-                    max-h-[55vh]
-                    overflow-y-auto
-                "
-        >
-          {renderPermissionGroup("RM Permissions", "RM", filteredGroups.rm)}
+        <div className="border border-base-300 rounded-lg overflow-hidden">
+          {filteredPermissions.map((permission) => {
+            const isAssigned = isPermissionAssigned(permission.id);
 
-          {renderPermissionGroup(
-            "Agent Permissions",
-            "Agent",
-            filteredGroups.agent,
-          )}
-
-          {renderPermissionGroup(
-            "Common Permissions",
-            "Common",
-            filteredGroups.common,
-          )}
-
-          {filteredGroups.rm.length === 0 &&
-            filteredGroups.agent.length === 0 &&
-            filteredGroups.common.length === 0 && (
-              <div
-                className="
-                                text-center
-                                py-10
-                            "
+            return (
+              <button
+                key={permission.id}
+                type="button"
+                onClick={() => togglePermission(permission)}
+                className={`
+                    w-full
+                    flex
+                    items-center
+                    justify-between
+                    gap-3
+                    px-4
+                    py-3
+                    text-left
+                    transition-colors
+                    border-b
+                    last:border-b-0
+                    border-base-300
+                    ${isAssigned
+                    ? "bg-[#8BCF00]/10"
+                    : "hover:bg-base-200/50"
+                  }
+                `}
               >
-                <ShieldCheckIcon
-                  className="
-                                        w-8
-                                        h-8
-                                        mx-auto
-                                        text-base-content/30
-                                    "
-                />
+                {/* permission name */}
 
-                <p
-                  className="
-                                    text-sm
-                                    font-medium
-                                    mt-3
-                                "
-                >
-                  No permissions found
-                </p>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={`
+                            w-8
+                            h-8
+                            rounded-lg
+                            flex
+                            items-center
+                            justify-center
+                            shrink-0
+                            ${isAssigned
+                        ? "bg-[#8BCF00]/15"
+                        : "bg-base-200"
+                      }
+                        `}
+                  >
+                    <ShieldCheckIcon
+                      className={`
+                                w-4
+                                h-4
+                                ${isAssigned
+                          ? "text-[#78B300]"
+                          : "text-base-content/50"
+                        }
+                            `}
+                    />
+                  </div>
 
-                <p
-                  className="
-                                    text-xs
-                                    text-base-content/50
-                                    mt-1
-                                "
+                  <span
+                    className={`
+                            text-sm
+                            truncate
+                            ${isAssigned
+                        ? "font-semibold"
+                        : "font-medium"
+                      }
+                        `}
+                  >
+                    {permission.name}
+                  </span>
+                </div>
+
+                {/* checkbox */}
+
+                <div
+                  className={`
+                        w-5
+                        h-5
+                        rounded
+                        border
+                        flex
+                        items-center
+                        justify-center
+                        shrink-0
+                        ${isAssigned
+                      ? "bg-[#8BCF00] border-[#8BCF00]"
+                      : "border-base-300"
+                    }
+                    `}
                 >
-                  Try changing your search.
-                </p>
-              </div>
-            )}
+                  {isAssigned && (
+                    <CheckIcon className="w-3.5 h-3.5 text-white" />
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* =================================================

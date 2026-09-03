@@ -7,7 +7,7 @@ import UserIcon from '@heroicons/react/24/outline/UserIcon'
 
 import AgentDropdown from '../../../../components/GlobalModels/Filters/AgentDropdown'
 
-
+import { getRoles } from '../../../../../src/services/commonservice'
 // =============================================================
 // COMPONENT
 // =============================================================
@@ -21,17 +21,29 @@ function AgentModal({
 
     const [formData, setFormData] = useState({
         employeeId: '',
+        roleId: '',
         status: 'Active',
     })
 
     const [error, setError] = useState('')
 
-
+    const [roles, setRoles] = useState([])
     // =========================================================
     // INITIALIZE
     // =========================================================
 
     useEffect(() => {
+        const loadRoles = async () => {
+            try {
+                const data = await getRoles()
+                setRoles(data)
+            } catch (error) {
+                console.error('Failed to load roles:', error)
+                setRoles([])
+            }
+        }
+
+        loadRoles()
 
         if (!open) {
             return
@@ -52,6 +64,10 @@ function AgentModal({
                     agent.id ??
                     '',
 
+                roleId:
+                    agent.roleId ??
+                    '',
+
                 status:
                     agent.status ||
                     'Active',
@@ -67,6 +83,7 @@ function AgentModal({
 
             setFormData({
                 employeeId: '',
+                roleId: '',
                 status: 'Active',
             })
 
@@ -137,6 +154,9 @@ function AgentModal({
         onSubmit?.({
             employeeId:
                 formData.employeeId,
+
+            roleId:
+                formData.roleId,
 
             status:
                 formData.status,
@@ -358,7 +378,64 @@ function AgentModal({
                             </div>
 
                         )}
+                        {/* =================================================
+                                ROLE
+                            ================================================= */}
 
+                        <div>
+
+                            <label className="
+                                label
+                                px-0
+                            ">
+
+                                <span className="
+                                    label-text
+                                    text-sm
+                                    font-medium
+                                ">
+                                    Role
+                                </span>
+
+                            </label>
+
+
+                            <select
+                                name="roleId"
+                                value={formData.roleId}
+                                onChange={(event) => {
+                                    setFormData((previous) => ({
+                                        ...previous,
+                                        roleId: event.target.value,
+                                    }))
+
+                                    setError('')
+                                }}
+                                className="
+                                    select
+                                    select-bordered
+                                    w-full
+                                    focus:border-[#8BCF00]
+                                    focus:outline-[#8BCF00]
+                                "
+                            >
+
+                                <option value="">
+                                    Select Role
+                                </option>
+
+                                {roles.map((role) => (
+                                    <option
+                                        key={role.id}
+                                        value={role.id}
+                                    >
+                                        {role.name}
+                                    </option>
+                                ))}
+
+                            </select>
+
+                        </div>
 
                         {/* =================================================
                             STATUS

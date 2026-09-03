@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.core.access_control import AccessControl
-
+from app.models.permissions import Permission
 from app.models.employees import Employee
 from app.models.employee_details import EmployeeDetails
 from app.models.employee_contexts import EmployeeContext
@@ -73,7 +73,47 @@ def _get_global_context(db: Session) -> Context:
 
     return context
 
+@staticmethod
+def get_roles(db, employee):
+    if not AccessControl.has_permission(
+        db=db,
+        employee=employee,
+        permission="employees:view",
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied",
+        )
 
+    return (
+        db.query(Role)
+        .order_by(Role.id)
+        .all()
+    )
+@staticmethod
+def get_common_permissions(
+    db: Session,
+    employee: Employee,
+):
+    if not AccessControl.has_permission(
+        db=db,
+        employee=employee,
+        permission="employees:view",
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied",
+        )
+
+    return (
+        db.query(Permission)
+        .filter(
+            Permission.is_active.is_(True),
+            Permission.description.ilike("common"),
+        )
+        .order_by(Permission.id)
+        .all()
+    )
 def _validate_employee_role(
     db: Session,
     role_id: int,
