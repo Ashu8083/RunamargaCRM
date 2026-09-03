@@ -1,4 +1,4 @@
-#!/home/mirai/Projects/new-runamarga-crm/backend/.venv/bin/python3.10
+#!/Users/ashu/PycharmProjects/new-runamarga-crm/backend/.venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys

@@ -14,3 +14,7 @@ from app.models.employee_face_profiles import EmployeeFaceProfile
 from app.models.loan_types import LoanType
 from app.models.loan_applications import LoanApplication
 from app.models.employee_roles import EmployeeRole
+from app.models.bank import Bank
+from app.models.banker_directories import BankerDirectory
+from app.models.banker_directory_asms import BankerDirectoryASM
+from app.models.banker_directory_sms import BankerDirectorySM
