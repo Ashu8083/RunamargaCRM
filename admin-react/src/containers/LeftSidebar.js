@@ -1,6 +1,6 @@
 // admin-react/src/containers/LeftSidebar.js
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import routes from '../routes/sidebarmenu'
 import { NavLink, Link, useLocation } from 'react-router-dom'
 
@@ -15,13 +15,27 @@ import { hasPermission } from '../app/permissions'
 function LeftSidebar({ onClose }) {
 
     const location = useLocation()
-    const currentUser = getCurrentUser()
 
+    const [currentUser, setCurrentUser] = useState(() =>
+        getCurrentUser()
+    )
+    useEffect(() => {
+        const handleAuthChanged = () => {
+            setCurrentUser(getCurrentUser())
+        }
 
-    // =========================================================
-    // CLOSE SIDEBAR
-    // =========================================================
+        window.addEventListener(
+            'auth:changed',
+            handleAuthChanged
+        )
 
+        return () => {
+            window.removeEventListener(
+                'auth:changed',
+                handleAuthChanged
+            )
+        }
+    }, [])
     const close = () => {
         onClose?.()
     }

@@ -2,13 +2,12 @@ import axios from 'axios'
 
 import {
     clearAuthSession,
-    getAccessToken,
-    getRefreshToken,
     refreshAccessToken,
 } from './auth'
 
 const apiClient = axios.create({
     baseURL: process.env.REACT_APP_BASE_URL || '',
+    withCredentials: true,
 })
 
 let refreshRequest = null
@@ -27,11 +26,13 @@ const hideGlobalLoader = () => {
 
 apiClient.interceptors.request.use(
     (config) => {
-        const accessToken = getAccessToken()
-
-        if (accessToken) {
-            config.headers.Authorization = `Bearer ${accessToken}`
-        }
+        /*
+         * Authentication is handled by HttpOnly cookies.
+         *
+         * We intentionally do NOT read the access token
+         * from localStorage or manually create an
+         * Authorization header.
+         */
 
         showGlobalLoader()
 
@@ -48,30 +49,51 @@ apiClient.interceptors.response.use(
         hideGlobalLoader()
         return response
     },
+
     async (error) => {
         hideGlobalLoader()
 
         const originalRequest = error.config
-        const isUnauthorized = error.response?.status === 401
+        const isUnauthorized =
+            error.response?.status === 401
 
+        /*
+         * If the API says the access token is expired,
+         * try to get a new access token using the
+         * HttpOnly refresh-token cookie.
+         */
         if (
             isUnauthorized &&
             originalRequest &&
-            !originalRequest._retry &&
-            getRefreshToken()
+            !originalRequest._retry
         ) {
             originalRequest._retry = true
 
             try {
-                refreshRequest = refreshRequest || refreshAccessToken()
-                const accessToken = await refreshRequest
+                refreshRequest =
+                    refreshRequest ||
+                    refreshAccessToken()
+
+                await refreshRequest
+
                 refreshRequest = null
 
-                originalRequest.headers.Authorization = `Bearer ${accessToken}`
+                /*
+                 * The refresh endpoint has already
+                 * set a new access_token cookie.
+                 *
+                 * Retry the original request.
+                 */
+                const retryRequest = {
+                    ...originalRequest,
+                    headers: undefined,
+                }
 
-                return apiClient(originalRequest)
+                return apiClient(retryRequest)
+
             } catch (refreshError) {
                 refreshRequest = null
+
                 clearAuthSession()
 
                 if (typeof window !== 'undefined') {

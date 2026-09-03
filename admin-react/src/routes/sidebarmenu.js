@@ -163,20 +163,27 @@ const sidebarmenu = [
       },
 
       {
-        path: "/crm/rm-applications",
+        path: "/crm/applications",
         icon: <DocumentTextIcon className={submenuIconClasses} />,
-        name: "RM Applications",
+        name: "Loan Applications",
         parent: "Loans",
-        permission: PERMISSIONS.LOANS_RM_VIEW,
+        permission: PERMISSIONS.LOANS_VIEW,
       },
+      // {
+      //   path: "/crm/rm-applications",
+      //   icon: <DocumentTextIcon className={submenuIconClasses} />,
+      //   name: "RM Applications",
+      //   parent: "Loans",
+      //   permission: PERMISSIONS.LOANS_RM_VIEW,
+      // },
 
-      {
-        path: "/crm/agent-applications",
-        icon: <ClipboardDocumentCheckIcon className={submenuIconClasses} />,
-        name: "Agent Applications",
-        parent: "Loans",
-        permission: PERMISSIONS.LOANS_AGENT_VIEW,
-      },
+      // {
+      //   path: "/crm/agent-applications",
+      //   icon: <ClipboardDocumentCheckIcon className={submenuIconClasses} />,
+      //   name: "Agent Applications",
+      //   parent: "Loans",
+      //   permission: PERMISSIONS.LOANS_AGENT_VIEW,
+      // },
 
       {
         path: "/crm/pending-applications",
@@ -389,7 +396,7 @@ const sidebarmenu = [
         icon: <UserCircleIcon className={submenuIconClasses} />,
         name: "Employees",
         parent: "Employee Management",
-        permission: PERMISSIONS.EMPLOYEE_VIEW,
+        permission: PERMISSIONS.EMPLOYEES_VIEW,
       },
 
       {

@@ -217,3 +217,794 @@ Models define the intended database structure. Alembic records the changes neede
 11. RUNAMARGA Rule
 
 The existing runamarga_crm database is reference-only. The new backend uses runamarga_crm_new. For tracked schema changes, modify the SQLAlchemy model, generate a migration, review it, and apply it with Alembic.
+
+
+
+                    LOGIN
+                      ↓
+                AUTHENTICATION
+                      ↓
+                  EMPLOYEE
+                      ↓
+               ACTIVE CONTEXT
+                      ↓
+                PERMISSIONS
+                 ↙        ↘
+             WHAT?       ALLOWED?
+                            ↓
+                       HIERARCHY
+                            ↓
+                       WHICH DATA?
+
+
+
+
+
+
+
+
+
+Runamarga CRM Authentication – How It Works
+
+Purpose: This document explains the authentication architecture we are building for the new Runamarga CRM, the role of each file/component, the OTP flow, JWT access/refresh tokens, database storage, security, and the automatic refresh flow.
+
+1. Overall Architecture
+
+The authentication flow is intentionally separated into layers:
+
+Frontend → Route → Controller → Service → Database
+
+The route handles HTTP/FastAPI concerns, the controller coordinates the request, the service contains authentication/business logic, and the database stores employee and refresh-session data.
+
+2. Current Project Structure
+
+app/
+
+├── core/
+
+│   └── security.py
+
+├── controllers/
+
+│   └── auth_controller.py
+
+├── routes/
+
+│   └── auth_routes.py
+
+├── services/
+
+│   └── auth_service.py
+
+├── schemas/
+
+│   └── auth.py
+
+├── models/
+
+│   ├── employees.py
+
+│   └── auth_tokens.py
+
+└── main.py
+
+3. Employee Authentication
+
+The Employee table is the source for determining whether a person is allowed to log in.
+
+email identifies the employee.
+
+deleted_at must be NULL.
+
+deactivate must be false.
+
+status must be active.
+
+4. OTP Request Flow
+
+Endpoint:
+
+POST /auth/request-otp
+
+Request schema already exists as RequestOTPRequest:
+
+emailId
+
+device (optional)
+
+ipAddress (optional)
+
+location (optional)
+
+Flow:
+
+Frontend sends emailId.
+
+auth_routes.py receives the HTTP request.
+
+auth_controller.py calls create_login_otp().
+
+auth_service.py finds the Employee by email.
+
+The employee's status/deactivation/deletion are validated.
+
+A cryptographically secure 4-digit OTP is generated.
+
+The OTP is hashed with SHA-256 before storage.
+
+The hash and expiry time are stored on the employee.
+
+OTP expiry is currently 5 minutes.
+
+For development/testing, the OTP is currently returned in the response. In production it should be sent through the real OTP delivery mechanism.
+
+5. OTP Verification Flow
+
+Endpoint:
+
+POST /auth/verify-otp
+
+Request schema already exists as VerifyOTPRequest:
+
+emailId
+
+otp
+
+deviceId (optional)
+
+device (optional)
+
+ipAddress (optional)
+
+location (optional)
+
+Find the employee by email.
+
+Validate that the employee is active and not deactivated/deleted.
+
+Ensure an OTP was requested.
+
+Check that the OTP has not expired.
+
+Hash the submitted OTP and compare it with the stored hash.
+
+Clear the stored OTP fields so the OTP can be used only once.
+
+Create a short-lived access JWT.
+
+Create a longer-lived refresh JWT.
+
+Hash the refresh JWT and store its hash in auth_tokens.
+
+Return the authentication result during development. Later, tokens will be moved to secure HttpOnly cookies.
+
+6. Access Token vs Refresh Token
+
+Property
+	
+
+Access JWT
+	
+
+Refresh JWT
+	
+
+Why
+
+Lifetime
+	
+
+30 minutes
+	
+
+7 days
+	
+
+Short access lifetime limits exposure; refresh maintains login
+
+Stored in auth_tokens
+	
+
+No
+	
+
+Hash only
+	
+
+Avoid DB lookup for every API request
+
+Purpose
+	
+
+Access protected APIs
+	
+
+Get a new access token
+	
+
+Separates frequent API access from session renewal
+
+Contains employee ID
+	
+
+Yes
+	
+
+Yes
+	
+
+JWT subject identifies the employee
+
+Revocation
+	
+
+Expires quickly
+	
+
+Can be revoked via DB
+	
+
+Refresh sessions can be terminated
+
+7. What Is Inside the JWT?
+
+The current access JWT payload contains:
+
+sub: employee ID, stored as a string.
+
+type: access.
+
+exp: expiration timestamp.
+
+The refresh JWT uses the same basic structure but has type=refresh and a longer expiration. Sensitive personal or business information should not be placed in the JWT payload.
+
+8. Why Access Tokens Are Not Stored in the Database
+
+The access token is short-lived and self-verifying. The backend verifies its JWT signature and expiration using the JWT secret. This avoids a database lookup for the token on every API request.
+
+If access tokens were stored and checked in the database on every request, every protected API call could require an additional database lookup. That is unnecessary for this design.
+
+9. Why Refresh Tokens Are Stored
+
+A refresh token represents a longer-lived login session/device. Its hash is stored in auth_tokens so the server can validate and revoke individual sessions.
+
+Example:
+
+Employee 1 – laptop session – valid
+
+Employee 1 – phone session – valid
+
+Employee 1 – old laptop session – revoked
+
+10. auth_tokens Table
+
+The new table contains fields for:
+
+employee_id – which employee owns the session.
+
+token_hash – SHA-256 hash of the refresh token.
+
+token_type – currently refresh for stored sessions.
+
+expires_at – refresh-session expiration.
+
+revoked_at – allows a session to be revoked.
+
+ip_address – optional login/session metadata.
+
+device_id – optional device identifier.
+
+device_type – optional device type.
+
+latitude / longitude – optional login location metadata.
+
+created_at – session creation time.
+
+token_hash is unique. employee_id is not unique, so one employee can have multiple device sessions.
+
+11. Security Model
+
+OTP is not stored in plaintext; only its SHA-256 hash is stored.
+
+OTP expires after 5 minutes.
+
+OTP is cleared after successful verification.
+
+Access JWTs are short-lived.
+
+Refresh tokens are stored only as hashes in the database.
+
+JWT signing uses a secret key and HS256 in the current implementation.
+
+Production JWT_SECRET_KEY must be a strong secret supplied through secure configuration/environment management, not the development fallback.
+
+Production traffic must use HTTPS.
+
+Tokens should ultimately be placed in HttpOnly and Secure cookies, with an appropriate SameSite policy.
+
+Do not put sensitive information inside JWT payloads.
+
+12. Browser Cookie Design (Production)
+
+The current development endpoint returns the tokens as JSON so that the flow can be tested. The planned production design is to set the tokens as secure cookies.
+
+Access token → HttpOnly + Secure cookie.
+
+Refresh token → HttpOnly + Secure cookie.
+
+JavaScript should not directly read the tokens.
+
+The browser automatically sends the cookies to the backend.
+
+13. Automatic Access-Token Refresh
+
+This is the part that addresses the old CRM problem where an access token sometimes needed a manual page refresh.
+
+User logs in once.
+
+Access JWT is valid for about 30 minutes.
+
+When the access token expires, the frontend calls POST /auth/refresh.
+
+The backend receives the refresh token.
+
+The backend verifies that it is a valid refresh JWT.
+
+The backend hashes the refresh token and checks the corresponding session in auth_tokens.
+
+The backend rejects the session if it is expired or revoked.
+
+The backend creates a new short-lived access JWT.
+
+The new access token is returned/set as the access cookie.
+
+The user continues working without manually refreshing the page.
+
+14. Logout
+
+The planned logout flow is to revoke the current refresh session by setting revoked_at and clear the browser cookies. Because the access token is short-lived, it naturally becomes invalid when it expires.
+
+15. Multiple Devices
+
+employee_id is intentionally not unique in auth_tokens. Each login/device can have its own refresh session.
+
+Example: the same employee can log in on a laptop and phone, producing separate refresh-session rows.
+
+16. Authentication and RBAC
+
+Authentication answers: 'Who is this employee?' Authorization/RBAC answers: 'What is this employee allowed to do?'
+
+JWT subject identifies the employee.
+
+Employee role identifies the broad role.
+
+Contexts distinguish operating scope such as global, agent, RM, or team-lead contexts.
+
+Permissions determine allowed actions.
+
+Data scope (for example agent_id or rm_id on applications) determines which records the employee can see/manage.
+
+17. Current Status
+
+PyJWT installed.
+
+Access JWT creation implemented.
+
+Refresh JWT creation implemented.
+
+OTP generation implemented.
+
+OTP hashing implemented.
+
+OTP verification implemented.
+
+auth_tokens model implemented.
+
+auth_tokens migration created and applied.
+
+request-OTP route tested successfully.
+
+verify-OTP route tested successfully.
+
+Refresh-token hash confirmed in auth_tokens.
+
+18. Next Implementation Steps
+
+Implement POST /auth/refresh.
+
+Validate refresh JWT and its database session.
+
+Issue a new access JWT automatically.
+
+Move access/refresh tokens from JSON responses to HttpOnly Secure cookies.
+
+Implement POST /auth/logout and refresh-session revocation.
+
+Add authentication dependency for protected APIs.
+
+Add RBAC/context/permission checks.
+
+Add refresh-token rotation/reuse protection if required by the final security model.
+
+Later, Redis can be introduced for suitable session/revocation/rate-limiting workloads without changing the fundamental access-vs-refresh design.
+
+19. Simple Mental Model
+
+OTP proves the user can complete the login challenge. The access JWT proves the request is from an authenticated employee for a short period. The refresh token represents the longer-lived login session. auth_tokens lets the server control those longer-lived sessions. RBAC and context permissions decide what the authenticated employee can actually access.
+
+
+                 LOGIN
+                   │
+                   ↓
+                Email
+                   │
+                   ↓
+             Request OTP
+                   │
+                   ↓
+              Verify OTP
+                   │
+                   ↓
+        ┌──────────┴──────────┐
+        ↓                     ↓
+   Access JWT            Refresh JWT
+    30 minutes              7 days
+        │                     │
+        │                     ↓
+        │              hash + store
+        │                     │
+        │                auth_tokens
+        │
+        ↓
+   Browser cookie
+        │
+        ↓
+   API requests
+        │
+        ↓
+   JWT validation
+        │
+        ↓
+   Employee #1
+        │
+        ↓
+ Authentication
+        │
+        ↓
+   RBAC / Context
+        │
+        ↓
+    Permissions
+        │
+        ↓
+    Data scope
+        │
+        ↓
+   Allow / Deny
+
+
+OTP
+ ↓
+Employee #1
+ ↓
+Create access JWT
+ ↓
+Create refresh JWT
+ ↓
+Save refresh session
+ ↓
+Get employee's active/default context
+ ↓
+Get context permissions
+ ↓
+Return user + permissions
+ ↓
+React stores auth session
+ ↓
+permissions.js checks permissions
+ ↓
+Dashboard ✅
+
+
+
+Employee
+   ↓
+EmployeeContext
+   ↓
+Context
+   ↓
+EmployeeContextPermission
+   ↓
+Permission
+
+
+                         LOGIN
+                           │
+                           ▼
+                  POST /auth/login
+                           │
+                           ▼
+                     Backend checks
+                     employee/account
+                           │
+                           ▼
+                 Generate auth tokens
+                           │
+                           ▼
+                 Load employee contexts
+                           │
+                           ▼
+                 Load context permissions
+                           │
+                           ▼
+                     Return user
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │      auth_user         │
+              │                        │
+              │ user                   │
+              │  ├── GLOBAL context    │
+              │  │     permissions     │
+              │  │                     │
+              │  └── RM context        │
+              │        permissions     │
+              └────────────────────────┘
+                           │
+                           ▼
+                  Select active context
+                           │
+                           ▼
+                 getActiveContext()
+                           │
+                           ▼
+                  Active context
+                           │
+                           ▼
+                    permissions[]
+                           │
+                           ▼
+                    PermissionGate
+                           │
+                 ┌─────────┴─────────┐
+                 │                   │
+              allowed             denied
+                 │                   │
+                 ▼                   ▼
+          Render page          Access restricted
+
+
+API REQUEST
+    │
+    ▼
+Access token valid?
+    │
+ ┌──┴───┐
+YES     NO
+ │       │
+ ▼       ▼
+200     401
+         │
+         ▼
+      /auth/refresh
+         │
+         ▼
+   New access token
+         │
+         ▼
+   Retry original API
+
+
+
+
+
+
+
+
+
+
+
+index.js — WHAT PAGE EXISTS AND WHAT PERMISSION IT NEEDS - "There is an Employees page. Its URL is /employees, its component is Employees, and you need employees:view to access it."
+PageContent.js — ACTUALLY PROTECTS THE PAGE
+
+This is where your routes are rendered.
+This is extremely important.
+
+Suppose RM manually types:
+
+/crm/employees
+
+into the browser.
+
+The sidebar isn't involved.
+
+So we need another protection layer.
+
+The flow becomes:
+User types /crm/employees
+          ↓
+PageContent
+          ↓
+Find /employees route
+          ↓
+PermissionGate
+          ↓
+"Does current context have employees:view?"
+          ↓
+       NO
+          ↓
+Access restricted
+
+
+PermissionGate.js — THE SECURITY GUARD
+
+This is the actual component that says:
+
+"Are you allowed to enter?"
+
+permissions.js asks:
+
+"Does this user have this permission?"
+
+PermissionGate asks:
+
+"What should I render based on that answer?"
+
+
+
+permissions.js — FIGURES OUT WHAT THE USER CAN DO
+
+This is the heart of your frontend RBAC.
+
+You have:
+
+const getUserPermissions = (user = getCurrentUser()) => {
+
+Then it gets the active context:
+
+const activeContext = getActiveContext(user)
+
+and returns:
+
+activeContext.permissions
+
+So imagine your user has:
+
+Test Admin
+
+with:
+
+GLOBAL
+    employees:view
+    employees:create
+    employees:edit
+    ...
+
+RM
+    loans:view
+    loans:assign
+    ...
+
+If the user selects:
+
+GLOBAL
+
+then:
+
+getUserPermissions()
+
+returns GLOBAL permissions.
+
+If they select:
+
+RM
+
+then it returns RM permissions.
+
+Therefore:
+
+hasPermission('employees:view')
+
+can change depending on the selected context.
+
+This is why context is so important.
+
+Same employee:
+
+Test Admin
+
+can become:
+
+GLOBAL
+    ↓
+many permissions
+
+or:
+
+RM
+    ↓
+different permissions
+
+without changing the employee itself.
+
+5. apiClient — TALKS TO THE BACKEND
+
+This one is different from all the others.
+
+apiClient isn't primarily an RBAC file.
+
+Its job is:
+
+"How does the frontend communicate with our FastAPI backend?"
+
+For example:
+
+React
+  │
+  │ GET /employees
+  ▼
+apiClient
+  │
+  ▼
+FastAPI
+  │
+  ▼
+Database
+
+It handles things such as:
+
+API base URL
+cookies
+authentication
+refresh token
+retrying requests
+common headers
+handling 401
+sending requests consistently
+React
+  │
+  │ request
+  ▼
+API Client
+  │
+  │ access_token cookie
+  ▼
+FastAPI
+  │
+  ▼
+get_current_employee()
+  │
+  ▼
+employee
+
+
+If access token expires:
+
+API request
+     ↓
+401
+     ↓
+apiClient
+     ↓
+refresh token
+     ↓
+new access token
+     ↓
+retry original request
+     ↓
+200
+
+
+                 CREATE EMPLOYEE
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+       Employee     Details      Contexts
+       table        table          │
+                                   │
+                    ┌──────────────┼──────────────┐
+                    ▼              ▼              ▼
+                 GLOBAL           RM            AGENT
+                    │              │              │
+                    ▼              ▼              ▼
+               permissions    permissions    permissions
