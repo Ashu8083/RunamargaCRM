@@ -143,22 +143,22 @@ PERMISSIONS = {
 
     ("Business Test 1", "AGENT"): [
         "employees:view",
-        "applications:view",
-        "applications:create",
-        "applications:update",
+        "loans:view",
+        "loans:create",
+        "loans:update",
     ],
 
     ("Business Test 1", "RM"): [
         "employees:view",
-        "applications:view",
-        "applications:create",
-        "applications:update",
+        "loans:view",
+        "loans:create",
+        "loans:update",
     ],
 
     ("Test Employee", "RM"): [
         "employees:view",
-        "applications:view",
-        "applications:update",
+        "loans:view",
+        "loans:update",
     ],
 
     ("komal mane", "GLOBAL"): "__ALL__",
