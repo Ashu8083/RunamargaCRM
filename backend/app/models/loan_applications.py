@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     TIMESTAMP,
     Index,
+    Text
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -259,7 +260,7 @@ class LoanApplication(Base):
         Integer,
         nullable=True,
     )
-
+    rejected_remarks = Column(Text, nullable=True)
     # =====================================================
     # TIMESTAMPS
     # =====================================================
@@ -300,12 +301,12 @@ class LoanApplication(Base):
     #     cascade="all, delete-orphan",
     # )
 
-    # reverted_loans = relationship(
-    #     "RevertedLoan",
-    #     back_populates="loan",
-    #     lazy="select",
-    #     cascade="all, delete-orphan",
-    # )
+    reverted_loans = relationship(
+        "RevertedLoan",
+        back_populates="loan",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
 
     # =====================================================
     # INDEXES

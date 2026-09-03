@@ -1,553 +1,829 @@
-// admin-react/src/pages/Loans/PendingApplications/index.jsx
+// src/pages/Applications/PendingApplications/index.jsx
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+
+import { getActiveContext } from '../../../app/auth'
+import {
+    getApplications,
+    updateApplicationLoanType,
+} from '../../../services/applicationService'
+
+import {
+    getLoanTypes,
+    getEmployeesByContext,
+} from '../../../services/commonservice'
 
 import PendingApplicationsTable from './components/PendingApplicationsTable'
+
 import LoanTypeModal from '../../../components/GlobalModels/Loans/LoanTypeModal'
 import StatusModal from '../../../components/GlobalModels/Loans/StatusModal'
 import ReminderModal from '../../../components/GlobalModels/Loans/ReminderModal'
+import { useToast } from '../../../components/Toast/ToastProvider'
+const STATUS_OPTIONS = [
+    {
+        value: 'revert_rejected',
+        label: 'Revert Rejected',
+    },
+    {
+        value: 'rejected',
+        label: 'Rejected',
+    },
+    {
+        value: 'inprocess',
+        label: 'In Process',
+    },
+    {
+        value: 'docspending',
+        label: 'Docs Pending',
+    },
+    {
+        value: 'sanctioned',
+        label: 'Sanctioned',
+    },
+    {
+        value: 'disbursed',
+        label: 'Disbursed',
+    },
+]
 
 
-function PendingApplications() {
+const normalizeStatus = (status) => {
+    if (!status) {
+        return ''
+    }
 
-    // =========================================================
-    // APPLICATION DATA
-    // =========================================================
-
-    const [applications, setApplications] = useState([
-        {
-            id: 1,
-            loanId: 'PA-2026-0001',
-            name: 'Rajesh Kumar',
-            phone: '9876543210',
-            email: 'rajesh@example.com',
-            loanType: 'Personal Loan',
-            amount: '500000',
-            status: 'Inprocess',
-            appliedDate: '2026-08-20',
-            appliedBy: 'Premalatha N',
-            referral: 'Premalatha N',
-            rmName: 'Premalatha N',
-            processingAgent: 'Prashanth',
-            agentId: 101,
-            rmId: 201,
-        },
-        {
-            id: 2,
-            loanId: 'PA-2026-0002',
-            name: 'Priya Sharma',
-            phone: '9876543211',
-            email: 'priya@example.com',
-            loanType: 'Business Loan',
-            amount: '1000000',
-            status: 'Docs Pending',
-            appliedDate: '2026-08-20',
-            appliedBy: 'Premalatha N',
-            referral: 'Premalatha N',
-            rmName: 'Premalatha N',
-            processingAgent: 'Kasturi',
-            agentId: 102,
-            rmId: 201,
-        },
-        {
-            id: 3,
-            loanId: 'PA-2026-0003',
-            name: 'Arun Kumar',
-            phone: '9876543212',
-            email: 'arun@example.com',
-            loanType: 'Home Loan',
-            amount: '2500000',
-            status: 'Rejected',
-            appliedDate: '2026-08-19',
-            appliedBy: 'Shubha',
-            referral: 'Shubha',
-            rmName: 'Shubha',
-            processingAgent: 'Kasturi',
-            agentId: 103,
-            rmId: 202,
-        },
-        {
-            id: 4,
-            loanId: 'PA-2026-0004',
-            name: 'Sneha Reddy',
-            phone: '9876543213',
-            email: 'sneha@example.com',
-            loanType: 'Personal Loan',
-            amount: '300000',
-            status: 'Inprocess',
-            appliedDate: '2026-08-18',
-            appliedBy: 'Prasanna Y R',
-            referral: 'Prasanna Y R',
-            rmName: 'Prasanna Y R',
-            processingAgent: 'Nayana',
-            agentId: 104,
-            rmId: 203,
-        },
-    ])
+    return String(status)
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+}
 
 
-    // =========================================================
-    // FILTER STATE
-    // =========================================================
+const normalizeApplication = (application) => {
+    return {
+        ...application,
+
+        id: application.id,
+
+        uniqueId:
+            application.uniqueId ??
+            application.unique_id ??
+            '',
+
+        name:
+            application.name ??
+            '',
+
+        email:
+            application.email ??
+            '',
+
+        phone:
+            application.phone ??
+            '',
+
+        gender:
+            application.gender ??
+            '',
+
+        alternatePhone:
+            application.alternatePhone ??
+            application.alternate_phone ??
+            '',
+
+        alternateEmail:
+            application.alternateEmail ??
+            application.alternate_email ??
+            '',
+
+        maritalStatus:
+            application.maritalStatus ??
+            application.marital_status ??
+            '',
+
+        dob:
+            application.dob ??
+            '',
+
+        pancardNo:
+            application.pancardNo ??
+            application.pancard_no ??
+            '',
+
+        aadharNo:
+            application.aadharNo ??
+            application.aadhar_no ??
+            '',
+
+        bankAccNo:
+            application.bankAccNo ??
+            application.bank_acc_no ??
+            '',
+
+        ifscCode:
+            application.ifscCode ??
+            application.ifsc_code ??
+            '',
+
+        loanTypeId:
+            application.loanTypeId ??
+            application.loan_type_id ??
+            null,
+
+        loanType:
+            application.loanType ??
+            application.loan_type ??
+            null,
+
+        loanAmt:
+            application.loanAmt ??
+            application.loan_amt ??
+            null,
+
+        loanTenure:
+            application.loanTenure ??
+            application.loan_tenure ??
+            null,
+
+        loanPurpose:
+            application.loanPurpose ??
+            application.loan_purpose ??
+            '',
+
+        creditScore:
+            application.creditScore ??
+            application.credit_score ??
+            null,
+
+        referral:
+            application.referral ??
+            '',
+
+        appliedById:
+            application.appliedById ??
+            application.applied_by_id ??
+            null,
+
+        appliedBy:
+            application.appliedBy ??
+            application.applied_by ??
+            null,
+
+        agentId:
+            application.agentId ??
+            application.agent_id ??
+            null,
+
+        agent:
+            application.agent ??
+            null,
+
+        rmId:
+            application.rmId ??
+            application.rm_id ??
+            null,
+
+        rm:
+            application.rm ??
+            null,
+
+        status:
+            application.status ??
+            '',
+
+        appliedDate:
+            application.appliedDate ??
+            application.applied_date ??
+            null,
+
+        sanctionDate:
+            application.sanctionDate ??
+            application.sanction_date ??
+            null,
+
+        rejectionDate:
+            application.rejectionDate ??
+            application.rejection_date ??
+            null,
+
+        loggedinDate:
+            application.loggedinDate ??
+            application.loggedin_date ??
+            null,
+
+        docspendingDate:
+            application.docspendingDate ??
+            application.docspending_date ??
+            null,
+
+        revertedStatus:
+            application.revertedStatus ??
+            application.reverted_status ??
+            '',
+
+        stateId:
+            application.stateId ??
+            application.state_id ??
+            null,
+
+        cityId:
+            application.cityId ??
+            application.city_id ??
+            null,
+
+        languageId:
+            application.languageId ??
+            application.language_id ??
+            null,
+
+        ivrId:
+            application.ivrId ??
+            application.ivr_id ??
+            null,
+
+        createdAt:
+            application.createdAt ??
+            application.created_at ??
+            null,
+
+        updatedAt:
+            application.updatedAt ??
+            application.updated_at ??
+            null,
+    }
+}
+
+
+const PendingApplications = () => {
+    const {
+        showSuccess,
+        showError,
+    } = useToast()
+
+    const [applications, setApplications] = useState([])
+    const [loading, setLoading] = useState(false)
+
+    const [loanTypes, setLoanTypes] = useState([])
+    const [rms, setRms] = useState([])
+    const [agents, setAgents] = useState([])
+    const [teamLeads, setTeamLeads] = useState([])
 
     const [search, setSearch] = useState('')
 
-    const [selectedLoanType, setSelectedLoanType] =
-        useState('')
+    const [selectedLoanType, setSelectedLoanType] = useState('')
+    const [selectedRM, setSelectedRM] = useState('')
+    const [selectedTeamLead, setSelectedTeamLead] = useState('')
+    const [selectedAgent, setSelectedAgent] = useState('')
+    const [selectedStatus, setSelectedStatus] = useState('')
 
-    const [selectedAgent, setSelectedAgent] =
-        useState('')
+    const [selectedApplication, setSelectedApplication] = useState(null)
 
+    const [showLoanTypeModal, setShowLoanTypeModal] = useState(false)
+    const [showStatusModal, setShowStatusModal] = useState(false)
+    const [showReminderModal, setShowReminderModal] = useState(false)
 
-    // =========================================================
-    // SELECTED APPLICATION
-    // =========================================================
-
-    const [selectedApplication, setSelectedApplication] =
-        useState(null)
-
-
-    // =========================================================
-    // LOAN TYPES
-    // =========================================================
-
-    const loanTypes = useMemo(() => {
-
-        return [
-            ...new Set(
-                applications
-                    .map(
-                        (application) =>
-                            application.loanType
-                    )
-                    .filter(Boolean)
-            ),
-        ]
-
-    }, [applications])
+    const [activeContext, setActiveContext] = useState(
+        getActiveContext()
+    )
 
 
-    // =========================================================
-    // AGENTS
-    // =========================================================
+    /*
+     * FETCH APPLICATIONS
+     */
 
-    const agents = useMemo(() => {
+    const fetchApplications = useCallback(async () => {
+        const context = getActiveContext()
 
-        const map = new Map()
+        if (!context?.id) {
+            setApplications([])
+            return
+        }
 
+        try {
+            setLoading(true)
 
-        applications.forEach((application) => {
+            const response = await getApplications(context.id)
 
-            const id =
-                application.agentId ??
-                application.agent_id ??
-                application.processingAgentId ??
-                application.processing_agent_id ??
-                application.agent?.id ??
-                application.processingAgent?.id
+            const data =
+                response?.data ??
+                response ??
+                []
 
+            const normalizedApplications = Array.isArray(data)
+                ? data.map(normalizeApplication)
+                : []
 
-            const name =
-                application.agentName ??
-                application.agent_name ??
-                application.processingAgent ??
-                application.processing_agent ??
-                application.agent?.name ??
-                application.processingAgent?.name
+            setApplications(normalizedApplications)
+        } catch (error) {
+            console.error(
+                'Failed to fetch pending applications:',
+                error
+            )
 
+            setApplications([])
 
-            if (!id && !name) {
-                return
-            }
-
-
-            const key = String(id ?? name)
-
-
-            if (!map.has(key)) {
-
-                map.set(key, {
-                    id: id ?? name,
-                    name: name || 'Unknown Agent',
-                })
-
-            }
-
-        })
+            showError(
+                error?.response?.data?.detail ||
+                'Failed to load applications',
+                'error'
+            )
+        } finally {
+            setLoading(false)
+        }
+    }, [showError])
 
 
-        return [...map.values()]
+    /*
+     * FETCH DROPDOWN DATA
+     */
 
-    }, [applications])
+    const fetchDropdownData = useCallback(async () => {
+        const context = getActiveContext()
+
+        if (!context?.id) {
+            setLoanTypes([])
+            setRms([])
+            setAgents([])
+            setTeamLeads([])
+            return
+        }
+
+        try {
+            const [
+                loanTypesResponse,
+                rmResponse,
+                agentResponse,
+            ] = await Promise.all([
+                getLoanTypes(),
+
+                // Relationship Manager context
+                getEmployeesByContext(3),
+
+                // Agent context
+                getEmployeesByContext(2),
+            ])
+
+            setLoanTypes(
+                Array.isArray(loanTypesResponse)
+                    ? loanTypesResponse
+                    : loanTypesResponse?.data ?? []
+            )
+
+            setRms(
+                Array.isArray(rmResponse)
+                    ? rmResponse
+                    : rmResponse?.data ?? []
+            )
+
+            setAgents(
+                Array.isArray(agentResponse)
+                    ? agentResponse
+                    : agentResponse?.data ?? []
+            )
+
+            // There is currently no Team Lead context.
+            setTeamLeads([])
+        } catch (error) {
+            console.error(
+                'Failed to fetch application dropdown data:',
+                error
+            )
+
+            showError(
+                error?.response?.data?.detail ||
+                'Failed to load dropdown data',
+                'error'
+            )
+        }
+    }, [showError])
 
 
-    // =========================================================
-    // FILTER APPLICATIONS
-    // =========================================================
+    /*
+     * INITIAL LOAD
+     */
+
+    useEffect(() => {
+        fetchApplications()
+        fetchDropdownData()
+    }, [
+        fetchApplications,
+        fetchDropdownData,
+    ])
+
+
+    /*
+     * ACTIVE CONTEXT CHANGE
+     */
+
+    useEffect(() => {
+        const handleAuthChange = () => {
+            const context = getActiveContext()
+
+            setActiveContext(context)
+
+            setSearch('')
+            setSelectedLoanType('')
+            setSelectedRM('')
+            setSelectedTeamLead('')
+            setSelectedAgent('')
+            setSelectedStatus('')
+
+            setSelectedApplication(null)
+        }
+
+        window.addEventListener(
+            'auth:changed',
+            handleAuthChange
+        )
+
+        return () => {
+            window.removeEventListener(
+                'auth:changed',
+                handleAuthChange
+            )
+        }
+    }, [])
+
+
+    /*
+     * REFETCH WHEN CONTEXT CHANGES
+     */
+
+    useEffect(() => {
+        if (!activeContext?.id) {
+            return
+        }
+
+        fetchApplications()
+        fetchDropdownData()
+    }, [
+        activeContext?.id,
+        fetchApplications,
+        fetchDropdownData,
+    ])
+
+
+    /*
+     * FILTER APPLICATIONS
+     */
 
     const filteredApplications = useMemo(() => {
-
-        const value =
-            search
-                .trim()
-                .toLowerCase()
-
+        const searchValue = search
+            .trim()
+            .toLowerCase()
 
         return applications.filter((application) => {
+            /*
+             * SEARCH
+             */
 
-            // -----------------------------------------------------
-            // SEARCH
-            // -----------------------------------------------------
-
-            if (
-                value &&
-                ![
+            if (searchValue) {
+                const searchableValues = [
                     application.name,
                     application.phone,
                     application.email,
-                    application.loanType,
-                    application.status,
-                    application.loanId,
-                    application.id,
-                    application.appliedBy,
-                    application.applied_by,
+                    application.uniqueId,
                     application.referral,
-                    application.referralName,
-                    application.referral_name,
-                    application.referredBy,
-                    application.referred_by,
-                    application.rmName,
-                    application.rm_name,
-                    application.rm?.name,
-                    application.processingAgent,
-                    application.processing_agent,
-                    application.agentName,
-                    application.agent_name,
                     application.agent?.name,
-                ].some(
-                    (field) =>
-                        field !== null &&
-                        field !== undefined &&
-                        String(field)
-                            .toLowerCase()
-                            .includes(value)
-                )
-            ) {
+                    application.rm?.name,
+                    application.appliedBy?.name,
+                ]
 
-                return false
+                const matchesSearch =
+                    searchableValues.some(
+                        (value) =>
+                            value !== null &&
+                            value !== undefined &&
+                            String(value)
+                                .toLowerCase()
+                                .includes(searchValue)
+                    )
 
+                if (!matchesSearch) {
+                    return false
+                }
             }
 
 
-            // -----------------------------------------------------
-            // LOAN TYPE
-            // -----------------------------------------------------
+            /*
+             * LOAN TYPE
+             */
 
-            if (
-                selectedLoanType &&
-                application.loanType !== selectedLoanType
-            ) {
-
-                return false
-
-            }
-
-
-            // -----------------------------------------------------
-            // AGENT
-            // -----------------------------------------------------
-
-            if (selectedAgent) {
-
-                const applicationAgent =
-                    application.agentId ??
-                    application.agent_id ??
-                    application.processingAgentId ??
-                    application.processing_agent_id ??
-                    application.agent?.id ??
-                    application.processingAgent?.id ??
-                    application.agentName ??
-                    application.agent_name ??
-                    application.processingAgent ??
-                    application.processing_agent ??
-                    application.agent?.name
-
+            if (selectedLoanType) {
+                const applicationLoanTypeId =
+                    application.loanTypeId
 
                 if (
-                    String(applicationAgent) !==
+                    String(applicationLoanTypeId) !==
+                    String(selectedLoanType)
+                ) {
+                    return false
+                }
+            }
+
+
+            /*
+             * RM
+             */
+
+            if (selectedRM) {
+                const applicationRMId =
+                    application.rmId
+
+                if (
+                    String(applicationRMId) !==
+                    String(selectedRM)
+                ) {
+                    return false
+                }
+            }
+
+
+            /*
+             * TEAM LEAD
+             */
+
+            if (selectedTeamLead) {
+                const teamLeadId =
+                    application.teamLeadId ??
+                    application.team_lead_id
+
+                if (
+                    String(teamLeadId) !==
+                    String(selectedTeamLead)
+                ) {
+                    return false
+                }
+            }
+
+
+            /*
+             * AGENT
+             */
+
+            if (selectedAgent) {
+                const applicationAgentId =
+                    application.agentId
+
+                if (
+                    String(applicationAgentId) !==
                     String(selectedAgent)
                 ) {
-
                     return false
-
                 }
+            }
 
+
+            /*
+             * STATUS
+             */
+
+            if (selectedStatus) {
+                const applicationStatus =
+                    normalizeStatus(
+                        application.status
+                    )
+
+                if (
+                    applicationStatus !==
+                    normalizeStatus(selectedStatus)
+                ) {
+                    return false
+                }
             }
 
 
             return true
-
         })
-
     }, [
         applications,
         search,
         selectedLoanType,
+        selectedRM,
+        selectedTeamLead,
         selectedAgent,
+        selectedStatus,
     ])
 
 
-    // =========================================================
-    // CLEAR FILTERS
-    // =========================================================
+    /*
+     * CLEAR FILTERS
+     */
 
     const handleClearFilters = () => {
-
         setSearch('')
-
         setSelectedLoanType('')
-
+        setSelectedRM('')
+        setSelectedTeamLead('')
         setSelectedAgent('')
-
+        setSelectedStatus('')
     }
 
 
-    // =========================================================
-    // LOAN TYPE MODAL
-    // =========================================================
+    /*
+     * REFRESH
+     */
 
-    const [showLoanTypeModal, setShowLoanTypeModal] =
-        useState(false)
+    const handleRefresh = () => {
+        fetchApplications()
+        fetchDropdownData()
+    }
 
+
+    /*
+     * LOAN TYPE MODAL
+     */
 
     const handleLoanTypeChange = (application) => {
-
         setSelectedApplication(application)
-
         setShowLoanTypeModal(true)
-
     }
 
 
     const handleCloseLoanTypeModal = () => {
-
         setShowLoanTypeModal(false)
-
         setSelectedApplication(null)
-
     }
 
 
-    const handleLoanTypeSubmit = (data) => {
+    const handleLoanTypeSubmit = async ({
+        applicationId,
+        loanTypeId,
+    }) => {
+        if (!applicationId || !loanTypeId) {
+            return
+        }
 
-        setApplications((previous) =>
-            previous.map((application) =>
-                application.id === data.id
-                    ? {
-                        ...application,
-                        loanType: data.loanType,
-                        updatedAt: new Date().toISOString(),
-                    }
-                    : application
+        try {
+            await updateApplicationLoanType(
+                applicationId,
+                loanTypeId
             )
-        )
 
+            setApplications((currentApplications) =>
+                currentApplications.map(
+                    (application) => {
+                        if (
+                            application.id !==
+                            applicationId
+                        ) {
+                            return application
+                        }
 
-        handleCloseLoanTypeModal()
+                        return {
+                            ...application,
+                            loanTypeId: loanTypeId,
+                            loan_type_id: loanTypeId,
+                        }
+                    }
+                )
+            )
 
+            showSuccess(
+                'Loan type updated successfully'
+            )
+
+            handleCloseLoanTypeModal()
+        } catch (error) {
+            console.error(
+                'Failed to update loan type:',
+                error
+            )
+
+            const detail =
+                error?.response?.data?.detail
+
+            const errorMessage =
+                Array.isArray(detail)
+                    ? detail
+                        .map(
+                            (item) => item?.msg
+                        )
+                        .filter(Boolean)
+                        .join(', ')
+                    : typeof detail === 'string'
+                        ? detail
+                        : 'Failed to update loan type'
+
+            showError(
+                errorMessage,
+                'error'
+            )
+        }
     }
 
 
-    // =========================================================
-    // STATUS MODAL
-    // =========================================================
-
-    const [showStatusModal, setShowStatusModal] =
-        useState(false)
-
+    /*
+     * STATUS MODAL
+     */
 
     const handleStatusChange = (application) => {
-
         setSelectedApplication(application)
-
         setShowStatusModal(true)
-
     }
 
 
     const handleCloseStatusModal = () => {
-
         setShowStatusModal(false)
-
         setSelectedApplication(null)
-
     }
 
 
-    const handleStatusSubmit = (data) => {
+    const handleStatusSubmit = async (status) => {
+        /*
+         * Status update API is not implemented yet.
+         *
+         * Keep the modal flow ready, but do not
+         * pretend that an API update happened.
+         */
 
-        setApplications((previous) =>
-            previous.map((application) =>
-                application.id === data.id
-                    ? {
-                        ...application,
-                        status: data.status,
-                        rejectionReason:
-                            data.rejectionReason || '',
-                        updatedAt: new Date().toISOString(),
-                    }
-                    : application
-            )
+        console.log(
+            'Status update requested:',
+            selectedApplication,
+            status
         )
 
-
         handleCloseStatusModal()
-
     }
 
 
-    // =========================================================
-    // REMINDER MODAL
-    // =========================================================
-
-    const [showReminderModal, setShowReminderModal] =
-        useState(false)
-
+    /*
+     * REMINDER MODAL
+     */
 
     const handleReminder = (application) => {
-
         setSelectedApplication(application)
-
         setShowReminderModal(true)
-
     }
 
 
     const handleCloseReminderModal = () => {
-
         setShowReminderModal(false)
-
         setSelectedApplication(null)
-
     }
 
 
-    const handleReminderSubmit = (data) => {
-
+    const handleReminderSubmit = async (data) => {
         /*
-         * API integration later.
-         *
-         * POST /pending-applications/{applicationId}/reminders
+         * Reminder API is not implemented yet.
          */
 
         console.log(
-            'Pending Application Reminder:',
+            'Reminder requested:',
+            selectedApplication,
             data
         )
 
-
         handleCloseReminderModal()
-
     }
 
 
-    // =========================================================
-    // VIEW APPLICATION
-    // =========================================================
-
-    const handleViewApplication = (application) => {
-
-        /*
-         * Application details/view page will be connected later.
-         */
-
-        console.log(
-            'View Pending Application:',
-            application
-        )
-
-    }
-
-
-    // =========================================================
-    // CHAT
-    // =========================================================
-
-    const handleChat = (application) => {
-
-        console.log(
-            'Open Pending Application Chat:',
-            {
-                loanId:
-                    application.loanId ||
-                    application.id,
-
-                agentId:
-                    application.agentId ||
-                    application.agent_id,
-            }
-        )
-
-    }
-
-
-    // =========================================================
-    // REFRESH
-    // =========================================================
-
-    const handleRefresh = () => {
-
-        /*
-         * API refresh will be added later.
-         */
-
-        console.log(
-            'Refresh Pending Applications'
-        )
-
-    }
-
-
-    // =========================================================
-    // RENDER
-    // =========================================================
+    /*
+     * RENDER
+     */
 
     return (
-
-        <div className="
-            p-4
-            sm:p-6
-            space-y-5
-        ">
-
+        <>
             <PendingApplicationsTable
                 applications={filteredApplications}
+                loading={loading}
 
                 search={search}
                 setSearch={setSearch}
 
                 loanTypes={loanTypes}
-
+                rms={rms}
+                teamLeads={teamLeads}
                 agents={agents}
+                statuses={STATUS_OPTIONS}
 
                 selectedLoanType={
                     selectedLoanType
                 }
-
                 setSelectedLoanType={
                     setSelectedLoanType
                 }
 
-                selectedAgent={
-                    selectedAgent
+                selectedRM={selectedRM}
+                setSelectedRM={setSelectedRM}
+
+                selectedTeamLead={
+                    selectedTeamLead
+                }
+                setSelectedTeamLead={
+                    setSelectedTeamLead
                 }
 
+                selectedAgent={selectedAgent}
                 setSelectedAgent={
                     setSelectedAgent
                 }
 
-                onClearFilters={
-                    handleClearFilters
+                selectedStatus={
+                    selectedStatus
+                }
+                setSelectedStatus={
+                    setSelectedStatus
                 }
 
                 onLoanTypeChange={
@@ -562,12 +838,8 @@ function PendingApplications() {
                     handleReminder
                 }
 
-                onChat={
-                    handleChat
-                }
-
-                onViewApplication={
-                    handleViewApplication
+                onClearFilters={
+                    handleClearFilters
                 }
 
                 onRefresh={
@@ -576,13 +848,12 @@ function PendingApplications() {
             />
 
 
-            {/* =====================================================
-                LOAN TYPE MODAL
-            ===================================================== */}
-
             <LoanTypeModal
                 open={showLoanTypeModal}
-                application={selectedApplication}
+                application={
+                    selectedApplication
+                }
+                loanTypes={loanTypes}
                 onClose={
                     handleCloseLoanTypeModal
                 }
@@ -592,13 +863,11 @@ function PendingApplications() {
             />
 
 
-            {/* =====================================================
-                STATUS MODAL
-            ===================================================== */}
-
             <StatusModal
                 open={showStatusModal}
-                application={selectedApplication}
+                application={
+                    selectedApplication
+                }
                 onClose={
                     handleCloseStatusModal
                 }
@@ -608,13 +877,11 @@ function PendingApplications() {
             />
 
 
-            {/* =====================================================
-                REMINDER MODAL
-            ===================================================== */}
-
             <ReminderModal
                 open={showReminderModal}
-                application={selectedApplication}
+                application={
+                    selectedApplication
+                }
                 onClose={
                     handleCloseReminderModal
                 }
@@ -622,11 +889,8 @@ function PendingApplications() {
                     handleReminderSubmit
                 }
             />
-
-        </div>
-
+        </>
     )
-
 }
 
 

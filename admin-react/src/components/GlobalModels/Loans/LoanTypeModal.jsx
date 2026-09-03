@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
 
-
 function LoanTypeModal({
     open,
     application,
+    loanTypes = [],
     onClose,
     onSubmit,
 }) {
@@ -18,24 +18,20 @@ function LoanTypeModal({
     useEffect(() => {
 
         if (!open || !application) {
-
             setLoanType('')
-
             return
         }
 
-
         setLoanType(
-            application.loanType || ''
+            application.loanTypeId
+                ? String(application.loanTypeId)
+                : ''
         )
 
     }, [open, application])
-
-
     if (!open || !application) {
         return null
     }
-
 
     const handleSubmit = (event) => {
 
@@ -45,15 +41,20 @@ function LoanTypeModal({
             return
         }
 
-
         onSubmit?.({
-            ...application,
-            loanType,
+            applicationId: application.id,
+            loanTypeId: Number(loanType),
         })
-
     }
-
-
+    const currentLoanType =
+        loanTypes.find(
+            (loanType) =>
+                String(loanType.id) ===
+                String(
+                    application.loanTypeId ??
+                    application.loan_type_id
+                )
+        )?.name || 'N/A'
     return (
 
         <dialog
@@ -204,29 +205,26 @@ function LoanTypeModal({
 
                         </div>
 
-
                         {/* CURRENT LOAN TYPE */}
 
                         <div>
 
                             <p className="
-                                text-xs
-                                text-base-content/50
-                            ">
+                                    text-xs
+                                    text-base-content/50
+                                ">
                                 Current Loan Type
                             </p>
 
-
                             <p className="
-                                text-sm
-                                font-medium
-                                mt-1
-                            ">
-                                {application.loanType || 'N/A'}
+        text-sm
+        font-medium
+        mt-1
+    ">
+                                {currentLoanType}
                             </p>
 
                         </div>
-
 
                         {/* NEW LOAN TYPE */}
 
@@ -251,47 +249,29 @@ function LoanTypeModal({
                             <select
                                 value={loanType}
                                 onChange={(event) =>
-                                    setLoanType(
-                                        event.target.value
-                                    )
+                                    setLoanType(event.target.value)
                                 }
                                 className="
-                                    select
-                                    select-bordered
-                                    w-full
-                                    focus:border-[#8BCF00]
-                                    focus:outline-[#8BCF00]
-                                "
+                                        select
+                                        select-bordered
+                                        w-full
+                                        focus:border-[#8BCF00]
+                                        focus:outline-[#8BCF00]
+                                    "
                             >
-
                                 <option value="">
                                     Select Loan Type
                                 </option>
-
-                                <option value="Personal Loan">
-                                    Personal Loan
-                                </option>
-
-                                <option value="Home Loan">
-                                    Home Loan
-                                </option>
-
-                                <option value="Business Loan">
-                                    Business Loan
-                                </option>
-
-                                <option value="Vehicle Loan">
-                                    Vehicle Loan
-                                </option>
-
-                                <option value="Education Loan">
-                                    Education Loan
-                                </option>
-
+                                {loanTypes.map((loanTypeItem) => (
+                                    <option
+                                        key={loanTypeItem.id}
+                                        value={loanTypeItem.id}
+                                    >
+                                        {loanTypeItem.name}
+                                    </option>
+                                ))}
                             </select>
-
                         </div>
-
                     </div>
 
 

@@ -28,3 +28,13 @@ node_modules/
 # Python virtual environments
 .venv/
 venv/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Python cache
+__pycache__/
+*.py[cod]
