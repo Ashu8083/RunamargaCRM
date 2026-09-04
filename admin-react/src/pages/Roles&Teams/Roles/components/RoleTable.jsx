@@ -1,4 +1,4 @@
-// admin-react/src/pages/Roles/components/RoleTable.jsx
+// admin-react/src/pages/Roles&Teams/Roles/components/RoleTable.jsx
 
 import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
@@ -9,27 +9,111 @@ import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 
 function RoleTable({
     roles = [],
-    search,
+
+    search = '',
     setSearch,
-    showDeleted,
+
+    showDeleted = false,
     setShowDeleted,
+
+    loading = false,
+    deletingId = null,
+
     onCreate,
     onEdit,
     onDelete,
     onRefresh,
 }) {
 
+    /*
+    |--------------------------------------------------------------------------
+    | Filter Roles
+    |--------------------------------------------------------------------------
+    */
+
+    const searchValue = search.trim().toLowerCase()
+
+
     const filteredRoles = roles.filter((role) => {
+
+        /*
+         * Hide deleted roles unless "Show Deleted" is enabled.
+         */
 
         if (!showDeleted && role.deleted) {
             return false
         }
 
-        const searchValue = search.toLowerCase()
 
-        return role.name?.toLowerCase().includes(searchValue)
+        /*
+         * Search by:
+         *
+         * - Name
+         * - Code
+         * - Description
+         */
+
+        if (!searchValue) {
+            return true
+        }
+
+
+        return (
+            role.name
+                ?.toLowerCase()
+                .includes(searchValue) ||
+
+            role.code
+                ?.toLowerCase()
+                .includes(searchValue) ||
+
+            role.description
+                ?.toLowerCase()
+                .includes(searchValue)
+        )
     })
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Format Date
+    |--------------------------------------------------------------------------
+    */
+
+    const formatDate = (value) => {
+
+        if (!value || value === 'N/A') {
+            return 'N/A'
+        }
+
+
+        const date = new Date(value)
+
+
+        if (Number.isNaN(date.getTime())) {
+            return value
+        }
+
+
+        return date.toLocaleString(
+            'en-IN',
+            {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+            }
+        )
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Render
+    |--------------------------------------------------------------------------
+    */
 
     return (
         <div className="space-y-5">
@@ -44,7 +128,9 @@ function RoleTable({
 
                     <div className="flex flex-col xl:flex-row xl:items-center gap-3">
 
-                        {/* Search */}
+                        {/* =================================================
+                            Search Input
+                        ================================================= */}
 
                         <div className="flex-1">
 
@@ -56,10 +142,11 @@ function RoleTable({
                                     type="text"
                                     value={search}
                                     onChange={(event) =>
-                                        setSearch(event.target.value)
+                                        setSearch?.(event.target.value)
                                     }
-                                    placeholder="Search roles by name..."
+                                    placeholder="Search roles by name, code..."
                                     className="grow"
+                                    disabled={loading}
                                 />
 
                             </label>
@@ -67,7 +154,9 @@ function RoleTable({
                         </div>
 
 
-                        {/* Search */}
+                        {/* =================================================
+                            Search Button
+                        ================================================= */}
 
                         <button
                             type="button"
@@ -79,17 +168,23 @@ function RoleTable({
                                 hover:text-white
                             "
                         >
+
                             <SearchIcon className="w-5 h-5" />
+
                             Search
+
                         </button>
 
 
-                        {/* Clear */}
+                        {/* =================================================
+                            Clear
+                        ================================================= */}
 
                         <button
                             type="button"
-                            onClick={() => setSearch('')}
+                            onClick={() => setSearch?.('')}
                             className="btn btn-ghost"
+                            disabled={!search || loading}
                         >
                             Clear
                         </button>
@@ -98,11 +193,14 @@ function RoleTable({
                         <div className="hidden xl:block h-8 border-l border-base-300" />
 
 
-                        {/* Create */}
+                        {/* =================================================
+                            Create Role
+                        ================================================= */}
 
                         <button
                             type="button"
                             onClick={onCreate}
+                            disabled={loading}
                             className="
                                 btn
                                 border-[#8BCF00]
@@ -112,16 +210,22 @@ function RoleTable({
                                 hover:border-[#6FA800]
                             "
                         >
+
                             <PlusIcon className="w-5 h-5" />
+
                             Create Role
+
                         </button>
 
 
-                        {/* Refresh */}
+                        {/* =================================================
+                            Refresh
+                        ================================================= */}
 
                         <button
                             type="button"
                             onClick={onRefresh}
+                            disabled={loading}
                             className="
                                 btn
                                 border-[#8BCF00]
@@ -130,12 +234,22 @@ function RoleTable({
                                 hover:text-white
                             "
                         >
-                            <ArrowPathIcon className="w-5 h-5" />
+
+                            <ArrowPathIcon
+                                className={`
+                                    w-5 h-5
+                                    ${loading ? 'animate-spin' : ''}
+                                `}
+                            />
+
                             Refresh
+
                         </button>
 
 
-                        {/* Show Deleted */}
+                        {/* =================================================
+                            Show Deleted
+                        ================================================= */}
 
                         <label className="flex items-center gap-2 cursor-pointer px-2">
 
@@ -143,8 +257,11 @@ function RoleTable({
                                 type="checkbox"
                                 checked={showDeleted}
                                 onChange={(event) =>
-                                    setShowDeleted(event.target.checked)
+                                    setShowDeleted?.(
+                                        event.target.checked
+                                    )
                                 }
+                                disabled={loading}
                                 className="
                                     toggle
                                     toggle-sm
@@ -178,36 +295,41 @@ function RoleTable({
 
                     <table className="table">
 
+                        {/* =================================================
+                            Table Header
+                        ================================================= */}
+
                         <thead>
 
                             <tr>
-
-                                {/* Index */}
 
                                 <th className="w-16 text-center">
                                     #
                                 </th>
 
-
                                 <th>
                                     Name
                                 </th>
 
+                                <th>
+                                    Code
+                                </th>
+
+                                <th>
+                                    Description
+                                </th>
 
                                 <th>
                                     Status
                                 </th>
 
-
                                 <th>
-                                    Created
+                                    Created Date
                                 </th>
 
-
                                 <th>
-                                    Last Updated
+                                    Updated Date
                                 </th>
-
 
                                 <th className="text-right">
                                     Actions
@@ -218,15 +340,50 @@ function RoleTable({
                         </thead>
 
 
+                        {/* =================================================
+                            Table Body
+                        ================================================= */}
+
                         <tbody>
 
-                            {filteredRoles.length === 0 ? (
+                            {/* =================================================
+                                Loading
+                            ================================================= */}
+
+                            {loading ? (
 
                                 <tr>
 
                                     <td
-                                        colSpan="6"
-                                        className="text-center py-12"
+                                        colSpan="8"
+                                        className="text-center py-14"
+                                    >
+
+                                        <div className="flex flex-col items-center justify-center gap-3">
+
+                                            <span className="loading loading-spinner loading-md text-[#8BCF00]" />
+
+                                            <p className="text-sm text-base-content/60">
+                                                Loading roles...
+                                            </p>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+
+                            ) : filteredRoles.length === 0 ? (
+
+                                /* =============================================
+                                    Empty State
+                                ============================================= */
+
+                                <tr>
+
+                                    <td
+                                        colSpan="8"
+                                        className="text-center py-14"
                                     >
 
                                         <p className="text-sm font-medium">
@@ -234,7 +391,10 @@ function RoleTable({
                                         </p>
 
                                         <p className="text-xs text-base-content/50 mt-1">
-                                            Try changing your search or create a new role.
+                                            {search
+                                                ? 'Try changing your search.'
+                                                : 'Create a new role to get started.'
+                                            }
                                         </p>
 
                                     </td>
@@ -243,11 +403,24 @@ function RoleTable({
 
                             ) : (
 
+                                /* =============================================
+                                    Roles
+                                ============================================= */
+
                                 filteredRoles.map((role, index) => (
 
-                                    <tr key={role.id}>
+                                    <tr
+                                        key={role.id}
+                                        className={
+                                            role.deleted
+                                                ? 'opacity-70'
+                                                : ''
+                                        }
+                                    >
 
-                                        {/* Index */}
+                                        {/* =================================
+                                            Index
+                                        ================================= */}
 
                                         <td className="text-center">
 
@@ -258,82 +431,195 @@ function RoleTable({
                                         </td>
 
 
-                                        {/* Name */}
+                                        {/* =================================
+                                            Name
+                                        ================================= */}
 
                                         <td>
 
-                                            <span className="font-semibold">
-                                                {role.name}
+                                            <span className="font-semibold whitespace-nowrap">
+                                                {role.name || 'N/A'}
                                             </span>
 
                                         </td>
 
 
-                                        {/* Status */}
+                                        {/* =================================
+                                            Code
+                                        ================================= */}
 
                                         <td>
 
-                                            <span
-                                                className={`
+                                            <code
+                                                className="
                                                     inline-flex
                                                     items-center
-                                                    px-3
-                                                    py-1
-                                                    rounded-full
+                                                    rounded-md
                                                     border
+                                                    border-base-300
+                                                    bg-base-200
+                                                    px-2.5
+                                                    py-1
                                                     text-xs
-                                                    font-medium
-                                                    ${
-                                                        role.deleted
-                                                            ? 'text-error border-error/30 bg-error/5'
-                                                            : 'text-[#78B300] border-[#8BCF00]/50 bg-[#8BCF00]/10'
-                                                    }
-                                                `}
+                                                    font-semibold
+                                                    tracking-wide
+                                                    whitespace-nowrap
+                                                "
                                             >
+                                                {role.code || 'N/A'}
+                                            </code>
 
-                                                {role.deleted
-                                                    ? 'Deleted'
-                                                    : 'Active'
+                                        </td>
+
+
+                                        {/* =================================
+                                            Description
+                                        ================================= */}
+
+                                        <td>
+
+                                            <div
+                                                className="
+                                                    max-w-xs
+                                                    truncate
+                                                    text-sm
+                                                    text-base-content/70
+                                                "
+                                                title={
+                                                    role.description ||
+                                                    ''
                                                 }
-
-                                            </span>
+                                            >
+                                                {role.description || 'N/A'}
+                                            </div>
 
                                         </td>
 
 
-                                        {/* Created */}
+                                        {/* =================================
+                                            Status
+                                        ================================= */}
 
                                         <td>
 
-                                            <span className="whitespace-nowrap">
-                                                {role.createdAt || 'N/A'}
-                                            </span>
+                                            {role.deleted ? (
+
+                                                <span
+                                                    className="
+                                                        inline-flex
+                                                        items-center
+                                                        px-3
+                                                        py-1
+                                                        rounded-full
+                                                        border
+                                                        text-xs
+                                                        font-medium
+                                                        text-error
+                                                        border-error/30
+                                                        bg-error/5
+                                                    "
+                                                >
+                                                    Deleted
+                                                </span>
+
+                                            ) : role.active ? (
+
+                                                <span
+                                                    className="
+                                                        inline-flex
+                                                        items-center
+                                                        px-3
+                                                        py-1
+                                                        rounded-full
+                                                        border
+                                                        text-xs
+                                                        font-medium
+                                                        text-[#78B300]
+                                                        border-[#8BCF00]/50
+                                                        bg-[#8BCF00]/10
+                                                    "
+                                                >
+                                                    Active
+                                                </span>
+
+                                            ) : (
+
+                                                <span
+                                                    className="
+                                                        inline-flex
+                                                        items-center
+                                                        px-3
+                                                        py-1
+                                                        rounded-full
+                                                        border
+                                                        text-xs
+                                                        font-medium
+                                                        text-base-content/60
+                                                        border-base-300
+                                                        bg-base-200
+                                                    "
+                                                >
+                                                    Inactive
+                                                </span>
+
+                                            )}
 
                                         </td>
 
 
-                                        {/* Updated */}
+                                        {/* =================================
+                                            Created Date
+                                        ================================= */}
 
                                         <td>
 
-                                            <span className="whitespace-nowrap">
-                                                {role.updatedAt || 'N/A'}
+                                            <span className="whitespace-nowrap text-sm">
+                                                {formatDate(
+                                                    role.createdAt
+                                                )}
                                             </span>
 
                                         </td>
 
 
-                                        {/* Actions */}
+                                        {/* =================================
+                                            Updated Date
+                                        ================================= */}
+
+                                        <td>
+
+                                            <span className="whitespace-nowrap text-sm">
+                                                {formatDate(
+                                                    role.updatedAt
+                                                )}
+                                            </span>
+
+                                        </td>
+
+
+                                        {/* =================================
+                                            Actions
+                                        ================================= */}
 
                                         <td>
 
                                             <div className="flex items-center justify-end gap-1">
 
+                                                {/* =========================
+                                                    Edit
+                                                ========================= */}
+
                                                 {!role.deleted && (
 
                                                     <button
                                                         type="button"
-                                                        onClick={() => onEdit?.(role)}
+                                                        onClick={() =>
+                                                            onEdit?.(role)
+                                                        }
+                                                        disabled={
+                                                            deletingId ===
+                                                            role.id
+                                                        }
                                                         className="
                                                             btn
                                                             btn-ghost
@@ -352,11 +638,21 @@ function RoleTable({
                                                 )}
 
 
+                                                {/* =========================
+                                                    Delete
+                                                ========================= */}
+
                                                 {!role.deleted && (
 
                                                     <button
                                                         type="button"
-                                                        onClick={() => onDelete?.(role)}
+                                                        onClick={() =>
+                                                            onDelete?.(role)
+                                                        }
+                                                        disabled={
+                                                            deletingId ===
+                                                            role.id
+                                                        }
                                                         className="
                                                             btn
                                                             btn-ghost
@@ -368,7 +664,16 @@ function RoleTable({
                                                         title="Delete role"
                                                     >
 
-                                                        <TrashIcon className="w-5 h-5" />
+                                                        {deletingId ===
+                                                        role.id ? (
+
+                                                            <span className="loading loading-spinner loading-sm" />
+
+                                                        ) : (
+
+                                                            <TrashIcon className="w-5 h-5" />
+
+                                                        )}
 
                                                     </button>
 
@@ -395,5 +700,6 @@ function RoleTable({
         </div>
     )
 }
+
 
 export default RoleTable
