@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getActiveContext } from '../../../app/auth'
 
 import ApplicationsTable from './components/ApplicationsTable'
@@ -18,6 +19,7 @@ import {
 } from '../../../services/commonservice'
 
 function Applications() {
+    const navigate = useNavigate()
     const {
         showSuccess,
         showError,
@@ -275,8 +277,9 @@ function Applications() {
                         application.loanType,
 
                     status:
-                        application.status || '',
-
+                        application.reverted_reason
+                            ? 'Revert Rejected'
+                            : application.status || '',
                     appliedDate:
                         application.applied_date || '',
 
@@ -291,9 +294,20 @@ function Applications() {
 
                     docsPendingDate:
                         application.docspending_date,
-
                     revertedStatus:
                         application.reverted_status,
+
+                    revertedReason:
+                        application.reverted_reason ?? '',
+
+                    revertedDate:
+                        application.reverted_date ?? null,
+
+                    revertedByName:
+                        application.reverted_by_name ?? '',
+
+                    revertedByRole:
+                        application.reverted_by_role ?? '',
 
                     stateId:
                         application.state_id,
@@ -630,12 +644,15 @@ function Applications() {
                 // =================================================
 
                 if (selectedStatus) {
-
                     const applicationStatus =
                         normalizeStatus(
                             application.status
-                        )
-
+                        ) === 'Rejected' &&
+                            application.revertedReason
+                            ? 'Revert Rejected'
+                            : normalizeStatus(
+                                application.status
+                            )
                     if (
                         applicationStatus !==
                         selectedStatus
@@ -841,6 +858,8 @@ function Applications() {
 
             handleCloseStatusModal()
 
+            await fetchApplications()
+
             showSuccess(
                 isRevertRejected
                     ? 'Application rejection reverted successfully'
@@ -920,9 +939,8 @@ function Applications() {
 
     const handleViewApplication = (application) => {
 
-        console.log(
-            'View Application:',
-            application
+        navigate(
+            `/crm/view-application/${application.id}`
         )
 
     }
@@ -938,7 +956,7 @@ function Applications() {
             'Open Application Chat:',
             {
                 loanId:
-                    application.loanId ||
+                    application.unique_id ||
                     application.id,
 
                 agentId:

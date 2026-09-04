@@ -36,7 +36,7 @@ function LoanTypeDropdown({
                 setError('')
 
                 const response = await fetch(
-                    `${API_BASE_URL}/loan-types`,
+                    `${API_BASE_URL}/common/loan-types`,
                     {
                         method: 'GET',
                         credentials: 'include',
