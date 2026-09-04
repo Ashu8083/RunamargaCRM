@@ -74,6 +74,7 @@ def verify_otp(
                 "email": employee.email,
                 "role": employee.role.name if employee.role else None,
                 "contexts": contexts,
+                "token": access_token,
             },
         }
 
