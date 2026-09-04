@@ -2,6 +2,7 @@ from fastapi import Depends, APIRouter
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.dependency.get_access_control_dependency import check_permission
 
 from app.schemas.bank_schema import (
     BankCreateRequest,
@@ -24,6 +25,7 @@ router = APIRouter(
     responses={
         404: {"description": "Not found"}
     },
+
 )
 
 
@@ -33,6 +35,7 @@ router = APIRouter(
 )
 def create_bank(
     bank_data: BankCreateRequest,
+    employee=Depends(check_permission("banks:create")),
     db: Session = Depends(get_db),
     # employee: Employee = Depends(get_current_employee),
 ):
@@ -49,13 +52,13 @@ def create_bank(
 )
 def filter_search_banks(
     bank_filter: BankFilterSearchRequest = Depends(),
+    employee=Depends(check_permission("banks:create")),
     db: Session = Depends(get_db),
-    # employee: Employee = Depends(get_current_employee),
+
 ):
     return filter_bank_search_controller(
         db_session=db,
         bank_search_filter=bank_filter,
-        # employee=employee,
     )
 
 
@@ -65,6 +68,7 @@ def filter_search_banks(
 )
 def update_bank(
     bank_data: UpdateBankRequest,
+    employee=Depends(check_permission("banks:create")),
     db: Session = Depends(get_db),
     # employee: Employee = Depends(get_current_employee),
 ):
@@ -81,6 +85,7 @@ def update_bank(
 )
 def delete_bank(
     bank_id: int,
+    employee=Depends(check_permission("banks:create")),
     db: Session = Depends(get_db),
     # employee: Employee = Depends(get_current_employee),
 ):
