@@ -1,136 +1,172 @@
-import React, { useEffect, useState } from 'react'
+// admin-react/src/components/GlobalModels/Filters/LoanTypeDropdown.jsx
+
+import { useEffect, useState } from 'react'
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'
 import { API_BASE_URL } from '../../../config/url'
 
+const LoanTypeDropdown = ({
+  value = '',
+  onChange,
+  placeholder = 'Select Loan Type',
+  disabled = false,
+  className = '',
+  label = '',
+  error = '',
+  required = false,
+  onOptionsLoaded,
+}) => {
+  const [loanTypes, setLoanTypes] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [fetchError, setFetchError] = useState('')
 
-function LoanTypeDropdown({
-    label = 'Loan Type',
-    value = '',
-    onChange,
-    options,
-    placeholder = 'Select loan type',
-    searchPlaceholder = 'Search loan type',
-    emptyMessage = 'No loan types found',
-    ...props
-}) {
+  useEffect(() => {
+    let isMounted = true
 
-    const [loanTypes, setLoanTypes] = useState([])
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState('')
+    const fetchLoanTypes = async () => {
+      setLoading(true)
+      setFetchError('')
 
+      try {
+        const response = await fetch(`${API_BASE_URL}/loan-types`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
 
-    // =============================================================
-    // FETCH LOAN TYPES
-    // =============================================================
-
-    useEffect(() => {
-
-        let isMounted = true
-
-        const fetchLoanTypes = async () => {
-
-            try {
-
-                setLoading(true)
-                setError('')
-
-                const response = await fetch(
-                    `${API_BASE_URL}/common/loan-types`,
-                    {
-                        method: 'GET',
-                        credentials: 'include',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                    }
-                )
-
-                if (!response.ok) {
-                    throw new Error(
-                        `Failed to fetch loan types (${response.status})`
-                    )
-                }
-
-                const data = await response.json()
-
-                if (!isMounted) {
-                    return
-                }
-
-                const formattedLoanTypes = Array.isArray(data)
-                    ? data.map((loanType) => ({
-                        id: Number(loanType.id),
-                        name: loanType.name,
-                    }))
-                    : []
-
-                setLoanTypes(formattedLoanTypes)
-
-            } catch (err) {
-
-                console.error(
-                    'Failed to fetch loan types:',
-                    err
-                )
-
-                if (isMounted) {
-                    setError('Unable to load loan types')
-                    setLoanTypes([])
-                }
-
-            } finally {
-
-                if (isMounted) {
-                    setLoading(false)
-                }
-
-            }
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch loan types (${response.status})`
+          )
         }
 
-        fetchLoanTypes()
+        const data = await response.json()
 
-        return () => {
-            isMounted = false
+        /*
+         * Only use loan types returned by the backend.
+         *
+         * Backend response:
+         * [
+         *   { id: 1, name: 'Personal' },
+         *   { id: 2, name: 'Business' },
+         *   { id: 3, name: 'Home' },
+         *   { id: 4, name: 'LAP' },
+         *   { id: 5, name: 'Education' },
+         *   { id: 6, name: 'Car' },
+         *   { id: 7, name: 'Gold' },
+         *   { id: 8, name: 'Credit Card' },
+         *   { id: 9, name: 'Agricultural' }
+         * ]
+         */
+
+        const formattedLoanTypes = Array.isArray(data)
+          ? data
+              .filter(
+                (loanType) =>
+                  loanType &&
+                  loanType.id !== undefined &&
+                  loanType.id !== null &&
+                  loanType.name
+              )
+              .map((loanType) => ({
+                id: Number(loanType.id),
+                name: loanType.name,
+              }))
+          : []
+
+        if (!isMounted) return
+
+        setLoanTypes(formattedLoanTypes)
+
+        if (typeof onOptionsLoaded === 'function') {
+          onOptionsLoaded(formattedLoanTypes)
+        }
+      } catch (error) {
+        if (!isMounted) return
+
+        console.error('Failed to fetch loan types:', error)
+
+        setLoanTypes([])
+        setFetchError('Unable to load loan types.')
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchLoanTypes()
+
+    return () => {
+      isMounted = false
+    }
+  }, [onOptionsLoaded])
+
+  /*
+   * SearchableFilterDropdown returns:
+   *
+   * onChange(value, originalOption)
+   *
+   * Example:
+   * onChange(3, {
+   *   id: 3,
+   *   name: 'Home'
+   * })
+   */
+  const handleChange = (selectedValue, selectedOption) => {
+    if (typeof onChange === 'function') {
+      onChange(selectedValue, selectedOption)
+    }
+  }
+
+  const dropdownError = error || fetchError
+
+  return (
+    <div className={`w-full ${className}`}>
+      {label && (
+        <label className="mb-1.5 block text-sm font-medium text-base-content">
+          {label}
+
+          {required && (
+            <span className="ml-1 text-error">
+              *
+            </span>
+          )}
+        </label>
+      )}
+
+      <SearchableFilterDropdown
+        value={value}
+        options={loanTypes}
+        onChange={handleChange}
+
+        /* Same design, but no ALL option */
+        includeAllOption={false}
+
+        /* Fix "Search undefined" */
+        searchPlaceholder="Search Loan Type"
+
+        placeholder={
+          loading
+            ? 'Loading Loan Types...'
+            : placeholder
         }
 
-    }, [])
+        disabled={disabled || loading}
 
+        getOptionValue={(option) => option.id}
+        getOptionLabel={(option) => option.name}
+      />
 
-    // =============================================================
-    // OPTIONS
-    // =============================================================
-
-    const dropdownOptions = options ?? loanTypes
-
-
-    // =============================================================
-    // COMPONENT
-    // =============================================================
-
-    return (
-
-        <SearchableFilterDropdown
-            label={label}
-            value={value}
-            onChange={onChange}
-            options={dropdownOptions}
-            placeholder={
-                loading
-                    ? 'Loading loan types...'
-                    : error
-                        ? error
-                        : placeholder
-            }
-            searchPlaceholder={searchPlaceholder}
-            emptyMessage={emptyMessage}
-            disabled={loading || !!error}
-            {...props}
-        />
-
-    )
-
+      {dropdownError && (
+        <p className="mt-1 text-xs text-error">
+          {dropdownError}
+        </p>
+      )}
+    </div>
+  )
 }
-
 
 export default LoanTypeDropdown

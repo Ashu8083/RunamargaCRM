@@ -6,84 +6,7 @@ import { createPortal } from 'react-dom'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 
-
-/*
-|--------------------------------------------------------------------------
-| DEFAULT STATES
-|--------------------------------------------------------------------------
-*/
-
-const DEFAULT_STATES = [
-    { id: 1, name: 'Andhra Pradesh' },
-    { id: 2, name: 'Arunachal Pradesh' },
-    { id: 3, name: 'Assam' },
-    { id: 4, name: 'Bihar' },
-    { id: 5, name: 'Chhattisgarh' },
-    { id: 6, name: 'Goa' },
-    { id: 7, name: 'Gujarat' },
-    { id: 8, name: 'Haryana' },
-    { id: 9, name: 'Himachal Pradesh' },
-    { id: 10, name: 'Jharkhand' },
-    { id: 11, name: 'Karnataka' },
-    { id: 12, name: 'Kerala' },
-    { id: 13, name: 'Madhya Pradesh' },
-    { id: 14, name: 'Maharashtra' },
-    { id: 15, name: 'Manipur' },
-    { id: 16, name: 'Meghalaya' },
-    { id: 17, name: 'Mizoram' },
-    { id: 18, name: 'Nagaland' },
-    { id: 19, name: 'Odisha' },
-    { id: 20, name: 'Punjab' },
-    { id: 21, name: 'Rajasthan' },
-    { id: 22, name: 'Sikkim' },
-    { id: 23, name: 'Tamil Nadu' },
-    { id: 24, name: 'Telangana' },
-    { id: 25, name: 'Tripura' },
-    { id: 26, name: 'Uttar Pradesh' },
-    { id: 27, name: 'Uttarakhand' },
-    { id: 28, name: 'West Bengal' },
-]
-
-
-/*
-|--------------------------------------------------------------------------
-| DEFAULT CITIES
-|--------------------------------------------------------------------------
-*/
-
-const DEFAULT_CITIES = [
-    // Karnataka
-    { id: 101, stateId: 11, name: 'Bengaluru' },
-    { id: 102, stateId: 11, name: 'Mysuru' },
-    { id: 103, stateId: 11, name: 'Mangaluru' },
-    { id: 104, stateId: 11, name: 'Hubballi' },
-    { id: 105, stateId: 11, name: 'Belagavi' },
-
-    // Maharashtra
-    { id: 201, stateId: 14, name: 'Mumbai' },
-    { id: 202, stateId: 14, name: 'Pune' },
-    { id: 203, stateId: 14, name: 'Nagpur' },
-    { id: 204, stateId: 14, name: 'Nashik' },
-
-    // Tamil Nadu
-    { id: 301, stateId: 23, name: 'Chennai' },
-    { id: 302, stateId: 23, name: 'Coimbatore' },
-    { id: 303, stateId: 23, name: 'Madurai' },
-
-    // Telangana
-    { id: 401, stateId: 24, name: 'Hyderabad' },
-    { id: 402, stateId: 24, name: 'Warangal' },
-
-    // Kerala
-    { id: 501, stateId: 12, name: 'Kochi' },
-    { id: 502, stateId: 12, name: 'Thiruvananthapuram' },
-    { id: 503, stateId: 12, name: 'Kozhikode' },
-
-    // Uttar Pradesh
-    { id: 601, stateId: 26, name: 'Lucknow' },
-    { id: 602, stateId: 26, name: 'Noida' },
-    { id: 603, stateId: 26, name: 'Kanpur' },
-]
+import { API_BASE_URL } from '../../../config/url'
 
 
 /*
@@ -757,9 +680,24 @@ function StateCityDropdown({
 
 
     /*
-     * --------------------------------------------------------------
+     * ==============================================================
+     * API DATA
+     * ==============================================================
+     */
+
+    const [apiStates, setApiStates] = useState([])
+
+    const [apiCities, setApiCities] = useState([])
+
+    const [statesLoading, setStatesLoading] = useState(false)
+
+    const [citiesLoading, setCitiesLoading] = useState(false)
+
+
+    /*
+     * ==============================================================
      * SYNC STATE FROM PARENT
-     * --------------------------------------------------------------
+     * ==============================================================
      */
 
     useEffect(() => {
@@ -772,9 +710,9 @@ function StateCityDropdown({
 
 
     /*
-     * --------------------------------------------------------------
+     * ==============================================================
      * SYNC CITY FROM PARENT
-     * --------------------------------------------------------------
+     * ==============================================================
      */
 
     useEffect(() => {
@@ -787,9 +725,221 @@ function StateCityDropdown({
 
 
     /*
-     * --------------------------------------------------------------
+     * ==============================================================
+     * FETCH STATES
+     * ==============================================================
+     *
+     * Only used when states are not supplied through props.
+     */
+
+    useEffect(() => {
+
+        /*
+         * If parent already provides states,
+         * don't make an unnecessary API request.
+         */
+        if (
+            Array.isArray(states) &&
+            states.length > 0
+        ) {
+            return
+        }
+
+
+        let cancelled = false
+
+
+        const fetchStates = async () => {
+
+            setStatesLoading(true)
+
+            try {
+
+                const response = await fetch(
+                    `${API_BASE_URL}/states`,
+                    {
+                        credentials: 'include',
+                    }
+                )
+
+
+                if (!response.ok) {
+                    throw new Error(
+                        `Failed to fetch states: ${response.status}`
+                    )
+                }
+
+
+                const data =
+                    await response.json()
+
+
+                if (!cancelled) {
+
+                    setApiStates(
+                        Array.isArray(data)
+                            ? data
+                            : []
+                    )
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    'Failed to fetch states:',
+                    error
+                )
+
+                if (!cancelled) {
+                    setApiStates([])
+                }
+
+            } finally {
+
+                if (!cancelled) {
+                    setStatesLoading(false)
+                }
+
+            }
+
+        }
+
+
+        fetchStates()
+
+
+        return () => {
+            cancelled = true
+        }
+
+    }, [states])
+
+
+    /*
+     * ==============================================================
+     * FETCH CITIES
+     * ==============================================================
+     *
+     * If cities are supplied through props, the existing prop data
+     * is used and no API request is made.
+     *
+     * Otherwise cities are fetched specifically for the selected
+     * state.
+     */
+
+    useEffect(() => {
+
+        /*
+         * No state selected.
+         *
+         * City dropdown should remain empty.
+         */
+        if (!selectedState) {
+
+            setApiCities([])
+
+            setCitiesLoading(false)
+
+            return
+        }
+
+
+        /*
+         * Parent already supplies cities.
+         *
+         * Keep existing functionality and don't fetch again.
+         */
+        if (
+            Array.isArray(cities) &&
+            cities.length > 0
+        ) {
+            return
+        }
+
+
+        let cancelled = false
+
+
+        const fetchCities = async () => {
+
+            setCitiesLoading(true)
+
+            try {
+
+                const response = await fetch(
+                    `${API_BASE_URL}/cities?state_id=${encodeURIComponent(selectedState)}`,
+                    {
+                        credentials: 'include',
+                    }
+                )
+
+
+                if (!response.ok) {
+                    throw new Error(
+                        `Failed to fetch cities: ${response.status}`
+                    )
+                }
+
+
+                const data =
+                    await response.json()
+
+
+                if (!cancelled) {
+
+                    setApiCities(
+                        Array.isArray(data)
+                            ? data
+                            : []
+                    )
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    'Failed to fetch cities:',
+                    error
+                )
+
+                if (!cancelled) {
+                    setApiCities([])
+                }
+
+            } finally {
+
+                if (!cancelled) {
+                    setCitiesLoading(false)
+                }
+
+            }
+
+        }
+
+
+        fetchCities()
+
+
+        return () => {
+            cancelled = true
+        }
+
+    }, [
+        selectedState,
+        cities,
+    ])
+
+
+    /*
+     * ==============================================================
      * STATES
-     * --------------------------------------------------------------
+     * ==============================================================
+     *
+     * Priority:
+     *
+     * 1. Props
+     * 2. Backend API
      */
 
     const stateOptions = useMemo(() => {
@@ -801,15 +951,24 @@ function StateCityDropdown({
             return states
         }
 
-        return DEFAULT_STATES
 
-    }, [states])
+        return apiStates
+
+    }, [
+        states,
+        apiStates,
+    ])
 
 
     /*
-     * --------------------------------------------------------------
+     * ==============================================================
      * CITIES
-     * --------------------------------------------------------------
+     * ==============================================================
+     *
+     * Priority:
+     *
+     * 1. Props
+     * 2. Backend API
      */
 
     const cityOptions = useMemo(() => {
@@ -821,15 +980,24 @@ function StateCityDropdown({
             return cities
         }
 
-        return DEFAULT_CITIES
 
-    }, [cities])
+        return apiCities
+
+    }, [
+        cities,
+        apiCities,
+    ])
 
 
     /*
-     * --------------------------------------------------------------
+     * ==============================================================
      * FILTER CITIES BY SELECTED STATE
-     * --------------------------------------------------------------
+     * ==============================================================
+     *
+     * This is intentionally kept.
+     *
+     * It preserves the original functionality even when a parent
+     * passes the complete cities array through props.
      */
 
     const filteredCities = useMemo(() => {
@@ -854,9 +1022,9 @@ function StateCityDropdown({
 
 
     /*
-     * --------------------------------------------------------------
+     * ==============================================================
      * STATE CHANGE
-     * --------------------------------------------------------------
+     * ==============================================================
      */
 
     const handleStateChange = (value) => {
@@ -864,16 +1032,24 @@ function StateCityDropdown({
         /*
          * Update local state FIRST.
          *
-         * This is the important fix.
+         * This keeps the dropdown immediately responsive.
          */
         setSelectedState(value)
 
 
         /*
-         * State changed,
-         * so city must be cleared.
+         * Clear currently selected city.
          */
         setSelectedCity('')
+
+
+        /*
+         * Clear old API cities immediately.
+         *
+         * The new city's API request will happen from the
+         * selectedState useEffect above.
+         */
+        setApiCities([])
 
 
         /*
@@ -887,9 +1063,9 @@ function StateCityDropdown({
 
 
     /*
-     * --------------------------------------------------------------
+     * ==============================================================
      * CITY CHANGE
-     * --------------------------------------------------------------
+     * ==============================================================
      */
 
     const handleCityChange = (value) => {
@@ -909,9 +1085,9 @@ function StateCityDropdown({
 
 
     /*
-     * --------------------------------------------------------------
+     * ==============================================================
      * RENDER
-     * --------------------------------------------------------------
+     * ==============================================================
      */
 
     return (
@@ -939,7 +1115,11 @@ function StateCityDropdown({
 
                 onChange={handleStateChange}
 
-                placeholder={statePlaceholder}
+                placeholder={
+                    statesLoading
+                        ? 'Loading States...'
+                        : statePlaceholder
+                }
 
                 searchPlaceholder={
                     stateSearchPlaceholder
@@ -948,10 +1128,15 @@ function StateCityDropdown({
                 allLabel={allStatesLabel}
 
                 emptyMessage={
-                    stateEmptyMessage
+                    statesLoading
+                        ? 'Loading states...'
+                        : stateEmptyMessage
                 }
 
-                disabled={disabled}
+                disabled={
+                    disabled ||
+                    statesLoading
+                }
 
             />
 
@@ -969,9 +1154,11 @@ function StateCityDropdown({
                 onChange={handleCityChange}
 
                 placeholder={
-                    selectedState
-                        ? cityPlaceholder
-                        : 'Select State First'
+                    !selectedState
+                        ? 'Select State First'
+                        : citiesLoading
+                            ? 'Loading Cities...'
+                            : cityPlaceholder
                 }
 
                 searchPlaceholder={
@@ -981,14 +1168,17 @@ function StateCityDropdown({
                 allLabel={allCitiesLabel}
 
                 emptyMessage={
-                    selectedState
-                        ? cityEmptyMessage
-                        : 'Select State First'
+                    !selectedState
+                        ? 'Select State First'
+                        : citiesLoading
+                            ? 'Loading cities...'
+                            : cityEmptyMessage
                 }
 
                 disabled={
                     disabled ||
-                    !selectedState
+                    !selectedState ||
+                    citiesLoading
                 }
 
             />

@@ -15,25 +15,41 @@ import StateCityDropdown from '../../../../../components/GlobalModels/Filters/St
 import LoanTypeDropdown from '../../../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
 import { createLoanApplication } from './API'
+import {
+  LOAN_TYPE_CONFIG,
+  getExtraFieldsForLoanType,
+} from './LoanApplicationFields'
 
 // =============================================================
 // INITIAL FORM
 // =============================================================
 
-const INITIAL_FORM = {
-  rm_id: '',
-  state_id: '',
-  city_id: '',
-  loan_type_id: '',
-  name: '',
-  phone: '',
-  loan_amount: '',
-  credit_score: '',
-  reference_name: '',
-  loan_purpose: '',
-  remarks: '',
-  gender: '',
+const createInitialForm = () => {
+  const form = {
+    rm_id: '',
+    state_id: '',
+    city_id: '',
+    loan_type_id: '',
+    name: '',
+    phone: '',
+    loan_amount: '',
+    credit_score: '',
+    reference_name: '',
+    loan_purpose: '',
+    remarks: '',
+    gender: '',
+  }
+
+  Object.values(LOAN_TYPE_CONFIG).forEach((config) => {
+    ;(config.extraFields || []).forEach((field) => {
+      form[field.name] = field.defaultValue ?? ''
+    })
+  })
+
+  return form
 }
+
+const INITIAL_FORM = createInitialForm()
 
 // =============================================================
 // GENDER OPTIONS
@@ -74,6 +90,10 @@ function ApplicationForm({
 
   const [submitting, setSubmitting] = useState(false)
 
+  const [loanTypeOptions, setLoanTypeOptions] = useState([])
+
+  const [selectedLoanType, setSelectedLoanType] = useState(null)
+
   const [notification, setNotification] = useState(null)
 
   // ===========================================================
@@ -104,6 +124,42 @@ function ApplicationForm({
       typeof value === 'string'
         ? value.trim()
         : value
+
+    const extraField = getExtraFieldsForLoanType(
+      selectedLoanType?.name
+    ).find((fieldConfig) => fieldConfig.name === field)
+
+    if (extraField) {
+      if (extraField.required && !trimmedValue) {
+        return `${extraField.label} is required.`
+      }
+
+      if (
+        trimmedValue &&
+        extraField.minLength &&
+        String(trimmedValue).length < extraField.minLength
+      ) {
+        return `${extraField.label} must contain at least ${extraField.minLength} characters.`
+      }
+
+      if (
+        trimmedValue &&
+        extraField.maxLength &&
+        String(trimmedValue).length > extraField.maxLength
+      ) {
+        return `${extraField.label} cannot exceed ${extraField.maxLength} characters.`
+      }
+
+      if (
+        extraField.pattern &&
+        trimmedValue &&
+        !extraField.pattern.test(String(trimmedValue))
+      ) {
+        return extraField.patternMessage || `Enter a valid ${extraField.label.toLowerCase()}.`
+      }
+
+      return ''
+    }
 
     switch (field) {
 
@@ -428,17 +484,74 @@ function ApplicationForm({
   // HANDLE LOAN TYPE CHANGE
   // ===========================================================
 
-  const handleLoanTypeChange = (value) => {
+  const handleLoanTypeChange = (value, selectedOption) => {
 
-    setFormData((previous) => ({
-      ...previous,
-      loan_type_id: value,
-    }))
+    const selected =
+      selectedOption ||
+      loanTypeOptions.find(
+        (loanType) =>
+          Number(loanType.id) === Number(value)
+      )
 
-    setTouched((previous) => ({
-      ...previous,
-      loan_type_id: true,
-    }))
+    const extraFields = getExtraFieldsForLoanType(
+      selected?.name
+    )
+
+    const extraFieldNames = new Set(
+      Object.values(LOAN_TYPE_CONFIG).flatMap(
+        (config) =>
+          (config.extraFields || []).map(
+            (field) => field.name
+          )
+      )
+    )
+
+    setSelectedLoanType(selected || null)
+
+    setFormData((previous) => {
+      const updated = {
+        ...previous,
+        loan_type_id: value,
+      }
+
+      extraFieldNames.forEach((fieldName) => {
+        updated[fieldName] = ''
+      })
+
+      extraFields.forEach((field) => {
+        updated[field.name] =
+          field.defaultValue ?? ''
+      })
+
+      return updated
+    })
+
+    setTouched((previous) => {
+      const updated = {
+        ...previous,
+        loan_type_id: true,
+      }
+
+      extraFieldNames.forEach((fieldName) => {
+        updated[fieldName] = false
+      })
+
+      return updated
+    })
+
+    setErrors((previous) => {
+      const updated = {
+        ...previous,
+      }
+
+      delete updated.loan_type_id
+
+      extraFieldNames.forEach((fieldName) => {
+        delete updated[fieldName]
+      })
+
+      return updated
+    })
 
     updateFieldError(
       'loan_type_id',
@@ -620,6 +733,8 @@ function ApplicationForm({
       ...INITIAL_FORM,
     })
 
+    setSelectedLoanType(null)
+
     setErrors({})
 
     setTouched({})
@@ -696,6 +811,19 @@ function ApplicationForm({
 
         gender:
           formData.gender,
+
+        ...getExtraFieldsForLoanType(
+          selectedLoanType?.name
+        ).reduce((result, field) => {
+          const value = formData[field.name]
+
+          result[field.name] =
+            typeof value === 'string'
+              ? value.trim()
+              : value ?? null
+
+          return result
+        }, {}),
 
       }
 
@@ -961,6 +1089,119 @@ function ApplicationForm({
   }
 
   // ===========================================================
+  // LOAN TYPE EXTRA FIELD RENDERER
+  // ===========================================================
+
+  const renderExtraField = (field) => {
+    const value = formData[field.name] ?? ''
+    const fieldError = errors[field.name]
+    const fieldTouched = touched[field.name]
+    const type = field.type || 'text'
+
+    const commonProps = {
+      name: field.name,
+      value,
+      onChange: handleChange,
+      onBlur: handleBlur,
+      placeholder: field.placeholder || `Enter ${field.label.toLowerCase()}`,
+      maxLength: field.maxLength,
+      className: getInputClass(field.name),
+    }
+
+    return (
+      <div
+        key={field.name}
+        className={field.fullWidth ? 'min-w-0 lg:col-span-2' : 'min-w-0'}
+      >
+        <label
+          className="
+            mb-1.5
+            block
+            text-xs
+            font-medium
+            text-base-content
+          "
+        >
+          {field.label}
+
+          {field.required && (
+            <span className="ml-1 text-error">*</span>
+          )}
+        </label>
+
+        {type === 'textarea' ? (
+          <textarea
+            {...commonProps}
+            rows={field.rows || 3}
+            className={`
+              textarea
+              textarea-bordered
+              min-h-[90px]
+              w-full
+              resize-y
+              rounded-md
+              bg-base-100
+              text-sm
+              placeholder:text-base-content/35
+              focus:border-[#8BCF00]
+              focus:outline-none
+              focus:ring-1
+              focus:ring-[#8BCF00]/30
+              ${
+                fieldError && fieldTouched
+                  ? 'border-error focus:border-error focus:ring-error/20'
+                  : ''
+              }
+            `}
+          />
+        ) : type === 'select' ? (
+          <select
+            name={field.name}
+            value={value}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            className={selectClass(field.name)}
+          >
+            <option value="">
+              {field.placeholder || `Select ${field.label}`}
+            </option>
+
+            {(field.options || []).map((option) => {
+              const optionValue =
+                typeof option === 'object'
+                  ? option.value
+                  : option
+              const optionLabel =
+                typeof option === 'object'
+                  ? option.label
+                  : option
+
+              return (
+                <option
+                  key={optionValue}
+                  value={optionValue}
+                >
+                  {optionLabel}
+                </option>
+              )
+            })}
+          </select>
+        ) : (
+          <input
+            {...commonProps}
+            type={type === 'number' ? 'text' : type}
+            inputMode={
+              type === 'number' ? 'numeric' : undefined
+            }
+          />
+        )}
+
+        <FieldError field={field.name} />
+      </div>
+    )
+  }
+
+  // ===========================================================
   // RENDER
   // ===========================================================
 
@@ -1168,6 +1409,7 @@ function ApplicationForm({
                     label=""
                     value={formData.loan_type_id}
                     onChange={handleLoanTypeChange}
+                    onOptionsLoaded={setLoanTypeOptions}
                   />
 
                   <FieldError
@@ -1437,6 +1679,12 @@ function ApplicationForm({
                   lg:grid-cols-2
                 "
               >
+
+                {/* Loan Type Specific Fields */}
+
+                {getExtraFieldsForLoanType(
+                  selectedLoanType?.name
+                ).map(renderExtraField)}
 
                 {/* Loan Amount */}
 
