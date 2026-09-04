@@ -1,3 +1,4 @@
+# backend\app\controllers\auth_controller.py
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, Response
 

@@ -82,6 +82,8 @@ def get_employee_id_from_token(token: str) -> int:
         return int(employee_id)
     except (TypeError, ValueError):
         raise ValueError("Invalid employee ID in token")
+
+    
 def get_current_employee(
     db: Session = Depends(get_db),
     access_token: str | None = Cookie(default=None),

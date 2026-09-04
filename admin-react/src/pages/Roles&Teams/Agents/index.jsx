@@ -790,30 +790,7 @@ function Agents() {
             sm:p-6
         ">
 
-            {/* =================================================
-                PAGE HEADER
-            ================================================= */}
-
-            <div>
-
-                <h1 className="
-                    text-2xl
-                    font-semibold
-                    sm:text-3xl
-                ">
-                    Agents
-                </h1>
-
-
-                <p className="
-                    mt-1
-                    text-sm
-                    text-base-content/60
-                ">
-                    Manage agent assignments and status.
-                </p>
-
-            </div>
+           
 
 
             {/* =================================================
