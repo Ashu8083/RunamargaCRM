@@ -1,30 +1,5 @@
 import SearchableFilterDropdown from './SearchableFilterDropdown'
 
-
-const DEFAULT_RMS = [
-    {
-        id: 201,
-        name: 'Priya Nair',
-    },
-    {
-        id: 202,
-        name: 'Rajesh Rao',
-    },
-    {
-        id: 203,
-        name: 'Sneha Reddy',
-    },
-    {
-        id: 204,
-        name: 'Manoj Kumar',
-    },
-    {
-        id: 205,
-        name: 'Deepa Sharma',
-    },
-]
-
-
 // =============================================================
 // COMPONENT
 // =============================================================
@@ -33,7 +8,8 @@ function RmDropdown({
     label = 'RM',
     value = '',
     onChange,
-    options,
+    options = [],
+    loading = false,
     allLabel = 'All RMs',
     placeholder = allLabel,
     searchPlaceholder = 'Search RM',
@@ -48,7 +24,7 @@ function RmDropdown({
             value={value}
             onChange={onChange}
             options={options}
-            defaultOptions={DEFAULT_RMS}
+            loading={loading}
             allLabel={allLabel}
             placeholder={placeholder}
             searchPlaceholder={searchPlaceholder}
@@ -59,6 +35,5 @@ function RmDropdown({
     )
 
 }
-
 
 export default RmDropdown

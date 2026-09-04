@@ -58,6 +58,7 @@ function LeftSidebar({ onClose }) {
     // =========================================================
 
     const canSeeRoute = (route) => {
+
         return hasPermission(
             route.permission,
             currentUser
@@ -129,15 +130,21 @@ function LeftSidebar({ onClose }) {
                 className="
                     menu
                     pt-2
+                    pb-10
                     w-72
                     lg:w-64
                     bg-base-100
                     min-h-full
                     text-base-content
                     overflow-y-auto
+
+                    [&::-webkit-scrollbar]:w-1.5
+                    [&::-webkit-scrollbar-track]:bg-transparent
+                    [&::-webkit-scrollbar-thumb]:rounded-full
+                    [&::-webkit-scrollbar-thumb]:bg-base-content/10
+                    hover:[&::-webkit-scrollbar-thumb]:bg-base-content/20
                 "
             >
-
 
                 {/* =================================================
                     Mobile close button
@@ -147,7 +154,6 @@ function LeftSidebar({ onClose }) {
                     className="
                         btn
                         btn-ghost
-                        bg-base-300
                         btn-circle
                         z-50
                         top-0
@@ -163,7 +169,7 @@ function LeftSidebar({ onClose }) {
                 >
 
                     <XMarkIcon
-                        className="h-5 inline-block w-5"
+                        className="h-5 w-5"
                     />
 
                 </button>
@@ -173,17 +179,37 @@ function LeftSidebar({ onClose }) {
                     Logo
                 ================================================= */}
 
-                <li className="mb-2 font-semibold text-xl">
+                <li className="mb-3 font-semibold text-xl">
 
-                    <Link to="/crm/dashboard">
+                    <Link
+                        to="/crm/dashboard"
+                        onClick={closeOnMobile}
+                        className="
+                            flex
+                            items-center
+                            gap-3
+                            px-3
+                            py-2
+                            rounded-lg
+                            hover:bg-base-200
+                            transition-colors
+                        "
+                    >
 
                         <img
-                            className="h-10 w-8 object-contain"
+                            className="
+                                h-10
+                                w-8
+                                object-contain
+                                shrink-0
+                            "
                             src={APP_LOGO}
                             alt="Runamarga Logo"
                         />
 
-                        Runamarga
+                        <span>
+                            Runamarga
+                        </span>
 
                     </Link>
 
@@ -237,7 +263,10 @@ function LeftSidebar({ onClose }) {
 
 
                         return (
-                            <div key={index}>
+                            <div
+                                key={index}
+                                className="mt-5"
+                            >
 
                                 {/* =================================================
                                     Section heading
@@ -245,7 +274,6 @@ function LeftSidebar({ onClose }) {
 
                                 <li
                                     className="
-                                        mt-5
                                         mb-1
                                         px-3
                                         pointer-events-none
@@ -258,7 +286,7 @@ function LeftSidebar({ onClose }) {
                                             font-semibold
                                             uppercase
                                             tracking-wider
-                                            text-base-content/60
+                                            text-base-content/50
                                         "
                                     >
                                         {route.name}
@@ -302,7 +330,9 @@ function LeftSidebar({ onClose }) {
                                         // =================================================
 
                                         return (
-                                            <li key={itemIndex}>
+                                            <li
+                                                key={itemIndex}
+                                            >
 
                                                 <NavLink
                                                     end
@@ -313,16 +343,35 @@ function LeftSidebar({ onClose }) {
                                                         flex
                                                         items-center
                                                         gap-3
-                                                        ${isActive
-                                                            ? 'font-semibold !bg-base-200 !text-base-content'
-                                                            : 'font-normal'
+                                                        rounded-lg
+                                                        mx-2
+                                                        px-3
+                                                        py-2.5
+                                                        transition-colors
+                                                        duration-150
+
+                                                        ${
+                                                            isActive
+                                                                ? `
+                                                                    font-semibold
+                                                                    !bg-base-200
+                                                                    !text-base-content
+                                                                `
+                                                                : `
+                                                                    font-normal
+                                                                    text-base-content/75
+                                                                    hover:bg-base-200/70
+                                                                    hover:text-base-content
+                                                                `
                                                         }
                                                     `}
                                                 >
 
                                                     {item.icon}
 
-                                                    {item.name}
+                                                    <span className="truncate">
+                                                        {item.name}
+                                                    </span>
 
 
                                                     {/* =====================================
@@ -330,18 +379,19 @@ function LeftSidebar({ onClose }) {
                                                     ===================================== */}
 
                                                     {location.pathname === item.path && (
+
                                                         <span
                                                             className="
                                                                 absolute
-                                                                inset-y-0
+                                                                inset-y-2
                                                                 left-0
                                                                 w-1
-                                                                rounded-tr-md
-                                                                rounded-br-md
+                                                                rounded-r-full
                                                                 bg-primary
                                                             "
                                                             aria-hidden="true"
                                                         ></span>
+
                                                     )}
 
                                                 </NavLink>
@@ -366,7 +416,9 @@ function LeftSidebar({ onClose }) {
 
 
                     return (
-                        <li key={index}>
+                        <li
+                            key={index}
+                        >
 
                             <NavLink
                                 end
@@ -377,16 +429,35 @@ function LeftSidebar({ onClose }) {
                                     flex
                                     items-center
                                     gap-3
-                                    ${isActive
-                                        ? 'font-semibold !bg-base-200 !text-base-content'
-                                        : 'font-normal'
+                                    rounded-lg
+                                    mx-2
+                                    px-3
+                                    py-2.5
+                                    transition-colors
+                                    duration-150
+
+                                    ${
+                                        isActive
+                                            ? `
+                                                font-semibold
+                                                !bg-base-200
+                                                !text-base-content
+                                            `
+                                            : `
+                                                font-normal
+                                                text-base-content/75
+                                                hover:bg-base-200/70
+                                                hover:text-base-content
+                                            `
                                     }
                                 `}
                             >
 
                                 {route.icon}
 
-                                {route.name}
+                                <span className="truncate">
+                                    {route.name}
+                                </span>
 
 
                                 {/* =============================================
@@ -394,18 +465,19 @@ function LeftSidebar({ onClose }) {
                                 ============================================= */}
 
                                 {location.pathname === route.path && (
+
                                     <span
                                         className="
                                             absolute
-                                            inset-y-0
+                                            inset-y-2
                                             left-0
                                             w-1
-                                            rounded-tr-md
-                                            rounded-br-md
+                                            rounded-r-full
                                             bg-primary
                                         "
                                         aria-hidden="true"
                                     ></span>
+
                                 )}
 
                             </NavLink>
@@ -413,6 +485,77 @@ function LeftSidebar({ onClose }) {
                         </li>
                     )
                 })}
+
+
+                {/* =================================================
+                    SIDEBAR END
+                ================================================= */}
+
+                <li
+                    className="
+                        mt-10
+                        mb-4
+                        pointer-events-none
+                    "
+                >
+
+                    <div
+                        className="
+                            flex
+                            items-center
+                            gap-3
+                            px-5
+                        "
+                    >
+
+                        <div
+                            className="
+                                h-px
+                                flex-1
+                                bg-base-content/10
+                            "
+                        />
+
+                        <span
+                            className="
+                                text-[10px]
+                                font-medium
+                                uppercase
+                                tracking-widest
+                                text-base-content/30
+                            "
+                        >
+                            End
+                        </span>
+
+                        <div
+                            className="
+                                h-px
+                                flex-1
+                                bg-base-content/10
+                            "
+                        />
+
+                    </div>
+
+                </li>
+
+
+                {/* =================================================
+                    EXTRA BOTTOM SPACE
+
+                    Allows the user to scroll past the last
+                    menu item instead of having it stuck to
+                    the bottom edge.
+                ================================================= */}
+
+                <li
+                    className="
+                        h-8
+                        pointer-events-none
+                    "
+                    aria-hidden="true"
+                />
 
             </ul>
 
@@ -482,7 +625,6 @@ function NestedSubmenu({
     return (
         <li>
 
-
             {/* =====================================================
                 Nested submenu button
             ===================================================== */}
@@ -491,24 +633,43 @@ function NestedSubmenu({
                 type="button"
                 onClick={toggleSubmenu}
                 className={`
-                    w-full
+                    relative
                     flex
                     items-center
                     gap-3
-                    font-normal
-                    ${containsActiveRoute
-                        ? '!bg-base-200 !text-base-content font-semibold'
-                        : ''
+                    w-full
+                    rounded-lg
+                    mx-2
+                    px-3
+                    py-2.5
+                    transition-colors
+                    duration-150
+
+                    ${
+                        containsActiveRoute
+                            ? `
+                                !bg-base-200
+                                !text-base-content
+                                font-semibold
+                            `
+                            : `
+                                font-normal
+                                text-base-content/75
+                                hover:bg-base-200/70
+                                hover:text-base-content
+                            `
                     }
                 `}
+                style={{
+                    width: 'calc(100% - 1rem)'
+                }}
                 aria-expanded={isOpen}
                 aria-haspopup="true"
             >
 
                 {item.icon}
 
-
-                <span className="flex-1 text-left">
+                <span className="flex-1 text-left truncate">
                     {item.name}
                 </span>
 
@@ -521,14 +682,39 @@ function NestedSubmenu({
                     className={`
                         h-4
                         w-4
+                        shrink-0
+                        opacity-60
                         transition-transform
                         duration-200
-                        ${isOpen
-                            ? 'rotate-180'
-                            : ''
+
+                        ${
+                            isOpen
+                                ? 'rotate-180'
+                                : ''
                         }
                     `}
                 />
+
+
+                {/* =================================================
+                    Active indicator
+                ================================================= */}
+
+                {containsActiveRoute && (
+
+                    <span
+                        className="
+                            absolute
+                            inset-y-2
+                            left-0
+                            w-1
+                            rounded-r-full
+                            bg-primary
+                        "
+                        aria-hidden="true"
+                    ></span>
+
+                )}
 
             </button>
 
@@ -541,7 +727,7 @@ function NestedSubmenu({
 
                 <ul
                     className="
-                        ml-4
+                        ml-5
                         mt-1
                         border-l
                         border-base-content/10
@@ -587,7 +773,9 @@ function NestedSubmenu({
                             // =================================================
 
                             return (
-                                <li key={childIndex}>
+                                <li
+                                    key={childIndex}
+                                >
 
                                     <NavLink
                                         end
@@ -598,6 +786,12 @@ function NestedSubmenu({
                                             flex
                                             items-center
                                             gap-3
+                                            rounded-lg
+                                            mx-1
+                                            px-3
+                                            py-2
+                                            transition-colors
+                                            duration-150
 
                                             ${
                                                 isActive
@@ -608,13 +802,15 @@ function NestedSubmenu({
                                                     `
                                                     : `
                                                         font-normal
+                                                        text-base-content/70
+                                                        hover:bg-base-200/70
+                                                        hover:text-base-content
                                                     `
                                             }
                                         `}
                                     >
 
                                         {child.icon}
-
 
                                         <span className="truncate">
                                             {child.name}
@@ -626,18 +822,19 @@ function NestedSubmenu({
                                         ===================================== */}
 
                                         {isActive && (
+
                                             <span
                                                 className="
                                                     absolute
-                                                    inset-y-0
+                                                    inset-y-1.5
                                                     left-0
                                                     w-1
-                                                    rounded-tr-md
-                                                    rounded-br-md
+                                                    rounded-r-full
                                                     bg-primary
                                                 "
                                                 aria-hidden="true"
                                             ></span>
+
                                         )}
 
                                     </NavLink>

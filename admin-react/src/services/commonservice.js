@@ -26,3 +26,15 @@ export const getEmployeesByContext = async (contextId) => {
 
     return response.data;
 };
+export const getRelationshipManagers = async (contextId) => {
+    const response = await apiClient.get(
+        '/common/relationship-managers',
+        {
+            params: {
+                context_id: contextId,
+            },
+        }
+    )
+
+    return response.data
+}

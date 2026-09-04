@@ -1,28 +1,34 @@
-import React from 'react'
+// admin-react/src/pages/Dashboard/index.jsx
 
-import ConversionOverview from './components/ConversionOverview'
-import ConversionFunnel from './components/ConversionFunnel'
-import MonthlyDisbursement from './components/MonthlyDisbursement'
-import LoanTypeDistribution from './components/LoanTypeDistribution'
+import React from "react";
+
+import ApplicationStatus from "./components/ApplicationStatus";
+import LoanTypeDistribution from "./components/LoanTypeDistribution";
+import MonthlyTrend from "./components/MonthlyTrend";
+import ApplicationFunnel from "./components/ApplicationFunnel";
 
 function Dashboard() {
     return (
-        <div className="space-y-6">
+        <div className="w-full space-y-6 p-5">
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-
-                <ConversionOverview />
-
-                <ConversionFunnel />
-                <MonthlyDisbursement />
+            {/* Top row */}
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <ApplicationStatus />
                 <LoanTypeDistribution />
+            </div>
 
+            {/* Monthly Trend */}
+            <div className="w-full">
+                <MonthlyTrend />
+            </div>
 
-
+            {/* Application Funnel */}
+            <div className="w-full">
+                <ApplicationFunnel />
             </div>
 
         </div>
-    )
+    );
 }
 
-export default Dashboard
+export default Dashboard;

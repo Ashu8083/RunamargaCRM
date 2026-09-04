@@ -416,3 +416,97 @@ class AccessControl:
         # -----------------------------------------------------
 
         return query.filter(False)
+@staticmethod
+def get_visible_rms(
+    db: Session,
+    employee: Employee,
+    context_id: Optional[int] = None,
+) -> list[Employee]:
+
+    if not employee:
+        return []
+
+    context = AccessControl.get_active_context(
+        db=db,
+        employee=employee,
+        context_id=context_id,
+    )
+
+    if not context:
+        return []
+
+    context_code = context.context.code
+
+    # ---------------------------------------------------------
+    # GLOBAL
+    # ---------------------------------------------------------
+
+    if context_code == "GLOBAL":
+
+        return (
+            db.query(Employee)
+            .join(
+                EmployeeContext,
+                EmployeeContext.employee_id == Employee.id,
+            )
+            .join(
+                Context,
+                EmployeeContext.context_id == Context.id,
+            )
+            .filter(
+                EmployeeContext.is_active.is_(True),
+                Context.is_active.is_(True),
+                Context.code == "RM",
+                Employee.status == "active",
+            )
+            .order_by(Employee.name)
+            .all()
+        )
+
+    # ---------------------------------------------------------
+    # RM
+    # ---------------------------------------------------------
+
+    if context_code == "RM":
+
+        return (
+            db.query(Employee)
+            .filter(
+                Employee.id == employee.id,
+                Employee.status == "active",
+            )
+            .all()
+        )
+
+    # ---------------------------------------------------------
+    # AGENT
+    # ---------------------------------------------------------
+
+    if context_code == "AGENT":
+
+        if not context.reports_to_id:
+            return []
+
+        rm = (
+            db.query(Employee)
+            .join(
+                EmployeeContext,
+                EmployeeContext.employee_id == Employee.id,
+            )
+            .join(
+                Context,
+                EmployeeContext.context_id == Context.id,
+            )
+            .filter(
+                Employee.id == context.reports_to_id,
+                EmployeeContext.is_active.is_(True),
+                Context.is_active.is_(True),
+                Context.code == "RM",
+                Employee.status == "active",
+            )
+            .first()
+        )
+
+        return [rm] if rm else []
+
+    return []

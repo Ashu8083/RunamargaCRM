@@ -77,3 +77,22 @@ def get_common_employees(
         }
         for emp in employees
     ]
+@router.get("/relationship-managers")
+def get_relationship_managers(
+    context_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
+):
+    rms = AccessControl.get_visible_rms(
+        db=db,
+        employee=employee,
+        context_id=context_id,
+    )
+
+    return [
+        {
+            "id": rm.id,
+            "name": rm.name,
+        }
+        for rm in rms
+    ]

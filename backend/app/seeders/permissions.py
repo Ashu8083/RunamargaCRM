@@ -1,3 +1,4 @@
+# backend\app\seeders\permissions.py
 from sqlalchemy.orm import Session
 
 from app.models.employees import Employee
