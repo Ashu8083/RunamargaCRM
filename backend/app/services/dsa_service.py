@@ -10,8 +10,8 @@ def create_dsa_service(
 ):
 
     dsa = DSADetail(
-        das_name=dsa_details_schema.dsa_name,
-        das_code=dsa_details_schema.dsa_code,
+        dsa_name=dsa_details_schema.dsa_name,
+        dsa_code=dsa_details_schema.dsa_code,
         bank_id=dsa_details_schema.bank_id,
         loan_type_id=dsa_details_schema.loan_type_id,
         status=dsa_details_schema.status,
