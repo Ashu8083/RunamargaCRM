@@ -1,0 +1,91 @@
+from fastapi import Depends, APIRouter
+from sqlalchemy.orm import Session
+
+from app.config.database import get_db
+
+from app.schemas.bank_schema import (
+    BankCreateRequest,
+    UpdateBankRequest,
+    BankFilterSearchRequest,
+    BankResponse,
+)
+
+from app.controllers.bank_controller import (
+    create_bank_controller,
+    update_bank_controller,
+    filter_bank_search_controller,
+    delete_bank_controller,
+)
+
+
+router = APIRouter(
+    prefix="/admin/banks",
+    tags=["Banks"],
+    responses={
+        404: {"description": "Not found"}
+    },
+)
+
+
+@router.post(
+    "/",
+    response_model=BankResponse,
+)
+def create_bank(
+    bank_data: BankCreateRequest,
+    db: Session = Depends(get_db),
+    # employee: Employee = Depends(get_current_employee),
+):
+    return create_bank_controller(
+        db_session=db,
+        bank_create_schema=bank_data,
+        # employee=employee,
+    )
+
+
+@router.get(
+    "/",
+    response_model=list[BankResponse],
+)
+def filter_search_banks(
+    bank_filter: BankFilterSearchRequest = Depends(),
+    db: Session = Depends(get_db),
+    # employee: Employee = Depends(get_current_employee),
+):
+    return filter_bank_search_controller(
+        db_session=db,
+        bank_search_filter=bank_filter,
+        # employee=employee,
+    )
+
+
+@router.put(
+    "/",
+    response_model=BankResponse,
+)
+def update_bank(
+    bank_data: UpdateBankRequest,
+    db: Session = Depends(get_db),
+    # employee: Employee = Depends(get_current_employee),
+):
+    return update_bank_controller(
+        db_session=db,
+        bank_update_schema=bank_data,
+        # employee=employee,
+    )
+
+
+@router.delete(
+    "/{bank_id}",
+    response_model=BankResponse,
+)
+def delete_bank(
+    bank_id: int,
+    db: Session = Depends(get_db),
+    # employee: Employee = Depends(get_current_employee),
+):
+    return delete_bank_controller(
+        db_session=db,
+        bank_id=bank_id,
+        # employee=employee,
+    )
