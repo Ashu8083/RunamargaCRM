@@ -36,7 +36,7 @@ def get_applications_route(
     )
 @router.get("/{application_id}")
 def view_application_route(
-    application_id: int,
+    application_id: str,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
