@@ -1,4 +1,6 @@
-import { API_BASE_URL } from '../../../config/url'
+// admin-react/src/components/GlobalModels/Filters/rolesApi.js
+
+import apiClient from '../../../app/apiClient'
 
 
 /*
@@ -20,11 +22,32 @@ import { API_BASE_URL } from '../../../config/url'
 | DELETE /contexts/:id
 |
 |--------------------------------------------------------------------------
+| Authentication
+|--------------------------------------------------------------------------
+|
+| Authentication is handled centrally by apiClient.
+|
+| apiClient:
+|
+| - Sends HttpOnly cookies automatically
+| - Handles access-token expiration
+| - Calls refresh endpoint when required
+| - Retries the original request
+| - Redirects to /login when refresh fails
+|
+| Therefore this file does NOT:
+|
+| - use fetch()
+| - read tokens from localStorage
+| - create Authorization headers
+| - manually refresh tokens
+|
+|--------------------------------------------------------------------------
 */
 
 
 /**
- * Extract a useful error message from a FastAPI response.
+ * Extract a useful error message from an Axios error.
  *
  * FastAPI validation errors normally look like:
  *
@@ -44,27 +67,29 @@ import { API_BASE_URL } from '../../../config/url'
  *   "detail": "Role code already exists."
  * }
  */
-const extractErrorMessage = (data, status) => {
+const extractErrorMessage = (error) => {
 
-    if (!data) {
-        return `Request failed (${status})`
-    }
+    const response = error?.response
+
+    const data = response?.data
+
+    const status = response?.status
 
 
     /*
      * FastAPI validation error array
      */
-    if (Array.isArray(data.detail)) {
+    if (Array.isArray(data?.detail)) {
 
         const messages = data.detail
-            .map((error) => {
+            .map((item) => {
 
-                if (typeof error === 'string') {
-                    return error
+                if (typeof item === 'string') {
+                    return item
                 }
 
-                if (error?.msg) {
-                    return error.msg
+                if (item?.msg) {
+                    return item.msg
                 }
 
                 return null
@@ -73,6 +98,7 @@ const extractErrorMessage = (data, status) => {
 
 
         if (messages.length > 0) {
+
             return messages.join(' ')
         }
     }
@@ -81,7 +107,8 @@ const extractErrorMessage = (data, status) => {
     /*
      * Normal FastAPI detail message
      */
-    if (typeof data.detail === 'string') {
+    if (typeof data?.detail === 'string') {
+
         return data.detail
     }
 
@@ -89,7 +116,8 @@ const extractErrorMessage = (data, status) => {
     /*
      * Generic API message
      */
-    if (typeof data.message === 'string') {
+    if (typeof data?.message === 'string') {
+
         return data.message
     }
 
@@ -97,75 +125,64 @@ const extractErrorMessage = (data, status) => {
     /*
      * Generic API error
      */
-    if (typeof data.error === 'string') {
+    if (typeof data?.error === 'string') {
+
         return data.error
     }
 
 
-    return `Request failed (${status})`
-}
+    /*
+     * Axios network error
+     */
+    if (!response) {
 
-
-/**
- * Common request helper.
- */
-const request = async (url, options = {}) => {
-
-    let response
-
-
-    try {
-
-        response = await fetch(url, {
-            credentials: 'include',
-
-            headers: {
-                'Content-Type': 'application/json',
-                ...(options.headers || {}),
-            },
-
-            ...options,
-        })
-
-    } catch (error) {
-
-        /*
-         * Network / server unreachable error.
-         */
-        throw new Error(
+        return (
             'Unable to connect to the server. Please check that the backend is running.'
         )
     }
 
 
-    let data = null
+    /*
+     * Fallback HTTP error
+     */
+    return `Request failed (${status})`
+}
 
+
+/**
+|--------------------------------------------------------------------------
+| Common Request Helper
+|--------------------------------------------------------------------------
+|
+| apiClient already handles:
+|
+| - baseURL
+| - withCredentials
+| - authentication cookies
+| - access token refresh
+| - retry after 401
+| - global loading indicator
+|
+| This helper only converts Axios errors
+| into normal JavaScript Error objects.
+|
+|--------------------------------------------------------------------------
+*/
+
+const request = async (config = {}) => {
 
     try {
 
-        data = await response.json()
+        const response = await apiClient(config)
+
+        return response.data
 
     } catch (error) {
 
-        /*
-         * Some successful responses may not contain JSON.
-         */
-        data = null
-    }
-
-
-    if (!response.ok) {
-
         throw new Error(
-            extractErrorMessage(
-                data,
-                response.status
-            )
+            extractErrorMessage(error)
         )
     }
-
-
-    return data
 }
 
 
@@ -174,7 +191,8 @@ const request = async (url, options = {}) => {
 | Normalize Role Response
 |--------------------------------------------------------------------------
 |
-| Converts backend Context response into the frontend Role format.
+| Converts backend Context response into
+| the frontend Role format.
 |
 | Backend:
 |
@@ -207,13 +225,17 @@ const request = async (url, options = {}) => {
 const normalizeRole = (role = {}) => {
 
     return {
+
         id: role.id,
 
-        name: role.name || '',
+        name:
+            role.name || '',
 
-        code: role.code || '',
+        code:
+            role.code || '',
 
-        description: role.description || '',
+        description:
+            role.description || '',
 
         active:
             role.is_active !== undefined
@@ -278,15 +300,20 @@ const normalizeRole = (role = {}) => {
 
 const normalizeRoleList = (data) => {
 
-    const roles = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.data)
-            ? data.data
-            : Array.isArray(data?.roles)
-                ? data.roles
-                : Array.isArray(data?.contexts)
-                    ? data.contexts
-                    : []
+    const roles =
+        Array.isArray(data)
+            ? data
+
+            : Array.isArray(data?.data)
+                ? data.data
+
+                : Array.isArray(data?.roles)
+                    ? data.roles
+
+                    : Array.isArray(data?.contexts)
+                        ? data.contexts
+
+                        : []
 
 
     return roles.map(normalizeRole)
@@ -324,11 +351,15 @@ const normalizeRoleList = (data) => {
 const buildRolePayload = (roleData = {}) => {
 
     return {
-        name: String(roleData.name || '').trim(),
 
-        code: String(roleData.code || '')
-            .trim()
-            .toUpperCase(),
+        name:
+            String(roleData.name || '')
+                .trim(),
+
+        code:
+            String(roleData.code || '')
+                .trim()
+                .toUpperCase(),
 
         description:
             roleData.description &&
@@ -351,20 +382,29 @@ const buildRolePayload = (roleData = {}) => {
 |
 | GET /contexts
 |
-| Backend uses "contexts".
-| Frontend continues calling them "roles".
+| Authentication:
+|
+| apiClient sends the HttpOnly access_token
+| cookie automatically.
+|
+| If access token is expired:
+|
+| 1. Backend returns 401
+| 2. apiClient calls refreshAccessToken()
+| 3. Backend sets a new access_token cookie
+| 4. apiClient retries GET /contexts
 |
 |--------------------------------------------------------------------------
 */
 
 export const getRoles = async () => {
 
-    const data = await request(
-        `${API_BASE_URL}/contexts`,
-        {
-            method: 'GET',
-        }
-    )
+    const data = await request({
+
+        method: 'GET',
+
+        url: '/contexts',
+    })
 
 
     return normalizeRoleList(data)
@@ -383,25 +423,25 @@ export const getRoles = async () => {
 
 export const createRole = async (roleData) => {
 
-    const payload = buildRolePayload(roleData)
+    const payload =
+        buildRolePayload(roleData)
 
 
-    const data = await request(
-        `${API_BASE_URL}/contexts`,
-        {
-            method: 'POST',
+    const data = await request({
 
-            body: JSON.stringify(payload),
-        }
-    )
+        method: 'POST',
+
+        url: '/contexts',
+
+        data: payload,
+    })
 
 
     /*
      * Backend currently returns the created Context
      * directly.
      *
-     * Also supports wrapped responses for future
-     * compatibility.
+     * Also supports wrapped responses.
      */
     const role =
         data?.data ||
@@ -425,9 +465,15 @@ export const createRole = async (roleData) => {
 |--------------------------------------------------------------------------
 */
 
-export const updateRole = async (id, roleData) => {
+export const updateRole = async (
+    id,
+    roleData
+) => {
 
-    if (id === undefined || id === null) {
+    if (
+        id === undefined ||
+        id === null
+    ) {
 
         throw new Error(
             'Role ID is required.'
@@ -435,17 +481,18 @@ export const updateRole = async (id, roleData) => {
     }
 
 
-    const payload = buildRolePayload(roleData)
+    const payload =
+        buildRolePayload(roleData)
 
 
-    const data = await request(
-        `${API_BASE_URL}/contexts/${id}`,
-        {
-            method: 'PATCH',
+    const data = await request({
 
-            body: JSON.stringify(payload),
-        }
-    )
+        method: 'PATCH',
+
+        url: `/contexts/${id}`,
+
+        data: payload,
+    })
 
 
     const role =
@@ -477,7 +524,10 @@ export const updateRole = async (id, roleData) => {
 
 export const deleteRole = async (id) => {
 
-    if (id === undefined || id === null) {
+    if (
+        id === undefined ||
+        id === null
+    ) {
 
         throw new Error(
             'Role ID is required.'
@@ -485,12 +535,12 @@ export const deleteRole = async (id) => {
     }
 
 
-    const data = await request(
-        `${API_BASE_URL}/contexts/${id}`,
-        {
-            method: 'DELETE',
-        }
-    )
+    const data = await request({
+
+        method: 'DELETE',
+
+        url: `/contexts/${id}`,
+    })
 
 
     /*
@@ -500,7 +550,8 @@ export const deleteRole = async (id) => {
      *   "message": "Context deleted successfully."
      * }
      *
-     * Return it directly because it is not a Role object.
+     * Return it directly because it is not
+     * a Role object.
      */
     return data
 }
@@ -516,14 +567,21 @@ export const deleteRole = async (id) => {
 /*
  * These prefixes are FIXED.
  *
- * A role code must always start with one of these values.
+ * A role code must always start with one
+ * of these values.
  */
 export const ROLE_CODE_PREFIXES = [
+
     'GLOBAL',
+
     'AGENT',
+
     'TEAMLEAD',
+
     'MANAGER',
+
     'RM',
+
 ]
 
 
@@ -558,16 +616,30 @@ export const ROLE_CODE_PREFIXES = [
 |--------------------------------------------------------------------------
 */
 
-export const generateRoleCode = (name = '') => {
+export const generateRoleCode = (
+    name = ''
+) => {
 
-    const cleanedName = String(name)
-        .trim()
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, '_')
-        .replace(/^_+|_+$/g, '')
+    const cleanedName =
+        String(name)
+
+            .trim()
+
+            .toUpperCase()
+
+            .replace(
+                /[^A-Z0-9]+/g,
+                '_'
+            )
+
+            .replace(
+                /^_+|_+$/g,
+                ''
+            )
 
 
     if (!cleanedName) {
+
         return ''
     }
 
@@ -581,8 +653,11 @@ export const generateRoleCode = (name = '') => {
      *
      * TEAMLEAD
      */
-    const normalizedName = cleanedName
-        .replace(/^TEAM_LEAD/, 'TEAMLEAD')
+    const normalizedName =
+        cleanedName.replace(
+            /^TEAM_LEAD/,
+            'TEAMLEAD'
+        )
 
 
     /*
@@ -617,11 +692,16 @@ export const generateRoleCode = (name = '') => {
 |--------------------------------------------------------------------------
 */
 
-export const validateRoleCode = (code = '') => {
+export const validateRoleCode = (
+    code = ''
+) => {
 
-    const normalizedCode = String(code)
-        .trim()
-        .toUpperCase()
+    const normalizedCode =
+        String(code)
+
+            .trim()
+
+            .toUpperCase()
 
 
     /*
@@ -630,6 +710,7 @@ export const validateRoleCode = (code = '') => {
     if (!normalizedCode) {
 
         return {
+
             valid: false,
 
             error:
@@ -641,16 +722,20 @@ export const validateRoleCode = (code = '') => {
     /*
      * Check allowed role prefix.
      */
-    const validPrefix = ROLE_CODE_PREFIXES.some(
-        (prefix) =>
-            normalizedCode === prefix ||
-            normalizedCode.startsWith(`${prefix}_`)
-    )
+    const validPrefix =
+        ROLE_CODE_PREFIXES.some(
+            (prefix) =>
+                normalizedCode === prefix ||
+                normalizedCode.startsWith(
+                    `${prefix}_`
+                )
+        )
 
 
     if (!validPrefix) {
 
         return {
+
             valid: false,
 
             error:
@@ -666,9 +751,13 @@ export const validateRoleCode = (code = '') => {
      * 0-9
      * _
      */
-    if (!/^[A-Z][A-Z0-9_]*$/.test(normalizedCode)) {
+    if (
+        !/^[A-Z][A-Z0-9_]*$/
+            .test(normalizedCode)
+    ) {
 
         return {
+
             valid: false,
 
             error:
@@ -689,6 +778,7 @@ export const validateRoleCode = (code = '') => {
     ) {
 
         return {
+
             valid: false,
 
             error:
@@ -698,6 +788,7 @@ export const validateRoleCode = (code = '') => {
 
 
     return {
+
         valid: true,
 
         error: '',
@@ -720,11 +811,17 @@ export const validateRole = ({
     const errors = {}
 
 
-    const trimmedName = String(name).trim()
+    const trimmedName =
+        String(name).trim()
 
-    const trimmedCode = String(code)
-        .trim()
-        .toUpperCase()
+
+    const trimmedCode =
+        String(code)
+
+            .trim()
+
+            .toUpperCase()
+
 
     const trimmedDescription =
         String(description).trim()
@@ -738,12 +835,16 @@ export const validateRole = ({
         errors.name =
             'Role name is required.'
 
-    } else if (trimmedName.length < 2) {
+    } else if (
+        trimmedName.length < 2
+    ) {
 
         errors.name =
             'Role name must contain at least 2 characters.'
 
-    } else if (trimmedName.length > 100) {
+    } else if (
+        trimmedName.length > 100
+    ) {
 
         errors.name =
             'Role name cannot exceed 100 characters.'
@@ -767,7 +868,9 @@ export const validateRole = ({
     /*
      * Description validation
      */
-    if (trimmedDescription.length > 500) {
+    if (
+        trimmedDescription.length > 500
+    ) {
 
         errors.description =
             'Description cannot exceed 500 characters.'
@@ -775,6 +878,7 @@ export const validateRole = ({
 
 
     return {
+
         valid:
             Object.keys(errors).length === 0,
 
@@ -790,6 +894,7 @@ export const validateRole = ({
 */
 
 export default {
+
     getRoles,
 
     createRole,
@@ -805,4 +910,5 @@ export default {
     validateRole,
 
     ROLE_CODE_PREFIXES,
+
 }
