@@ -23,9 +23,7 @@ router.include_router(common_router)
 router.include_router(bank_router)
 router.include_router(dsa_router)
 router.include_router(banker_directory_router)
-
 router.include_router(loan_types_router)
 router.include_router(state_router)
 router.include_router(city_router)
 router.include_router(context_router)
-

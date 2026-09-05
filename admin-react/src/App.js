@@ -9,7 +9,11 @@ import {
 } from 'react-router-dom'
 import { themeChange } from 'theme-change'
 
-import { isAuthenticated } from './app/auth'
+import {
+    isAuthenticated,
+    getCurrentUser,
+    clearAuthSession,
+} from './app/auth'
 import initializeApp from './app/init'
 
 
@@ -47,13 +51,41 @@ function App() {
         window.addEventListener('auth:changed', syncAuthState)
         window.addEventListener('storage', syncAuthState)
 
+        const refreshUserSession = async () => {
+
+            if (!isAuthenticated()) {
+                return
+            }
+
+            try {
+                await getCurrentUser()
+
+                setAuthenticated(true)
+
+                window.dispatchEvent(
+                    new Event('auth:changed')
+                )
+
+            } catch (error) {
+
+                console.error(
+                    'Failed to refresh user session:',
+                    error
+                )
+
+                clearAuthSession()
+                setAuthenticated(false)
+            }
+        }
+
+        refreshUserSession()
+
         return () => {
             window.removeEventListener('auth:changed', syncAuthState)
             window.removeEventListener('storage', syncAuthState)
         }
 
     }, [])
-
 
     return (
 

@@ -408,3 +408,183 @@ permissions | Defines available actions.
 employee_context_permissions | Assigns permissions to a specific employee context.
 employee_details | Personal, employment, financial, and identity details.
 auth_tokens | Hashed refresh-session information.
+
+
+
+
+                    LOGIN
+                      │
+                      ▼
+              OTP verification
+                      │
+              ┌───────┴────────┐
+              ▼                ▼
+       access_token       refresh_token
+          cookie             cookie
+              │
+              ▼
+       get_current_employee()
+              │
+              ▼
+           Employee
+              │
+              ▼
+        AccessControl
+              │
+        ┌─────┴─────┐
+        ▼           ▼
+    Context      Permissions
+        │           │
+        └─────┬─────┘
+              ▼
+       Authorization
+              │
+        ┌─────┴─────┐
+        ▼           ▼
+      Allow        403
+Frontend
+   │
+   ▼
+/auth/me
+   │
+   ▼
+current contexts + permissions
+   │
+   ▼
+PermissionGate
+   │
+   ▼
+UI visibility
+
+
+
+
+
+
+
+
+
+
+Runamarga CRM — Authentication & RBAC Flow
+
+How authentication, contexts, permissions, async/sync functions, and PermissionGate work
+
+1. Big Picture
+
+The CRM separates authentication, authorization, context selection, and frontend UI permission checks. The backend database is the source of truth for permissions. The frontend keeps a cached copy for fast UI checks.
+
+Overall flow: Login → HttpOnly access/refresh cookies → /auth/me → database contexts & permissions → localStorage cache → PermissionGate → UI.
+
+2. Authentication: Who is the user?
+
+After OTP verification, the backend creates an access token and a refresh token. The tokens are stored in HttpOnly cookies, so frontend JavaScript does not manually read the access token.
+
+get_current_employee() reads the access-token cookie, validates the JWT, extracts the employee ID, loads the Employee from PostgreSQL, and rejects deleted, deactivated, or inactive employees.
+
+3. Contexts and Permissions
+
+Permissions are not taken directly from the JWT. They are stored in the database through EmployeeContext and EmployeeContextPermission.
+
+Employee → EmployeeContext → Context
+
+EmployeeContext → EmployeeContextPermission → Permission
+
+get_employee_contexts() reads active contexts and their active permission codes.
+
+4. What /auth/me Does
+
+GET /auth/me authenticates the employee using the HttpOnly access token, then reads the employee's current contexts and permissions directly from the database.
+
+Example: { "success": true, "data": { "id": 125, "name": "Employee", "email": "employee@example.com", "role": "Admin", "contexts": [ { "id": 1, "code": "GLOBAL", "name": "Global", "is_default": true, "permissions": ["dashboard:view", "loans:view"] } ] } }
+
+5. Why We Added getStoredUser()
+
+There are now two intentionally different functions.
+
+getCurrentUser() — Asynchronous: calls /auth/me, gets fresh DB-backed user data, and updates localStorage.
+
+getStoredUser() — Synchronous: immediately reads the cached user from localStorage for frontend permission checks.
+
+6. Synchronous vs Asynchronous
+
+Synchronous code returns its result immediately and can be used directly by synchronous functions.
+
+Asynchronous code performs an operation that may take time, such as a network request. It returns a Promise and is normally consumed with await inside an async function.
+
+In this project: const user = getStoredUser() is synchronous; const user = await getCurrentUser() is asynchronous.
+
+PermissionGate and the permission helper functions are synchronous, so they must not call an API request every time they check a permission.
+
+7. Application Startup Flow
+
+App.js checks whether a cached user exists using isAuthenticated(), then calls getCurrentUser() to synchronize the cache with the backend.
+
+1. App starts. 2. isAuthenticated() checks localStorage synchronously. 3. getCurrentUser() calls GET /auth/me. 4. Backend reads current employee and permissions from DB. 5. Fresh user replaces auth_user in localStorage. 6. auth:changed is dispatched. 7. PermissionGate reads the updated cached user. 8. UI reflects the latest permissions.
+
+8. Expired Access Token Flow
+
+If /auth/me returns 401, getCurrentUser() attempts to refresh the access token using the refresh-token cookie, then retries /auth/me.
+
+Flow: /auth/me → 401 → /auth/refresh → new access cookie → /auth/me again → fresh user data.
+
+9. PermissionGate Flow
+
+PermissionGate is a frontend UI guard. It reads permissions from the active context of the stored user.
+
+PermissionGate → hasAnyPermission()/hasAllPermissions() → getStoredUser() → getActiveContext() → context.permissions.
+
+If the required permission exists, the component is rendered; otherwise the fallback is rendered.
+
+10. Important Security Principle
+
+Frontend PermissionGate controls what the user sees. It must not be treated as the real security boundary.
+
+The backend should independently check the required permission before performing protected operations. The database should remain the source of truth.
+
+11. What Happens When a Permission Is Removed
+
+1. Employee initially has dashboard:view in the database. 2. Login returns the permission and caches it in localStorage. 3. An administrator removes dashboard:view from EmployeeContextPermission. 4. The next application/session synchronization calls /auth/me. 5. get_employee_contexts() reads the database again. 6. dashboard:view is no longer returned. 7. localStorage is updated. 8. PermissionGate no longer allows dashboard:view.
+
+12. Current Architecture Diagram
+
+DATABASE
+  └── Employee
+       └── EmployeeContext
+            └── EmployeeContextPermission
+                 └── Permission
+                       ↓
+                  GET /auth/me
+                       ↓
+                getCurrentUser() [async]
+                       ↓
+              localStorage.auth_user
+                       ↓
+                getStoredUser() [sync]
+                       ↓
+                 getActiveContext()
+                       ↓
+                  permissions[]
+                       ↓
+                  PermissionGate
+                       ↓
+                        UI
+
+13. Files Involved
+
+backend/app/core/security.py — authenticates the employee from the HttpOnly access-token cookie.
+
+backend/app/routes/auth_routes.py — exposes /auth/me and login/refresh/logout endpoints.
+
+backend/app/services/auth_service.py — builds current contexts and permissions.
+
+admin-react/src/app/auth.js — manages frontend auth state, fresh-user synchronization, and cached user data.
+
+admin-react/src/app/permissions.js — checks permissions synchronously for the frontend.
+
+admin-react/src/App.js — synchronizes the current user when the application starts.
+
+admin-react/src/app/apiClient.js — handles API requests and access-token refresh/retry behavior.
+
+14. Production-Grade Responsibility
+
+Synchronizing /auth/me fixes stale frontend permission state. For full production-grade authorization, protected backend endpoints must also enforce permissions using the backend AccessControl layer. The frontend should never be the only authorization check.
