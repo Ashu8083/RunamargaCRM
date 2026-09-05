@@ -20,3 +20,5 @@ from app.models.dsa_details import DSADetail
 from app.models.loan_applications import LoanApplication
 from app.models.employee_roles import EmployeeRole
 from app.models.reverted_loans import RevertedLoan
+from app.models.attendance import Attendance
+

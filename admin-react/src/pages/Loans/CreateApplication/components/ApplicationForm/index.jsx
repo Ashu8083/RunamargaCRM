@@ -41,7 +41,7 @@ const createInitialForm = () => {
   }
 
   Object.values(LOAN_TYPE_CONFIG).forEach((config) => {
-    ;(config.extraFields || []).forEach((field) => {
+    ; (config.extraFields || []).forEach((field) => {
       form[field.name] = field.defaultValue ?? ''
     })
   })
@@ -168,10 +168,6 @@ function ApplicationForm({
       // -------------------------------------------------------
 
       case 'rm_id':
-
-        if (!trimmedValue) {
-          return 'Please select a Relationship Manager.'
-        }
 
         return ''
 
@@ -775,7 +771,9 @@ function ApplicationForm({
       const applicationData = {
 
         rm_id:
-          formData.rm_id,
+          formData.rm_id
+            ? Number(formData.rm_id)
+            : null,
 
         state_id:
           formData.state_id || null,
@@ -939,14 +937,13 @@ function ApplicationForm({
       focus:outline-none
       focus:ring-1
       focus:ring-[#8BCF00]/30
-      ${
-        errors[field] && touched[field]
-          ? `
+      ${errors[field] && touched[field]
+        ? `
             border-error
             focus:border-error
             focus:ring-error/20
           `
-          : ''
+        : ''
       }
     `
   }
@@ -970,14 +967,13 @@ function ApplicationForm({
       focus:outline-none
       focus:ring-1
       focus:ring-[#8BCF00]/30
-      ${
-        errors[field] && touched[field]
-          ? `
+      ${errors[field] && touched[field]
+        ? `
             border-error
             focus:border-error
             focus:ring-error/20
           `
-          : ''
+        : ''
       }
     `
   }
@@ -1147,10 +1143,9 @@ function ApplicationForm({
               focus:outline-none
               focus:ring-1
               focus:ring-[#8BCF00]/30
-              ${
-                fieldError && fieldTouched
-                  ? 'border-error focus:border-error focus:ring-error/20'
-                  : ''
+              ${fieldError && fieldTouched
+                ? 'border-error focus:border-error focus:ring-error/20'
+                : ''
               }
             `}
           />
@@ -1236,14 +1231,13 @@ function ApplicationForm({
             border
             px-4
             py-3
-            ${
-              notification.type === 'success'
-                ? `
+            ${notification.type === 'success'
+              ? `
                   border-[#8BCF00]/30
                   bg-[#8BCF00]/10
                   text-[#5E8F00]
                 `
-                : `
+              : `
                   border-error/20
                   bg-error/5
                   text-error
@@ -1356,13 +1350,8 @@ function ApplicationForm({
                   >
                     Relationship Manager (RM)
 
-                    <span
-                      className="
-                        ml-1
-                        text-error
-                      "
-                    >
-                      *
+                    <span className="ml-1 text-base-content/40">
+                      (Optional)
                     </span>
 
                   </label>
@@ -1978,15 +1967,14 @@ function ApplicationForm({
                       focus:outline-none
                       focus:ring-1
                       focus:ring-[#8BCF00]/30
-                      ${
-                        errors.remarks &&
+                      ${errors.remarks &&
                         touched.remarks
-                          ? `
+                        ? `
                             border-error
                             focus:border-error
                             focus:ring-error/20
                           `
-                          : ''
+                        : ''
                       }
                     `}
                   />

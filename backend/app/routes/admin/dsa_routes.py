@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-
+from app.dependency.get_access_control_dependency import check_permission
 from app.config.database import get_db
 from app.schemas.DSA_schema import (
     DSACreateRequest,
@@ -16,7 +16,7 @@ from app.controllers.dsa_details_controller import (
 
 router = APIRouter(
     prefix="/dsa",
-    tags=["DSA"]
+    tags=["DSA"],
 )
 
 
@@ -26,6 +26,7 @@ router = APIRouter(
 )
 async def create_dsa(
     create_dsa_request: DSACreateRequest,
+    employee=Depends(check_permission("dsa:create")),
     db: Session = Depends(get_db),
 ):
     return create_dsa_details(
@@ -40,6 +41,7 @@ async def create_dsa(
 )
 async def get_dsa_list(
     filters: Annotated[DSA_filter_search_query, Query()],
+    employee=Depends(check_permission("dsa:view")),
     db: Session = Depends(get_db),
 ):
     return filter_dsa_details(

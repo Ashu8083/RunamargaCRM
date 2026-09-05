@@ -124,3 +124,9 @@ class Employee(Base):
         back_populates="employee",
         cascade="all, delete-orphan",
     )
+    attendances = relationship(
+        "Attendance",
+        foreign_keys="Attendance.employee_id",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+    )

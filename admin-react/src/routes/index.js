@@ -60,13 +60,6 @@ const Applications = lazy(() =>
     import('../pages/Loans/CombinedApplications/index')
 )
 
-const RMApplications = lazy(() =>
-    import('../pages/Loans/RMApplications/index')
-)
-
-const AgentApplications = lazy(() =>
-    import('../pages/Loans/AgentApplications/index')
-)
 
 const PendingApplications = lazy(() =>
     import('../pages/Loans/PendingApplications/index')
