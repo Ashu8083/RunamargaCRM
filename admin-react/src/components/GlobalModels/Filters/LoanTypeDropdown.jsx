@@ -28,7 +28,7 @@ const LoanTypeDropdown = ({
       setFetchError('')
 
       try {
-        const response = await fetch(`${API_BASE_URL}/loan-types`, {
+        const response = await fetch(`${API_BASE_URL}/common/loan-types`, {
           method: 'GET',
           credentials: 'include',
           headers: {

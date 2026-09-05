@@ -54,13 +54,52 @@ const normalizeStatusResponse = (response, fallbackMessage) => {
             fallbackMessage,
     }
 }
-
-export const getCurrentUser = () => {
+export const getStoredUser = () => {
     return readJson(
         localStorage.getItem(AUTH_USER_KEY)
     )
 }
+export const getCurrentUser = async () => {
+    try {
+        const response = await authClient.get('/auth/me')
 
+        const user = response.data?.data
+
+        if (user) {
+            localStorage.setItem(
+                AUTH_USER_KEY,
+                JSON.stringify(user)
+            )
+        }
+
+        return user
+
+    } catch (error) {
+
+        if (error.response?.status !== 401) {
+            throw error
+        }
+
+        const refreshed = await refreshAccessToken()
+
+        if (!refreshed) {
+            throw error
+        }
+
+        const response = await authClient.get('/auth/me')
+
+        const user = response.data?.data
+
+        if (user) {
+            localStorage.setItem(
+                AUTH_USER_KEY,
+                JSON.stringify(user)
+            )
+        }
+
+        return user
+    }
+}
 export const getActiveContext = (
     user = getCurrentUser()
 ) => {
@@ -113,11 +152,9 @@ export const clearAuthSession = () => {
 
     notifyAuthChanged()
 }
-
 export const isAuthenticated = () => {
-    return Boolean(getCurrentUser())
+    return Boolean(getStoredUser())
 }
-
 export const requestLoginOtp = async (payload) => {
     const response = await authClient.post(
         AUTH_ENDPOINTS.requestOtp,

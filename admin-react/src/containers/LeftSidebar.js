@@ -8,7 +8,7 @@ import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 
 import { APP_LOGO } from '../constants/assets'
-import { getCurrentUser } from '../app/auth'
+import { getStoredUser } from '../app/auth'
 import { hasPermission } from '../app/permissions'
 
 
@@ -17,11 +17,11 @@ function LeftSidebar({ onClose }) {
     const location = useLocation()
 
     const [currentUser, setCurrentUser] = useState(() =>
-        getCurrentUser()
+        getStoredUser()
     )
     useEffect(() => {
         const handleAuthChanged = () => {
-            setCurrentUser(getCurrentUser())
+            setCurrentUser(getStoredUser())
         }
 
         window.addEventListener(
