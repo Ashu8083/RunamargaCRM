@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 import hashlib  
 import jwt
-from fastapi import Cookie, Depends, HTTPException
+from fastapi import Cookie, Depends, HTTPException,Request
 from sqlalchemy.orm import Session
 from app.models.employees import Employee
 from app.config.database import get_db
@@ -67,6 +67,8 @@ def decode_token(token: str) -> dict:
         raise ValueError("Invalid token")
 
     return payload
+
+
 def get_employee_id_from_token(token: str) -> int:
     payload = decode_token(token)
 
@@ -83,8 +85,8 @@ def get_employee_id_from_token(token: str) -> int:
     except (TypeError, ValueError):
         raise ValueError("Invalid employee ID in token")
 
-    
 def get_current_employee(
+    request: Request,
     db: Session = Depends(get_db),
     access_token: str | None = Cookie(default=None),
 ) -> Employee:
@@ -129,5 +131,6 @@ def get_current_employee(
             status_code=401,
             detail="Account is inactive",
         )
+    request.state.employee = employee
 
     return employee

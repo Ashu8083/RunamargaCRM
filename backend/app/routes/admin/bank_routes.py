@@ -2,6 +2,7 @@ from fastapi import Depends, APIRouter
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.security import get_current_employee
 from app.dependency.get_access_control_dependency import check_permission
 
 from app.schemas.bank_schema import (
@@ -22,6 +23,7 @@ from app.controllers.bank_controller import (
 router = APIRouter(
     prefix="/admin/banks",
     tags=["Banks"],
+    dependencies=[Depends(get_current_employee)],
     responses={
         404: {"description": "Not found"}
     },
@@ -35,9 +37,8 @@ router = APIRouter(
 )
 def create_bank(
     bank_data: BankCreateRequest,
-    employee=Depends(check_permission("banks:create")),
+    permission_check=Depends(check_permission("banks:create")),
     db: Session = Depends(get_db),
-    # employee: Employee = Depends(get_current_employee),
 ):
     return create_bank_controller(
         db_session=db,

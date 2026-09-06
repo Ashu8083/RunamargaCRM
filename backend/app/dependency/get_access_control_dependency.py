@@ -1,16 +1,17 @@
-from fastapi import Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.models.employees import Employee
 from app.core.access_control import AccessControl
-from app.core.security import  get_current_employee
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
 
 
 def check_permission(permission: str):
-    def dependency(
+    def permission_dependency(
+        request: Request,
         db: Session = Depends(get_db),
-        employee: Employee = Depends(get_current_employee),
     ):
+        employee: Employee = request.state.employee
+
         if not AccessControl.has_permission(
             db,
             employee,
@@ -20,5 +21,5 @@ def check_permission(permission: str):
                 status_code=403,
                 detail="Permission denied",
             )
-        return employee
-    return dependency
+
+    return permission_dependency

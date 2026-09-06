@@ -2,6 +2,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+
+from app.core.security import get_current_employee
 from app.dependency.get_access_control_dependency import check_permission
 from app.config.database import get_db
 from app.schemas.DSA_schema import (
@@ -16,6 +18,7 @@ from app.controllers.dsa_details_controller import (
 
 router = APIRouter(
     prefix="/dsa",
+    dependencies=[Depends(get_current_employee)],
     tags=["DSA"],
 )
 

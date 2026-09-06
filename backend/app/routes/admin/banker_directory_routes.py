@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.config.database import get_db
+from app.core.security import get_current_employee
 from app.schemas.banker_directory_schema import (
     CreateBankerDirectoryRequest,
     BankerFilterSearchRequest,
@@ -16,6 +17,7 @@ from app.controllers.banker_directory_controller import (
 )
 router = APIRouter(
     prefix="/banker-directory",
+    dependencies=[Depends(get_current_employee)],
     tags=["Banker Directory"],
 )
 @router.post("/create")
