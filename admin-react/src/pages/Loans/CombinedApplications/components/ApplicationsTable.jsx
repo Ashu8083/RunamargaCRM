@@ -1,4 +1,5 @@
 // admin-react/src/pages/Loans/AgentApplications/components/ApplicationsTable.jsx
+
 import { useState } from "react";
 
 import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
@@ -14,73 +15,47 @@ import AgentDropdown from "../../../../components/GlobalModels/Filters/AgentDrop
 import RmDropdown from "../../../../components/GlobalModels/Filters/RmDropdown";
 import TeamLeadDropdown from "../../../../components/GlobalModels/Filters/TeamLeadDropdown";
 import LoanTypeDropdown from "../../../../components/GlobalModels/Filters/LoanTypeDropdown";
-import StatusDropdown from '../../../../components/GlobalModels/Filters/StatusDropdown'
+import StatusDropdown from "../../../../components/GlobalModels/Filters/StatusDropdown";
+
 
 // =============================================================
-// COMPONENT
+// CONSTANTS
 // =============================================================
 
-function ApplicationsTable({
-  applications = [],
-  search,
-  setSearch,
-  loanTypes = [],
-  rms = [],
-  teamLeads = [],
-  agents = [],
-  statuses = [],
-  selectedLoanType,
-  setSelectedLoanType,
-  selectedRM,
-  setSelectedRM,
-  selectedTeamLead,
-  setSelectedTeamLead,
-  selectedAgent,
-  setSelectedAgent,
-  selectedStatus,
-  setSelectedStatus,
-  onClearFilters,
-  onLoanTypeChange,
-  onStatusChange,
-  onReminder,
-  onChat,
-  onViewApplication,
-  onRefresh,
-}) {
-
-  // =========================================================
-  // CHAT
-  // =========================================================
-
-  const [chatOpen, setChatOpen] = useState(false);
-
-  const [selectedChatApplication, setSelectedChatApplication] =
-    useState(null);
+const STATUS_OPTIONS = [
+    "Revert Rejected",
+    "Rejected",
+    "In Process",
+    "Docs Pending",
+    "Sanctioned",
+    "Disbursed",
+];
 
 
-  // =========================================================
-  // HELPERS
-  // =========================================================
+// =============================================================
+// HELPERS
+// =============================================================
 
-  const getAgentName = (application) =>
+const getAgentName = (application) =>
     application.agentName ??
     application.agent_name ??
+    application.processingAgentName ??
+    application.processing_agent_name ??
     application.processingAgent ??
     application.processing_agent ??
     application.agent?.name ??
-    application.processingAgent?.name ??
     "N/A";
 
 
-  const getRMName = (application) =>
+const getRMName = (application) =>
     application.rmName ??
-    application.rm?.name ??
     application.rm_name ??
+    application.rm?.name ??
     application.rm ??
     "N/A";
 
 
-  const getTeamLeadName = (application) =>
+const getTeamLeadName = (application) =>
     application.teamLeadName ??
     application.team_lead_name ??
     application.teamLead?.name ??
@@ -88,34 +63,39 @@ function ApplicationsTable({
     "N/A";
 
 
-  const getAppliedBy = (application) =>
+const getAppliedBy = (application) =>
+    application.appliedByName ??
+    application.applied_by_name ??
     application.appliedBy ??
     application.applied_by ??
+    application.createdByName ??
+    application.created_by_name ??
     application.createdBy ??
     application.created_by ??
     "N/A";
 
 
-  const getReferral = (application) =>
-    application.referral ??
+const getReferral = (application) =>
     application.referralName ??
     application.referral_name ??
+    application.referral ??
     application.referredBy ??
     application.referred_by ??
-    application.referrer ??
     application.referrerName ??
     application.referrer_name ??
+    application.referrer ??
     "N/A";
 
 
-  const getLoanId = (application) =>
+const getLoanId = (application) =>
     application.loanId ??
     application.loan_id ??
+    application.unique_id ??
     application.id ??
     null;
 
 
-  const getAgentId = (application) =>
+const getAgentId = (application) =>
     application.agentId ??
     application.agent_id ??
     application.processingAgentId ??
@@ -125,158 +105,295 @@ function ApplicationsTable({
     null;
 
 
-  const getAmount = (application) => {
+// =============================================================
+// LOAN TYPE
+// =============================================================
 
-    const amount =
-      application.loanAmount ??
-      application.amount ??
-      application.loan_amount;
+const getLoanTypeName = (
+    application,
+    loanTypes = []
+) => {
+
+    // If a resolved name is already present,
+    // use it first.
 
     if (
-      amount === null ||
-      amount === undefined ||
-      amount === ""
+        application.loanType &&
+        typeof application.loanType === "string"
     ) {
-      return "N/A";
+        return application.loanType;
     }
 
-    const numericAmount = Number(
-      String(amount)
-        .replace(/,/g, "")
-        .replace(/₹/g, "")
+    if (
+        application.loan_type &&
+        typeof application.loan_type === "string"
+    ) {
+        return application.loan_type;
+    }
+
+
+    // Otherwise resolve the name from loan_type_id.
+
+    const loanTypeId =
+        application.loanTypeId ??
+        application.loan_type_id ??
+        application.loanType?.id ??
+        application.loan_type?.id;
+
+
+    if (
+        loanTypeId === null ||
+        loanTypeId === undefined ||
+        loanTypeId === ""
+    ) {
+        return "Not Assigned";
+    }
+
+
+    const loanType = loanTypes.find(
+        (item) =>
+            String(item.id) ===
+            String(loanTypeId)
     );
 
-    return Number.isNaN(numericAmount)
-      ? String(amount)
-      : `₹${numericAmount.toLocaleString("en-IN")}`;
 
-  };
+    return loanType?.name || "Not Assigned";
+};
 
 
-  const formatDate = (value) => {
+// =============================================================
+// AMOUNT
+// =============================================================
+
+const getAmount = (application) => {
+
+    const amount =
+        application.loanAmount ??
+        application.loan_amount ??
+        application.loan_amt ??
+        application.amount;
+
+
+    if (
+        amount === null ||
+        amount === undefined ||
+        amount === ""
+    ) {
+        return "N/A";
+    }
+
+
+    const numericAmount = Number(
+        String(amount)
+            .replace(/,/g, "")
+            .replace(/₹/g, "")
+            .trim()
+    );
+
+
+    if (Number.isNaN(numericAmount)) {
+        return String(amount);
+    }
+
+
+    return `₹${numericAmount.toLocaleString("en-IN")}`;
+};
+
+
+// =============================================================
+// DATE
+// =============================================================
+
+const formatDate = (value) => {
 
     if (!value) {
-      return "N/A";
+        return "N/A";
     }
+
 
     const date = new Date(value);
 
+
     if (Number.isNaN(date.getTime())) {
-      return String(value);
+        return String(value);
     }
 
+
     return [
-      String(date.getDate()).padStart(2, "0"),
-      String(date.getMonth() + 1).padStart(2, "0"),
-      date.getFullYear(),
+        String(date.getDate()).padStart(2, "0"),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        date.getFullYear(),
     ].join("/");
+};
 
-  };
 
-
-  const getAppliedDate = (application) =>
+const getAppliedDate = (application) =>
     formatDate(
-      application.appliedDate ??
-      application.applied_at ??
-      application.createdAt ??
-      application.created_at
+        application.appliedDate ??
+        application.applied_date ??
+        application.appliedAt ??
+        application.applied_at ??
+        application.createdAt ??
+        application.created_at
     );
 
 
-  const getStatusClass = (status) => {
+// =============================================================
+// STATUS
+// =============================================================
 
-    switch (status) {
+/**
+ * Convert backend status values into the exact
+ * status labels used by the UI.
+ *
+ * inprocess       -> In Process
+ * in_process      -> In Process
+ * docs_pending    -> Docs Pending
+ * docspending     -> Docs Pending
+ * revert_rejected -> Revert Rejected
+ */
 
-      case "Inprocess":
-      case "In Process":
+const normalizeStatus = (value) => {
 
-        return `
-                    text-[#78B300]
-                    border-[#8BCF00]/40
-                    bg-[#8BCF00]/10
-                `;
-
-
-      case "Docs Pending":
-
-        return `
-                    text-orange-600
-                    border-orange-300
-                    bg-orange-50
-                `;
-
-
-      case "Rejected":
-
-        return `
-                    text-error
-                    border-error/30
-                    bg-error/5
-                `;
-
-
-      case "Revert Rejected":
-
-        return `
-                    text-[#78B300]
-                    border-[#8BCF00]/40
-                    bg-[#8BCF00]/10
-                `;
-
-
-      default:
-
-        return `
-                    text-base-content/60
-                    border-base-300
-                    bg-base-200/50
-                `;
-
+    if (!value) {
+        return "N/A";
     }
 
-  };
+
+    const normalized = String(value)
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ");
 
 
-  // =========================================================
-  // CHAT
-  // =========================================================
+    switch (normalized) {
 
-  const handleOpenChat = (application) => {
-
-    setSelectedChatApplication(application);
-
-    setChatOpen(true);
-
-    onChat?.(application);
-
-  };
+        case "revert rejected":
+        case "reverted rejected":
+        case "revertreject":
+        case "revert reject":
+            return "Revert Rejected";
 
 
-  const handleCloseChat = () => {
-
-    setChatOpen(false);
-
-    setSelectedChatApplication(null);
-
-  };
+        case "rejected":
+        case "reject":
+            return "Rejected";
 
 
-  // =========================================================
-  // TABLE CELL
-  // =========================================================
+        case "inprocess":
+        case "in process":
+        case "in progress":
+        case "processing":
+            return "In Process";
 
-  const Cell = ({
+
+        case "docspending":
+        case "docs pending":
+        case "document pending":
+        case "documents pending":
+            return "Docs Pending";
+
+
+        case "sanctioned":
+        case "sanction":
+            return "Sanctioned";
+
+
+        case "disbursed":
+        case "disbursement":
+            return "Disbursed";
+
+
+        default:
+            return String(value);
+    }
+};
+
+
+// =============================================================
+// STATUS CLASS
+// =============================================================
+
+const getStatusClass = (status) => {
+
+    switch (normalizeStatus(status)) {
+
+        case "In Process":
+            return `
+                text-[#78B300]
+                border-[#8BCF00]/40
+                bg-[#8BCF00]/10
+            `;
+
+
+        case "Docs Pending":
+            return `
+                text-orange-600
+                border-orange-300
+                bg-orange-50
+            `;
+
+
+        case "Rejected":
+            return `
+                text-error
+                border-error/30
+                bg-error/5
+            `;
+
+
+        case "Revert Rejected":
+            return `
+                text-yellow-600
+                border-yellow-300
+                bg-yellow-50
+            `;
+
+
+        case "Sanctioned":
+            return `
+                text-blue-600
+                border-blue-300
+                bg-blue-50
+            `;
+
+
+        case "Disbursed":
+            return `
+                text-purple-600
+                border-purple-300
+                bg-purple-50
+            `;
+
+
+        default:
+            return `
+                text-base-content/60
+                border-base-300
+                bg-base-200/50
+            `;
+    }
+};
+
+
+// =============================================================
+// TABLE CELL
+// =============================================================
+
+function Cell({
     children,
     title,
     className = "",
-  }) => (
+}) {
 
-    <span
-      title={
-        title ??
-        String(children ?? "")
-      }
-      className={`
+    return (
+        <span
+            title={
+                title ??
+                String(children ?? "")
+            }
+            className={`
                 block
                 min-w-0
                 overflow-hidden
@@ -284,224 +401,414 @@ function ApplicationsTable({
                 whitespace-nowrap
                 ${className}
             `}
-    >
-      {children}
-    </span>
+        >
+            {children}
+        </span>
+    );
+}
 
-  );
+
+// =============================================================
+// COMPONENT
+// =============================================================
+
+function ApplicationsTable({
+    applications = [],
+    search,
+    setSearch,
+
+    loanTypes = [],
+    rms = [],
+    teamLeads = [],
+    agents = [],
+
+    statuses = STATUS_OPTIONS,
+
+    selectedLoanType,
+    setSelectedLoanType,
+
+    selectedRM,
+    setSelectedRM,
+
+    selectedTeamLead,
+    setSelectedTeamLead,
+
+    selectedAgent,
+    setSelectedAgent,
+
+    selectedStatus,
+    setSelectedStatus,
+
+    onClearFilters,
+    onLoanTypeChange,
+    onStatusChange,
+    onReminder,
+    onChat,
+    onViewApplication,
+    onRefresh,
+}) {
+
+    // =========================================================
+    // STATE
+    // =========================================================
+
+    const [chatOpen, setChatOpen] =
+        useState(false);
+
+    const [
+        selectedChatApplication,
+        setSelectedChatApplication,
+    ] = useState(null);
+
+    const [
+        expandedPhoneId,
+        setExpandedPhoneId,
+    ] = useState(null);
 
 
-  // =========================================================
-  // RENDER
-  // =========================================================
+    // =========================================================
+    // FILTER STATUS OPTIONS
+    // =========================================================
 
-  return (
+    const statusOptions =
+        statuses?.length
+            ? statuses
+            : STATUS_OPTIONS;
 
-    <div className="space-y-4">
 
-      {/* =====================================================
+    // =========================================================
+    // CHAT
+    // =========================================================
+
+    const handleOpenChat = (application) => {
+
+        setSelectedChatApplication(
+            application
+        );
+
+        setChatOpen(true);
+
+        onChat?.(application);
+    };
+
+
+    const handleCloseChat = () => {
+
+        setChatOpen(false);
+
+        setSelectedChatApplication(
+            null
+        );
+    };
+
+
+    // =========================================================
+    // PHONE
+    // =========================================================
+
+    const handlePhoneClick = (
+        application
+    ) => {
+
+        const applicationId =
+            application.id ??
+            application.loanId ??
+            application.loan_id;
+
+
+        setExpandedPhoneId(
+            (currentId) =>
+                currentId === applicationId
+                    ? null
+                    : applicationId
+        );
+    };
+
+
+    // =========================================================
+    // SEARCH
+    // =========================================================
+
+    const handleSearchChange = (
+        event
+    ) => {
+
+        setSearch(
+            event.target.value
+        );
+    };
+
+
+    // =========================================================
+    // RENDER
+    // =========================================================
+
+    return (
+
+        <div className="space-y-4">
+
+            {/* =================================================
                 FILTERS
-            ===================================================== */}
+            ================================================= */}
 
-      <div
-        className="
+            <div
+                className="
                     card
                     bg-base-100
                     border
                     border-base-300
                     shadow-sm
                 "
-      >
+            >
 
-        <div
-          className="
-        p-3
-        flex
-        items-center
-        gap-2
-        w-full
-    "
-        >
-          {/* SEARCH */}
+                <div
+                    className="
+                        p-3
+                        flex
+                        items-center
+                        gap-2
+                        w-full
+                    "
+                >
 
-          <div className="flex-1 min-w-0">
+                    {/* SEARCH */}
 
-            <div className="relative">
+                    <div className="flex-1 min-w-0">
 
-              <SearchIcon
-                className="
-                    pointer-events-none
-                    absolute
-                    left-3
-                    top-1/2
-                    h-4
-                    w-4
-                    -translate-y-1/2
-                    text-base-content/35
-                "
-              />
+                        <div className="relative">
 
-              <input
-                type="text"
-                value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Search name, loan ID, email or Agent..."
-                className="
-                    input
-                    input-bordered
-                    h-10
-                    min-h-10
-                    w-full
-                    pl-9
-                "
-              />
+                            <SearchIcon
+                                className="
+                                    pointer-events-none
+                                    absolute
+                                    left-3
+                                    top-1/2
+                                    h-4
+                                    w-4
+                                    -translate-y-1/2
+                                    text-base-content/35
+                                "
+                            />
+
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={
+                                    handleSearchChange
+                                }
+                                placeholder="
+                                    Search name, loan ID, email or Agent...
+                                "
+                                className="
+                                    input
+                                    input-bordered
+                                    h-10
+                                    min-h-10
+                                    w-full
+                                    pl-9
+                                "
+                            />
+
+                        </div>
+
+                    </div>
+
+
+                    {/* LOAN TYPE */}
+
+                    <div className="w-44 shrink-0">
+
+                        <LoanTypeDropdown
+                            label=""
+                            value={
+                                selectedLoanType
+                            }
+                            onChange={
+                                setSelectedLoanType
+                            }
+                            options={
+                                loanTypes
+                            }
+                            allLabel="
+                                All Loan Types
+                            "
+                            placeholder="
+                                All Loan Types
+                            "
+                            searchPlaceholder="
+                                Search loan type
+                            "
+                            emptyMessage="
+                                No loan types found
+                            "
+                        />
+
+                    </div>
+
+
+                    {/* RM */}
+
+                    <div className="w-44 shrink-0">
+
+                        <RmDropdown
+                            label=""
+                            value={
+                                selectedRM
+                            }
+                            onChange={
+                                setSelectedRM
+                            }
+                            options={
+                                rms
+                            }
+                            allLabel="All RMs"
+                            placeholder="All RMs"
+                            searchPlaceholder="Search RM"
+                            emptyMessage="No RMs found"
+                        />
+
+                    </div>
+
+
+                    {/* TEAM LEAD */}
+
+                    <div className="w-44 shrink-0">
+
+                        <TeamLeadDropdown
+                            label=""
+                            value={
+                                selectedTeamLead
+                            }
+                            onChange={
+                                setSelectedTeamLead
+                            }
+                            options={
+                                teamLeads
+                            }
+                            allLabel="
+                                All Team Leads
+                            "
+                            placeholder="
+                                All Team Leads
+                            "
+                            searchPlaceholder="
+                                Search team lead
+                            "
+                            emptyMessage="
+                                No team leads found
+                            "
+                        />
+
+                    </div>
+
+
+                    {/* AGENT */}
+
+                    <div className="w-44 shrink-0">
+
+                        <AgentDropdown
+                            label=""
+                            value={
+                                selectedAgent
+                            }
+                            onChange={
+                                setSelectedAgent
+                            }
+                            options={
+                                agents
+                            }
+                            allLabel="All Agents"
+                            placeholder="All Agents"
+                            searchPlaceholder="Search agent"
+                            emptyMessage="No agents found"
+                        />
+
+                    </div>
+
+
+                    {/* STATUS */}
+
+                    <div className="w-44 shrink-0">
+
+                        <StatusDropdown
+                            label=""
+                            value={
+                                selectedStatus
+                            }
+                            onChange={
+                                setSelectedStatus
+                            }
+                            options={
+                                statusOptions
+                            }
+                            allLabel="All Statuses"
+                            placeholder="All Statuses"
+                            searchPlaceholder="Search status"
+                            emptyMessage="No statuses found"
+                        />
+
+                    </div>
+
+
+                    {/* CLEAR */}
+
+                    <button
+                        type="button"
+                        onClick={
+                            onClearFilters
+                        }
+                        className="
+                            btn
+                            btn-ghost
+                            btn-sm
+                            h-10
+                            min-h-10
+                            shrink-0
+                        "
+                    >
+                        Clear
+                    </button>
+
+
+                    {/* REFRESH */}
+
+                    <button
+                        type="button"
+                        onClick={
+                            onRefresh
+                        }
+                        title="
+                            Refresh applications
+                        "
+                        className="
+                            btn
+                            btn-sm
+                            btn-square
+                            h-10
+                            min-h-10
+                            shrink-0
+                            border-[#8BCF00]
+                            text-[#78B300]
+                            hover:bg-[#8BCF00]
+                            hover:text-white
+                        "
+                    >
+                        <ArrowPathIcon
+                            className="w-4 h-4"
+                        />
+                    </button>
+
+                </div>
 
             </div>
 
-          </div>
 
-
-          {/* LOAN TYPE */}
-
-          <div className="w-44 shrink-0">
-
-            <LoanTypeDropdown
-              label=""
-              value={selectedLoanType}
-              onChange={setSelectedLoanType}
-              options={loanTypes}
-              allLabel="All Loan Types"
-              placeholder="All Loan Types"
-              searchPlaceholder="Search loan type"
-              emptyMessage="No loan types found"
-            />
-
-          </div>
-
-
-          {/* RM */}
-
-          <div className="w-44 shrink-0">
-
-            <RmDropdown
-              label=""
-              value={selectedRM}
-              onChange={setSelectedRM}
-              options={rms}
-              allLabel="All RMs"
-              placeholder="All RMs"
-              searchPlaceholder="Search RM"
-              emptyMessage="No RMs found"
-            />
-
-          </div>
-
-
-          {/* TEAM LEAD */}
-
-          <div className="w-44 shrink-0">
-
-            <TeamLeadDropdown
-              label=""
-              value={selectedTeamLead}
-              onChange={setSelectedTeamLead}
-              options={teamLeads}
-              allLabel="All Team Leads"
-              placeholder="All Team Leads"
-              searchPlaceholder="Search team lead"
-              emptyMessage="No team leads found"
-            />
-
-          </div>
-
-
-          {/* AGENT */}
-
-          <div className="w-44 shrink-0">
-
-            <AgentDropdown
-              label=""
-              value={selectedAgent}
-              onChange={setSelectedAgent}
-              options={agents}
-              allLabel="All Agents"
-              placeholder="All Agents"
-              searchPlaceholder="Search agent"
-              emptyMessage="No agents found"
-            />
-
-          </div>
-          {/* Status */}
-
-          <div className="w-44 shrink-0">
-
-            <StatusDropdown
-              label=""
-              value={selectedStatus}
-              onChange={setSelectedStatus}
-              options={statuses}
-              allLabel="All Statuses"
-              placeholder="All Statuses"
-              searchPlaceholder="Search status"
-              emptyMessage="No statuses found"
-            />
-
-          </div>
-
-
-          {/* CLEAR */}
-
-          <button
-            type="button"
-            onClick={onClearFilters}
-            className="
-            btn
-            btn-ghost
-            btn-sm
-            h-10
-            min-h-10
-            shrink-0
-        "
-          >
-            Clear
-          </button>
-
-
-          {/* REFRESH */}
-
-          <button
-            type="button"
-            onClick={onRefresh}
-            title="Refresh applications"
-            className="
-            btn
-            btn-sm
-            btn-square
-            h-10
-            min-h-10
-            shrink-0
-            border-[#8BCF00]
-            text-[#78B300]
-            hover:bg-[#8BCF00]
-            hover:text-white
-        "
-          >
-            <ArrowPathIcon className="w-4 h-4" />
-          </button>
-
-        </div>
-
-      </div>
-
-
-      {/* =====================================================
+            {/* =================================================
                 TABLE
-            ===================================================== */}
+            ================================================= */}
 
-      <div
-        className="
+            <div
+                className="
                     card
                     bg-base-100
                     border
@@ -510,617 +817,734 @@ function ApplicationsTable({
                     w-full
                     overflow-hidden
                 "
-      >
+            >
 
-        <div
-          className="
+                <div
+                    className="
                         w-full
                         overflow-x-auto
                         touch-pan-x
                         overscroll-x-contain
                     "
-        >
+                >
 
-          <table
-            className="
+                    <table
+                        className="
                             w-full
-                            min-w-[1150px]
+                            min-w-[1300px]
                             table-fixed
                             border-collapse
                         "
-          >
+                    >
 
-            <colgroup>
+                        <colgroup>
 
-              <col className="w-[3%]" />
-              <col className="w-[10%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-              <col className="w-[8%]" />
-              <col className="w-[8%]" />
-              <col className="w-[10%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-              <col className="w-[8%]" />
-              <col className="w-[9%]" />
-              <col className="w-[8%]" />
+                            <col className="w-[3%]" />
 
-            </colgroup>
+                            <col className="w-[11%]" />
 
+                            <col className="w-[10%]" />
 
-            {/* HEADER */}
+                            <col className="w-[9%]" />
 
-            <thead>
+                            <col className="w-[9%]" />
 
-              <tr
-                className="
-                                    border-b
-                                    border-base-300
-                                "
-              >
+                            <col className="w-[9%]" />
 
-                {[
-                  "#",
-                  "Name",
-                  "Phone",
-                  "Loan Type",
-                  "Loan Amount",
-                  "Applied Date",
-                  "Applied By",
-                  "Referral",
-                  "RM",
-                  "Processing Agent",
-                  "Status",
-                  "Actions",
-                ].map((heading) => (
+                            <col className="w-[10%]" />
 
-                  <th
-                    key={heading}
-                    className="
-                                            px-3
-                                            py-3
-                                            text-left
-                                            text-[11px]
-                                            font-semibold
-                                            text-base-content/70
-                                        "
-                  >
-                    {heading}
-                  </th>
+                            <col className="w-[9%]" />
 
-                ))}
+                            <col className="w-[9%]" />
 
-              </tr>
+                            <col className="w-[9%]" />
 
-            </thead>
+                            <col className="w-[9%]" />
+
+                            <col className="w-[10%]" />
+
+                        </colgroup>
 
 
-            {/* BODY */}
+                        {/* HEADER */}
 
-            <tbody>
+                        <thead>
 
-              {!applications.length ? (
+                            <tr className="
+                                border-b
+                                border-base-300
+                            ">
 
-                <tr>
+                                {[
+                                    "#",
+                                    "Name",
+                                    "Phone",
+                                    "Loan Type",
+                                    "Loan Amount",
+                                    "Applied Date",
+                                    "Applied By",
+                                    "Referral",
+                                    "RM",
+                                    "Processing Agent",
+                                    "Status",
+                                    "Actions",
+                                ].map(
+                                    (heading) => (
+                                        <th
+                                            key={
+                                                heading
+                                            }
+                                            className="
+                                                px-3
+                                                py-3
+                                                text-left
+                                                text-[11px]
+                                                font-semibold
+                                                text-base-content/70
+                                            "
+                                        >
+                                            {
+                                                heading
+                                            }
+                                        </th>
+                                    )
+                                )}
 
-                  <td
-                    colSpan="12"
-                    className="
+                            </tr>
+
+                        </thead>
+
+
+                        {/* BODY */}
+
+                        <tbody>
+
+                            {!applications.length ? (
+
+                                <tr>
+
+                                    <td
+                                        colSpan="12"
+                                        className="
                                             text-center
                                             py-12
                                             text-sm
                                             text-base-content/50
                                         "
-                  >
-                    No applications found
-                  </td>
+                                    >
+                                        No applications found
+                                    </td>
 
-                </tr>
+                                </tr>
 
-              ) : (
+                            ) : (
 
-                applications.map(
-                  (application, index) => (
+                                applications.map(
+                                    (
+                                        application,
+                                        index
+                                    ) => {
 
-                    <tr
-                      key={
-                        application.id ??
-                        application.loanId ??
-                        index
-                      }
-                      className="
-                                                border-b
-                                                border-base-300
-                                                last:border-b-0
-                                                hover:bg-base-200/30
-                                            "
-                    >
-
-                      {/* # */}
-
-                      <td className="px-3 py-4">
-
-                        <Cell
-                          className="
-                                                        text-sm
-                                                        text-base-content/70
-                                                    "
-                        >
-                          {index + 1}
-                        </Cell>
-
-                      </td>
+                                        const applicationId =
+                                            application.id ??
+                                            application.loanId ??
+                                            application.loan_id ??
+                                            index;
 
 
-                      {/* NAME */}
-
-                      <td className="px-3 py-4">
-
-                        <Cell
-                          title={
-                            application.name
-                          }
-                          className="
-                                                        text-sm
-                                                        font-medium
-                                                    "
-                        >
-                          {
-                            application.name ||
-                            "N/A"
-                          }
-                        </Cell>
-
-                      </td>
+                                        const phone =
+                                            application.phone ||
+                                            "N/A";
 
 
-                      {/* PHONE */}
+                                        const phoneExpanded =
+                                            expandedPhoneId ===
+                                            applicationId;
 
-                      <td className="px-3 py-4">
 
-                        <div
-                          className="
-                                                        flex
-                                                        items-center
-                                                        gap-1
-                                                        min-w-0
-                                                    "
-                        >
+                                        const status =
+                                            normalizeStatus(
+                                                application.status
+                                            );
 
-                          <Cell
-                            title={
-                              application.phone
-                            }
-                            className="
+
+                                        const loanTypeName =
+                                            getLoanTypeName(
+                                                application,
+                                                loanTypes
+                                            );
+
+
+                                        const agentName =
+                                            getAgentName(
+                                                application
+                                            );
+
+
+                                        const rmName =
+                                            getRMName(
+                                                application
+                                            );
+
+
+                                        const appliedBy =
+                                            getAppliedBy(
+                                                application
+                                            );
+
+
+                                        const referral =
+                                            getReferral(
+                                                application
+                                            );
+
+
+                                        const amount =
+                                            getAmount(
+                                                application
+                                            );
+
+
+                                        const appliedDate =
+                                            getAppliedDate(
+                                                application
+                                            );
+
+
+                                        return (
+
+                                            <tr
+                                                key={
+                                                    applicationId
+                                                }
+                                                className="
+                                                    border-b
+                                                    border-base-300
+                                                    last:border-b-0
+                                                    hover:bg-base-200/30
+                                                "
+                                            >
+
+                                                {/* # */}
+
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <Cell
+                                                        className="
                                                             text-sm
-                                                            flex-1
+                                                            text-base-content/70
                                                         "
-                          >
-                            {
-                              application.phone ||
-                              "N/A"
-                            }
-                          </Cell>
+                                                    >
+                                                        {
+                                                            index + 1
+                                                        }
+                                                    </Cell>
+
+                                                </td>
 
 
-                          {application.phone && (
+                                                {/* NAME */}
 
-                            <a
-                              href={
-                                `tel:${application.phone}`
-                              }
-                              title={
-                                `Call ${application.name ||
-                                application.phone
-                                }`
-                              }
-                              aria-label={
-                                `Call ${application.name ||
-                                application.phone
-                                }`
-                              }
-                              className="
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <Cell
+                                                        title={
+                                                            application.name
+                                                        }
+                                                        className="
+                                                            text-sm
+                                                            font-medium
+                                                        "
+                                                    >
+                                                        {
+                                                            application.name ||
+                                                            "N/A"
+                                                        }
+                                                    </Cell>
+
+                                                </td>
+
+
+                                                {/* PHONE */}
+
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <div
+                                                        className="
+                                                            flex
+                                                            items-center
+                                                            gap-1
+                                                            min-w-0
+                                                        "
+                                                    >
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handlePhoneClick(
+                                                                    application
+                                                                )
+                                                            }
+                                                            title={
+                                                                phoneExpanded
+                                                                    ? "Collapse phone number"
+                                                                    : "Show full phone number"
+                                                            }
+                                                            className="
+                                                                min-w-0
+                                                                flex-1
+                                                                text-left
+                                                                text-sm
+                                                                hover:text-[#78B300]
+                                                            "
+                                                        >
+
+                                                            <span
+                                                                className={
+                                                                    phoneExpanded
+                                                                        ? "break-all"
+                                                                        : "block truncate"
+                                                                }
+                                                            >
+                                                                {
+                                                                    phone
+                                                                }
+                                                            </span>
+
+                                                        </button>
+
+
+                                                        {application.phone && (
+
+                                                            <a
+                                                                href={`tel:${application.phone}`}
+                                                                title={`Call ${
+                                                                    application.name ||
+                                                                    application.phone
+                                                                }`}
+                                                                aria-label={`Call ${
+                                                                    application.name ||
+                                                                    application.phone
+                                                                }`}
+                                                                className="
+                                                                    btn
+                                                                    btn-ghost
+                                                                    btn-xs
+                                                                    btn-square
+                                                                    shrink-0
+                                                                    rounded-full
+                                                                    text-[#78B300]
+                                                                    hover:bg-[#8BCF00]/10
+                                                                "
+                                                            >
+
+                                                                <PhoneIcon
+                                                                    className="
+                                                                        w-4
+                                                                        h-4
+                                                                    "
+                                                                />
+
+                                                            </a>
+
+                                                        )}
+
+                                                    </div>
+
+                                                </td>
+
+
+                                                {/* LOAN TYPE */}
+
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            onLoanTypeChange?.(
+                                                                application
+                                                            )
+                                                        }
+                                                        title={
+                                                            loanTypeName
+                                                        }
+                                                        className="
+                                                            max-w-full
+                                                            inline-flex
+                                                            items-center
+                                                            px-2.5
+                                                            py-1
+                                                            rounded-full
+                                                            border
+                                                            border-[#8BCF00]/40
+                                                            bg-[#8BCF00]/10
+                                                            text-[#78B300]
+                                                            text-xs
+                                                            font-medium
+                                                            truncate
+                                                            hover:bg-[#8BCF00]/20
+                                                        "
+                                                    >
+                                                        {
+                                                            loanTypeName
+                                                        }
+                                                    </button>
+
+                                                </td>
+
+
+                                                {/* LOAN AMOUNT */}
+
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <Cell
+                                                        title={
+                                                            amount
+                                                        }
+                                                        className="
+                                                            text-sm
+                                                            font-medium
+                                                        "
+                                                    >
+                                                        {
+                                                            amount
+                                                        }
+                                                    </Cell>
+
+                                                </td>
+
+
+                                                {/* APPLIED DATE */}
+
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <Cell
+                                                        title={
+                                                            appliedDate
+                                                        }
+                                                        className="text-sm"
+                                                    >
+                                                        {
+                                                            appliedDate
+                                                        }
+                                                    </Cell>
+
+                                                </td>
+
+
+                                                {/* APPLIED BY */}
+
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <Cell
+                                                        title={
+                                                            appliedBy
+                                                        }
+                                                        className="text-sm"
+                                                    >
+                                                        {
+                                                            appliedBy
+                                                        }
+                                                    </Cell>
+
+                                                </td>
+
+
+                                                {/* REFERRAL */}
+
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <Cell
+                                                        title={
+                                                            referral
+                                                        }
+                                                        className="text-sm"
+                                                    >
+                                                        {
+                                                            referral
+                                                        }
+                                                    </Cell>
+
+                                                </td>
+
+
+                                                {/* RM */}
+
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <Cell
+                                                        title={
+                                                            rmName
+                                                        }
+                                                        className="text-sm"
+                                                    >
+                                                        {
+                                                            rmName
+                                                        }
+                                                    </Cell>
+
+                                                </td>
+
+
+                                                {/* PROCESSING AGENT */}
+
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <Cell
+                                                        title={
+                                                            agentName
+                                                        }
+                                                        className="text-sm"
+                                                    >
+                                                        {
+                                                            agentName
+                                                        }
+                                                    </Cell>
+
+                                                </td>
+
+
+                                                {/* STATUS */}
+
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            onStatusChange?.(
+                                                                application
+                                                            )
+                                                        }
+                                                        title={
+                                                            status
+                                                        }
+                                                        className={`
+                                                            max-w-full
+                                                            inline-flex
+                                                            items-center
+                                                            px-2.5
+                                                            py-1
+                                                            rounded-full
+                                                            border
+                                                            text-xs
+                                                            font-medium
+                                                            truncate
+                                                            hover:opacity-80
+                                                            ${getStatusClass(
+                                                                status
+                                                            )}
+                                                        `}
+                                                    >
+                                                        {
+                                                            status
+                                                        }
+                                                    </button>
+
+                                                </td>
+
+
+                                                {/* ACTIONS */}
+
+                                                <td className="
+                                                    px-2
+                                                    py-4
+                                                ">
+
+                                                    <div
+                                                        className="
+                                                            flex
+                                                            items-center
+                                                            justify-center
+                                                            gap-0
+                                                        "
+                                                    >
+
+                                                        {/* VIEW */}
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                onViewApplication?.(
+                                                                    application
+                                                                )
+                                                            }
+                                                            title="
+                                                                View application
+                                                            "
+                                                            className="
                                                                 btn
                                                                 btn-ghost
-                                                                btn-xs
+                                                                btn-sm
                                                                 btn-square
-                                                                shrink-0
-                                                                rounded-full
-                                                                text-[#78B300]
                                                                 hover:bg-[#8BCF00]/10
+                                                                hover:text-[#78B300]
                                                             "
-                            >
+                                                        >
 
-                              <PhoneIcon
-                                className="
+                                                            <EyeIcon
+                                                                className="
                                                                     w-4
                                                                     h-4
                                                                 "
-                              />
+                                                            />
 
-                            </a>
-
-                          )}
-
-                        </div>
-
-                      </td>
+                                                        </button>
 
 
-                      {/* LOAN TYPE */}
+                                                        {/* REMINDER */}
 
-                      <td className="px-3 py-4">
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onLoanTypeChange?.(
-                              application
-                            )
-                          }
-                          title={
-                            application.loanType
-                          }
-                          className="
-                                                        max-w-full
-                                                        inline-flex
-                                                        items-center
-                                                        px-2.5
-                                                        py-1
-                                                        rounded-full
-                                                        border
-                                                        border-[#8BCF00]/40
-                                                        bg-[#8BCF00]/10
-                                                        text-[#78B300]
-                                                        text-xs
-                                                        font-medium
-                                                        truncate
-                                                        hover:bg-[#8BCF00]/20
-                                                    "
-                        >
-
-                          {
-                            application.loanType ||
-                            "Not Assigned"
-                          }
-
-                        </button>
-
-                      </td>
-
-
-                      {/* LOAN AMOUNT */}
-
-                      <td className="px-3 py-4">
-
-                        <Cell
-                          title={
-                            getAmount(
-                              application
-                            )
-                          }
-                          className="
-                                                        text-sm
-                                                        font-medium
-                                                    "
-                        >
-                          {
-                            getAmount(
-                              application
-                            )
-                          }
-                        </Cell>
-
-                      </td>
-
-
-                      {/* APPLIED DATE */}
-
-                      <td className="px-3 py-4">
-
-                        <Cell
-                          title={
-                            getAppliedDate(
-                              application
-                            )
-                          }
-                          className="text-sm"
-                        >
-                          {
-                            getAppliedDate(
-                              application
-                            )
-                          }
-                        </Cell>
-
-                      </td>
-
-
-                      {/* APPLIED BY */}
-
-                      <td className="px-3 py-4">
-
-                        <Cell
-                          title={
-                            getAppliedBy(
-                              application
-                            )
-                          }
-                          className="text-sm"
-                        >
-                          {
-                            getAppliedBy(
-                              application
-                            )
-                          }
-                        </Cell>
-
-                      </td>
-
-
-                      {/* REFERRAL */}
-
-                      <td className="px-3 py-4">
-
-                        <Cell
-                          title={
-                            getReferral(
-                              application
-                            )
-                          }
-                          className="text-sm"
-                        >
-                          {
-                            getReferral(
-                              application
-                            )
-                          }
-                        </Cell>
-
-                      </td>
-
-
-                      {/* RM */}
-
-                      <td className="px-3 py-4">
-
-                        <Cell
-                          title={
-                            getRMName(
-                              application
-                            )
-                          }
-                          className="text-sm"
-                        >
-                          {
-                            getRMName(
-                              application
-                            )
-                          }
-                        </Cell>
-
-                      </td>
-
-
-                      {/* PROCESSING AGENT */}
-
-                      <td className="px-3 py-4">
-
-                        <Cell
-                          title={
-                            getAgentName(
-                              application
-                            )
-                          }
-                          className="text-sm"
-                        >
-                          {
-                            getAgentName(
-                              application
-                            )
-                          }
-                        </Cell>
-
-                      </td>
-
-
-                      {/* STATUS */}
-
-                      <td className="px-3 py-4">
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            onStatusChange?.(
-                              application
-                            )
-                          }
-                          title={
-                            application.status
-                          }
-                          className={`
-                                                        max-w-full
-                                                        inline-flex
-                                                        items-center
-                                                        px-2.5
-                                                        py-1
-                                                        rounded-full
-                                                        border
-                                                        text-xs
-                                                        font-medium
-                                                        truncate
-                                                        hover:opacity-80
-                                                        ${getStatusClass(
-                            application.status
-                          )}
-                                                    `}
-                        >
-                          {
-                            application.status ||
-                            "N/A"
-                          }
-                        </button>
-
-                      </td>
-
-
-                      {/* ACTIONS */}
-
-                      <td className="px-2 py-4">
-
-                        <div
-                          className="
-                                                        flex
-                                                        items-center
-                                                        justify-center
-                                                        gap-0
-                                                    "
-                        >
-
-                          {/* VIEW */}
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onViewApplication?.(
-                                application
-                              )
-                            }
-                            title="View application"
-                            className="
-                                                            btn
-                                                            btn-ghost
-                                                            btn-sm
-                                                            btn-square
-                                                            hover:bg-[#8BCF00]/10
-                                                            hover:text-[#78B300]
-                                                        "
-                          >
-
-                            <EyeIcon
-                              className="
-                                                                w-4
-                                                                h-4
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                onReminder?.(
+                                                                    application
+                                                                )
+                                                            }
+                                                            title="
+                                                                Add reminder
                                                             "
-                            />
-
-                          </button>
-
-
-                          {/* REMINDER */}
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onReminder?.(
-                                application
-                              )
-                            }
-                            title="Add reminder"
-                            className="
-                                                            btn
-                                                            btn-ghost
-                                                            btn-sm
-                                                            btn-square
-                                                            hover:bg-[#8BCF00]/10
-                                                            hover:text-[#78B300]
-                                                        "
-                          >
-
-                            <BellAlertIcon
-                              className="
-                                                                w-4
-                                                                h-4
+                                                            className="
+                                                                btn
+                                                                btn-ghost
+                                                                btn-sm
+                                                                btn-square
+                                                                hover:bg-[#8BCF00]/10
+                                                                hover:text-[#78B300]
                                                             "
-                            />
+                                                        >
 
-                          </button>
+                                                            <BellAlertIcon
+                                                                className="
+                                                                    w-4
+                                                                    h-4
+                                                                "
+                                                            />
+
+                                                        </button>
 
 
-                          {/* CHAT */}
+                                                        {/* CHAT */}
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleOpenChat(
-                                application
-                              )
-                            }
-                            title="Open chat"
-                            className="
-                                                            btn
-                                                            btn-ghost
-                                                            btn-sm
-                                                            btn-square
-                                                            hover:bg-[#8BCF00]/10
-                                                            hover:text-[#78B300]
-                                                        "
-                          >
-
-                            <ChatBubbleLeftRightIcon
-                              className="
-                                                                w-4
-                                                                h-4
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handleOpenChat(
+                                                                    application
+                                                                )
+                                                            }
+                                                            title="
+                                                                Open chat
                                                             "
-                            />
+                                                            className="
+                                                                btn
+                                                                btn-ghost
+                                                                btn-sm
+                                                                btn-square
+                                                                hover:bg-[#8BCF00]/10
+                                                                hover:text-[#78B300]
+                                                            "
+                                                        >
 
-                          </button>
+                                                            <ChatBubbleLeftRightIcon
+                                                                className="
+                                                                    w-4
+                                                                    h-4
+                                                                "
+                                                            />
 
-                        </div>
+                                                        </button>
 
-                      </td>
+                                                    </div>
 
-                    </tr>
+                                                </td>
 
-                  )
-                )
+                                            </tr>
 
-              )}
+                                        );
+                                    }
+                                )
 
-            </tbody>
+                            )}
 
-          </table>
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+
+            {/* =================================================
+                GLOBAL CHAT
+            ================================================= */}
+
+            {selectedChatApplication && (
+
+                <GlobalChat
+                    open={
+                        chatOpen
+                    }
+                    onClose={
+                        handleCloseChat
+                    }
+                    loanId={
+                        getLoanId(
+                            selectedChatApplication
+                        )
+                    }
+                    agentId={
+                        getAgentId(
+                            selectedChatApplication
+                        )
+                    }
+                    customerName={
+                        selectedChatApplication.name ||
+                        "Customer"
+                    }
+                    customerPhone={
+                        selectedChatApplication.phone ||
+                        ""
+                    }
+                />
+
+            )}
 
         </div>
-
-      </div>
-
-
-      {/* =====================================================
-                GLOBAL CHAT
-            ===================================================== */}
-
-      {selectedChatApplication && (
-
-        <GlobalChat
-          open={chatOpen}
-          onClose={handleCloseChat}
-          loanId={
-            getLoanId(
-              selectedChatApplication
-            )
-          }
-          agentId={
-            getAgentId(
-              selectedChatApplication
-            )
-          }
-          customerName={
-            selectedChatApplication.name ||
-            "Customer"
-          }
-          customerPhone={
-            selectedChatApplication.phone ||
-            ""
-          }
-        />
-
-      )}
-
-    </div>
-
-  );
-
+    );
 }
 
 

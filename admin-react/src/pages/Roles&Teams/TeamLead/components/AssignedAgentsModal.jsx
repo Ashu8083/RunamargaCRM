@@ -1,153 +1,227 @@
-// admin-react/src/pages/Role-management/TeamLead/components/AssignedAgentsModal.jsx
-
-import { useEffect, useMemo, useState } from 'react'
+// admin-react\src\pages\Roles&Teams\TeamLead\components\AssignedAgentsModal.jsx
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 
+import {
+    getAssignedAgents,
+} from '../API'
+
 
 function AssignedAgentsModal({
     open,
     teamLead,
-    employees = [],
     onClose,
 }) {
 
+    const [employees, setEmployees] = useState([])
+
     const [search, setSearch] = useState('')
 
+    const [loading, setLoading] = useState(false)
 
-    // =========================================================
-    // RESET SEARCH
-    // =========================================================
+    const [error, setError] = useState('')
+
+
+    // ========================================================================
+    // LOAD ASSIGNED AGENTS
+    // ========================================================================
 
     useEffect(() => {
 
+        let isMounted = true
+
         if (!open || !teamLead) {
+
+            setEmployees([])
             setSearch('')
-            return
+            setError('')
+            setLoading(false)
+
+            return () => {
+                isMounted = false
+            }
         }
 
-        setSearch('')
+
+        const loadAssignedAgents = async () => {
+
+            setLoading(true)
+            setError('')
+
+            try {
+
+                const data =
+                    await getAssignedAgents(
+                        teamLead.id
+                    )
+
+
+                if (!isMounted) {
+                    return
+                }
+
+
+                const assignedData =
+                    Array.isArray(data)
+                        ? data
+                        : Array.isArray(data?.employees)
+                            ? data.employees
+                            : Array.isArray(data?.assigned_agents)
+                                ? data.assigned_agents
+                                : []
+
+
+                const formattedEmployees =
+                    assignedData
+                        .filter(
+                            (employee) =>
+                                employee &&
+                                employee.id !== undefined &&
+                                employee.id !== null
+                        )
+                        .map((employee) => ({
+                            ...employee,
+
+                            id:
+                                Number(employee.id),
+
+                            employeeId:
+                                employee.employeeId ??
+                                employee.employee_id ??
+                                employee.id,
+
+                            name:
+                                employee.name ||
+                                'N/A',
+
+                            phone:
+                                employee.phone ||
+                                employee.mobile ||
+                                employee.phone_number ||
+                                'N/A',
+
+                            email:
+                                employee.email ||
+                                'N/A',
+                        }))
+
+
+                setEmployees(
+                    formattedEmployees
+                )
+
+            } catch (error) {
+
+                if (!isMounted) {
+                    return
+                }
+
+                console.error(
+                    'Failed to load assigned agents:',
+                    error
+                )
+
+                setEmployees([])
+
+                setError(
+                    error?.response?.data?.detail ||
+                    'Unable to load assigned agents.'
+                )
+
+            } finally {
+
+                if (isMounted) {
+                    setLoading(false)
+                }
+
+            }
+
+        }
+
+
+        loadAssignedAgents()
+
+
+        return () => {
+            isMounted = false
+        }
 
     }, [open, teamLead])
 
 
-    // =========================================================
-    // GET ASSIGNED EMPLOYEES
-    // =========================================================
+    // ========================================================================
+    // RESET SEARCH
+    // ========================================================================
 
-    const assignedEmployees = useMemo(() => {
+    useEffect(() => {
 
-        if (!teamLead) {
-            return []
+        if (open) {
+            setSearch('')
         }
 
-
-        /*
-         * Team Lead stores assigned employee IDs.
-         *
-         * Example:
-         *
-         * assignedAgentIds: [101, 102]
-         *
-         * Resolve those IDs against the employee list.
-         */
+    }, [open, teamLead])
 
 
-        if (
-            Array.isArray(
-                teamLead.assignedAgentIds
-            )
-        ) {
+    // ========================================================================
+    // FILTER
+    // ========================================================================
+
+    const filteredEmployees =
+        useMemo(() => {
+
+            const searchValue =
+                search.trim().toLowerCase()
+
+            if (!searchValue) {
+                return employees
+            }
 
             return employees.filter(
-                (employee) =>
-                    teamLead.assignedAgentIds.some(
-                        (id) =>
-                            String(id) ===
-                            String(employee.id)
+                (employee) => {
+
+                    const name =
+                        String(
+                            employee.name || ''
+                        ).toLowerCase()
+
+                    const employeeId =
+                        String(
+                            employee.employeeId || ''
+                        ).toLowerCase()
+
+                    const phone =
+                        String(
+                            employee.phone || ''
+                        ).toLowerCase()
+
+                    const email =
+                        String(
+                            employee.email || ''
+                        ).toLowerCase()
+
+                    return (
+                        name.includes(searchValue) ||
+                        employeeId.includes(searchValue) ||
+                        phone.includes(searchValue) ||
+                        email.includes(searchValue)
                     )
+                }
             )
 
-        }
+        }, [employees, search])
 
-
-        /*
-         * Backward compatibility if assignedAgents
-         * objects are already present.
-         */
-
-        return teamLead.assignedAgents || []
-
-    }, [employees, teamLead])
-
-
-    // =========================================================
-    // FILTER ASSIGNED EMPLOYEES
-    // =========================================================
-
-    const filteredEmployees = useMemo(() => {
-
-        const searchValue =
-            search.trim().toLowerCase()
-
-
-        if (!searchValue) {
-            return assignedEmployees
-        }
-
-
-        return assignedEmployees.filter(
-            (employee) => {
-
-                return (
-
-                    employee.name
-                        ?.toLowerCase()
-                        .includes(searchValue)
-
-                    ||
-
-                    employee.employeeId
-                        ?.toLowerCase()
-                        .includes(searchValue)
-
-                    ||
-
-                    employee.phone
-                        ?.toLowerCase()
-                        .includes(searchValue)
-
-                    ||
-
-                    employee.email
-                        ?.toLowerCase()
-                        .includes(searchValue)
-
-                )
-
-            }
-        )
-
-    }, [
-        assignedEmployees,
-        search,
-    ])
-
-
-    // =========================================================
-    // CLOSED
-    // =========================================================
 
     if (!open || !teamLead) {
         return null
     }
 
-
-    // =========================================================
-    // MODAL
-    // =========================================================
 
     return (
 
@@ -170,9 +244,7 @@ function AssignedAgentsModal({
                 p-0
             ">
 
-                {/* =================================================
-                    HEADER
-                ================================================= */}
+                {/* HEADER */}
 
                 <div className="
                     flex
@@ -210,21 +282,18 @@ function AssignedAgentsModal({
 
                         <div>
 
-                            <h3 className="
+                            <h2 className="
                                 text-lg
                                 font-semibold
                             ">
                                 Assigned Agents
-                            </h3>
-
+                            </h2>
 
                             <p className="
-                                mt-1
-                                text-xs
-                                text-base-content/50
+                                text-sm
+                                text-base-content/60
                             ">
-                                Agents assigned to{' '}
-                                {teamLead.name}
+                                {teamLead.name || 'Team Lead'}
                             </p>
 
                         </div>
@@ -237,11 +306,11 @@ function AssignedAgentsModal({
                         onClick={onClose}
                         className="
                             btn
-                            btn-sm
                             btn-ghost
-                            btn-circle
+                            btn-sm
+                            btn-square
                         "
-                        aria-label="Close"
+                        title="Close"
                     >
 
                         <XMarkIcon className="
@@ -254,62 +323,29 @@ function AssignedAgentsModal({
                 </div>
 
 
-                {/* =================================================
-                    SUMMARY
-                ================================================= */}
+                {/* CONTENT */}
 
-                <div className="px-5 pt-5">
+                <div className="p-5">
+
+                    {/* SEARCH */}
 
                     <div className="
-                        rounded-lg
-                        border
-                        border-base-300
-                        bg-base-200/30
-                        px-4
-                        py-3
+                        relative
+                        mb-4
                     ">
 
-                        <p className="
-                            text-xs
-                            text-base-content/50
-                        ">
-                            Assigned Agents
-                        </p>
-
-
-                        <p className="
-                            mt-1
-                            text-lg
-                            font-semibold
-                        ">
-                            {assignedEmployees.length}
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                {/* =================================================
-                    SEARCH
-                ================================================= */}
-
-                <div className="px-5 pt-4">
-
-                    <label className="
-                        input
-                        input-bordered
-                        flex
-                        items-center
-                        gap-3
-                    ">
-
-                        <MagnifyingGlassIcon className="
-                            h-4
-                            w-4
-                            text-base-content/40
-                        " />
-
+                        <MagnifyingGlassIcon
+                            className="
+                                pointer-events-none
+                                absolute
+                                left-3
+                                top-1/2
+                                h-5
+                                w-5
+                                -translate-y-1/2
+                                text-base-content/40
+                            "
+                        />
 
                         <input
                             type="text"
@@ -320,240 +356,260 @@ function AssignedAgentsModal({
                                 )
                             }
                             placeholder="Search assigned agents..."
-                            className="grow"
+                            className="
+                                input
+                                input-bordered
+                                w-full
+                                pl-10
+                            "
                         />
 
-                    </label>
-
-                </div>
+                    </div>
 
 
-                {/* =================================================
-                    ASSIGNED AGENTS
-                ================================================= */}
+                    {/* ERROR */}
 
-                <div className="
-                    max-h-[55vh]
-                    overflow-y-auto
-                    p-5
-                ">
-
-                    {filteredEmployees.length === 0 ? (
+                    {error && (
 
                         <div className="
-                            py-12
-                            text-center
-                        ">
-
-                            <UserGroupIcon className="
-                                mx-auto
-                                h-9
-                                w-9
-                                text-base-content/30
-                            " />
-
-
-                            <p className="
-                                mt-3
-                                text-sm
-                                font-medium
-                            ">
-
-                                {assignedEmployees.length === 0
-                                    ? 'No agents assigned'
-                                    : 'No agents found'
-                                }
-
-                            </p>
-
-
-                            <p className="
-                                mt-1
-                                text-xs
-                                text-base-content/50
-                            ">
-
-                                {assignedEmployees.length === 0
-                                    ? 'Agents assigned to this team lead will appear here.'
-                                    : 'Try changing your search.'
-                                }
-
-                            </p>
-
-                        </div>
-
-                    ) : (
-
-                        <div className="
-                            overflow-hidden
+                            mb-4
                             rounded-lg
                             border
-                            border-base-300
+                            border-error/20
+                            bg-error/5
+                            px-4
+                            py-3
                         ">
 
-                            {filteredEmployees.map(
-                                (employee, index) => (
-
-                                    <div
-                                        key={
-                                            employee.id ||
-                                            employee.employeeId ||
-                                            index
-                                        }
-                                        className="
-                                            flex
-                                            items-center
-                                            justify-between
-                                            gap-4
-                                            border-b
-                                            border-base-300
-                                            px-4
-                                            py-3
-                                            last:border-b-0
-                                        "
-                                    >
-
-                                        {/* =================================
-                                            EMPLOYEE INFORMATION
-                                        ================================= */}
-
-                                        <div className="
-                                            flex
-                                            min-w-0
-                                            items-center
-                                            gap-3
-                                        ">
-
-                                            {/* Employee Icon */}
-
-                                            <div className="
-                                                flex
-                                                h-9
-                                                w-9
-                                                shrink-0
-                                                items-center
-                                                justify-center
-                                                rounded-lg
-                                                bg-[#8BCF00]/10
-                                            ">
-
-                                                <UserGroupIcon className="
-                                                    h-4
-                                                    w-4
-                                                    text-[#78B300]
-                                                " />
-
-                                            </div>
-
-
-                                            {/* Employee */}
-
-                                            <div className="
-                                                min-w-0
-                                            ">
-
-                                                <p className="
-                                                    truncate
-                                                    text-sm
-                                                    font-semibold
-                                                ">
-                                                    {employee.name ||
-                                                        'N/A'
-                                                    }
-                                                </p>
-
-
-                                                <div className="
-                                                    mt-0.5
-                                                    flex
-                                                    flex-wrap
-                                                    items-center
-                                                    gap-x-3
-                                                    gap-y-1
-                                                ">
-
-                                                    <span className="
-                                                        text-xs
-                                                        text-base-content/50
-                                                    ">
-                                                        ID:{' '}
-                                                        {employee.employeeId ||
-                                                            employee.id ||
-                                                            'N/A'
-                                                        }
-                                                    </span>
-
-
-                                                    {employee.phone && (
-
-                                                        <span className="
-                                                            text-xs
-                                                            text-base-content/50
-                                                        ">
-                                                            {employee.phone}
-                                                        </span>
-
-                                                    )}
-
-                                                </div>
-
-                                            </div>
-
-                                        </div>
-
-
-                                        {/* =================================
-                                            EMAIL
-                                        ================================= */}
-
-                                        <div className="
-                                            hidden
-                                            max-w-[240px]
-                                            shrink-0
-                                            truncate
-                                            text-xs
-                                            text-base-content/50
-                                            sm:block
-                                        ">
-
-                                            {employee.email ||
-                                                'N/A'
-                                            }
-
-                                        </div>
-
-                                    </div>
-
-                                )
-                            )}
+                            <p className="
+                                text-sm
+                                text-error
+                            ">
+                                {error}
+                            </p>
 
                         </div>
 
                     )}
 
+
+                    {/* LOADING */}
+
+                    {loading && (
+
+                        <div className="
+                            flex
+                            min-h-32
+                            items-center
+                            justify-center
+                        ">
+
+                            <span className="
+                                loading
+                                loading-spinner
+                                loading-md
+                            " />
+
+                        </div>
+
+                    )}
+
+
+                    {/* EMPTY */}
+
+                    {!loading &&
+                        !error &&
+                        filteredEmployees.length === 0 && (
+
+                            <div className="
+                                flex
+                                min-h-32
+                                flex-col
+                                items-center
+                                justify-center
+                                rounded-lg
+                                border
+                                border-dashed
+                                border-base-300
+                                px-4
+                                text-center
+                            ">
+
+                                <UserGroupIcon className="
+                                    mb-2
+                                    h-8
+                                    w-8
+                                    text-base-content/30
+                                " />
+
+                                <p className="
+                                    text-sm
+                                    font-medium
+                                    text-base-content/70
+                                ">
+                                    {search.trim()
+                                        ? 'No assigned agents found.'
+                                        : 'No agents are currently assigned.'
+                                    }
+                                </p>
+
+                            </div>
+
+                        )}
+
+
+                    {/* AGENTS */}
+
+                    {!loading &&
+                        filteredEmployees.length > 0 && (
+
+                            <div className="
+                                overflow-hidden
+                                rounded-lg
+                                border
+                                border-base-300
+                            ">
+
+                                <div className="
+                                    max-h-96
+                                    overflow-y-auto
+                                ">
+
+                                    {filteredEmployees.map(
+                                        (employee) => (
+
+                                            <div
+                                                key={employee.id}
+                                                className="
+                                                    flex
+                                                    items-center
+                                                    justify-between
+                                                    gap-4
+                                                    border-b
+                                                    border-base-300
+                                                    px-4
+                                                    py-3
+                                                    last:border-b-0
+                                                "
+                                            >
+
+                                                <div className="
+                                                    min-w-0
+                                                    flex-1
+                                                ">
+
+                                                    <p className="
+                                                        truncate
+                                                        text-sm
+                                                        font-medium
+                                                    ">
+                                                        {employee.name}
+                                                    </p>
+
+
+                                                    <div className="
+                                                        mt-1
+                                                        flex
+                                                        flex-wrap
+                                                        gap-x-4
+                                                        gap-y-1
+                                                        text-xs
+                                                        text-base-content/60
+                                                    ">
+
+                                                        {employee.employeeId && (
+
+                                                            <span>
+                                                                ID: {
+                                                                    employee.employeeId
+                                                                }
+                                                            </span>
+
+                                                        )}
+
+
+                                                        {employee.phone &&
+                                                            employee.phone !== 'N/A' && (
+
+                                                                <span>
+                                                                    {employee.phone}
+                                                                </span>
+
+                                                            )}
+
+
+                                                        {employee.email &&
+                                                            employee.email !== 'N/A' && (
+
+                                                                <span className="
+                                                                    max-w-xs
+                                                                    truncate
+                                                                ">
+                                                                    {employee.email}
+                                                                </span>
+
+                                                            )}
+
+                                                    </div>
+
+                                                </div>
+
+
+                                                <span className="
+                                                    shrink-0
+                                                    rounded-full
+                                                    bg-[#8BCF00]/10
+                                                    px-3
+                                                    py-1
+                                                    text-xs
+                                                    font-medium
+                                                    text-[#78B300]
+                                                ">
+                                                    Assigned
+                                                </span>
+
+                                            </div>
+
+                                        )
+                                    )}
+
+                                </div>
+
+                            </div>
+
+                        )}
+
                 </div>
 
 
-                {/* =================================================
-                    FOOTER
-                ================================================= */}
+                {/* FOOTER */}
 
                 <div className="
                     flex
-                    justify-end
+                    items-center
+                    justify-between
                     border-t
                     border-base-300
-                    p-4
+                    px-5
+                    py-4
                 ">
+
+                    <p className="
+                        text-sm
+                        text-base-content/60
+                    ">
+                        {employees.length}{' '}
+                        {employees.length === 1
+                            ? 'agent'
+                            : 'agents'}{' '}
+                        assigned
+                    </p>
+
 
                     <button
                         type="button"
                         onClick={onClose}
-                        className="
-                            btn
-                            btn-sm
-                            btn-ghost
-                        "
+                        className="btn btn-sm"
                     >
                         Close
                     </button>
@@ -563,17 +619,15 @@ function AssignedAgentsModal({
             </div>
 
 
-            {/* =================================================
-                BACKDROP
-            ================================================= */}
-
             <form
                 method="dialog"
                 className="modal-backdrop"
-                onClick={onClose}
             >
 
-                <button type="button">
+                <button
+                    type="button"
+                    onClick={onClose}
+                >
                     close
                 </button>
 
@@ -582,7 +636,6 @@ function AssignedAgentsModal({
         </dialog>
 
     )
-
 }
 
 

@@ -1,4 +1,4 @@
-# app/models/employee_contexts.py
+# backend\app\models\employee_contexts.py
 from sqlalchemy import (
     Boolean,
     Column,
@@ -42,17 +42,22 @@ class EmployeeContext(Base):
         index=True,
     )
 
-    # Who this context reports to
+    # Which EmployeeContext this context reports to
     #
-    # AGENT           → Agent Team Lead
-    # RM              → RM Team Lead
-    # AGENT_TEAM_LEAD → Manager
-    # RM_TEAM_LEAD    → Manager
+    # AGENT           → AGENT_TEAM_LEAD context
+    # RM              → RM_TEAM_LEAD context
+    # AGENT_TEAM_LEAD → MANAGER context
+    # RM_TEAM_LEAD    → MANAGER context
     # GLOBAL           → NULL
+    #
+    # IMPORTANT:
+    # This points to employee_contexts.id,
+    # NOT employees.id.
+
     reports_to_id = Column(
         Integer,
         ForeignKey(
-            "employees.id",
+            "employee_contexts.id",
             ondelete="SET NULL",
         ),
         nullable=True,
@@ -88,28 +93,57 @@ class EmployeeContext(Base):
         nullable=True,
     )
 
+    # ------------------------------------------------------------------------
+    # Employee
+    # ------------------------------------------------------------------------
+
     employee = relationship(
         "Employee",
         foreign_keys=[employee_id],
         back_populates="contexts",
     )
 
+    # ------------------------------------------------------------------------
+    # Context
+    # ------------------------------------------------------------------------
+
     context = relationship(
         "Context",
         back_populates="employee_contexts",
     )
 
+    # ------------------------------------------------------------------------
+    # Hierarchy
+    # ------------------------------------------------------------------------
+
+    # This context reports to another EmployeeContext.
     reports_to = relationship(
-        "Employee",
+        "EmployeeContext",
         foreign_keys=[reports_to_id],
+        remote_side=[id],
         back_populates="reporting_contexts",
     )
+
+    # These EmployeeContexts report to this context.
+    reporting_contexts = relationship(
+        "EmployeeContext",
+        foreign_keys=[reports_to_id],
+        back_populates="reports_to",
+    )
+
+    # ------------------------------------------------------------------------
+    # Permissions
+    # ------------------------------------------------------------------------
 
     permissions = relationship(
         "EmployeeContextPermission",
         back_populates="employee_context",
         cascade="all, delete-orphan",
     )
+
+    # ------------------------------------------------------------------------
+    # Constraints
+    # ------------------------------------------------------------------------
 
     __table_args__ = (
         UniqueConstraint(

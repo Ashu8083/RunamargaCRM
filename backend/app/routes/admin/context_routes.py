@@ -1,9 +1,9 @@
 # backend/app/routes/admin/context_routes.py
-
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.security import get_current_employee
 
 from app.controllers.contexts_controller import (
     list_contexts,
@@ -18,6 +18,8 @@ from app.schemas.contexts import (
     ContextResponse,
     ContextUpdate,
 )
+
+from app.models.employees import Employee
 
 
 router = APIRouter(
@@ -37,9 +39,16 @@ router = APIRouter(
 )
 def get_all_contexts(
     db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
 ):
     """
     Get all roles/contexts.
+
+    Authentication:
+        Required.
+
+    The authenticated employee is resolved through
+    get_current_employee before the controller is called.
     """
 
     return list_contexts(
@@ -59,9 +68,13 @@ def get_all_contexts(
 def get_context(
     context_id: int,
     db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
 ):
     """
     Get one role/context by ID.
+
+    Authentication:
+        Required.
     """
 
     return retrieve_context(
@@ -82,9 +95,13 @@ def get_context(
 def create_context(
     context_data: ContextCreate,
     db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
 ):
     """
     Create a new role/context.
+
+    Authentication:
+        Required.
     """
 
     return create_new_context(
@@ -106,9 +123,13 @@ def update_context(
     context_id: int,
     context_data: ContextUpdate,
     db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
 ):
     """
     Partially update a role/context.
+
+    Authentication:
+        Required.
     """
 
     return update_existing_context(
@@ -129,9 +150,13 @@ def update_context(
 def delete_context(
     context_id: int,
     db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
 ):
     """
     Delete a role/context.
+
+    Authentication:
+        Required.
     """
 
     return delete_existing_context(

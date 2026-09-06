@@ -1,3 +1,4 @@
+# backend\app\models\employees.py
 from sqlalchemy import (
     Boolean,
     Column,
@@ -43,7 +44,7 @@ class Employee(Base):
     )
 
     login_otp_hash = Column(
-    String,
+        String,
         nullable=True,
     )
 
@@ -60,7 +61,8 @@ class Employee(Base):
     status = Column(
         Enum(
             "active",
-            "inactive", "WFH",
+            "inactive",
+            "WFH",
             name="employee_status_enum",
         ),
         nullable=False,
@@ -91,13 +93,19 @@ class Employee(Base):
         onupdate=func.now(),
     )
 
+    # ------------------------------------------------------------------------
     # Main role
+    # ------------------------------------------------------------------------
+
     role = relationship(
         "Role",
         back_populates="employees",
     )
 
+    # ------------------------------------------------------------------------
     # Personal details
+    # ------------------------------------------------------------------------
+
     details = relationship(
         "EmployeeDetails",
         back_populates="employee",
@@ -105,7 +113,10 @@ class Employee(Base):
         cascade="all, delete-orphan",
     )
 
+    # ------------------------------------------------------------------------
     # Contexts this employee has
+    # ------------------------------------------------------------------------
+
     contexts = relationship(
         "EmployeeContext",
         foreign_keys="EmployeeContext.employee_id",
@@ -113,12 +124,10 @@ class Employee(Base):
         cascade="all, delete-orphan",
     )
 
-    # Contexts where this employee is the reporting person
-    reporting_contexts = relationship(
-        "EmployeeContext",
-        foreign_keys="EmployeeContext.reports_to_id",
-        back_populates="reports_to",
-    )
+    # ------------------------------------------------------------------------
+    # Employee roles
+    # ------------------------------------------------------------------------
+
     employee_roles = relationship(
         "EmployeeRole",
         back_populates="employee",

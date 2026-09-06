@@ -1,34 +1,70 @@
-// admin-react/src/pages/Role-management/TeamLead/components/TeamLeadModal.jsx
-
-import { useEffect, useState } from 'react'
+// admin-react\src\pages\Roles&Teams\TeamLead\components\TeamLeadModal.jsx
+import {
+    useCallback,
+    useEffect,
+    useState,
+} from 'react'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
-import { getRoles } from '../../../../../src/services/commonservice'
+
+import {
+    getTeamLeadRoles,
+} from '../API'
+
+import EmployeeDropdown from '../../../../components/GlobalModels/Filters/EmployeeDropdown'
 
 
 function TeamLeadModal({
     open,
     teamLead,
     employees = [],
-    assignedEmployeeIds = [],
     onClose,
     onSubmit,
 }) {
+
+    const isEdit = Boolean(teamLead)
+
+
     const [formData, setFormData] = useState({
         employeeId: '',
         roleId: '',
         status: 'Active',
     })
 
-    const [error, setError] = useState('')
 
-    const [roles, setRoles] = useState([])
+    const [employeeOptions, setEmployeeOptions] =
+        useState([])
+
+    const [error, setError] =
+        useState('')
+
+    const [roles, setRoles] =
+        useState([])
+
+    const [rolesLoading, setRolesLoading] =
+        useState(false)
 
 
-    // =========================================================
-    // LOAD FORM
-    // =========================================================
+    // ========================================================================
+    // EMPLOYEE OPTIONS
+    // ========================================================================
+
+    const handleEmployeesLoaded = useCallback(
+        (loadedEmployees) => {
+            setEmployeeOptions(
+                Array.isArray(loadedEmployees)
+                    ? loadedEmployees
+                    : []
+            )
+        },
+        []
+    )
+
+
+    // ========================================================================
+    // LOAD FORM + ROLES
+    // ========================================================================
 
     useEffect(() => {
 
@@ -40,31 +76,104 @@ function TeamLeadModal({
                 status: 'Active',
             })
 
+            setEmployeeOptions([])
+            setRoles([])
             setError('')
+            setRolesLoading(false)
 
             return
         }
+
+
+        let isMounted = true
+
+
         const loadRoles = async () => {
+
+            setRolesLoading(true)
+
             try {
-                const data = await getRoles()
-                setRoles(data)
+
+                const data =
+                    await getTeamLeadRoles()
+
+                const formattedRoles =
+                    Array.isArray(data)
+                        ? data
+                            .filter(
+                                (role) =>
+                                    role &&
+                                    role.value !== undefined &&
+                                    role.value !== null &&
+                                    role.name
+                            )
+                            .map((role) => ({
+                                name: role.name,
+                                value: role.value,
+                            }))
+                        : []
+
+                if (isMounted) {
+                    setRoles(formattedRoles)
+                }
+
             } catch (error) {
-                console.error('Failed to load roles:', error)
-                setRoles([])
+
+                console.error(
+                    'Failed to load team lead roles:',
+                    error
+                )
+
+                if (isMounted) {
+                    setRoles([])
+                }
+
+            } finally {
+
+                if (isMounted) {
+                    setRolesLoading(false)
+                }
+
             }
         }
+
 
         loadRoles()
 
 
         if (teamLead) {
 
-            setFormData({
-                employeeId: String(
-                    teamLead.employeeId || teamLead.id || ''
-                ),
+            const employeeId =
+                teamLead.employeeId ??
+                teamLead.employee_id ??
+                teamLead.employee?.id ??
+                ''
 
-                status: teamLead.status || 'Active',
+            const roleId =
+                teamLead.roleId ??
+                teamLead.contextId ??
+                teamLead.context_id ??
+                teamLead.role?.value ??
+                teamLead.role?.id ??
+                ''
+
+            setFormData({
+                employeeId:
+                    employeeId !== null &&
+                    employeeId !== undefined
+                        ? String(employeeId)
+                        : '',
+
+                roleId:
+                    roleId !== null &&
+                    roleId !== undefined
+                        ? String(roleId)
+                        : '',
+
+                status:
+                    teamLead.status === 'Inactive'
+                        ? 'Inactive'
+                        : 'Active',
             })
 
         } else {
@@ -80,61 +189,107 @@ function TeamLeadModal({
 
         setError('')
 
+
+        return () => {
+            isMounted = false
+        }
+
     }, [open, teamLead])
 
 
-    // =========================================================
-    // CHANGE
-    // =========================================================
+    // ========================================================================
+    // EMPLOYEE CHANGE
+    // ========================================================================
 
-    const handleChange = (event) => {
+    const handleEmployeeChange = useCallback(
+        (selectedValue) => {
 
-        const {
-            name,
-            value,
-        } = event.target
+            if (isEdit) {
+                return
+            }
 
+            setFormData((previous) => ({
+                ...previous,
+                employeeId:
+                    selectedValue === undefined ||
+                    selectedValue === null ||
+                    selectedValue === ''
+                        ? ''
+                        : String(selectedValue),
+            }))
+
+            setError('')
+        },
+        [isEdit]
+    )
+
+
+    // ========================================================================
+    // ROLE CHANGE
+    // ========================================================================
+
+    const handleRoleChange = (event) => {
 
         setFormData((previous) => ({
             ...previous,
-            [name]: value,
+            roleId: event.target.value,
         }))
 
-
         setError('')
-
     }
 
 
-    // =========================================================
+    // ========================================================================
+    // STATUS CHANGE
+    // ========================================================================
+
+    const handleStatusChange = (event) => {
+
+        setFormData((previous) => ({
+            ...previous,
+            status: event.target.value,
+        }))
+
+        setError('')
+    }
+
+
+    // ========================================================================
     // SUBMIT
-    // =========================================================
+    // ========================================================================
 
     const handleSubmit = (event) => {
 
         event.preventDefault()
 
 
-        const employeeId =
-            formData.employeeId
+        if (!formData.employeeId) {
+
+            setError('Please select an employee.')
+            return
+        }
 
 
-        if (!employeeId) {
+        if (!formData.roleId) {
 
-            setError(
-                'Please select an employee.'
-            )
-
+            setError('Please select a role.')
             return
         }
 
 
         const selectedEmployee =
+            employeeOptions.find(
+                (employee) =>
+                    String(employee.id) ===
+                    String(formData.employeeId)
+            ) ||
+            teamLead?.employee ||
             employees.find(
                 (employee) =>
                     String(employee.id) ===
-                    String(employeeId)
-            )
+                    String(formData.employeeId)
+            ) ||
+            null
 
 
         if (!selectedEmployee) {
@@ -147,17 +302,59 @@ function TeamLeadModal({
         }
 
 
+        const employeeId =
+            Number(selectedEmployee.id)
+
+
+        if (
+            !Number.isFinite(employeeId) ||
+            employeeId <= 0
+        ) {
+
+            setError('Invalid employee ID.')
+            return
+        }
+
+
+        const selectedRole =
+            roles.find(
+                (role) =>
+                    String(role.value) ===
+                    String(formData.roleId)
+            )
+
+
+        if (!selectedRole) {
+
+            setError(
+                'Selected role could not be found.'
+            )
+
+            return
+        }
+
+
         onSubmit?.({
 
-            employeeId:
-                selectedEmployee.id,
+            employeeId,
 
-            employee:
-                selectedEmployee,
+            employee: selectedEmployee,
+
             roleId:
-                formData.roleId,
+                Number(selectedRole.value),
+
+            role:
+                selectedRole,
+
             status:
-                formData.status,
+                isEdit
+                    ? teamLead.status
+                    : formData.status,
+
+            isEdit,
+
+            teamLeadId:
+                teamLead?.id || null,
 
         })
 
@@ -169,34 +366,19 @@ function TeamLeadModal({
     }
 
 
-    // =========================================================
-    // AVAILABLE EMPLOYEES
-    // =========================================================
-
-    const availableEmployees =
-        employees.filter((employee) => {
-
-            /*
-             * While editing, the currently selected employee
-             * must remain available in the dropdown.
-             */
-
-            if (
-                teamLead &&
+    const selectedEmployee =
+        employeeOptions.find(
+            (employee) =>
                 String(employee.id) ===
-                String(teamLead.employeeId)
-            ) {
-                return true
-            }
-
-
-            return !assignedEmployeeIds.some(
-                (id) =>
-                    String(id) ===
-                    String(employee.id)
-            )
-
-        })
+                String(formData.employeeId)
+        ) ||
+        teamLead?.employee ||
+        employees.find(
+            (employee) =>
+                String(employee.id) ===
+                String(formData.employeeId)
+        ) ||
+        null
 
 
     return (
@@ -220,9 +402,7 @@ function TeamLeadModal({
                 p-0
             ">
 
-                {/* =================================================
-                    HEADER
-                ================================================= */}
+                {/* HEADER */}
 
                 <div className="
                     flex
@@ -264,8 +444,8 @@ function TeamLeadModal({
                                 text-lg
                                 font-semibold
                             ">
-                                {teamLead
-                                    ? 'Team Lead Details'
+                                {isEdit
+                                    ? 'Edit Team Lead'
                                     : 'Add Team Lead'
                                 }
                             </h3>
@@ -276,8 +456,8 @@ function TeamLeadModal({
                                 text-xs
                                 text-base-content/50
                             ">
-                                {teamLead
-                                    ? 'Update the team lead status.'
+                                {isEdit
+                                    ? 'Change the team lead role.'
                                     : 'Select an existing employee as a team lead.'
                                 }
                             </p>
@@ -309,9 +489,7 @@ function TeamLeadModal({
                 </div>
 
 
-                {/* =================================================
-                    FORM
-                ================================================= */}
+                {/* FORM */}
 
                 <form onSubmit={handleSubmit}>
 
@@ -320,236 +498,148 @@ function TeamLeadModal({
                         p-5
                     ">
 
-                        {/* =============================================
-                            EMPLOYEE
-                        ============================================= */}
+                        {/* EMPLOYEE */}
 
-                        <div>
+                        <EmployeeDropdown
+                            value={formData.employeeId}
+                            onChange={handleEmployeeChange}
+                            onOptionsLoaded={
+                                handleEmployeesLoaded
+                            }
+                            label="Employee"
+                            placeholder="Select Employee"
+                            disabled={isEdit}
+                            required
+                            error={
+                                !formData.employeeId
+                                    ? error
+                                    : ''
+                            }
+                        />
 
-                            <label className="
-                                label
-                                px-0
+
+                        {isEdit && (
+
+                            <p className="
+                                -mt-3
+                                text-xs
+                                text-base-content/45
                             ">
+                                Employee cannot be changed after
+                                the team lead is created.
+                            </p>
 
-                                <span className="
-                                    label-text
-                                    text-sm
-                                    font-medium
+                        )}
+
+
+                        {/* EMPLOYEE DETAILS */}
+
+                        {formData.employeeId &&
+                            selectedEmployee && (
+
+                                <div className="
+                                    rounded-lg
+                                    border
+                                    border-base-300
+                                    bg-base-200/30
+                                    p-4
                                 ">
-                                    Employee
-                                </span>
 
-                            </label>
-
-
-                            <select
-                                name="employeeId"
-                                value={formData.employeeId}
-                                onChange={handleChange}
-                                disabled={Boolean(teamLead)}
-                                className="
-                                    select
-                                    select-bordered
-                                    w-full
-                                    focus:border-[#8BCF00]
-                                    focus:outline-[#8BCF00]
-                                    disabled:cursor-not-allowed
-                                    disabled:opacity-70
-                                "
-                            >
-
-                                <option value="">
-                                    Select employee
-                                </option>
+                                    <p className="
+                                        text-sm
+                                        font-semibold
+                                    ">
+                                        {selectedEmployee.name}
+                                    </p>
 
 
-                                {availableEmployees.map(
-                                    (employee) => (
+                                    <div className="
+                                        mt-2
+                                        grid
+                                        grid-cols-1
+                                        gap-2
+                                        sm:grid-cols-2
+                                    ">
 
-                                        <option
-                                            key={employee.id}
-                                            value={employee.id}
-                                        >
-                                            {employee.name}
-                                            {employee.employeeId
-                                                ? ` (${employee.employeeId})`
-                                                : ''
-                                            }
-                                        </option>
+                                        <div>
 
-                                    )
-                                )}
+                                            <span className="
+                                                text-[10px]
+                                                uppercase
+                                                tracking-wide
+                                                text-base-content/40
+                                            ">
+                                                Employee ID
+                                            </span>
 
-                            </select>
+                                            <p className="
+                                                mt-0.5
+                                                text-xs
+                                            ">
+                                                {selectedEmployee.employeeId ||
+                                                    selectedEmployee.id ||
+                                                    'N/A'
+                                                }
+                                            </p>
+
+                                        </div>
 
 
-                            {teamLead && (
+                                        <div>
 
-                                <p className="
-                                    mt-1.5
-                                    text-xs
-                                    text-base-content/45
-                                ">
-                                    Employee cannot be changed after
-                                    the team lead is created.
-                                </p>
+                                            <span className="
+                                                text-[10px]
+                                                uppercase
+                                                tracking-wide
+                                                text-base-content/40
+                                            ">
+                                                Phone
+                                            </span>
+
+                                            <p className="
+                                                mt-0.5
+                                                text-xs
+                                            ">
+                                                {selectedEmployee.phone ||
+                                                    'N/A'
+                                                }
+                                            </p>
+
+                                        </div>
+
+
+                                        <div className="
+                                            sm:col-span-2
+                                        ">
+
+                                            <span className="
+                                                text-[10px]
+                                                uppercase
+                                                tracking-wide
+                                                text-base-content/40
+                                            ">
+                                                Email
+                                            </span>
+
+                                            <p className="
+                                                mt-0.5
+                                                text-xs
+                                            ">
+                                                {selectedEmployee.email ||
+                                                    'N/A'
+                                                }
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
 
                             )}
 
 
-                            {!teamLead &&
-                                availableEmployees.length === 0 && (
-
-                                    <p className="
-                                        mt-1.5
-                                        text-xs
-                                        text-warning
-                                    ">
-                                        No employees are available
-                                        to assign as a team lead.
-                                    </p>
-
-                                )}
-
-                        </div>
-
-
-                        {/* =============================================
-                            SELECTED EMPLOYEE DETAILS
-                        ============================================= */}
-
-                        {formData.employeeId && (
-
-                            <div className="
-                                rounded-lg
-                                border
-                                border-base-300
-                                bg-base-200/30
-                                p-4
-                            ">
-
-                                {(() => {
-
-                                    const employee =
-                                        employees.find(
-                                            (item) =>
-                                                String(item.id) ===
-                                                String(
-                                                    formData.employeeId
-                                                )
-                                        )
-
-
-                                    if (!employee) {
-                                        return null
-                                    }
-
-
-                                    return (
-
-                                        <div>
-
-                                            <p className="
-                                                text-sm
-                                                font-semibold
-                                            ">
-                                                {employee.name}
-                                            </p>
-
-
-                                            <div className="
-                                                mt-2
-                                                grid
-                                                grid-cols-1
-                                                gap-2
-                                                sm:grid-cols-2
-                                            ">
-
-                                                <div>
-
-                                                    <span className="
-                                                        text-[10px]
-                                                        uppercase
-                                                        tracking-wide
-                                                        text-base-content/40
-                                                    ">
-                                                        Employee ID
-                                                    </span>
-
-                                                    <p className="
-                                                        mt-0.5
-                                                        text-xs
-                                                    ">
-                                                        {employee.employeeId ||
-                                                            employee.id ||
-                                                            'N/A'
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-
-                                                <div>
-
-                                                    <span className="
-                                                        text-[10px]
-                                                        uppercase
-                                                        tracking-wide
-                                                        text-base-content/40
-                                                    ">
-                                                        Phone
-                                                    </span>
-
-                                                    <p className="
-                                                        mt-0.5
-                                                        text-xs
-                                                    ">
-                                                        {employee.phone ||
-                                                            'N/A'
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-
-                                                <div className="
-                                                    sm:col-span-2
-                                                ">
-
-                                                    <span className="
-                                                        text-[10px]
-                                                        uppercase
-                                                        tracking-wide
-                                                        text-base-content/40
-                                                    ">
-                                                        Email
-                                                    </span>
-
-                                                    <p className="
-                                                        mt-0.5
-                                                        text-xs
-                                                    ">
-                                                        {employee.email ||
-                                                            'N/A'
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-
-                                        </div>
-
-                                    )
-
-                                })()}
-
-                            </div>
-
-                        )}
-                        {/* =================================================
-                                ROLE
-                            ================================================= */}
+                        {/* ROLE */}
 
                         <div>
 
@@ -572,114 +662,97 @@ function TeamLeadModal({
                             <select
                                 name="roleId"
                                 value={formData.roleId}
-                                onChange={(event) => {
-                                    setFormData((previous) => ({
-                                        ...previous,
-                                        roleId: event.target.value,
-                                    }))
-
-                                    setError('')
-                                }}
+                                onChange={handleRoleChange}
+                                disabled={rolesLoading}
                                 className="
                                     select
                                     select-bordered
                                     w-full
                                     focus:border-[#8BCF00]
-                                    focus:outline-[#8BCF00]
                                 "
                             >
 
                                 <option value="">
-                                    Select Role
+                                    {rolesLoading
+                                        ? 'Loading roles...'
+                                        : 'Select Role'
+                                    }
                                 </option>
 
+
                                 {roles.map((role) => (
+
                                     <option
-                                        key={role.id}
-                                        value={role.id}
+                                        key={role.value}
+                                        value={role.value}
                                     >
                                         {role.name}
                                     </option>
+
                                 ))}
 
                             </select>
 
-                        </div>
 
+                            {!formData.roleId &&
+                                error && (
 
-                        {/* =============================================
-                            STATUS
-                        ============================================= */}
+                                    <p className="
+                                        mt-1
+                                        text-xs
+                                        text-error
+                                    ">
+                                        {error}
+                                    </p>
 
-                        <div>
-
-                            <label className="
-                                label
-                                px-0
-                            ">
-
-                                <span className="
-                                    label-text
-                                    text-sm
-                                    font-medium
-                                ">
-                                    Status
-                                </span>
-
-                            </label>
-
-
-                            <select
-                                name="status"
-                                value={formData.status}
-                                onChange={handleChange}
-                                className="
-                                    select
-                                    select-bordered
-                                    w-full
-                                    focus:border-[#8BCF00]
-                                    focus:outline-[#8BCF00]
-                                "
-                            >
-
-                                <option value="Active">
-                                    Active
-                                </option>
-
-                                <option value="Absent">
-                                    Absent
-                                </option>
-
-                                <option value="Deactivated">
-                                    Deactivated
-                                </option>
-
-                            </select>
+                                )}
 
                         </div>
 
 
-                        {/* =============================================
-                            ERROR
-                        ============================================= */}
+                        {/* STATUS - CREATE ONLY */}
 
-                        {error && (
+                        {!isEdit && (
 
-                            <div className="
-                                rounded-lg
-                                border
-                                border-error/20
-                                bg-error/5
-                                px-3
-                                py-2
-                            ">
+                            <div>
 
-                                <p className="
-                                    text-xs
-                                    text-error
+                                <label className="
+                                    label
+                                    px-0
                                 ">
-                                    {error}
-                                </p>
+
+                                    <span className="
+                                        label-text
+                                        text-sm
+                                        font-medium
+                                    ">
+                                        Status
+                                    </span>
+
+                                </label>
+
+
+                                <select
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleStatusChange}
+                                    className="
+                                        select
+                                        select-bordered
+                                        w-full
+                                        focus:border-[#8BCF00]
+                                    "
+                                >
+
+                                    <option value="Active">
+                                        Active
+                                    </option>
+
+                                    <option value="Inactive">
+                                        Inactive
+                                    </option>
+
+                                </select>
 
                             </div>
 
@@ -688,9 +761,7 @@ function TeamLeadModal({
                     </div>
 
 
-                    {/* =================================================
-                        FOOTER
-                    ================================================= */}
+                    {/* FOOTER */}
 
                     <div className="
                         flex
@@ -698,7 +769,7 @@ function TeamLeadModal({
                         gap-2
                         border-t
                         border-base-300
-                        p-4
+                        p-5
                     ">
 
                         <button
@@ -706,7 +777,6 @@ function TeamLeadModal({
                             onClick={onClose}
                             className="
                                 btn
-                                btn-sm
                                 btn-ghost
                             "
                         >
@@ -718,7 +788,6 @@ function TeamLeadModal({
                             type="submit"
                             className="
                                 btn
-                                btn-sm
                                 border-[#8BCF00]
                                 bg-[#8BCF00]
                                 text-white
@@ -726,9 +795,9 @@ function TeamLeadModal({
                                 hover:bg-[#6FA800]
                             "
                         >
-                            {teamLead
-                                ? 'Save Status'
-                                : 'Add Team Lead'
+                            {isEdit
+                                ? 'Update Team Lead'
+                                : 'Create Team Lead'
                             }
                         </button>
 
@@ -738,27 +807,9 @@ function TeamLeadModal({
 
             </div>
 
-
-            {/* =================================================
-                BACKDROP
-            ================================================= */}
-
-            <form
-                method="dialog"
-                className="modal-backdrop"
-                onClick={onClose}
-            >
-
-                <button type="button">
-                    close
-                </button>
-
-            </form>
-
         </dialog>
 
     )
-
 }
 
 
