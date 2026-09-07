@@ -1,77 +1,128 @@
-// admin-react/src/pages/Loans/CreateApplication/components/ApplicationForm/API.js
+import apiClient from '../../../../../app/apiClient'
 
-import { API_BASE_URL } from '../../../../../config/url'
+
+// =============================================================
+// GET APPLICATION FILTERS
+// =============================================================
+
+export const getApplicationFilters = async (
+    contextId = null
+) => {
+
+    try {
+
+        const response =
+            await apiClient.get(
+                '/common/application-filters',
+                {
+                    params: {
+                        context_id: contextId,
+                    },
+                }
+            )
+
+        return response.data
+
+    } catch (error) {
+
+        console.error(
+            'Failed to fetch application filters:',
+            error
+        )
+
+        const detail =
+            error.response?.data?.detail
+
+        throw new Error(
+            Array.isArray(detail)
+                ? detail
+                    .map(
+                        (item) =>
+                            item?.msg ||
+                            'Validation error'
+                    )
+                    .join(', ')
+                : detail ||
+                  error.response?.data?.message ||
+                  'Failed to load application filters.'
+        )
+    }
+}
+
 
 // =============================================================
 // CREATE LOAN APPLICATION
 // =============================================================
-//
-// This API receives the complete application payload.
-//
-// Common fields:
-//   rm_id
-//   state_id
-//   city_id
-//   loan_type_id
-//   name
-//   phone
-//   loan_amount
-//   credit_score
-//   reference_name
-//   loan_purpose
-//   remarks
-//   gender
-//
-// Dynamic loan-type fields are also accepted.
-// Example:
-//   business_name
-//
-// Future loan-type-specific fields do NOT need any changes here.
-// They are forwarded as part of the payload received from
-// ApplicationForm/index.jsx.
-// =============================================================
 
-export const createLoanApplication = async (data) => {
-  if (!data) {
-    throw new Error('Application data is required.')
-  }
+export const createLoanApplication = async (
+    data
+) => {
 
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/loan-applications`,
-      {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      }
-    )
+    if (!data) {
 
-    let responseData = null
+        throw new Error(
+            'Application data is required.'
+        )
+
+    }
 
     try {
-      responseData = await response.json()
-    } catch {
-      responseData = null
+
+        const response =
+            await apiClient.post(
+                '/applications/create',
+                data
+            )
+
+        return response.data
+
+    } catch (error) {
+
+        console.error(
+            'Failed to create loan application:',
+            error
+        )
+
+        const detail =
+            error.response?.data?.detail
+
+        let message =
+            error.response?.data?.message
+
+
+        // -------------------------------------------------------
+        // FastAPI validation error
+        // -------------------------------------------------------
+
+        if (Array.isArray(detail)) {
+
+            message =
+                detail
+                    .map(
+                        (item) =>
+                            item?.msg ||
+                            'Validation error'
+                    )
+                    .join(', ')
+
+        }
+
+        // -------------------------------------------------------
+        // FastAPI HTTPException
+        // -------------------------------------------------------
+
+        else if (
+            typeof detail === 'string'
+        ) {
+
+            message = detail
+
+        }
+
+
+        throw new Error(
+            message ||
+            'Failed to create loan application.'
+        )
     }
-
-    if (!response.ok) {
-      throw new Error(
-        responseData?.detail ||
-          responseData?.message ||
-          `Failed to create loan application (${response.status})`
-      )
-    }
-
-    return responseData
-  } catch (error) {
-    console.error(
-      'Failed to create loan application:',
-      error
-    )
-
-    throw error
-  }
 }

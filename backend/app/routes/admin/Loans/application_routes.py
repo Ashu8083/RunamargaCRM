@@ -7,11 +7,14 @@ from app.core.security import get_current_employee
 from app.controllers.Loans.application_controller import (
     get_applications,
     view_application,
-    create_application,
+    create_application
 )
 
-from app.schemas.application_schema import LoanApplicationCreateRequest
+from app.schemas.application_schema import (
+   LoanApplicationCreateRequest
+)
 from app.models.employees import Employee
+
 
 router = APIRouter(
     prefix="/applications",

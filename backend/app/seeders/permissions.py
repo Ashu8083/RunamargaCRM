@@ -1,12 +1,11 @@
-# backend\app\seeders\permissions.py
+# backend/app/seeders/permissions.py
+
 from sqlalchemy.orm import Session
 
-from app.models.employees import Employee
+from app.config.database import SessionLocal
 from app.models.roles import Role
 from app.models.permissions import Permission
 from app.models.contexts import Context
-from app.models.employee_contexts import EmployeeContext
-from app.models.employee_context_permissions import EmployeeContextPermission
 
 
 # ============================================================
@@ -16,27 +15,27 @@ from app.models.employee_context_permissions import EmployeeContextPermission
 ROLES = [
     {
         "name": "admin",
-        "description": "Full system administrator",
+        "description": "System administrator",
     },
     {
         "name": "Guest",
-        "description": "Guest",
+        "description": "Guest user",
     },
     {
         "name": "HR",
-        "description": "Handles HRMS",
+        "description": "Human resources",
     },
     {
         "name": "accountant",
-        "description": "Handles disbursed loan and financial operations",
+        "description": "Accountant",
     },
     {
         "name": "developer",
-        "description": "Technical/system access",
+        "description": "Developer",
     },
     {
         "name": "business",
-        "description": "Business operations employee",
+        "description": "Business user",
     },
 ]
 
@@ -46,86 +45,167 @@ ROLES = [
 # ============================================================
 
 PERMISSIONS = [
+    # --------------------------------------------------------
     # Dashboard
-    ("Dashboard View", "dashboard:view"),
+    # --------------------------------------------------------
+
     (
-        "Dashboard Conversion Funnel Access",
+        "Dashboard View",
+        "dashboard:view",
+    ),
+    (
+        "Conversion Funnel",
         "dashboard:conversion-funnel",
     ),
     (
-        "Dashboard Loan Distribution Access",
+        "Loan Distribution",
         "dashboard:loan-distribution",
     ),
-    ("Profile View", "profile:view"),
-    ("Attendance", "user-attendance:view"),
-    ("Application Filter", "application-filter:view"),
-    # Team Leads
-    ("Team Lead View", "team-leads:view"),
-    ("Team Lead Create", "team-leads:create"),
-    ("Team Lead Edit", "team-leads:edit"),
     (
-        "Team Lead Permission Manage",
+        "Profile View",
+        "profile:view",
+    ),
+    (
+        "User Attendance View",
+        "user-attendance:view",
+    ),
+    (
+        "Application Filter View",
+        "application-filter:view",
+    ),
+
+    # --------------------------------------------------------
+    # Team Leads
+    # --------------------------------------------------------
+
+    (
+        "Team Leads View",
+        "team-leads:view",
+    ),
+    (
+        "Team Lead Create",
+        "team-leads:create",
+    ),
+    (
+        "Team Lead Edit",
+        "team-leads:edit",
+    ),
+    (
+        "Team Lead Permissions Manage",
         "team-leads:permissions:manage",
     ),
+
+    # --------------------------------------------------------
     # Agents
-    ("Agent View", "agents:view"),
-    ("Agent Create", "agents:create"),
-    ("Agent Edit", "agents:edit"),
-    ("Agent Delete", "agents:delete"),
+    # --------------------------------------------------------
+
     (
-        "Agent Permission Manage",
+        "Agents View",
+        "agents:view",
+    ),
+    (
+        "Agent Create",
+        "agents:create",
+    ),
+    (
+        "Agent Edit",
+        "agents:edit",
+    ),
+    (
+        "Agent Delete",
+        "agents:delete",
+    ),
+    (
+        "Agent Permissions Manage",
         "agents:permissions:manage",
     ),
-    # Applications / Loans
-    ("Application View", "loans:view"),
-    ("Application Create", "loans:create"),
-    ("Application Edit", "loans:edit"),
-    ("Application Delete", "loans:delete"),
-    ("Application Status Change", "loans:status:update"),
-    ("Application Assign", "loans:assign"),
-    ("Application Shuffle", "loans:shuffle"),
-    ("Application Revert", "loans:revert"),
-    ("Application Pending", "loans:pending:view"),
+
+    # --------------------------------------------------------
+    # Loans
+    # --------------------------------------------------------
+
     (
-        "Shuffle Loan Type Access",
+        "Loans View",
+        "loans:view",
+    ),
+    (
+        "Loan Create",
+        "loans:create",
+    ),
+    (
+        "Loan Edit",
+        "loans:edit",
+    ),
+    (
+        "Loan Delete",
+        "loans:delete",
+    ),
+    (
+        "Loan Status Update",
+        "loans:status:update",
+    ),
+    (
+        "Loan Assign",
+        "loans:assign",
+    ),
+    (
+        "Loan Shuffle",
+        "loans:shuffle",
+    ),
+    (
+        "Loan Revert",
+        "loans:revert",
+    ),
+    (
+        "Pending Loans View",
+        "loans:pending:view",
+    ),
+    (
+        "Loan Shuffle By Type",
         "loans:shuffle:loan-type",
     ),
     (
-        "Shuffle Agent Access",
+        "Loan Shuffle Agent",
         "loans:shuffle:agent",
     ),
     (
-        "Shuffle RM Access",
+        "Loan Shuffle RM",
         "loans:shuffle:rm",
     ),
 
+    # --------------------------------------------------------
     # Application Details
+    # --------------------------------------------------------
+
     (
-        "Application Document Edit",
+        "Loan Document Edit",
         "loans:document:edit",
     ),
     (
-        "Application Loan Details Edit",
+        "Loan Details Edit",
         "loans:details:edit",
     ),
     (
-        "Application Address Edit",
+        "Loan Address Edit",
         "loans:address:edit",
     ),
     (
-        "Application Co Applicant Edit",
+        "Loan Co-Applicant Edit",
         "loans:co-applicant:edit",
     ),
     (
-        "Application Header Edit",
+        "Loan Header Edit",
         "loans:header:edit",
     ),
     (
-        "Application Reference Edit",
+        "Loan Reference Edit",
         "loans:reference:edit",
     ),
 
-    # Application Communication
+    # --------------------------------------------------------
+    # Communication
+    # --------------------------------------------------------
+
     (
         "Application Mail Send",
         "loans:mail:send",
@@ -143,11 +223,18 @@ PERMISSIONS = [
         "loans:notes:view",
     ),
     (
+        "Application Notes Send",
+        "loans:notes:send",
+    ),
+    (
         "Customer Chat Access",
         "loans:chat:view",
     ),
 
+    # --------------------------------------------------------
     # Bank Processing
+    # --------------------------------------------------------
+
     (
         "Bank Processing Pipeline",
         "bank-processing:view",
@@ -165,7 +252,10 @@ PERMISSIONS = [
         "bank-processing:delete",
     ),
 
+    # --------------------------------------------------------
     # Loan Types
+    # --------------------------------------------------------
+
     (
         "Personal Loan Access",
         "loans:personal:view",
@@ -203,15 +293,39 @@ PERMISSIONS = [
         "loans:agriculture:view",
     ),
 
+    # --------------------------------------------------------
     # Employees
-    ("Employee View", "employees:view"),
-    ("Employee Create", "employees:create"),
-    ("Employee Edit", "employees:edit"),
-    ("Employee Delete", "employees:delete"),
-    ("Employee Block", "employees:block"),
+    # --------------------------------------------------------
 
+    (
+        "Employee View",
+        "employees:view",
+    ),
+    (
+        "Employee Create",
+        "employees:create",
+    ),
+    (
+        "Employee Edit",
+        "employees:edit",
+    ),
+    (
+        "Employee Delete",
+        "employees:delete",
+    ),
+    (
+        "Employee Block",
+        "employees:block",
+    ),
+
+    # --------------------------------------------------------
     # Calls
-    ("Call Logs View", "calls:logs:view"),
+    # --------------------------------------------------------
+
+    (
+        "Call Logs View",
+        "calls:logs:view",
+    ),
     (
         "Call Assignment View",
         "calls:assignment:view",
@@ -224,36 +338,112 @@ PERMISSIONS = [
         "Call Number Exchange",
         "calls:number:exchange",
     ),
+    (
+        "Phone Numbers View",
+        "phone:numbers:view",
+    ),
 
+    # --------------------------------------------------------
     # Roles
-    ("Role View", "roles:view"),
-    ("Role Create", "roles:create"),
-    ("Role Edit", "roles:edit"),
-    ("Role Delete", "roles:delete"),
+    # --------------------------------------------------------
 
+    (
+        "Role View",
+        "roles:view",
+    ),
+    (
+        "Role Create",
+        "roles:create",
+    ),
+    (
+        "Role Edit",
+        "roles:edit",
+    ),
+    (
+        "Role Delete",
+        "roles:delete",
+    ),
+
+    # --------------------------------------------------------
     # Banks
-    ("Bank View", "banks:view"),
-    ("Bank Create", "banks:create"),
-    ("Bank Edit", "banks:edit"),
-    ("Bank Delete", "banks:delete"),
+    # --------------------------------------------------------
 
+    (
+        "Bank View",
+        "banks:view",
+    ),
+    (
+        "Bank Create",
+        "banks:create",
+    ),
+    (
+        "Bank Edit",
+        "banks:edit",
+    ),
+    (
+        "Bank Delete",
+        "banks:delete",
+    ),
+
+    # --------------------------------------------------------
     # Banker
-    ("Banker View", "bankers:view"),
-    ("Banker Create", "bankers:create"),
-    ("Banker Edit", "bankers:edit"),
-    ("Banker Delete", "bankers:delete"),
+    # --------------------------------------------------------
 
+    (
+        "Banker View",
+        "bankers:view",
+    ),
+    (
+        "Banker Create",
+        "bankers:create",
+    ),
+    (
+        "Banker Edit",
+        "bankers:edit",
+    ),
+    (
+        "Banker Delete",
+        "bankers:delete",
+    ),
+
+    # --------------------------------------------------------
     # DSA
-    ("DSA View", "dsa:view"),
-    ("DSA Create", "dsa:create"),
-    ("DSA Edit", "dsa:edit"),
-    ("DSA Delete", "dsa:delete"),
+    # --------------------------------------------------------
 
+    (
+        "DSA View",
+        "dsa:view",
+    ),
+    (
+        "DSA Create",
+        "dsa:create",
+    ),
+    (
+        "DSA Edit",
+        "dsa:edit",
+    ),
+    (
+        "DSA Delete",
+        "dsa:delete",
+    ),
+
+    # --------------------------------------------------------
     # Attendance
-    ("Attendance View", "attendance:view"),
+    # --------------------------------------------------------
 
+    (
+        "Attendance View",
+        "attendance:view",
+    ),
+
+    # --------------------------------------------------------
     # Accountant
-    ("Disbursement View", "disbursement:view"),
+    # --------------------------------------------------------
+
+    (
+        "Disbursement View",
+        "disbursement:view",
+    ),
 ]
 
 
@@ -270,126 +460,14 @@ CONTEXTS = [
     {
         "name": "Agent",
         "code": "AGENT",
-        "description": "Processing Agent workspace",
+        "description": "Agent operational context",
     },
     {
         "name": "Relationship Manager",
         "code": "RM",
-        "description": "Relationship Manager workspace",
+        "description": "Relationship Manager operational context",
     },
 ]
-
-
-# ============================================================
-# CONTEXT PERMISSIONS
-# ============================================================
-
-AGENT_PERMISSION_CODES = {
-    # Common
-    "dashboard:view",
-    "dashboard:conversion-funnel",
-    "dashboard:loan-distribution",
-    "profile:view",
-    "application-filter:view",
-
-    # Applications
-    "loans:view",
-    "loans:create",
-    "loans:edit",
-    "loans:pending:view",
-    "loans:status:update",
-    "loans:revert",
-
-    # Application details
-    "loans:document:edit",
-    "loans:details:edit",
-    "loans:address:edit",
-    "loans:co-applicant:edit",
-    "loans:header:edit",
-    "loans:reference:edit",
-
-    # Communication
-    "loans:mail:send",
-    "loans:remarks:view",
-    "loans:remarks:send",
-    "loans:notes:view",
-    "loans:chat:view",
-
-    # Bank Processing
-    "bank-processing:view",
-    "bank-processing:create",
-    "bank-processing:edit",
-    "bank-processing:delete",
-
-    # Loan types
-    "loans:personal:view",
-    "loans:business:view",
-    "loans:home:view",
-    "loans:lap:view",
-    "loans:education:view",
-    "loans:car:view",
-    "loans:gold:view",
-    "loans:credit-card:view",
-    "loans:agriculture:view",
-
-}
-
-
-RM_PERMISSION_CODES = {
-    # Common
-    "dashboard:view",
-    "dashboard:conversion-funnel",
-    "dashboard:loan-distribution",
-    "profile:view",
-    "application-filter:view",
-
-    # Applications
-    "loans:view",
-    "loans:create",
-    "loans:edit",
-    "loans:pending:view",
-    "loans:status:update",
-    "loans:assign",
-    "loans:revert",
-
-    # Shuffle
-    "loans:shuffle",
-    "loans:shuffle:loan-type",
-    "loans:shuffle:agent",
-    "loans:shuffle:rm",
-
-    # Application details
-    "loans:document:edit",
-    "loans:details:edit",
-    "loans:address:edit",
-    "loans:co-applicant:edit",
-    "loans:header:edit",
-    "loans:reference:edit",
-
-    # Communication
-    "loans:mail:send",
-    "loans:remarks:view",
-    "loans:remarks:send",
-    "loans:notes:view",
-    "loans:chat:view",
-
-    # Loan types
-    "loans:personal:view",
-    "loans:business:view",
-    "loans:home:view",
-    "loans:lap:view",
-    "loans:education:view",
-    "loans:car:view",
-    "loans:gold:view",
-    "loans:credit-card:view",
-    "loans:agriculture:view",
-
-    # Bank Processing
-    "bank-processing:view",
-    # Calls
-    "calls:logs:view",
-    "calls:assignment:view",
-}
 
 
 # ============================================================
@@ -397,24 +475,31 @@ RM_PERMISSION_CODES = {
 # ============================================================
 
 def seed_roles(db: Session) -> None:
+
     for role_data in ROLES:
 
-        existing_role = (
+        role = (
             db.query(Role)
-            .filter(
-                Role.name == role_data["name"]
-            )
+            .filter(Role.name == role_data["name"])
             .first()
         )
 
-        if existing_role:
-            continue
+        if role:
 
-        db.add(
-            Role(**role_data)
-        )
+            role.description = role_data["description"]
+            role.is_active = True
 
-    db.commit()
+        else:
+
+            db.add(
+                Role(
+                    name=role_data["name"],
+                    description=role_data["description"],
+                    is_active=True,
+                )
+            )
+
+    db.flush()
 
 
 # ============================================================
@@ -422,27 +507,31 @@ def seed_roles(db: Session) -> None:
 # ============================================================
 
 def seed_permissions(db: Session) -> None:
+
     for name, code in PERMISSIONS:
 
-        existing_permission = (
+        permission = (
             db.query(Permission)
-            .filter(
-                Permission.code == code
-            )
+            .filter(Permission.code == code)
             .first()
         )
 
-        if existing_permission:
-            continue
+        if permission:
 
-        db.add(
-            Permission(
-                name=name,
-                code=code,
+            permission.name = name
+            permission.is_active = True
+
+        else:
+
+            db.add(
+                Permission(
+                    name=name,
+                    code=code,
+                    is_active=True,
+                )
             )
-        )
 
-    db.commit()
+    db.flush()
 
 
 # ============================================================
@@ -450,9 +539,10 @@ def seed_permissions(db: Session) -> None:
 # ============================================================
 
 def seed_contexts(db: Session) -> None:
+
     for context_data in CONTEXTS:
 
-        existing_context = (
+        context = (
             db.query(Context)
             .filter(
                 Context.code == context_data["code"]
@@ -460,432 +550,60 @@ def seed_contexts(db: Session) -> None:
             .first()
         )
 
-        if existing_context:
-            continue
+        if context:
 
-        db.add(
-            Context(**context_data)
-        )
+            context.name = context_data["name"]
+            context.description = context_data["description"]
+            context.is_active = True
 
-    db.commit()
+        else:
 
-
-# ============================================================
-# ASSIGN PERMISSIONS TO CONTEXT
-# ============================================================
-
-def assign_context_permissions(
-    db: Session,
-    context_code: str,
-    permission_codes: set[str],
-) -> None:
-
-    context = (
-        db.query(Context)
-        .filter(
-            Context.code == context_code,
-            Context.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not context:
-        raise ValueError(
-            f"Context '{context_code}' not found"
-        )
-
-    permissions = (
-        db.query(Permission)
-        .filter(
-            Permission.code.in_(permission_codes),
-            Permission.is_active.is_(True),
-        )
-        .all()
-    )
-
-    found_codes = {
-        permission.code
-        for permission in permissions
-    }
-
-    missing_codes = (
-        permission_codes - found_codes
-    )
-
-    if missing_codes:
-        raise ValueError(
-            f"Permissions not found for "
-            f"{context_code}: {sorted(missing_codes)}"
-        )
-
-    # This function only adds missing assignments.
-    # It does not duplicate existing ones.
-    for permission in permissions:
-
-        existing_assignment = (
-            db.query(EmployeeContextPermission)
-            .filter(
-                EmployeeContextPermission.employee_context_id
-                == context.id,
-                EmployeeContextPermission.permission_id
-                == permission.id,
+            db.add(
+                Context(
+                    name=context_data["name"],
+                    code=context_data["code"],
+                    description=context_data["description"],
+                    is_active=True,
+                )
             )
-            .first()
-        )
 
-        if existing_assignment:
-            continue
-
-        db.add(
-            EmployeeContextPermission(
-                employee_context_id=context.id,
-                permission_id=permission.id,
-            )
-        )
-
-    db.commit()
+    db.flush()
 
 
 # ============================================================
-# ASSIGN ADMIN GLOBAL CONTEXT
+# MAIN SEED
 # ============================================================
 
-def assign_employee_global_context(
-    db: Session,
-    employee_id: int,
-) -> None:
+def seed():
 
-    global_context = (
-        db.query(Context)
-        .filter(
-            Context.code == "GLOBAL",
-            Context.is_active.is_(True),
-        )
-        .first()
-    )
+    db = SessionLocal()
 
-    if not global_context:
-        raise ValueError(
-            "GLOBAL context not found"
-        )
+    try:
 
-    employee_context = (
-        db.query(EmployeeContext)
-        .filter(
-            EmployeeContext.employee_id == employee_id,
-            EmployeeContext.context_id == global_context.id,
-        )
-        .first()
-    )
+        print("Seeding roles...")
+        seed_roles(db)
 
-    if not employee_context:
+        print("Seeding permissions...")
+        seed_permissions(db)
 
-        employee_context = EmployeeContext(
-            employee_id=employee_id,
-            context_id=global_context.id,
-            is_default=True,
-            is_active=True,
-        )
-
-        db.add(employee_context)
-        db.commit()
-        db.refresh(employee_context)
-
-    # Admin gets every active permission.
-    permissions = (
-        db.query(Permission)
-        .filter(
-            Permission.is_active.is_(True)
-        )
-        .all()
-    )
-
-    for permission in permissions:
-
-        existing_assignment = (
-            db.query(EmployeeContextPermission)
-            .filter(
-                EmployeeContextPermission.employee_context_id
-                == employee_context.id,
-                EmployeeContextPermission.permission_id
-                == permission.id,
-            )
-            .first()
-        )
-
-        if existing_assignment:
-            continue
-
-        db.add(
-            EmployeeContextPermission(
-                employee_context_id=employee_context.id,
-                permission_id=permission.id,
-            )
-        )
-
-    db.commit()
-
-
-# ============================================================
-# CREATE / GET EMPLOYEE CONTEXT
-# ============================================================
-
-def assign_employee_context(
-    db: Session,
-    employee_id: int,
-    context_code: str,
-    is_default: bool = False,
-) -> EmployeeContext:
-
-    context = (
-        db.query(Context)
-        .filter(
-            Context.code == context_code,
-            Context.is_active.is_(True),
-        )
-        .first()
-    )
-
-    if not context:
-        raise ValueError(
-            f"Context '{context_code}' not found"
-        )
-
-    employee_context = (
-        db.query(EmployeeContext)
-        .filter(
-            EmployeeContext.employee_id == employee_id,
-            EmployeeContext.context_id == context.id,
-        )
-        .first()
-    )
-
-    if employee_context:
-        return employee_context
-
-    employee_context = EmployeeContext(
-        employee_id=employee_id,
-        context_id=context.id,
-        is_default=is_default,
-        is_active=True,
-    )
-
-    db.add(employee_context)
-    db.commit()
-    db.refresh(employee_context)
-
-    return employee_context
-
-
-# ============================================================
-# CREATE DUMMY BUSINESS EMPLOYEE
-# ============================================================
-
-def seed_dummy_business_employee(
-    db: Session,
-) -> None:
-
-    email = "manekomal2021@gmail.com"
-
-    business_role = (
-        db.query(Role)
-        .filter(
-            Role.name == "business"
-        )
-        .first()
-    )
-
-    if not business_role:
-        raise ValueError(
-            "Business role not found"
-        )
-
-    employee = (
-        db.query(Employee)
-        .filter(
-            Employee.email == email
-        )
-        .first()
-    )
-
-    if not employee:
-
-        employee = Employee(
-            name="Business Test",
-            email=email,
-            role_id=business_role.id,
-            status="active",
-            deactivate=False,
-        )
-
-        db.add(employee)
-        db.commit()
-        db.refresh(employee)
-
-    else:
-
-        # Make sure the existing employee has
-        # the intended business role.
-        employee.role_id = business_role.id
-        employee.status = "active"
-        employee.deactivate = False
+        print("Seeding contexts...")
+        seed_contexts(db)
 
         db.commit()
-        db.refresh(employee)
 
-    # --------------------------------------------------------
-    # Give employee BOTH contexts
-    # --------------------------------------------------------
-
-    agent_context = assign_employee_context(
-        db=db,
-        employee_id=employee.id,
-        context_code="AGENT",
-        is_default=True,
-    )
-
-    rm_context = assign_employee_context(
-        db=db,
-        employee_id=employee.id,
-        context_code="RM",
-        is_default=False,
-    )
-
-    # --------------------------------------------------------
-    # Assign AGENT permissions
-    # --------------------------------------------------------
-
-    assign_permissions_to_employee_context(
-        db=db,
-        employee_context_id=agent_context.id,
-        permission_codes=AGENT_PERMISSION_CODES,
-    )
-
-    # --------------------------------------------------------
-    # Assign RM permissions
-    # --------------------------------------------------------
-
-    assign_permissions_to_employee_context(
-        db=db,
-        employee_context_id=rm_context.id,
-        permission_codes=RM_PERMISSION_CODES,
-    )
-
-
-# ============================================================
-# ASSIGN PERMISSIONS TO EMPLOYEE CONTEXT
-# ============================================================
-
-def assign_permissions_to_employee_context(
-    db: Session,
-    employee_context_id: int,
-    permission_codes: set[str],
-) -> None:
-
-    permissions = (
-        db.query(Permission)
-        .filter(
-            Permission.code.in_(permission_codes),
-            Permission.is_active.is_(True),
-        )
-        .all()
-    )
-
-    found_codes = {
-        permission.code
-        for permission in permissions
-    }
-
-    missing_codes = (
-        permission_codes - found_codes
-    )
-
-    if missing_codes:
-        raise ValueError(
-            "Permissions missing from database: "
-            f"{sorted(missing_codes)}"
+        print(
+            "Permissions/RBAC base seed completed successfully."
         )
 
-    for permission in permissions:
+    except Exception:
 
-        existing_assignment = (
-            db.query(EmployeeContextPermission)
-            .filter(
-                EmployeeContextPermission.employee_context_id
-                == employee_context_id,
-                EmployeeContextPermission.permission_id
-                == permission.id,
-            )
-            .first()
-        )
+        db.rollback()
+        raise
 
-        if existing_assignment:
-            continue
+    finally:
 
-        db.add(
-            EmployeeContextPermission(
-                employee_context_id=employee_context_id,
-                permission_id=permission.id,
-            )
-        )
-
-    db.commit()
+        db.close()
 
 
-# ============================================================
-# SEED EVERYTHING
-# ============================================================
-
-def seed_all(
-    db: Session,
-    admin_employee_id: int = 1,
-) -> None:
-
-    """
-    Seed complete RBAC structure.
-
-    Flow:
-
-        Roles
-          ↓
-        Permissions
-          ↓
-        Contexts
-          ↓
-        Context Permissions
-          ↓
-        Admin → GLOBAL
-          ↓
-        Business Test → AGENT + RM
-    """
-
-    # 1. Roles
-    seed_roles(db)
-
-    # 2. Permissions
-    seed_permissions(db)
-
-    # 3. Contexts
-    seed_contexts(db)
-
-    # 4. Context-level permissions
-    # assign_context_permissions(
-    #     db=db,
-    #     context_code="AGENT",
-    #     permission_codes=AGENT_PERMISSION_CODES,
-    # )
-
-    # assign_context_permissions(
-    #     db=db,
-    #     context_code="RM",
-    #     permission_codes=RM_PERMISSION_CODES,
-    # )
-
-    # 5. Admin employee
-    assign_employee_global_context(
-        db=db,
-        employee_id=admin_employee_id,
-    )
-
-    # 6. Dummy Business employee
-    seed_dummy_business_employee(db=db)
+if __name__ == "__main__":
+    seed()

@@ -1,7 +1,10 @@
-# app/core/access_control.py
+# backend/app/core/access_control.py
+
 from typing import Optional
-from sqlalchemy import or_
+
+from sqlalchemy import or_, func
 from sqlalchemy.orm import Session, Query
+
 from app.models.loan_applications import LoanApplication
 from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
@@ -14,18 +17,35 @@ from app.models.employee_context_permissions import (
 
 class AccessControl:
     """
-    Central authorization and access-control service.
+    Central authorization and data-access control service.
 
     Responsibilities:
 
-    1. Determine the employee's active context
-    2. Read permissions belonging to that context
-    3. Check permissions
-    4. Enforce permissions
-    5. Provide common hierarchy helpers
+    1. Resolve an employee's active context
+    2. Resolve permissions for that context
+    3. Check / require permissions
+    4. Determine context family
+    5. Determine visible RMs
+    6. Determine visible Agents
+    7. Determine visible Team Leads
+    8. Apply application data scope
 
-    Feature-specific data filtering will be added here only
-    after the corresponding models are confirmed.
+    Context family is derived from Context.code.
+
+    Examples:
+
+        GLOBAL
+        AGENT
+        AGENT_PERSONAL
+        AGENT_BUSINESS
+        RM
+        RM_SENIOR
+        RM_JUNIOR
+        TEAMLEAD
+        TEAMLEAD_MUMBAI
+        TEAM_LEAD_NORTH
+
+    No database IDs are hardcoded here.
     """
 
     # =========================================================
@@ -38,6 +58,18 @@ class AccessControl:
         employee: Employee,
         context_id: Optional[int] = None,
     ) -> Optional[EmployeeContext]:
+        """
+        Return the employee's active EmployeeContext.
+
+        If context_id is provided:
+            return that context only if it belongs to the employee.
+
+        Otherwise:
+            prefer the employee's default active context.
+
+        Finally:
+            fall back to any active context.
+        """
 
         if not employee:
             return None
@@ -56,11 +88,10 @@ class AccessControl:
         )
 
         # -----------------------------------------------------
-        # Explicitly requested context
+        # Explicit context
         # -----------------------------------------------------
 
         if context_id is not None:
-
             return (
                 query
                 .filter(
@@ -91,6 +122,148 @@ class AccessControl:
         return query.first()
 
     # =========================================================
+    # CONTEXT FAMILY
+    # =========================================================
+
+    @staticmethod
+    def get_context_family(
+        context_code: Optional[str],
+    ) -> Optional[str]:
+        """
+        Convert a concrete context code into its operational
+        family.
+
+        Examples:
+
+            GLOBAL              -> GLOBAL
+            AGENT               -> AGENT
+            AGENT_PERSONAL      -> AGENT
+            AGENT_BUSINESS      -> AGENT
+
+            RM                  -> RM
+            RM_SENIOR           -> RM
+
+            TEAMLEAD             -> TEAMLEAD
+            TEAMLEAD_MUMBAI      -> TEAMLEAD
+            TEAM_LEAD_NORTH     -> TEAMLEAD
+
+            MANAGER             -> MANAGER
+            MANAGER_OPERATIONS  -> MANAGER
+
+        This is intentionally based on the code prefix, not
+        the database ID.
+        """
+
+        if not context_code:
+            return None
+
+        code = str(context_code).strip().upper()
+
+        # -----------------------------------------------------
+        # Global
+        # -----------------------------------------------------
+
+        if code == "GLOBAL":
+            return "GLOBAL"
+
+        # -----------------------------------------------------
+        # Agent
+        # -----------------------------------------------------
+
+        if (
+            code == "AGENT"
+            or code.startswith("AGENT_")
+        ):
+            return "AGENT"
+
+        # -----------------------------------------------------
+        # Relationship Manager
+        # -----------------------------------------------------
+
+        if (
+            code == "RM"
+            or code.startswith("RM_")
+        ):
+            return "RM"
+
+        # -----------------------------------------------------
+        # Team Lead
+        # -----------------------------------------------------
+
+        if (
+            code == "TEAMLEAD"
+            or code.startswith("TEAMLEAD_")
+            or code == "TEAM_LEAD"
+            or code.startswith("TEAM_LEAD_")
+        ):
+            return "TEAMLEAD"
+
+        # -----------------------------------------------------
+        # Manager
+        # -----------------------------------------------------
+
+        if (
+            code == "MANAGER"
+            or code.startswith("MANAGER_")
+        ):
+            return "MANAGER"
+
+        return None
+
+    # =========================================================
+    # ACTIVE CONTEXT FAMILY
+    # =========================================================
+
+    @staticmethod
+    def get_active_context_family(
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+    ) -> Optional[str]:
+        """
+        Return the operational family of the employee's
+        active context.
+        """
+
+        context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not context or not context.context:
+            return None
+
+        return AccessControl.get_context_family(
+            context.context.code
+        )
+
+    # =========================================================
+    # ACTIVE CONTEXT CODE
+    # =========================================================
+
+    @staticmethod
+    def get_active_context_code(
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+    ) -> Optional[str]:
+        """
+        Return the actual Context.code for the active context.
+        """
+
+        context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not context or not context.context:
+            return None
+
+        return context.context.code
+
+    # =========================================================
     # PERMISSIONS
     # =========================================================
 
@@ -99,6 +272,9 @@ class AccessControl:
         db: Session,
         employee_context: EmployeeContext,
     ) -> list[str]:
+        """
+        Return permissions assigned to an EmployeeContext.
+        """
 
         if not employee_context:
             return []
@@ -133,6 +309,9 @@ class AccessControl:
         employee: Employee,
         context_id: Optional[int] = None,
     ) -> list[str]:
+        """
+        Return permissions for the employee's active context.
+        """
 
         context = AccessControl.get_active_context(
             db=db,
@@ -159,6 +338,10 @@ class AccessControl:
         permission: str,
         context_id: Optional[int] = None,
     ) -> bool:
+        """
+        Check whether the employee has a permission in the
+        selected active context.
+        """
 
         if not employee or not permission:
             return False
@@ -168,10 +351,6 @@ class AccessControl:
             employee=employee,
             context_id=context_id,
         )
-
-        # -----------------------------------------------------
-        # Super-admin support
-        # -----------------------------------------------------
 
         if "*" in permissions:
             return True
@@ -189,6 +368,10 @@ class AccessControl:
         permissions: list[str],
         context_id: Optional[int] = None,
     ) -> bool:
+        """
+        Return True if the employee has at least one requested
+        permission.
+        """
 
         if not permissions:
             return True
@@ -218,6 +401,10 @@ class AccessControl:
         permissions: list[str],
         context_id: Optional[int] = None,
     ) -> bool:
+        """
+        Return True if the employee has all requested
+        permissions.
+        """
 
         if not permissions:
             return True
@@ -247,6 +434,9 @@ class AccessControl:
         permission: str,
         context_id: Optional[int] = None,
     ) -> None:
+        """
+        Raise PermissionError when the permission is missing.
+        """
 
         if not AccessControl.has_permission(
             db=db,
@@ -269,6 +459,10 @@ class AccessControl:
         permissions: list[str],
         context_id: Optional[int] = None,
     ) -> None:
+        """
+        Raise PermissionError when none of the permissions
+        are available.
+        """
 
         if not AccessControl.has_any_permission(
             db=db,
@@ -281,7 +475,7 @@ class AccessControl:
             )
 
     # =========================================================
-    # EMPLOYEE CONTEXT CHECK
+    # HAS CONTEXT
     # =========================================================
 
     @staticmethod
@@ -290,6 +484,10 @@ class AccessControl:
         employee: Employee,
         context_code: str,
     ) -> bool:
+        """
+        Check whether an employee has a particular exact
+        context code.
+        """
 
         if not employee or not context_code:
             return False
@@ -304,22 +502,120 @@ class AccessControl:
                 EmployeeContext.employee_id == employee.id,
                 EmployeeContext.is_active.is_(True),
                 Context.is_active.is_(True),
-                Context.code == context_code,
+                func.upper(Context.code)
+                == context_code.upper(),
             )
             .first()
             is not None
         )
 
     # =========================================================
-    # ACTIVE CONTEXT CODE
+    # EMPLOYEE QUERY BY CONTEXT FAMILY
     # =========================================================
 
     @staticmethod
-    def get_active_context_code(
+    def _employee_query_by_family(
+        db: Session,
+        family: str,
+    ):
+        """
+        Build a query for active employees whose active
+        EmployeeContext belongs to the requested family.
+
+        This is the central dynamic discovery mechanism.
+
+        No context IDs are used.
+        """
+
+        family = family.upper()
+
+        if family == "AGENT":
+
+            context_filter = or_(
+                func.upper(Context.code) == "AGENT",
+                func.upper(Context.code).like("AGENT_%"),
+            )
+
+        elif family == "RM":
+
+            context_filter = or_(
+                func.upper(Context.code) == "RM",
+                func.upper(Context.code).like("RM_%"),
+            )
+
+        elif family == "TEAMLEAD":
+
+            context_filter = or_(
+                func.upper(Context.code) == "TEAMLEAD",
+                func.upper(Context.code).like("TEAMLEAD_%"),
+                func.upper(Context.code) == "TEAM_LEAD",
+                func.upper(Context.code).like("TEAM_LEAD_%"),
+            )
+
+        elif family == "MANAGER":
+
+            context_filter = or_(
+                func.upper(Context.code) == "MANAGER",
+                func.upper(Context.code).like("MANAGER_%"),
+            )
+
+        else:
+            return None
+
+        return (
+            db.query(Employee)
+            .join(
+                EmployeeContext,
+                EmployeeContext.employee_id
+                == Employee.id,
+            )
+            .join(
+                Context,
+                EmployeeContext.context_id
+                == Context.id,
+            )
+            .filter(
+                Employee.status == "active",
+                EmployeeContext.is_active.is_(True),
+                Context.is_active.is_(True),
+                context_filter,
+            )
+            .distinct()
+        )
+
+    # =========================================================
+    # VISIBLE RMs
+    # =========================================================
+
+    @staticmethod
+    def get_visible_rms(
         db: Session,
         employee: Employee,
         context_id: Optional[int] = None,
-    ) -> Optional[str]:
+    ) -> list[Employee]:
+        """
+        Determine which Relationship Managers the current
+        employee can use as an application filter.
+
+        GLOBAL:
+            all active RMs.
+
+        RM:
+            RM filter is hidden, therefore return [].
+
+        AGENT:
+            return the RM referenced by reports_to_id.
+
+        TEAMLEAD:
+            return the RM referenced by reports_to_id.
+
+        MANAGER:
+            currently returns all active RMs because no more
+            specific manager hierarchy is established yet.
+        """
+
+        if not employee:
+            return []
 
         context = AccessControl.get_active_context(
             db=db,
@@ -328,9 +624,467 @@ class AccessControl:
         )
 
         if not context or not context.context:
-            return None
+            return []
 
-        return context.context.code
+        family = AccessControl.get_context_family(
+            context.context.code
+        )
+
+        # -----------------------------------------------------
+        # GLOBAL
+        # -----------------------------------------------------
+
+        if family == "GLOBAL":
+
+            query = AccessControl._employee_query_by_family(
+                db=db,
+                family="RM",
+            )
+
+            if query is None:
+                return []
+
+            return (
+                query
+                .order_by(Employee.name.asc())
+                .all()
+            )
+
+        # -----------------------------------------------------
+        # RM
+        # -----------------------------------------------------
+
+        if family == "RM":
+
+            return []
+
+        # -----------------------------------------------------
+        # AGENT / TEAM LEAD
+        # -----------------------------------------------------
+
+        if family in {"AGENT", "TEAMLEAD"}:
+
+            if not context.reports_to_id:
+                return []
+
+            query = AccessControl._employee_query_by_family(
+                db=db,
+                family="RM",
+            )
+
+            if query is None:
+                return []
+
+            return (
+                query
+                .filter(
+                    Employee.id == context.reports_to_id
+                )
+                .order_by(Employee.name.asc())
+                .all()
+            )
+
+        # -----------------------------------------------------
+        # MANAGER
+        # -----------------------------------------------------
+
+        if family == "MANAGER":
+
+            query = AccessControl._employee_query_by_family(
+                db=db,
+                family="RM",
+            )
+
+            if query is None:
+                return []
+
+            return (
+                query
+                .order_by(Employee.name.asc())
+                .all()
+            )
+
+        return []
+
+    # =========================================================
+    # VISIBLE AGENTS
+    # =========================================================
+
+    @staticmethod
+    def get_visible_agents(
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+    ) -> list[Employee]:
+        """
+        Determine which Agents the current employee can use
+        as an application filter.
+
+        GLOBAL:
+            all active Agents.
+
+        RM:
+            Agents whose EmployeeContext.reports_to_id is
+            the current RM.
+
+        TEAMLEAD:
+            Agents whose EmployeeContext.reports_to_id is
+            the current Team Lead.
+
+        AGENT:
+            Agent filter is hidden, therefore return [].
+
+        MANAGER:
+            currently all active Agents because no specific
+            manager hierarchy has been established yet.
+        """
+
+        if not employee:
+            return []
+
+        context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not context or not context.context:
+            return []
+
+        family = AccessControl.get_context_family(
+            context.context.code
+        )
+
+        # -----------------------------------------------------
+        # GLOBAL
+        # -----------------------------------------------------
+
+        if family == "GLOBAL":
+
+            query = AccessControl._employee_query_by_family(
+                db=db,
+                family="AGENT",
+            )
+
+            if query is None:
+                return []
+
+            return (
+                query
+                .order_by(Employee.name.asc())
+                .all()
+            )
+
+        # -----------------------------------------------------
+        # AGENT
+        # -----------------------------------------------------
+
+        if family == "AGENT":
+
+            return []
+
+        # -----------------------------------------------------
+        # RM / TEAM LEAD
+        # -----------------------------------------------------
+
+        if family in {"RM", "TEAMLEAD"}:
+
+            query = AccessControl._employee_query_by_family(
+                db=db,
+                family="AGENT",
+            )
+
+            if query is None:
+                return []
+
+            return (
+                query
+                .filter(
+                    EmployeeContext.reports_to_id
+                    == employee.id
+                )
+                .order_by(Employee.name.asc())
+                .all()
+            )
+
+        # -----------------------------------------------------
+        # MANAGER
+        # -----------------------------------------------------
+
+        if family == "MANAGER":
+
+            query = AccessControl._employee_query_by_family(
+                db=db,
+                family="AGENT",
+            )
+
+            if query is None:
+                return []
+
+            return (
+                query
+                .order_by(Employee.name.asc())
+                .all()
+            )
+
+        return []
+
+    # =========================================================
+    # VISIBLE TEAM LEADS
+    # =========================================================
+
+    @staticmethod
+    def get_visible_team_leads(
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+    ) -> list[Employee]:
+        """
+        Determine which Team Leads the current employee can
+        use as an application filter.
+
+        GLOBAL:
+            all active Team Leads.
+
+        RM:
+            Team Leads whose EmployeeContext.reports_to_id
+            points to the current RM.
+
+        TEAMLEAD:
+            Team Lead filter is hidden, therefore return [].
+
+        AGENT:
+            We do NOT guess the Agent -> Team Lead hierarchy.
+
+            If an Agent directly reports to an RM in the
+            current data model, there is not enough information
+            to infer a Team Lead.
+
+        MANAGER:
+            currently all active Team Leads.
+        """
+
+        if not employee:
+            return []
+
+        context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not context or not context.context:
+            return []
+
+        family = AccessControl.get_context_family(
+            context.context.code
+        )
+
+        # -----------------------------------------------------
+        # GLOBAL
+        # -----------------------------------------------------
+
+        if family == "GLOBAL":
+
+            query = AccessControl._employee_query_by_family(
+                db=db,
+                family="TEAMLEAD",
+            )
+
+            if query is None:
+                return []
+
+            return (
+                query
+                .order_by(Employee.name.asc())
+                .all()
+            )
+
+        # -----------------------------------------------------
+        # TEAM LEAD
+        # -----------------------------------------------------
+
+        if family == "TEAMLEAD":
+
+            return []
+
+        # -----------------------------------------------------
+        # RM
+        # -----------------------------------------------------
+
+        if family == "RM":
+
+            query = AccessControl._employee_query_by_family(
+                db=db,
+                family="TEAMLEAD",
+            )
+
+            if query is None:
+                return []
+
+            return (
+                query
+                .filter(
+                    EmployeeContext.reports_to_id
+                    == employee.id
+                )
+                .order_by(Employee.name.asc())
+                .all()
+            )
+
+        # -----------------------------------------------------
+        # AGENT
+        # -----------------------------------------------------
+        #
+        # We intentionally do not guess the hierarchy.
+        #
+        # Your current data model only proves that an Agent
+        # can report to an RM.
+        #
+        # -----------------------------------------------------
+
+        if family == "AGENT":
+
+            return []
+
+        # -----------------------------------------------------
+        # MANAGER
+        # -----------------------------------------------------
+
+        if family == "MANAGER":
+
+            query = AccessControl._employee_query_by_family(
+                db=db,
+                family="TEAMLEAD",
+            )
+
+            if query is None:
+                return []
+
+            return (
+                query
+                .order_by(Employee.name.asc())
+                .all()
+            )
+
+        return []
+
+    # =========================================================
+    # APPLICATION FILTER VISIBILITY
+    # =========================================================
+
+    @staticmethod
+    def get_application_filter_options(
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+    ) -> dict:
+        """
+        Return all application filter options visible to the
+        current employee.
+
+        This is the backend source of truth for the frontend.
+
+        The frontend does not need to know:
+
+            context IDs
+            employee IDs
+            AGENT IDs
+            RM IDs
+            TEAM LEAD IDs
+
+        It only consumes this response.
+        """
+
+        context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not context or not context.context:
+            return {
+                "context": None,
+                "visibility": {
+                    "show_rm": False,
+                    "show_agent": False,
+                    "show_team_lead": False,
+                },
+                "rms": [],
+                "agents": [],
+                "team_leads": [],
+            }
+
+        family = AccessControl.get_context_family(
+            context.context.code
+        )
+
+        # -----------------------------------------------------
+        # Visibility
+        # -----------------------------------------------------
+
+        visibility = {
+            "show_rm": family != "RM",
+            "show_agent": family != "AGENT",
+            "show_team_lead": family != "TEAMLEAD",
+        }
+
+        # -----------------------------------------------------
+        # Data
+        # -----------------------------------------------------
+
+        rms = AccessControl.get_visible_rms(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        agents = AccessControl.get_visible_agents(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        team_leads = AccessControl.get_visible_team_leads(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        return {
+            "context": {
+                "id": context.context.id,
+                "code": context.context.code,
+                "name": context.context.name,
+            },
+
+            "visibility": visibility,
+
+            "rms": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                }
+                for item in rms
+            ],
+
+            "agents": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                }
+                for item in agents
+            ],
+
+            "team_leads": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                }
+                for item in team_leads
+            ],
+        }
+
     # =========================================================
     # APPLICATION VISIBILITY
     # =========================================================
@@ -343,34 +1097,54 @@ class AccessControl:
         context_id: Optional[int] = None,
     ) -> Query:
         """
-        Restrict LoanApplication records according to
-        the employee's active context.
+        Restrict LoanApplication records according to the
+        employee's active context.
+
+        GLOBAL:
+            all applications.
 
         AGENT:
-            sees applications assigned to this employee.
+            applications assigned to the current employee.
 
         RM:
-            sees applications belonging to this employee.
+            applications belonging to the current employee.
 
-        GLOBAL / TEAM_LEAD:
-            handled separately once their hierarchy rules
-            are confirmed.
+        TEAMLEAD:
+            not guessed until the actual Team Lead hierarchy
+            is confirmed.
+
+        Unknown:
+            no applications.
         """
 
         if not employee:
             return query.filter(False)
 
-        context_code = AccessControl.get_active_context_code(
-            db=db,
-            employee=employee,
-            context_id=context_id,
+        context_code = (
+            AccessControl.get_active_context_code(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+            )
         )
+
+        family = AccessControl.get_context_family(
+            context_code
+        )
+
+        # -----------------------------------------------------
+        # GLOBAL
+        # -----------------------------------------------------
+
+        if family == "GLOBAL":
+
+            return query
 
         # -----------------------------------------------------
         # AGENT
         # -----------------------------------------------------
 
-        if context_code == "AGENT":
+        if family == "AGENT":
 
             return query.filter(
                 LoanApplication.agent_id == employee.id
@@ -380,133 +1154,41 @@ class AccessControl:
         # RM
         # -----------------------------------------------------
 
-        if context_code == "RM":
+        if family == "RM":
 
             return query.filter(
                 LoanApplication.rm_id == employee.id
             )
 
         # -----------------------------------------------------
-        # GLOBAL
+        # TEAM LEAD
+        # -----------------------------------------------------
+        #
+        # We intentionally do not guess this.
+        #
+        # Once the Team Lead hierarchy is confirmed, this
+        # section can filter applications through the Team
+        # Lead's subordinate Agents/RMs.
         # -----------------------------------------------------
 
-        if context_code == "GLOBAL":
+        if family == "TEAMLEAD":
+
+            raise NotImplementedError(
+                "Team Lead application visibility is not "
+                "implemented yet because the Team Lead "
+                "hierarchy has not been established."
+            )
+
+        # -----------------------------------------------------
+        # MANAGER
+        # -----------------------------------------------------
+
+        if family == "MANAGER":
 
             return query
 
         # -----------------------------------------------------
-        # TEAM LEAD
-        # -----------------------------------------------------
-        #
-        # DO NOT guess the hierarchy yet.
-        #
-        # We will add this after checking how the new CRM
-        # represents Team Lead → Agent/RM relationships.
-        # -----------------------------------------------------
-
-        if context_code == "TEAM_LEAD":
-
-            raise NotImplementedError(
-                "Team Lead application visibility is not "
-                "implemented yet."
-            )
-
-        # -----------------------------------------------------
-        # Unknown context
+        # Unknown
         # -----------------------------------------------------
 
         return query.filter(False)
-@staticmethod
-def get_visible_rms(
-    db: Session,
-    employee: Employee,
-    context_id: Optional[int] = None,
-) -> list[Employee]:
-
-    if not employee:
-        return []
-
-    context = AccessControl.get_active_context(
-        db=db,
-        employee=employee,
-        context_id=context_id,
-    )
-
-    if not context:
-        return []
-
-    context_code = context.context.code
-
-    # ---------------------------------------------------------
-    # GLOBAL
-    # ---------------------------------------------------------
-
-    if context_code == "GLOBAL":
-
-        return (
-            db.query(Employee)
-            .join(
-                EmployeeContext,
-                EmployeeContext.employee_id == Employee.id,
-            )
-            .join(
-                Context,
-                EmployeeContext.context_id == Context.id,
-            )
-            .filter(
-                EmployeeContext.is_active.is_(True),
-                Context.is_active.is_(True),
-                Context.code == "RM",
-                Employee.status == "active",
-            )
-            .order_by(Employee.name)
-            .all()
-        )
-
-    # ---------------------------------------------------------
-    # RM
-    # ---------------------------------------------------------
-
-    if context_code == "RM":
-
-        return (
-            db.query(Employee)
-            .filter(
-                Employee.id == employee.id,
-                Employee.status == "active",
-            )
-            .all()
-        )
-
-    # ---------------------------------------------------------
-    # AGENT
-    # ---------------------------------------------------------
-
-    if context_code == "AGENT":
-
-        if not context.reports_to_id:
-            return []
-
-        rm = (
-            db.query(Employee)
-            .join(
-                EmployeeContext,
-                EmployeeContext.employee_id == Employee.id,
-            )
-            .join(
-                Context,
-                EmployeeContext.context_id == Context.id,
-            )
-            .filter(
-                Employee.id == context.reports_to_id,
-                EmployeeContext.is_active.is_(True),
-                Context.is_active.is_(True),
-                Context.code == "RM",
-                Employee.status == "active",
-            )
-            .first()
-        )
-
-        return [rm] if rm else []
-
-    return []

@@ -1,43 +1,16 @@
-// admin-react/src/pages/CallManagement/PhoneNumbers/components/PhoneNumberTable.jsx
 import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
-import CheckIcon from '@heroicons/react/24/outline/CheckIcon'
-import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
 
 
 function PhoneNumberTable({
     phoneNumbers = [],
-    employees = [],
-    editingId,
-    editData,
     onEdit,
-    onEditChange,
-    onSave,
-    onCancel,
     onViewDetails,
-    EmployeeDropdown,
 }) {
 
-    // =========================================================
-    // GET EMPLOYEE
-    // =========================================================
-
-    const getEmployee = (employeeId) => {
-
-        return employees.find(
-            (employee) =>
-                String(employee.id) ===
-                String(employeeId)
-        )
-
-    }
-
-
-    // =========================================================
-    // STATUS CLASS
-    // =========================================================
-
-    const getStatusClass = (status) => {
+    const getStatusClass = (
+        status
+    ) => {
 
         if (status === 'Active') {
 
@@ -49,7 +22,6 @@ function PhoneNumberTable({
 
         }
 
-
         return `
             text-error
             border-error/30
@@ -59,11 +31,9 @@ function PhoneNumberTable({
     }
 
 
-    // =========================================================
-    // TRACKABLE CLASS
-    // =========================================================
-
-    const getTrackableClass = (trackable) => {
+    const getTrackableClass = (
+        trackable
+    ) => {
 
         if (
             trackable === true ||
@@ -78,7 +48,6 @@ function PhoneNumberTable({
 
         }
 
-
         return `
             text-base-content/60
             border-base-300
@@ -88,11 +57,9 @@ function PhoneNumberTable({
     }
 
 
-    // =========================================================
-    // EMPTY STATE
-    // =========================================================
-
-    if (phoneNumbers.length === 0) {
+    if (
+        phoneNumbers.length === 0
+    ) {
 
         return (
 
@@ -119,7 +86,6 @@ function PhoneNumberTable({
                         text-base-content/30
                     " />
 
-
                     <p className="
                         mt-3
                         text-sm
@@ -127,7 +93,6 @@ function PhoneNumberTable({
                     ">
                         No phone numbers found
                     </p>
-
 
                     <p className="
                         mt-1
@@ -156,50 +121,37 @@ function PhoneNumberTable({
             shadow-sm
         ">
 
-            {/* =================================================
-                TABLE HEADER
-            ================================================= */}
-
             <div className="
-                flex
-                items-center
-                justify-between
-                gap-3
                 border-b
                 border-base-300
                 p-4
             ">
 
-                <div>
+                <h2 className="
+                    text-base
+                    font-semibold
+                ">
+                    Phone Numbers
+                </h2>
 
-                    <h2 className="
-                        text-base
-                        font-semibold
-                    ">
-                        Phone Numbers
-                    </h2>
-
-
-                    <p className="
-                        mt-0.5
-                        text-xs
-                        text-base-content/50
-                    ">
-                        Manage assigned phone numbers and calling status.
-                    </p>
-
-                </div>
+                <p className="
+                    mt-0.5
+                    text-xs
+                    text-base-content/50
+                ">
+                    Manage assigned phone numbers and calling status.
+                </p>
 
             </div>
 
 
-            {/* =================================================
-                TABLE
-            ================================================= */}
+            <div className="
+                overflow-x-auto
+            ">
 
-            <div className="overflow-x-auto">
-
-                <table className="table">
+                <table className="
+                    table
+                ">
 
                     <thead>
 
@@ -217,10 +169,7 @@ function PhoneNumberTable({
                                 Employee
                             </th>
 
-                            <th>
-                                Team
-                            </th>
-
+                            
                             <th>
                                 Status
                             </th>
@@ -241,440 +190,194 @@ function PhoneNumberTable({
                     <tbody>
 
                         {phoneNumbers.map(
-                            (phoneNumber, index) => {
+                            (
+                                phoneNumber,
+                                index
+                            ) => (
 
-                                const isEditing =
-                                    editingId !== null &&
-                                    String(editingId) ===
-                                    String(phoneNumber.id)
+                                <tr
+                                    key={
+                                        phoneNumber.id
+                                    }
+                                >
+
+                                    {/* INDEX */}
+
+                                    <td className="
+                                        text-center
+                                    ">
+                                        <span className="
+                                            text-sm
+                                            text-base-content/60
+                                        ">
+                                            {index + 1}
+                                        </span>
+                                    </td>
 
 
-                                const employee =
-                                    getEmployee(
-                                        phoneNumber.employeeId
-                                    )
+                                    {/* PHONE */}
+
+                                    <td>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                onViewDetails?.(
+                                                    phoneNumber
+                                                )
+                                            }
+                                            className="
+                                                font-semibold
+                                                hover:text-[#78B300]
+                                                hover:underline
+                                            "
+                                        >
+                                            {phoneNumber.number ||
+                                                phoneNumber.phone ||
+                                                '—'
+                                            }
+                                        </button>
+
+                                    </td>
 
 
-                                const selectedEmployee =
-                                    getEmployee(
-                                        editData?.employeeId
-                                    )
+                                    {/* EMPLOYEE */}
+
+                                    <td>
+
+                                        <div>
+
+                                            <p className="
+                                                text-sm
+                                                font-medium
+                                            ">
+                                                {phoneNumber.employeeName ||
+                                                    'Not Assigned'
+                                                }
+                                            </p>
+
+                                            {phoneNumber.employeeId && (
+
+                                                <p className="
+                                                    mt-0.5
+                                                    text-xs
+                                                    text-base-content/50
+                                                ">
+                                                    ID: {phoneNumber.employeeId}
+                                                </p>
+
+                                            )}
+
+                                        </div>
+
+                                    </td>
 
 
-                                return (
+                                    {/* STATUS */}
 
-                                    <tr
-                                        key={phoneNumber.id}
-                                        className={
-                                            isEditing
-                                                ? 'bg-base-200/30'
-                                                : ''
-                                        }
-                                    >
+                                    <td>
 
-                                        {/* =================================
-                                            INDEX
-                                        ================================= */}
-
-                                        <td className="text-center">
+                                        <span className={`
+                                            inline-flex
+                                            items-center
+                                            rounded-full
+                                            border
+                                            px-2.5
+                                            py-1
+                                            text-xs
+                                            font-medium
+                                            ${getStatusClass(
+                                                phoneNumber.status
+                                            )}
+                                        `}>
 
                                             <span className="
-                                                text-sm
-                                                text-base-content/60
-                                            ">
-                                                {index + 1}
-                                            </span>
+                                                mr-1.5
+                                                h-1.5
+                                                w-1.5
+                                                rounded-full
+                                                bg-current
+                                            " />
 
-                                        </td>
+                                            {phoneNumber.status ||
+                                                'Inactive'
+                                            }
+
+                                        </span>
+
+                                    </td>
 
 
-                                        {/* =================================
-                                            PHONE NUMBER
-                                        ================================= */}
+                                    {/* TRACKABLE */}
 
-                                        <td>
+                                    <td>
+
+                                        <span className={`
+                                            inline-flex
+                                            items-center
+                                            rounded-full
+                                            border
+                                            px-2.5
+                                            py-1
+                                            text-xs
+                                            font-medium
+                                            ${getTrackableClass(
+                                                phoneNumber.trackable
+                                            )}
+                                        `}>
+
+                                            {phoneNumber.trackable
+                                                ? 'Yes'
+                                                : 'No'
+                                            }
+
+                                        </span>
+
+                                    </td>
+
+
+                                    {/* ACTION */}
+
+                                    <td>
+
+                                        <div className="
+                                            flex
+                                            justify-end
+                                        ">
 
                                             <button
                                                 type="button"
                                                 onClick={() =>
-                                                    onViewDetails?.(
+                                                    onEdit?.(
                                                         phoneNumber
                                                     )
                                                 }
                                                 className="
-                                                    font-semibold
-                                                    transition
+                                                    btn
+                                                    btn-sm
+                                                    btn-ghost
+                                                    gap-2
+                                                    hover:bg-[#8BCF00]/10
                                                     hover:text-[#78B300]
-                                                    hover:underline
                                                 "
                                             >
-                                                {phoneNumber.number}
+
+                                                <PencilIcon className="
+                                                    h-4
+                                                    w-4
+                                                " />
+
+                                                Edit
+
                                             </button>
 
-                                        </td>
+                                        </div>
 
+                                    </td>
 
-                                        {/* =================================
-                                            EMPLOYEE
-                                        ================================= */}
+                                </tr>
 
-                                        <td>
-
-                                            {isEditing ? (
-
-                                                <div className="
-                                                    min-w-[190px]
-                                                ">
-
-                                                    {EmployeeDropdown && (
-
-                                                        <EmployeeDropdown
-                                                            value={
-                                                                editData?.employeeId ||
-                                                                ''
-                                                            }
-                                                            onChange={(
-                                                                value
-                                                            ) =>
-                                                                onEditChange?.({
-                                                                    employeeId:
-                                                                        value,
-                                                                })
-                                                            }
-                                                            employees={
-                                                                employees
-                                                            }
-                                                        />
-
-                                                    )}
-
-                                                </div>
-
-                                            ) : (
-
-                                                <div>
-
-                                                    {employee ? (
-
-                                                        <>
-
-                                                            <p className="
-                                                                text-sm
-                                                                font-medium
-                                                            ">
-                                                                {employee.name}
-                                                            </p>
-
-
-                                                            <p className="
-                                                                mt-0.5
-                                                                text-xs
-                                                                text-base-content/50
-                                                            ">
-                                                                {employee.employeeId ||
-                                                                    employee.id
-                                                                }
-                                                            </p>
-
-                                                        </>
-
-                                                    ) : (
-
-                                                        <span className="
-                                                            text-sm
-                                                            text-base-content/40
-                                                        ">
-                                                            —
-                                                        </span>
-
-                                                    )}
-
-                                                </div>
-
-                                            )}
-
-                                        </td>
-
-
-                                        {/* =================================
-                                            TEAM
-                                        ================================= */}
-
-                                        <td>
-
-                                            {isEditing ? (
-
-                                                <span className="
-                                                    text-sm
-                                                    font-medium
-                                                ">
-                                                    {selectedEmployee?.teamName ||
-                                                        '—'
-                                                    }
-                                                </span>
-
-                                            ) : (
-
-                                                <span className="
-                                                    text-sm
-                                                    text-base-content/70
-                                                ">
-                                                    {phoneNumber.teamName ||
-                                                        employee?.teamName ||
-                                                        '—'
-                                                    }
-                                                </span>
-
-                                            )}
-
-                                        </td>
-
-
-                                        {/* =================================
-                                            STATUS
-                                        ================================= */}
-
-                                        <td>
-
-                                            {isEditing ? (
-
-                                                <select
-                                                    value={
-                                                        editData?.status ||
-                                                        'Active'
-                                                    }
-                                                    onChange={(event) =>
-                                                        onEditChange?.({
-                                                            status:
-                                                                event.target.value,
-                                                        })
-                                                    }
-                                                    className="
-                                                        select
-                                                        select-sm
-                                                        min-w-[115px]
-                                                        border
-                                                        border-base-300
-                                                    "
-                                                >
-
-                                                    <option value="Active">
-                                                        Active
-                                                    </option>
-
-                                                    <option value="Inactive">
-                                                        Inactive
-                                                    </option>
-
-                                                </select>
-
-                                            ) : (
-
-                                                <span className={`
-                                                    inline-flex
-                                                    items-center
-                                                    rounded-full
-                                                    border
-                                                    px-2.5
-                                                    py-1
-                                                    text-xs
-                                                    font-medium
-                                                    ${getStatusClass(
-                                                        phoneNumber.status
-                                                    )}
-                                                `}>
-
-                                                    <span className="
-                                                        mr-1.5
-                                                        h-1.5
-                                                        w-1.5
-                                                        rounded-full
-                                                        bg-current
-                                                    " />
-
-                                                    {phoneNumber.status}
-
-                                                </span>
-
-                                            )}
-
-                                        </td>
-
-
-                                        {/* =================================
-                                            TRACKABLE
-                                        ================================= */}
-
-                                        <td>
-
-                                            {isEditing ? (
-
-                                                <select
-                                                    value={
-                                                        editData?.trackable
-                                                            ? 'Yes'
-                                                            : 'No'
-                                                    }
-                                                    onChange={(event) =>
-                                                        onEditChange?.({
-                                                            trackable:
-                                                                event.target.value ===
-                                                                'Yes',
-                                                        })
-                                                    }
-                                                    className="
-                                                        select
-                                                        select-sm
-                                                        min-w-[95px]
-                                                        border
-                                                        border-base-300
-                                                    "
-                                                >
-
-                                                    <option value="Yes">
-                                                        Yes
-                                                    </option>
-
-                                                    <option value="No">
-                                                        No
-                                                    </option>
-
-                                                </select>
-
-                                            ) : (
-
-                                                <span className={`
-                                                    inline-flex
-                                                    items-center
-                                                    rounded-full
-                                                    border
-                                                    px-2.5
-                                                    py-1
-                                                    text-xs
-                                                    font-medium
-                                                    ${getTrackableClass(
-                                                        phoneNumber.trackable
-                                                    )}
-                                                `}>
-
-                                                    {phoneNumber.trackable
-                                                        ? 'Yes'
-                                                        : 'No'
-                                                    }
-
-                                                </span>
-
-                                            )}
-
-                                        </td>
-
-
-                                        {/* =================================
-                                            ACTION
-                                        ================================= */}
-
-                                        <td>
-
-                                            {isEditing ? (
-
-                                                <div className="
-                                                    flex
-                                                    items-center
-                                                    justify-end
-                                                    gap-1
-                                                ">
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            onSave?.(
-                                                                phoneNumber
-                                                            )
-                                                        }
-                                                        className="
-                                                            btn
-                                                            btn-sm
-                                                            btn-square
-                                                            text-[#78B300]
-                                                            hover:bg-[#8BCF00]/10
-                                                        "
-                                                        title="Save changes"
-                                                    >
-
-                                                        <CheckIcon className="
-                                                            h-5
-                                                            w-5
-                                                        " />
-
-                                                    </button>
-
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={onCancel}
-                                                        className="
-                                                            btn
-                                                            btn-sm
-                                                            btn-square
-                                                            text-base-content/60
-                                                            hover:bg-base-200
-                                                        "
-                                                        title="Cancel"
-                                                    >
-
-                                                        <XMarkIcon className="
-                                                            h-5
-                                                            w-5
-                                                        " />
-
-                                                    </button>
-
-                                                </div>
-
-                                            ) : (
-
-                                                <div className="
-                                                    flex
-                                                    justify-end
-                                                ">
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            onEdit?.(
-                                                                phoneNumber
-                                                            )
-                                                        }
-                                                        className="
-                                                            btn
-                                                            btn-sm
-                                                            btn-ghost
-                                                            gap-2
-                                                            hover:bg-[#8BCF00]/10
-                                                            hover:text-[#78B300]
-                                                        "
-                                                    >
-
-                                                        <PencilIcon className="
-                                                            h-4
-                                                            w-4
-                                                        " />
-
-                                                        Edit
-
-                                                    </button>
-
-                                                </div>
-
-                                            )}
-
-                                        </td>
-
-                                    </tr>
-
-                                )
-
-                            }
+                            )
                         )}
 
                     </tbody>

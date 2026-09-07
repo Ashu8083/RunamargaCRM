@@ -1,3 +1,4 @@
+
 // admin-react/src/pages/Loans/CreateApplication/components/ApplicationForm/index.jsx
 
 import { useEffect, useState } from 'react'
@@ -14,11 +15,16 @@ import RmDropdown from '../../../../../components/GlobalModels/Filters/RmDropdow
 import StateCityDropdown from '../../../../../components/GlobalModels/Filters/StateCityDropdown'
 import LoanTypeDropdown from '../../../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
-import { createLoanApplication } from './API'
+import {
+  createLoanApplication,
+  getApplicationFilters,
+} from './API'
+import FeedbackModal from '../../../../../components/GlobalModels/FeedbackModal'
 import {
   LOAN_TYPE_CONFIG,
   getExtraFieldsForLoanType,
 } from './LoanApplicationFields'
+
 
 // =============================================================
 // INITIAL FORM
@@ -41,7 +47,7 @@ const createInitialForm = () => {
   }
 
   Object.values(LOAN_TYPE_CONFIG).forEach((config) => {
-    ;(config.extraFields || []).forEach((field) => {
+    ; (config.extraFields || []).forEach((field) => {
       form[field.name] = field.defaultValue ?? ''
     })
   })
@@ -50,6 +56,7 @@ const createInitialForm = () => {
 }
 
 const INITIAL_FORM = createInitialForm()
+
 
 // =============================================================
 // GENDER OPTIONS
@@ -74,6 +81,7 @@ const GENDER_OPTIONS = [
   },
 ]
 
+
 // =============================================================
 // COMPONENT
 // =============================================================
@@ -90,29 +98,111 @@ function ApplicationForm({
 
   const [submitting, setSubmitting] = useState(false)
 
-  const [loanTypeOptions, setLoanTypeOptions] = useState([])
+  const [loanTypeOptions, setLoanTypeOptions] =
+    useState([])
 
-  const [selectedLoanType, setSelectedLoanType] = useState(null)
+  const [selectedLoanType, setSelectedLoanType] =
+    useState(null)
 
-  const [notification, setNotification] = useState(null)
+ 
+  // ===========================================================
+  // RM OPTIONS
+  // ===========================================================
+
+  const [rmOptions, setRmOptions] =
+    useState([])
+
+  const [loadingRms, setLoadingRms] =
+    useState(true)
+
 
   // ===========================================================
-  // CLEAR NOTIFICATION
+  // FEEDBACK MODAL
+  // ===========================================================
+
+  const [feedback, setFeedback] =
+    useState({
+      open: false,
+      type: 'success',
+      title: '',
+      message: '',
+    })
+  
+  // ===========================================================
+  // LOAD RM OPTIONS
   // ===========================================================
 
   useEffect(() => {
 
-    if (!notification) {
-      return undefined
+    const loadRms = async () => {
+
+      try {
+
+        setLoadingRms(true)
+
+        const response =
+          await getApplicationFilters()
+
+        console.log(
+          'Application filter response:',
+          response
+        )
+
+        const rms =
+          Array.isArray(response?.rms)
+            ? response.rms
+            : []
+
+        /*
+         * SearchableFilterDropdown expects
+         * dropdown options.
+         *
+         * Backend response:
+         *
+         * [
+         *   {
+         *      id: 1,
+         *      name: "John"
+         *   }
+         * ]
+         */
+
+        setRmOptions(
+          rms.map((rm) => ({
+            value: rm.id,
+            label: rm.name,
+          }))
+        )
+
+      } catch (error) {
+
+        console.error(
+          'Failed to load RMs:',
+          error
+        )
+
+        setRmOptions([])
+
+        setFeedback({
+          open: true,
+          type: 'error',
+          title: 'Unable to Load RMs',
+          message:
+            error?.message ||
+            'Relationship Managers could not be loaded.',
+        })
+
+      } finally {
+
+        setLoadingRms(false)
+
+      }
     }
 
-    const timer = setTimeout(() => {
-      setNotification(null)
-    }, 4000)
+    loadRms()
 
-    return () => clearTimeout(timer)
+  }, [])
 
-  }, [notification])
 
   // ===========================================================
   // VALIDATE SINGLE FIELD
@@ -127,17 +217,25 @@ function ApplicationForm({
 
     const extraField = getExtraFieldsForLoanType(
       selectedLoanType?.name
-    ).find((fieldConfig) => fieldConfig.name === field)
+    ).find(
+      (fieldConfig) =>
+        fieldConfig.name === field
+    )
 
     if (extraField) {
-      if (extraField.required && !trimmedValue) {
+
+      if (
+        extraField.required &&
+        !trimmedValue
+      ) {
         return `${extraField.label} is required.`
       }
 
       if (
         trimmedValue &&
         extraField.minLength &&
-        String(trimmedValue).length < extraField.minLength
+        String(trimmedValue).length <
+        extraField.minLength
       ) {
         return `${extraField.label} must contain at least ${extraField.minLength} characters.`
       }
@@ -145,7 +243,8 @@ function ApplicationForm({
       if (
         trimmedValue &&
         extraField.maxLength &&
-        String(trimmedValue).length > extraField.maxLength
+        String(trimmedValue).length >
+        extraField.maxLength
       ) {
         return `${extraField.label} cannot exceed ${extraField.maxLength} characters.`
       }
@@ -153,13 +252,19 @@ function ApplicationForm({
       if (
         extraField.pattern &&
         trimmedValue &&
-        !extraField.pattern.test(String(trimmedValue))
+        !extraField.pattern.test(
+          String(trimmedValue)
+        )
       ) {
-        return extraField.patternMessage || `Enter a valid ${extraField.label.toLowerCase()}.`
+        return (
+          extraField.patternMessage ||
+          `Enter a valid ${extraField.label.toLowerCase()}.`
+        )
       }
 
       return ''
     }
+
 
     switch (field) {
 
@@ -168,12 +273,9 @@ function ApplicationForm({
       // -------------------------------------------------------
 
       case 'rm_id':
-
-        if (!trimmedValue) {
-          return 'Please select a Relationship Manager.'
-        }
-
+        // RM is optional.
         return ''
+
 
       // -------------------------------------------------------
       // LOAN TYPE
@@ -186,6 +288,7 @@ function ApplicationForm({
         }
 
         return ''
+
 
       // -------------------------------------------------------
       // NAME
@@ -211,6 +314,7 @@ function ApplicationForm({
 
         return ''
 
+
       // -------------------------------------------------------
       // PHONE
       // -------------------------------------------------------
@@ -235,6 +339,7 @@ function ApplicationForm({
 
         return ''
 
+
       // -------------------------------------------------------
       // GENDER
       // -------------------------------------------------------
@@ -246,6 +351,7 @@ function ApplicationForm({
         }
 
         return ''
+
 
       // -------------------------------------------------------
       // LOAN AMOUNT
@@ -266,6 +372,7 @@ function ApplicationForm({
         }
 
         return ''
+
 
       // -------------------------------------------------------
       // CREDIT SCORE
@@ -290,6 +397,7 @@ function ApplicationForm({
 
         return ''
 
+
       // -------------------------------------------------------
       // REFERENCE NAME
       // -------------------------------------------------------
@@ -309,6 +417,7 @@ function ApplicationForm({
         }
 
         return ''
+
 
       // -------------------------------------------------------
       // LOAN PURPOSE
@@ -330,31 +439,42 @@ function ApplicationForm({
 
         return ''
 
+
       // -------------------------------------------------------
       // REMARKS
       // -------------------------------------------------------
 
       case 'remarks':
 
-        if (trimmedValue.length > 500) {
+        if (
+          trimmedValue &&
+          trimmedValue.length > 500
+        ) {
           return 'Remarks cannot exceed 500 characters.'
         }
 
         return ''
 
-      default:
 
+      default:
         return ''
     }
   }
+
 
   // ===========================================================
   // UPDATE ERROR
   // ===========================================================
 
-  const updateFieldError = (field, value) => {
+  const updateFieldError = (
+    field,
+    value
+  ) => {
 
-    const error = validateField(field, value)
+    const error = validateField(
+      field,
+      value
+    )
 
     setErrors((previous) => {
 
@@ -369,11 +489,11 @@ function ApplicationForm({
       }
 
       return updated
-
     })
 
     return error
   }
+
 
   // ===========================================================
   // HANDLE TEXT INPUT
@@ -396,8 +516,12 @@ function ApplicationForm({
       [name]: true,
     }))
 
-    updateFieldError(name, value)
+    updateFieldError(
+      name,
+      value
+    )
   }
+
 
   // ===========================================================
   // HANDLE RM CHANGE
@@ -407,7 +531,7 @@ function ApplicationForm({
 
     setFormData((previous) => ({
       ...previous,
-      rm_id: value,
+      rm_id: value ?? '',
     }))
 
     setTouched((previous) => ({
@@ -421,134 +545,175 @@ function ApplicationForm({
     )
   }
 
+
   // ===========================================================
   // HANDLE STATE CHANGE
   // ===========================================================
 
-  const handleStateChange = (value) => {
+  const handleStateChange = (
+    value
+  ) => {
 
-    setFormData((previous) => ({
-      ...previous,
-      state_id: value,
-      city_id: '',
-    }))
-
-    setTouched((previous) => ({
-      ...previous,
-      state_id: true,
-      city_id: false,
-    }))
-
-    setErrors((previous) => {
-
-      const updated = {
+    setFormData(
+      (previous) => ({
         ...previous,
+        state_id: value,
+        city_id: '',
+      })
+    )
+
+    setTouched(
+      (previous) => ({
+        ...previous,
+        state_id: true,
+        city_id: false,
+      })
+    )
+
+    setErrors(
+      (previous) => {
+
+        const updated = {
+          ...previous,
+        }
+
+        delete updated.state_id
+        delete updated.city_id
+
+        return updated
       }
-
-      delete updated.state_id
-      delete updated.city_id
-
-      return updated
-    })
+    )
   }
 
   // ===========================================================
   // HANDLE CITY CHANGE
   // ===========================================================
 
-  const handleCityChange = (value) => {
+  const handleCityChange = (
+    value
+  ) => {
 
-    setFormData((previous) => ({
-      ...previous,
-      city_id: value,
-    }))
-
-    setTouched((previous) => ({
-      ...previous,
-      city_id: true,
-    }))
-
-    setErrors((previous) => {
-
-      const updated = {
+    setFormData(
+      (previous) => ({
         ...previous,
+        city_id: value,
+      })
+    )
+
+    setTouched(
+      (previous) => ({
+        ...previous,
+        city_id: true,
+      })
+    )
+
+    setErrors(
+      (previous) => {
+
+        const updated = {
+          ...previous,
+        }
+
+        delete updated.city_id
+
+        return updated
       }
-
-      delete updated.city_id
-
-      return updated
-    })
+    )
   }
+
 
   // ===========================================================
   // HANDLE LOAN TYPE CHANGE
   // ===========================================================
 
-  const handleLoanTypeChange = (value, selectedOption) => {
+  const handleLoanTypeChange = (
+    value,
+    selectedOption
+  ) => {
 
     const selected =
       selectedOption ||
       loanTypeOptions.find(
         (loanType) =>
-          Number(loanType.id) === Number(value)
+          Number(loanType.id) ===
+          Number(value)
       )
 
-    const extraFields = getExtraFieldsForLoanType(
-      selected?.name
-    )
-
-    const extraFieldNames = new Set(
-      Object.values(LOAN_TYPE_CONFIG).flatMap(
-        (config) =>
-          (config.extraFields || []).map(
-            (field) => field.name
-          )
+    const extraFields =
+      getExtraFieldsForLoanType(
+        selected?.name
       )
-    )
 
-    setSelectedLoanType(selected || null)
+    const extraFieldNames =
+      new Set(
+        Object.values(
+          LOAN_TYPE_CONFIG
+        ).flatMap(
+          (config) =>
+            (config.extraFields || [])
+              .map(
+                (field) =>
+                  field.name
+              )
+        )
+      )
+
+    setSelectedLoanType(
+      selected || null
+    )
 
     setFormData((previous) => {
+
       const updated = {
         ...previous,
         loan_type_id: value,
       }
 
-      extraFieldNames.forEach((fieldName) => {
-        updated[fieldName] = ''
-      })
+      extraFieldNames.forEach(
+        (fieldName) => {
+          updated[fieldName] = ''
+        }
+      )
 
-      extraFields.forEach((field) => {
-        updated[field.name] =
-          field.defaultValue ?? ''
-      })
+      extraFields.forEach(
+        (field) => {
+          updated[field.name] =
+            field.defaultValue ?? ''
+        }
+      )
 
       return updated
     })
 
     setTouched((previous) => {
+
       const updated = {
         ...previous,
         loan_type_id: true,
       }
 
-      extraFieldNames.forEach((fieldName) => {
-        updated[fieldName] = false
-      })
+      extraFieldNames.forEach(
+        (fieldName) => {
+          updated[fieldName] = false
+        }
+      )
 
       return updated
     })
 
     setErrors((previous) => {
+
       const updated = {
         ...previous,
       }
 
       delete updated.loan_type_id
 
-      extraFieldNames.forEach((fieldName) => {
-        delete updated[fieldName]
-      })
+      extraFieldNames.forEach(
+        (fieldName) => {
+          delete updated[fieldName]
+        }
+      )
 
       return updated
     })
@@ -559,15 +724,19 @@ function ApplicationForm({
     )
   }
 
+
   // ===========================================================
   // PHONE CHANGE
   // ===========================================================
 
-  const handlePhoneChange = (event) => {
+  const handlePhoneChange = (
+    event
+  ) => {
 
-    const value = event.target.value
-      .replace(/\D/g, '')
-      .slice(0, 10)
+    const value =
+      event.target.value
+        .replace(/\D/g, '')
+        .slice(0, 10)
 
     setFormData((previous) => ({
       ...previous,
@@ -585,14 +754,18 @@ function ApplicationForm({
     )
   }
 
+
   // ===========================================================
   // LOAN AMOUNT CHANGE
   // ===========================================================
 
-  const handleLoanAmountChange = (event) => {
+  const handleLoanAmountChange = (
+    event
+  ) => {
 
-    const value = event.target.value
-      .replace(/\D/g, '')
+    const value =
+      event.target.value
+        .replace(/\D/g, '')
 
     setFormData((previous) => ({
       ...previous,
@@ -610,15 +783,19 @@ function ApplicationForm({
     )
   }
 
+
   // ===========================================================
   // CREDIT SCORE CHANGE
   // ===========================================================
 
-  const handleCreditScoreChange = (event) => {
+  const handleCreditScoreChange = (
+    event
+  ) => {
 
-    const value = event.target.value
-      .replace(/\D/g, '')
-      .slice(0, 3)
+    const value =
+      event.target.value
+        .replace(/\D/g, '')
+        .slice(0, 3)
 
     setFormData((previous) => ({
       ...previous,
@@ -636,14 +813,20 @@ function ApplicationForm({
     )
   }
 
+
   // ===========================================================
   // REMARKS CHANGE
   // ===========================================================
 
-  const handleRemarksChange = (event) => {
+  const handleRemarksChange = (
+    event
+  ) => {
 
-    const value = event.target.value
-      .slice(0, 500)
+    const value =
+      event.target.value.slice(
+        0,
+        500
+      )
 
     setFormData((previous) => ({
       ...previous,
@@ -661,11 +844,14 @@ function ApplicationForm({
     )
   }
 
+
   // ===========================================================
   // HANDLE BLUR
   // ===========================================================
 
-  const handleBlur = (event) => {
+  const handleBlur = (
+    event
+  ) => {
 
     const {
       name,
@@ -683,6 +869,7 @@ function ApplicationForm({
     )
   }
 
+
   // ===========================================================
   // VALIDATE FORM
   // ===========================================================
@@ -691,23 +878,28 @@ function ApplicationForm({
 
     const nextErrors = {}
 
-    Object.keys(INITIAL_FORM).forEach((field) => {
+    Object.keys(
+      INITIAL_FORM
+    ).forEach((field) => {
 
-      const error = validateField(
-        field,
-        formData[field]
-      )
+      const error =
+        validateField(
+          field,
+          formData[field]
+        )
 
       if (error) {
-        nextErrors[field] = error
+        nextErrors[field] =
+          error
       }
-
     })
 
     setErrors(nextErrors)
 
     setTouched(
-      Object.keys(INITIAL_FORM).reduce(
+      Object.keys(
+        INITIAL_FORM
+      ).reduce(
         (result, field) => ({
           ...result,
           [field]: true,
@@ -716,8 +908,13 @@ function ApplicationForm({
       )
     )
 
-    return Object.keys(nextErrors).length === 0
+    return (
+      Object.keys(
+        nextErrors
+      ).length === 0
+    )
   }
+
 
   // ===========================================================
   // RESET FORM
@@ -738,21 +935,22 @@ function ApplicationForm({
     setErrors({})
 
     setTouched({})
-
-    setNotification(null)
   }
+
 
   // ===========================================================
   // SUBMIT FORM
   // ===========================================================
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (
+    event
+  ) => {
 
     event.preventDefault()
 
-    setNotification(null)
 
-    const isValid = validateForm()
+    const isValid =
+      validateForm()
 
     if (!isValid) {
       return
@@ -762,29 +960,32 @@ function ApplicationForm({
 
     try {
 
-      // -------------------------------------------------------
-      // ORIGINAL APPLICATION DATA
-      // -------------------------------------------------------
-      //
-      // Keep this object intact because if an existing loan
-      // is found, the same data will be sent to the final
-      // ExistingLoan API.
-      //
-      // -------------------------------------------------------
+      // =======================================================
+      // APPLICATION DATA
+      // =======================================================
 
       const applicationData = {
 
+        // RM IS OPTIONAL
         rm_id:
-          formData.rm_id,
+          formData.rm_id
+            ? Number(formData.rm_id)
+            : null,
 
         state_id:
-          formData.state_id || null,
+          formData.state_id
+            ? Number(formData.state_id)
+            : null,
 
         city_id:
-          formData.city_id || null,
+          formData.city_id
+            ? Number(formData.city_id)
+            : null,
 
         loan_type_id:
-          formData.loan_type_id,
+          formData.loan_type_id
+            ? Number(formData.loan_type_id)
+            : null,
 
         name:
           formData.name.trim(),
@@ -814,46 +1015,62 @@ function ApplicationForm({
 
         ...getExtraFieldsForLoanType(
           selectedLoanType?.name
-        ).reduce((result, field) => {
-          const value = formData[field.name]
+        ).reduce(
+          (result, field) => {
 
-          result[field.name] =
-            typeof value === 'string'
-              ? value.trim()
-              : value ?? null
+            const value =
+              formData[field.name]
 
-          return result
-        }, {}),
+            result[field.name] =
+              typeof value === 'string'
+                ? value.trim()
+                : value ?? null
+
+            return result
+          },
+          {}
+        ),
 
       }
 
-      // -------------------------------------------------------
-      // INITIAL APPLICATION API
-      // -------------------------------------------------------
+
+      // =======================================================
+      // CREATE APPLICATION
+      // =======================================================
 
       const response =
         await createLoanApplication(
           applicationData
         )
 
-      // -------------------------------------------------------
-      // EXISTING LOAN FOUND
-      // -------------------------------------------------------
-      //
-      // Do NOT reset the form here.
-      //
-      // The original application data must remain available
-      // because ExistingLoan will use it when the user clicks
-      // "Submit Application".
-      //
-      // -------------------------------------------------------
+
+      // =======================================================
+      // EXISTING APPLICATION FOUND
+      // =======================================================
 
       if (
         response?.existing_loan === true
       ) {
 
+        /*
+         * IMPORTANT:
+         *
+         * Do NOT reset the form.
+         *
+         * We pass both:
+         *
+         * 1. existingLoanData
+         * 2. originalApplicationData
+         *
+         * to the parent page.
+         *
+         * The parent page will display ExistingLoan
+         * as a modal on THIS SAME PAGE.
+         */
+
         if (
-          typeof onExistingLoan === 'function'
+          typeof onExistingLoan ===
+          'function'
         ) {
 
           onExistingLoan({
@@ -865,31 +1082,30 @@ function ApplicationForm({
               applicationData,
 
           })
-
         }
-
-        setSubmitting(false)
 
         return
       }
 
-      // -------------------------------------------------------
+
+      // =======================================================
       // NORMAL NEW APPLICATION
-      // -------------------------------------------------------
+      // =======================================================
 
-      setNotification({
-
+      setFeedback({
+        open: true,
         type: 'success',
-
+        title: 'Application Created',
         message:
           response?.message ||
           'Loan application submitted successfully.',
-
       })
 
       setFormData({
         ...INITIAL_FORM,
       })
+
+      setSelectedLoanType(null)
 
       setErrors({})
 
@@ -902,14 +1118,13 @@ function ApplicationForm({
         error
       )
 
-      setNotification({
-
+      setFeedback({
+        open: true,
         type: 'error',
-
+        title: 'Unable to Create Application',
         message:
           error?.message ||
           'Unable to submit the loan application. Please try again.',
-
       })
 
     } finally {
@@ -919,11 +1134,14 @@ function ApplicationForm({
     }
   }
 
+
   // ===========================================================
   // FIELD CLASS
   // ===========================================================
 
-  const getInputClass = (field) => {
+  const getInputClass = (
+    field
+  ) => {
 
     return `
       input
@@ -939,23 +1157,26 @@ function ApplicationForm({
       focus:outline-none
       focus:ring-1
       focus:ring-[#8BCF00]/30
-      ${
-        errors[field] && touched[field]
-          ? `
+      ${errors[field] &&
+        touched[field]
+        ? `
             border-error
             focus:border-error
             focus:ring-error/20
           `
-          : ''
+        : ''
       }
     `
   }
+
 
   // ===========================================================
   // SELECT CLASS
   // ===========================================================
 
-  const selectClass = (field) => {
+  const selectClass = (
+    field
+  ) => {
 
     return `
       select
@@ -970,17 +1191,18 @@ function ApplicationForm({
       focus:outline-none
       focus:ring-1
       focus:ring-[#8BCF00]/30
-      ${
-        errors[field] && touched[field]
-          ? `
+      ${errors[field] &&
+        touched[field]
+        ? `
             border-error
             focus:border-error
             focus:ring-error/20
           `
-          : ''
+        : ''
       }
     `
   }
+
 
   // ===========================================================
   // SECTION HEADER
@@ -1045,6 +1267,7 @@ function ApplicationForm({
     </div>
   )
 
+
   // ===========================================================
   // FIELD ERROR
   // ===========================================================
@@ -1084,35 +1307,67 @@ function ApplicationForm({
         {errors[field]}
 
       </p>
-
     )
   }
 
+
   // ===========================================================
-  // LOAN TYPE EXTRA FIELD RENDERER
+  // EXTRA FIELD RENDERER
   // ===========================================================
 
-  const renderExtraField = (field) => {
-    const value = formData[field.name] ?? ''
-    const fieldError = errors[field.name]
-    const fieldTouched = touched[field.name]
-    const type = field.type || 'text'
+  const renderExtraField = (
+    field
+  ) => {
+
+    const value =
+      formData[field.name] ?? ''
+
+    const fieldError =
+      errors[field.name]
+
+    const fieldTouched =
+      touched[field.name]
+
+    const type =
+      field.type || 'text'
 
     const commonProps = {
-      name: field.name,
+
+      name:
+        field.name,
+
       value,
-      onChange: handleChange,
-      onBlur: handleBlur,
-      placeholder: field.placeholder || `Enter ${field.label.toLowerCase()}`,
-      maxLength: field.maxLength,
-      className: getInputClass(field.name),
+
+      onChange:
+        handleChange,
+
+      onBlur:
+        handleBlur,
+
+      placeholder:
+        field.placeholder ||
+        `Enter ${field.label.toLowerCase()}`,
+
+      maxLength:
+        field.maxLength,
+
+      className:
+        getInputClass(
+          field.name
+        ),
     }
 
     return (
+
       <div
         key={field.name}
-        className={field.fullWidth ? 'min-w-0 lg:col-span-2' : 'min-w-0'}
+        className={
+          field.fullWidth
+            ? 'min-w-0 lg:col-span-2'
+            : 'min-w-0'
+        }
       >
+
         <label
           className="
             mb-1.5
@@ -1122,17 +1377,25 @@ function ApplicationForm({
             text-base-content
           "
         >
+
           {field.label}
 
           {field.required && (
-            <span className="ml-1 text-error">*</span>
+            <span className="ml-1 text-error">
+              *
+            </span>
           )}
+
         </label>
 
+
         {type === 'textarea' ? (
+
           <textarea
             {...commonProps}
-            rows={field.rows || 3}
+            rows={
+              field.rows || 3
+            }
             className={`
               textarea
               textarea-bordered
@@ -1147,59 +1410,84 @@ function ApplicationForm({
               focus:outline-none
               focus:ring-1
               focus:ring-[#8BCF00]/30
-              ${
-                fieldError && fieldTouched
-                  ? 'border-error focus:border-error focus:ring-error/20'
-                  : ''
+              ${fieldError &&
+                fieldTouched
+                ? 'border-error focus:border-error focus:ring-error/20'
+                : ''
               }
             `}
           />
+
         ) : type === 'select' ? (
+
           <select
             name={field.name}
             value={value}
             onChange={handleChange}
             onBlur={handleBlur}
-            className={selectClass(field.name)}
+            className={selectClass(
+              field.name
+            )}
           >
+
             <option value="">
-              {field.placeholder || `Select ${field.label}`}
+              {field.placeholder ||
+                `Select ${field.label}`}
             </option>
 
-            {(field.options || []).map((option) => {
-              const optionValue =
-                typeof option === 'object'
-                  ? option.value
-                  : option
-              const optionLabel =
-                typeof option === 'object'
-                  ? option.label
-                  : option
+            {(field.options || [])
+              .map((option) => {
 
-              return (
-                <option
-                  key={optionValue}
-                  value={optionValue}
-                >
-                  {optionLabel}
-                </option>
-              )
-            })}
+                const optionValue =
+                  typeof option === 'object'
+                    ? option.value
+                    : option
+
+                const optionLabel =
+                  typeof option === 'object'
+                    ? option.label
+                    : option
+
+                return (
+
+                  <option
+                    key={optionValue}
+                    value={optionValue}
+                  >
+                    {optionLabel}
+                  </option>
+
+                )
+              })}
+
           </select>
+
         ) : (
+
           <input
             {...commonProps}
-            type={type === 'number' ? 'text' : type}
+            type={
+              type === 'number'
+                ? 'text'
+                : type
+            }
             inputMode={
-              type === 'number' ? 'numeric' : undefined
+              type === 'number'
+                ? 'numeric'
+                : undefined
             }
           />
+
         )}
 
-        <FieldError field={field.name} />
+        <FieldError
+          field={field.name}
+        />
+
       </div>
     )
   }
+
 
   // ===========================================================
   // RENDER
@@ -1218,76 +1506,6 @@ function ApplicationForm({
         lg:px-6
       "
     >
-
-      {/* =====================================================
-          NOTIFICATION
-      ===================================================== */}
-
-      {notification && (
-
-        <div
-          role="alert"
-          className={`
-            mb-4
-            flex
-            items-start
-            gap-3
-            rounded-lg
-            border
-            px-4
-            py-3
-            ${
-              notification.type === 'success'
-                ? `
-                  border-[#8BCF00]/30
-                  bg-[#8BCF00]/10
-                  text-[#5E8F00]
-                `
-                : `
-                  border-error/20
-                  bg-error/5
-                  text-error
-                `
-            }
-          `}
-        >
-
-          {notification.type === 'success' ? (
-
-            <CheckCircleIcon
-              className="
-                mt-0.5
-                h-5
-                w-5
-                shrink-0
-              "
-            />
-
-          ) : (
-
-            <ExclamationCircleIcon
-              className="
-                mt-0.5
-                h-5
-                w-5
-                shrink-0
-              "
-            />
-
-          )}
-
-          <p
-            className="
-              text-sm
-              font-medium
-            "
-          >
-            {notification.message}
-          </p>
-
-        </div>
-
-      )}
 
       {/* =====================================================
           MAIN WORKSPACE
@@ -1321,7 +1539,7 @@ function ApplicationForm({
           >
 
             {/* =================================================
-                SECTION 1 — APPLICATION DETAILS
+                SECTION 1
             ================================================= */}
 
             <section>
@@ -1352,17 +1570,18 @@ function ApplicationForm({
                       text-xs
                       font-medium
                       text-base-content
-                    "
+                  "
                   >
+
                     Relationship Manager (RM)
 
                     <span
                       className="
-                        ml-1
-                        text-error
-                      "
+                ml-1
+                text-base-content/40
+            "
                     >
-                      *
+                      (Optional)
                     </span>
 
                   </label>
@@ -1371,6 +1590,12 @@ function ApplicationForm({
                     label=""
                     value={formData.rm_id}
                     onChange={handleRmChange}
+                    options={rmOptions}
+                    loading={loadingRms}
+                    allLabel="No RM"
+                    placeholder="Select RM"
+                    searchPlaceholder="Search RM"
+                    emptyMessage="No RMs found"
                   />
 
                   <FieldError
@@ -1378,6 +1603,7 @@ function ApplicationForm({
                   />
 
                 </div>
+
 
                 {/* Loan Type */}
 
@@ -1392,6 +1618,7 @@ function ApplicationForm({
                       text-base-content
                     "
                   >
+
                     Loan Type
 
                     <span
@@ -1407,9 +1634,15 @@ function ApplicationForm({
 
                   <LoanTypeDropdown
                     label=""
-                    value={formData.loan_type_id}
-                    onChange={handleLoanTypeChange}
-                    onOptionsLoaded={setLoanTypeOptions}
+                    value={
+                      formData.loan_type_id
+                    }
+                    onChange={
+                      handleLoanTypeChange
+                    }
+                    onOptionsLoaded={
+                      setLoanTypeOptions
+                    }
                   />
 
                   <FieldError
@@ -1417,6 +1650,7 @@ function ApplicationForm({
                   />
 
                 </div>
+
 
                 {/* State + City */}
 
@@ -1449,17 +1683,33 @@ function ApplicationForm({
                     <StateCityDropdown
                       stateValue={formData.state_id}
                       cityValue={formData.city_id}
-                      onStateChange={handleStateChange}
-                      onCityChange={handleCityChange}
+
+                      onStateChange={
+                        handleStateChange
+                      }
+
+                      onCityChange={
+                        handleCityChange
+                      }
+
+                 
+
+
                       stateLabel=""
                       cityLabel=""
+
                       allStatesLabel="All States"
                       allCitiesLabel="All Cities"
+
                       statePlaceholder="Select State"
                       cityPlaceholder="Select City"
+
                       stateSearchPlaceholder="Search State"
                       citySearchPlaceholder="Search City"
-                      disabled={submitting}
+
+                      disabled={
+                        submitting
+                      }
                     />
 
                   </div>
@@ -1470,8 +1720,9 @@ function ApplicationForm({
 
             </section>
 
+
             {/* =================================================
-                SECTION 2 — CUSTOMER INFORMATION
+                SECTION 2
             ================================================= */}
 
             <section>
@@ -1490,7 +1741,7 @@ function ApplicationForm({
                 "
               >
 
-                {/* Full Name */}
+                {/* Name */}
 
                 <div className="min-w-0">
 
@@ -1503,14 +1754,10 @@ function ApplicationForm({
                       text-base-content
                     "
                   >
+
                     Full Name of Applicant
 
-                    <span
-                      className="
-                        ml-1
-                        text-error
-                      "
-                    >
+                    <span className="ml-1 text-error">
                       *
                     </span>
 
@@ -1553,6 +1800,7 @@ function ApplicationForm({
 
                 </div>
 
+
                 {/* Phone */}
 
                 <div className="min-w-0">
@@ -1566,14 +1814,10 @@ function ApplicationForm({
                       text-base-content
                     "
                   >
+
                     Phone Number
 
-                    <span
-                      className="
-                        ml-1
-                        text-error
-                      "
-                    >
+                    <span className="ml-1 text-error">
                       *
                     </span>
 
@@ -1583,12 +1827,16 @@ function ApplicationForm({
                     type="tel"
                     name="phone"
                     value={formData.phone}
-                    onChange={handlePhoneChange}
+                    onChange={
+                      handlePhoneChange
+                    }
                     onBlur={handleBlur}
                     placeholder="10-digit mobile number"
                     inputMode="numeric"
                     maxLength={10}
-                    className={getInputClass('phone')}
+                    className={
+                      getInputClass('phone')
+                    }
                   />
 
                   <FieldError
@@ -1596,6 +1844,7 @@ function ApplicationForm({
                   />
 
                 </div>
+
 
                 {/* Gender */}
 
@@ -1610,14 +1859,10 @@ function ApplicationForm({
                       text-base-content
                     "
                   >
+
                     Gender
 
-                    <span
-                      className="
-                        ml-1
-                        text-error
-                      "
-                    >
+                    <span className="ml-1 text-error">
                       *
                     </span>
 
@@ -1627,7 +1872,9 @@ function ApplicationForm({
                     name="gender"
                     value={formData.gender}
                     onChange={handleChange}
-                    className={selectClass('gender')}
+                    className={
+                      selectClass('gender')
+                    }
                   >
 
                     <option value="">
@@ -1638,8 +1885,12 @@ function ApplicationForm({
                       (option) => (
 
                         <option
-                          key={option.value}
-                          value={option.value}
+                          key={
+                            option.value
+                          }
+                          value={
+                            option.value
+                          }
                         >
                           {option.label}
                         </option>
@@ -1659,8 +1910,9 @@ function ApplicationForm({
 
             </section>
 
+
             {/* =================================================
-                SECTION 3 — LOAN DETAILS
+                SECTION 3
             ================================================= */}
 
             <section>
@@ -1680,11 +1932,12 @@ function ApplicationForm({
                 "
               >
 
-                {/* Loan Type Specific Fields */}
-
                 {getExtraFieldsForLoanType(
                   selectedLoanType?.name
-                ).map(renderExtraField)}
+                ).map(
+                  renderExtraField
+                )}
+
 
                 {/* Loan Amount */}
 
@@ -1699,14 +1952,10 @@ function ApplicationForm({
                       text-base-content
                     "
                   >
+
                     Loan Amount (₹)
 
-                    <span
-                      className="
-                        ml-1
-                        text-error
-                      "
-                    >
+                    <span className="ml-1 text-error">
                       *
                     </span>
 
@@ -1730,13 +1979,19 @@ function ApplicationForm({
                     <input
                       type="text"
                       name="loan_amount"
-                      value={formData.loan_amount}
-                      onChange={handleLoanAmountChange}
+                      value={
+                        formData.loan_amount
+                      }
+                      onChange={
+                        handleLoanAmountChange
+                      }
                       onBlur={handleBlur}
                       placeholder="Enter loan amount"
                       inputMode="numeric"
                       className={`
-                        ${getInputClass('loan_amount')}
+                        ${getInputClass(
+                        'loan_amount'
+                      )}
                         pl-9
                       `}
                     />
@@ -1748,6 +2003,7 @@ function ApplicationForm({
                   />
 
                 </div>
+
 
                 {/* Credit Score */}
 
@@ -1768,13 +2024,21 @@ function ApplicationForm({
                   <input
                     type="text"
                     name="credit_score"
-                    value={formData.credit_score}
-                    onChange={handleCreditScoreChange}
+                    value={
+                      formData.credit_score
+                    }
+                    onChange={
+                      handleCreditScoreChange
+                    }
                     onBlur={handleBlur}
                     placeholder="Enter credit score (e.g. 750)"
                     inputMode="numeric"
                     maxLength={3}
-                    className={getInputClass('credit_score')}
+                    className={
+                      getInputClass(
+                        'credit_score'
+                      )
+                    }
                   />
 
                   <p
@@ -1793,7 +2057,8 @@ function ApplicationForm({
 
                 </div>
 
-                {/* Reference Name */}
+
+                {/* Reference */}
 
                 <div>
 
@@ -1806,14 +2071,10 @@ function ApplicationForm({
                       text-base-content
                     "
                   >
+
                     Reference Name
 
-                    <span
-                      className="
-                        ml-1
-                        text-error
-                      "
-                    >
+                    <span className="ml-1 text-error">
                       *
                     </span>
 
@@ -1822,12 +2083,18 @@ function ApplicationForm({
                   <input
                     type="text"
                     name="reference_name"
-                    value={formData.reference_name}
+                    value={
+                      formData.reference_name
+                    }
                     onChange={handleChange}
                     onBlur={handleBlur}
                     maxLength={100}
                     placeholder="Enter reference name"
-                    className={getInputClass('reference_name')}
+                    className={
+                      getInputClass(
+                        'reference_name'
+                      )
+                    }
                   />
 
                   <FieldError
@@ -1835,6 +2102,7 @@ function ApplicationForm({
                   />
 
                 </div>
+
 
                 {/* Loan Purpose */}
 
@@ -1849,14 +2117,10 @@ function ApplicationForm({
                       text-base-content
                     "
                   >
+
                     Loan Purpose
 
-                    <span
-                      className="
-                        ml-1
-                        text-error
-                      "
-                    >
+                    <span className="ml-1 text-error">
                       *
                     </span>
 
@@ -1865,12 +2129,18 @@ function ApplicationForm({
                   <input
                     type="text"
                     name="loan_purpose"
-                    value={formData.loan_purpose}
+                    value={
+                      formData.loan_purpose
+                    }
                     onChange={handleChange}
                     onBlur={handleBlur}
                     maxLength={200}
                     placeholder="Enter loan purpose"
-                    className={getInputClass('loan_purpose')}
+                    className={
+                      getInputClass(
+                        'loan_purpose'
+                      )
+                    }
                   />
 
                   <div
@@ -1893,7 +2163,11 @@ function ApplicationForm({
                         text-base-content/40
                       "
                     >
-                      {formData.loan_purpose.length}/200
+                      {
+                        formData.loan_purpose
+                          .length
+                      }
+                      /200
                     </span>
 
                   </div>
@@ -1904,8 +2178,9 @@ function ApplicationForm({
 
             </section>
 
+
             {/* =================================================
-                SECTION 4 — REMARKS
+                SECTION 4
             ================================================= */}
 
             <section>
@@ -1926,6 +2201,7 @@ function ApplicationForm({
                     text-base-content
                   "
                 >
+
                   Remarks / Notes
 
                   <span
@@ -1956,8 +2232,12 @@ function ApplicationForm({
 
                   <textarea
                     name="remarks"
-                    value={formData.remarks}
-                    onChange={handleRemarksChange}
+                    value={
+                      formData.remarks
+                    }
+                    onChange={
+                      handleRemarksChange
+                    }
                     onBlur={handleBlur}
                     maxLength={500}
                     rows={4}
@@ -1978,15 +2258,14 @@ function ApplicationForm({
                       focus:outline-none
                       focus:ring-1
                       focus:ring-[#8BCF00]/30
-                      ${
-                        errors.remarks &&
+                      ${errors.remarks &&
                         touched.remarks
-                          ? `
+                        ? `
                             border-error
                             focus:border-error
                             focus:ring-error/20
                           `
-                          : ''
+                        : ''
                       }
                     `}
                   />
@@ -2001,7 +2280,10 @@ function ApplicationForm({
                       text-base-content/40
                     "
                   >
-                    {formData.remarks.length} / 500
+                    {
+                      formData.remarks
+                        .length
+                    } / 500
                   </span>
 
                 </div>
@@ -2015,6 +2297,7 @@ function ApplicationForm({
             </section>
 
           </div>
+
 
           {/* =================================================
               FORM ACTIONS
@@ -2038,8 +2321,6 @@ function ApplicationForm({
             "
           >
 
-            {/* Reset */}
-
             <button
               type="button"
               onClick={handleReset}
@@ -2059,18 +2340,12 @@ function ApplicationForm({
               "
             >
 
-              <ArrowPathIcon
-                className="
-                  h-4
-                  w-4
-                "
-              />
+              <ArrowPathIcon className="h-4 w-4" />
 
               Reset
 
             </button>
 
-            {/* Submit */}
 
             <button
               type="submit"
@@ -2105,7 +2380,7 @@ function ApplicationForm({
                     "
                   />
 
-                  Submitting...
+                  Checking...
 
                 </>
 
@@ -2115,12 +2390,7 @@ function ApplicationForm({
 
                   Submit Application
 
-                  <ArrowRightIcon
-                    className="
-                      h-4
-                      w-4
-                    "
-                  />
+                  <ArrowRightIcon className="h-4 w-4" />
 
                 </>
 
@@ -2139,3 +2409,4 @@ function ApplicationForm({
 }
 
 export default ApplicationForm
+

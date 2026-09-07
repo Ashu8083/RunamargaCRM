@@ -1,11 +1,22 @@
 # backend/app/routes/auth_routes.py
 from fastapi import APIRouter, Depends, Response, Cookie, HTTPException
 from sqlalchemy.orm import Session
-from app.controllers.auth_controller import request_otp,verify_otp,refresh_token
+
+from app.controllers.auth_controller import (
+    request_otp,
+    verify_otp,
+    refresh_token,
+)
+
 from app.config.database import get_db
-from app.schemas.auth import RequestOTPRequest,VerifyOTPRequest
 
+from app.schemas.auth import (
+    RequestOTPRequest,
+    VerifyOTPRequest,
+)
 
+from app.core.security import get_current_employee
+from app.services.auth_service import get_employee_contexts
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
@@ -68,4 +79,24 @@ def logout_route(
 
     return {
         "message": "Logout successful",
+    }
+@router.get("/me")
+def get_current_user_route(
+    db: Session = Depends(get_db),
+    employee=Depends(get_current_employee),
+):
+    contexts = get_employee_contexts(
+        db=db,
+        employee_id=employee.id,
+    )
+
+    return {
+        "success": True,
+        "data": {
+            "id": employee.id,
+            "name": employee.name,
+            "email": employee.email,
+            "role": employee.role.name if employee.role else None,
+            "contexts": contexts,
+        },
     }

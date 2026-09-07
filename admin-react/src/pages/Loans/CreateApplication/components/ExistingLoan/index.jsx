@@ -138,10 +138,10 @@ const getStatusConfig = (status) => {
         label:
           status
             ? String(status)
-                .replace(/_/g, ' ')
-                .replace(/\b\w/g, (char) =>
-                  char.toUpperCase()
-                )
+              .replace(/_/g, ' ')
+              .replace(/\b\w/g, (char) =>
+                char.toUpperCase()
+              )
             : '—',
         className:
           'border-base-300 bg-base-200 text-base-content/70',
@@ -337,8 +337,9 @@ function ExistingLoan({
   )
 
   const appliedBy = getValue(
-    existingLoanData?.applied_by,
-    existingLoanData?.appliedBy
+    existingLoanData?.applied_by_name ||
+    existingLoanData?.applied_by ||
+    '—'
   )
 
   const rmName = getValue(
@@ -403,77 +404,86 @@ function ExistingLoan({
     }
 
     setNotification(null)
-
     setSubmitting(true)
 
     try {
 
-      // -------------------------------------------------------
-      // IMPORTANT:
-      // Send ORIGINAL APPLICATION FORM DATA.
-      //
-      // Do NOT send existingLoanData here because that object
-      // contains the existing application's display information.
-      // -------------------------------------------------------
+      const existingApplicationId =
+        existingLoanData?.application_id ||
+        existingLoanData?.applicationId ||
+        existingLoanData?.id
+
+      if (!existingApplicationId) {
+        throw new Error(
+          'Existing application ID is missing.'
+        )
+      }
 
       const response =
-        await submitExistingLoan(
-          originalApplicationData
-        )
+        await submitExistingLoan({
 
-      if (
-        response?.success === false
-      ) {
+          loan_application_id:
+            Number(existingApplicationId),
 
+          name:
+            originalApplicationData?.name,
+
+          phone:
+            originalApplicationData?.phone,
+
+          loan_type_id:
+            originalApplicationData?.loan_type_id
+              ? Number(
+                originalApplicationData.loan_type_id
+              )
+              : null,
+
+          loan_amount:
+            originalApplicationData?.loan_amount
+              ? Number(
+                originalApplicationData.loan_amount
+              )
+              : null,
+
+          loan_purpose:
+            originalApplicationData?.loan_purpose,
+
+          reference_name:
+            originalApplicationData?.reference_name,
+        })
+
+      if (response?.success === false) {
         throw new Error(
           response?.message ||
-          'Unable to submit the application.'
+          'Unable to submit approval request.'
         )
-
       }
 
       setNotification({
-
         type: 'success',
-
         message:
           response?.message ||
-          'Existing loan application submitted successfully.',
-
+          'Approval request submitted successfully.',
       })
-
-      // -------------------------------------------------------
-      // Allow the parent to handle successful completion.
-      //
-      // Parent can:
-      // - show success notification
-      // - return to empty ApplicationForm
-      // - refresh application data
-      // -------------------------------------------------------
 
       if (
         typeof onSubmitSuccess === 'function'
       ) {
-
         onSubmitSuccess(response)
-
       }
 
     } catch (error) {
 
       console.error(
-        'Existing loan submission failed:',
+        'Duplicate approval request failed:',
         error
       )
 
       setNotification({
-
         type: 'error',
-
         message:
           error?.message ||
-          'Unable to submit the application. Please try again.',
-
+          'Unable to request approval. Please try again.',
       })
 
     } finally {
@@ -482,7 +492,6 @@ function ExistingLoan({
 
     }
   }
-
   // ===========================================================
   // RENDER
   // ===========================================================
@@ -518,14 +527,13 @@ function ExistingLoan({
             border
             px-4
             py-3
-            ${
-              notification.type === 'success'
-                ? `
+            ${notification.type === 'success'
+              ? `
                   border-[#8BCF00]/30
                   bg-[#8BCF00]/10
                   text-[#5E8F00]
                 `
-                : `
+              : `
                   border-error/20
                   bg-error/5
                   text-error

@@ -1,140 +1,45 @@
 // admin-react/src/pages/Loans/CreateApplication/components/ExistingLoan/API.js
 
+import apiClient from '../../../../../app/apiClient'
+
 // =============================================================
-// EXISTING LOAN — FINAL SUBMISSION API
-// =============================================================
-//
-// This API is called ONLY after the initial application API
-// detects that the customer already has an existing loan.
-//
-// IMPORTANT:
-// The API receives the ORIGINAL APPLICATION FORM DATA.
-//
-// Example payload:
-//
-// {
-//   rm_id,
-//   state_id,
-//   city_id,
-//   loan_type_id,
-//   name,
-//   phone,
-//   loan_amount,
-//   credit_score,
-//   reference_name,
-//   loan_purpose,
-//   remarks,
-//   gender
-// }
-//
-// Replace the mock implementation below with the actual
-// backend API call once the endpoint is available.
+// REQUEST DUPLICATE APPLICATION APPROVAL
 // =============================================================
 
-export const submitExistingLoan = (data) => {
+export const submitExistingLoan = async (data) => {
 
-  return new Promise((resolve, reject) => {
+  if (!data) {
+    throw new Error(
+      'Application data is required.'
+    )
+  }
 
-    setTimeout(() => {
+  if (!data.loan_application_id) {
+    throw new Error(
+      'Existing application ID is required.'
+    )
+  }
 
-      try {
+  try {
 
-        // -------------------------------------------------------
-        // BASIC VALIDATION
-        // -------------------------------------------------------
+    const response = await apiClient.post(
+      '/duplicate-approvals',
+      data
+    )
 
-        if (!data) {
+    return response.data
 
-          throw new Error(
-            'Application data is required.'
-          )
+  } catch (error) {
 
-        }
+    console.error(
+      'Duplicate approval request failed:',
+      error
+    )
 
-        if (!data.name) {
-
-          throw new Error(
-            'Applicant name is required.'
-          )
-
-        }
-
-        if (!data.phone) {
-
-          throw new Error(
-            'Applicant phone number is required.'
-          )
-
-        }
-
-        if (!data.loan_type_id) {
-
-          throw new Error(
-            'Loan type is required.'
-          )
-
-        }
-
-        if (!data.loan_amount) {
-
-          throw new Error(
-            'Loan amount is required.'
-          )
-
-        }
-
-        // -------------------------------------------------------
-        // FINAL EXISTING LOAN SUBMISSION
-        // -------------------------------------------------------
-        //
-        // In the real application, replace this section with
-        // your backend request.
-        //
-        // Example:
-        //
-        // const response = await axios.post(
-        //   '/api/loans/existing/submit',
-        //   data
-        // )
-        //
-        // return response.data
-        //
-        // -------------------------------------------------------
-
-        const response = {
-
-          success: true,
-
-          message:
-            'Existing loan application submitted successfully.',
-
-          data: {
-
-            application_id:
-              `LA-${Date.now()}`,
-
-            status:
-              'IN_PROCESS',
-
-            submitted_at:
-              new Date().toISOString(),
-
-            ...data,
-
-          },
-
-        }
-
-        resolve(response)
-
-      } catch (error) {
-
-        reject(error)
-
-      }
-
-    }, 1200)
-
-  })
-
+    throw new Error(
+      error.response?.data?.detail ||
+      error.response?.data?.message ||
+      'Unable to request approval.'
+    )
+  }
 }

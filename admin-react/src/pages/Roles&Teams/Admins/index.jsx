@@ -1,163 +1,35 @@
 // admin-react/src/pages/Roles&Teams/Admins/index.jsx
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import AdminTable from './components/AdminTable'
 import AdminModal from './components/AdminModal'
 
 import PermissionsModal from '../../../components/GlobalModels/PermissionsModal'
+import FeedbackModal from '../../../components/GlobalModels/FeedbackModal'
 
-import EmployeeDropdown from '../../../components/GlobalModels/Filters/EmployeeDropdown'
+import {
+    getAdmins,
+    getEmployees,
+    createAdmin,
+    updateAdmin,
+    deleteAdmin,
+    updateAdminStatus,
+    getApiErrorMessage,
+} from './API'
 
 
 function Admins() {
 
     // =========================================================
-    // MOCK EMPLOYEES
-    //
-    // In the real API these will come from the employee table.
-    // Admins are created by selecting one of these employees.
+    // DATA
     // =========================================================
 
-    const employees = [
-        {
-            id: 201,
-            name: 'Rahul Sharma',
-            employeeId: 'EMP201',
-            phone: '9876543210',
-            email: 'rahul@runamarga.com',
-        },
+    const [admins, setAdmins] = useState([])
+    const [employees, setEmployees] = useState([])
 
-        {
-            id: 202,
-            name: 'Anil Kumar',
-            employeeId: 'EMP202',
-            phone: '9845671234',
-            email: 'anil@runamarga.com',
-        },
-
-        {
-            id: 203,
-            name: 'Vikram Singh',
-            employeeId: 'EMP203',
-            phone: '9988776655',
-            email: 'vikram@runamarga.com',
-        },
-
-        {
-            id: 204,
-            name: 'Arjun Rao',
-            employeeId: 'EMP204',
-            phone: '9123456789',
-            email: 'arjun@runamarga.com',
-        },
-
-        {
-            id: 205,
-            name: 'Kiran Kumar',
-            employeeId: 'EMP205',
-            phone: '9012345678',
-            email: 'kiran@runamarga.com',
-        },
-    ]
-
-
-    // =========================================================
-    // FORMAT DATE
-    // =========================================================
-
-    const getCurrentDateTime = () => {
-
-        return new Date().toLocaleString(
-            'en-IN',
-            {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                second: '2-digit',
-            }
-        )
-
-    }
-
-
-    // =========================================================
-    // MOCK ADMINS
-    //
-    // employeeId connects an admin to an existing employee.
-    // =========================================================
-
-    const [admins, setAdmins] = useState([
-        {
-            id: 1,
-
-            employeeId: 201,
-
-            name: 'Rahul Sharma',
-
-            phone: '9876543210',
-
-            email: 'rahul@runamarga.com',
-
-            status: 'Active',
-
-            createdAt:
-                'Apr 7, 2026, 3:13:50 PM',
-
-            updatedAt:
-                'N/A',
-
-            permissions: [
-                {
-                    id: 1,
-                    name: 'View RM Applications',
-                    group: 'RM',
-                },
-
-                {
-                    id: 11,
-                    name: 'View Dashboard',
-                    group: 'Common',
-                },
-            ],
-        },
-
-        {
-            id: 2,
-
-            employeeId: 202,
-
-            name: 'Anil Kumar',
-
-            phone: '9845671234',
-
-            email: 'anil@runamarga.com',
-
-            status: 'Absent',
-
-            createdAt:
-                'Apr 8, 2026, 10:20:15 AM',
-
-            updatedAt:
-                'Apr 10, 2026, 2:30:10 PM',
-
-            permissions: [
-                {
-                    id: 6,
-                    name: 'View Agent Applications',
-                    group: 'Agent',
-                },
-
-                {
-                    id: 12,
-                    name: 'View Profile',
-                    group: 'Common',
-                },
-            ],
-        },
-    ])
+    const [loading, setLoading] = useState(true)
+    const [actionLoading, setActionLoading] = useState(false)
 
 
     // =========================================================
@@ -168,12 +40,11 @@ function Admins() {
 
 
     // =========================================================
-    // ADD / EDIT ADMIN MODAL
+    // ADD / EDIT MODAL
     // =========================================================
 
     const [showModal, setShowModal] =
         useState(false)
-
 
     const [editingAdmin, setEditingAdmin] =
         useState(null)
@@ -183,23 +54,140 @@ function Admins() {
     // PERMISSIONS MODAL
     // =========================================================
 
-    const [
-        showPermissionsModal,
-        setShowPermissionsModal,
-    ] = useState(false)
+    const [showPermissionsModal, setShowPermissionsModal] =
+        useState(false)
 
-
-    const [
-        selectedAdmin,
-        setSelectedAdmin,
-    ] = useState(null)
+    const [selectedAdmin, setSelectedAdmin] =
+        useState(null)
 
 
     // =========================================================
-    // EMPLOYEES AVAILABLE FOR ADMIN CREATION
+    // FEEDBACK MODAL
+    // =========================================================
+
+    const [feedback, setFeedback] = useState({
+        open: false,
+        type: 'info',
+        title: '',
+        message: '',
+    })
+
+
+    // =========================================================
+    // FEEDBACK HELPERS
+    // =========================================================
+
+    const showFeedback = (
+        type,
+        title,
+        message
+    ) => {
+
+        setFeedback({
+            open: true,
+            type,
+            title,
+            message,
+        })
+    }
+
+
+    const closeFeedback = () => {
+
+        setFeedback((previous) => ({
+            ...previous,
+            open: false,
+        }))
+    }
+
+
+    // =========================================================
+    // LOAD ADMINS
+    // =========================================================
+
+    const loadAdmins = async () => {
+
+        try {
+
+            setLoading(true)
+
+            const data = await getAdmins()
+
+            setAdmins(
+                Array.isArray(data)
+                    ? data
+                    : []
+            )
+
+        } catch (error) {
+
+            showFeedback(
+                'error',
+                'Failed to Load Admins',
+                getApiErrorMessage(
+                    error,
+                    'Unable to load admins.'
+                )
+            )
+
+        } finally {
+
+            setLoading(false)
+
+        }
+    }
+
+
+    // =========================================================
+    // LOAD EMPLOYEES
+    // =========================================================
+
+    const loadEmployees = async () => {
+
+        try {
+
+            const data = await getEmployees()
+
+            setEmployees(
+                Array.isArray(data)
+                    ? data
+                    : []
+            )
+
+        } catch (error) {
+
+            showFeedback(
+                'error',
+                'Failed to Load Employees',
+                getApiErrorMessage(
+                    error,
+                    'Unable to load employees.'
+                )
+            )
+
+        }
+    }
+
+
+    // =========================================================
+    // INITIAL LOAD
+    // =========================================================
+
+    useEffect(() => {
+
+        loadAdmins()
+        loadEmployees()
+
+    }, [])
+
+
+    // =========================================================
+    // AVAILABLE EMPLOYEES
+    // =========================================================
     //
-    // An employee who is already an admin is removed from
-    // the selection list.
+    // Employees already having a GLOBAL Admin context are
+    // removed from the create dropdown.
+    //
     // =========================================================
 
     const availableEmployees = useMemo(() => {
@@ -209,9 +197,15 @@ function Admins() {
                 admins
                     .map(
                         (admin) =>
-                            String(admin.employeeId)
+                            admin.employee_id ??
+                            admin.employeeId
                     )
-                    .filter(Boolean)
+                    .filter(
+                        (id) =>
+                            id !== null &&
+                            id !== undefined
+                    )
+                    .map(String)
             )
 
 
@@ -222,11 +216,11 @@ function Admins() {
                 )
         )
 
-    }, [admins])
+    }, [admins, employees])
 
 
     // =========================================================
-    // CREATE ADMIN
+    // CREATE
     // =========================================================
 
     const handleCreate = () => {
@@ -234,12 +228,11 @@ function Admins() {
         setEditingAdmin(null)
 
         setShowModal(true)
-
     }
 
 
     // =========================================================
-    // EDIT ADMIN
+    // EDIT
     // =========================================================
 
     const handleEdit = (admin) => {
@@ -247,12 +240,11 @@ function Admins() {
         setEditingAdmin(admin)
 
         setShowModal(true)
-
     }
 
 
     // =========================================================
-    // CLOSE ADD / EDIT MODAL
+    // CLOSE ADD / EDIT
     // =========================================================
 
     const handleCloseModal = () => {
@@ -260,216 +252,283 @@ function Admins() {
         setShowModal(false)
 
         setEditingAdmin(null)
-
     }
 
 
     // =========================================================
-    // CREATE / UPDATE ADMIN
+    // CREATE / UPDATE
     // =========================================================
 
-    const handleSubmit = (data) => {
+    const handleSubmit = async (data) => {
 
-        // =====================================================
-        // UPDATE EXISTING ADMIN
-        //
-        // Only status can be changed.
-        // =====================================================
+        try {
 
-        if (editingAdmin) {
+            setActionLoading(true)
 
-            setAdmins((previous) =>
+            // =================================================
+            // UPDATE
+            // =================================================
 
-                previous.map((admin) => {
+            if (editingAdmin) {
 
-                    if (
-                        admin.id !==
-                        editingAdmin.id
-                    ) {
-                        return admin
-                    }
+                const response =
+                    await updateAdmin(
+                        editingAdmin.id,
+                        data
+                    )
+
+                const updatedAdmin =
+                    response || editingAdmin
+
+                setAdmins((previous) =>
+                    previous.map((admin) =>
+                        admin.id === editingAdmin.id
+                            ? {
+                                ...admin,
+                                ...updatedAdmin,
+                                employee_id:
+                                    updatedAdmin.employee_id ??
+                                    admin.employee_id,
+                                employeeId:
+                                    updatedAdmin.employee_id ??
+                                    admin.employee_id,
+                                context_id:
+                                    updatedAdmin.context_id ??
+                                    admin.context_id,
+                                contextId:
+                                    updatedAdmin.context_id ??
+                                    admin.context_id,
+                            }
+                            : admin
+                    )
+                )
+
+                handleCloseModal()
+
+                showFeedback(
+                    'success',
+                    'Admin Updated',
+                    'Admin details updated successfully.'
+                )
+
+                return
+            }
 
 
-                    return {
+            // =================================================
+            // CREATE
+            // =================================================
 
-                        ...admin,
+            const response =
+                await createAdmin(data)
 
+            const employee =
+                employees.find(
+                    (item) =>
+                        String(item.id) ===
+                        String(
+                            data.employee_id ??
+                            data.employeeId
+                        )
+                )
+
+
+            if (response) {
+
+                setAdmins((previous) => [
+                    ...previous,
+                    {
+                        ...response,
+                        name:
+                            response.name ||
+                            employee?.name ||
+                            'N/A',
+                        phone:
+                            response.phone ||
+                            employee?.phone ||
+                            'N/A',
+                        email:
+                            response.email ||
+                            employee?.email ||
+                            'N/A',
+                        employee_id:
+                            response.employee_id ??
+                            employee?.id,
+                        employeeId:
+                            response.employee_id ??
+                            employee?.id,
+                        role: 'Admin',
+                        role_code: 'GLOBAL',
                         status:
-                            data.status,
+                            response.status ||
+                            data.status ||
+                            'Active',
+                        is_active:
+                            response.is_active ??
+                            data.status === 'Active',
+                    },
+                ])
 
-                        updatedAt:
-                            getCurrentDateTime(),
+            } else {
 
-                    }
-
-                })
-
-            )
-
+                await loadAdmins()
+            }
 
             handleCloseModal()
 
-            return
-
-        }
-
-
-        // =====================================================
-        // CREATE NEW ADMIN
-        // =====================================================
-
-        const employee =
-            employees.find(
-                (item) =>
-                    String(item.id) ===
-                    String(data.employeeId)
+            showFeedback(
+                'success',
+                'Admin Created',
+                'Admin created successfully.'
             )
 
+        } catch (error) {
 
-        if (!employee) {
-
-            return
-
-        }
-
-
-        // =====================================================
-        // DUPLICATE CHECK
-        // =====================================================
-
-        const alreadyAdmin =
-            admins.some(
-                (admin) =>
-                    String(admin.employeeId) ===
-                    String(employee.id)
+            showFeedback(
+                'error',
+                editingAdmin
+                    ? 'Admin Update Failed'
+                    : 'Admin Creation Failed',
+                getApiErrorMessage(
+                    error,
+                    editingAdmin
+                        ? 'Unable to update admin.'
+                        : 'Unable to create admin.'
+                )
             )
 
+        } finally {
 
-        if (alreadyAdmin) {
-
-            return
-
-        }
-
-
-        const now =
-            getCurrentDateTime()
-
-
-        const newAdmin = {
-
-            id:
-                Date.now(),
-
-            employeeId:
-                employee.id,
-
-            name:
-                employee.name,
-
-            phone:
-                employee.phone ||
-                '',
-
-            email:
-                employee.email ||
-                '',
-
-            status:
-                data.status ||
-                'Active',
-
-            createdAt:
-                now,
-
-            updatedAt:
-                'N/A',
-
-            permissions:
-                [],
+            setActionLoading(false)
 
         }
-
-
-        setAdmins((previous) => [
-
-            ...previous,
-
-            newAdmin,
-
-        ])
-
-
-        handleCloseModal()
-
     }
 
 
     // =========================================================
-    // DELETE ADMIN
+    // DELETE
     // =========================================================
 
-    const handleDelete = (admin) => {
+    const handleDelete = async (admin) => {
 
         const confirmed =
             window.confirm(
                 `Delete admin "${admin.name}"?`
             )
 
-
         if (!confirmed) {
             return
         }
 
+        try {
 
-        setAdmins((previous) =>
-            previous.filter(
-                (item) =>
-                    item.id !== admin.id
+            setActionLoading(true)
+
+            await deleteAdmin(admin.id)
+
+            setAdmins((previous) =>
+                previous.filter(
+                    (item) =>
+                        item.id !== admin.id
+                )
             )
-        )
 
+            showFeedback(
+                'success',
+                'Admin Deleted',
+                'Admin deleted successfully.'
+            )
+
+        } catch (error) {
+
+            showFeedback(
+                'error',
+                'Admin Delete Failed',
+                getApiErrorMessage(
+                    error,
+                    'Unable to delete admin.'
+                )
+            )
+
+        } finally {
+
+            setActionLoading(false)
+
+        }
     }
 
 
     // =========================================================
     // STATUS CHANGE
-    //
-    // This is the inline status dropdown in the table.
     // =========================================================
 
-    const handleStatusChange = (
+    const handleStatusChange = async (
         admin,
         status
     ) => {
 
-        setAdmins((previous) =>
+        const previousStatus =
+            admin.status
 
-            previous.map((item) => {
+        try {
 
-                if (
-                    item.id !==
-                    admin.id
-                ) {
-                    return item
-                }
+            setActionLoading(true)
 
+            const response =
+                await updateAdminStatus(
+                    admin.id,
+                    status
+                )
 
-                return {
+            setAdmins((previous) =>
+                previous.map((item) =>
+                    item.id === admin.id
+                        ? {
+                            ...item,
+                            ...response,
+                            status,
+                            is_active:
+                                status === 'Active',
+                        }
+                        : item
+                )
+            )
 
-                    ...item,
+            showFeedback(
+                'success',
+                'Status Updated',
+                `Admin status changed to ${status}.`
+            )
 
-                    status,
+        } catch (error) {
 
-                    updatedAt:
-                        getCurrentDateTime(),
+            setAdmins((previous) =>
+                previous.map((item) =>
+                    item.id === admin.id
+                        ? {
+                            ...item,
+                            status: previousStatus,
+                            is_active:
+                                previousStatus === 'Active',
+                        }
+                        : item
+                )
+            )
 
-                }
+            showFeedback(
+                'error',
+                'Status Update Failed',
+                getApiErrorMessage(
+                    error,
+                    'Unable to update admin status.'
+                )
+            )
 
-            })
+        } finally {
 
-        )
+            setActionLoading(false)
 
+        }
     }
 
 
@@ -481,10 +540,45 @@ function Admins() {
         admin
     ) => {
 
-        setSelectedAdmin(admin)
+        const employeeId =
+            admin?.employee_id ??
+            admin?.employeeId
+
+        const contextId =
+            admin?.context_id ??
+            admin?.contextId
+
+        if (!employeeId || !contextId) {
+
+            showFeedback(
+                'error',
+                'Permission Error',
+                'Admin employee or context information is missing.'
+            )
+
+            return
+        }
+
+        if (!admin?.is_active) {
+
+            showFeedback(
+                'warning',
+                'Admin Inactive',
+                'Activate this Admin before managing permissions.'
+            )
+
+            return
+        }
+
+        setSelectedAdmin({
+            ...admin,
+            employee_id: Number(employeeId),
+            employeeId: Number(employeeId),
+            context_id: Number(contextId),
+            contextId: Number(contextId),
+        })
 
         setShowPermissionsModal(true)
-
     }
 
 
@@ -497,46 +591,22 @@ function Admins() {
         setShowPermissionsModal(false)
 
         setSelectedAdmin(null)
-
     }
 
 
     // =========================================================
-    // SAVE PERMISSIONS
+    // PERMISSIONS SAVE
+    // =========================================================
+    //
+    // PermissionsModal itself handles the backend permission
+    // update. We only keep the selected Admin reference synced.
+    //
     // =========================================================
 
     const handleSavePermissions = (
         adminId,
         permissions
     ) => {
-
-        setAdmins((previous) =>
-
-            previous.map((admin) => {
-
-                if (
-                    admin.id !==
-                    adminId
-                ) {
-                    return admin
-                }
-
-
-                return {
-
-                    ...admin,
-
-                    permissions,
-
-                }
-
-            })
-
-        )
-
-
-        // Keep selected admin data in sync
-        // while the permissions modal is open.
 
         setSelectedAdmin((previous) => {
 
@@ -547,17 +617,11 @@ function Admins() {
                 return previous
             }
 
-
             return {
-
                 ...previous,
-
                 permissions,
-
             }
-
         })
-
     }
 
 
@@ -565,16 +629,39 @@ function Admins() {
     // REFRESH
     // =========================================================
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
 
-        /*
-         * Backend API refresh will be added later.
-         */
+        try {
 
-        console.log(
-            'Refresh admins'
-        )
+            setLoading(true)
 
+            await Promise.all([
+                loadAdmins(),
+                loadEmployees(),
+            ])
+
+            showFeedback(
+                'success',
+                'Refreshed',
+                'Admin data refreshed successfully.'
+            )
+
+        } catch (error) {
+
+            showFeedback(
+                'error',
+                'Refresh Failed',
+                getApiErrorMessage(
+                    error,
+                    'Unable to refresh admin data.'
+                )
+            )
+
+        } finally {
+
+            setLoading(false)
+
+        }
     }
 
 
@@ -590,34 +677,11 @@ function Admins() {
             sm:p-6
         ">
 
-            {/* =====================================================
-                PAGE HEADER
-            ===================================================== */}
-
-            <div>
-
-                <h1 className="
-                    text-2xl
-                    font-semibold
-                    sm:text-3xl
-                ">
-                    Admins
-                </h1>
-
-
-                <p className="
-                    mt-1
-                    text-sm
-                    text-base-content/60
-                ">
-                    Manage administrators, permissions and account status.
-                </p>
-
-            </div>
-
+ 
+       
 
             {/* =====================================================
-                ADMIN TABLE
+                TABLE
             ===================================================== */}
 
             <AdminTable
@@ -638,7 +702,7 @@ function Admins() {
 
 
             {/* =====================================================
-                ADD / EDIT ADMIN MODAL
+                ADD / EDIT MODAL
             ===================================================== */}
 
             <AdminModal
@@ -651,32 +715,50 @@ function Admins() {
                 }
                 onClose={handleCloseModal}
                 onSubmit={handleSubmit}
+                loading={actionLoading}
             />
 
 
             {/* =====================================================
-                PERMISSIONS MODAL
+                PERMISSIONS
+                =====================================================
+                
+                IMPORTANT:
+                Existing PermissionsModal is not modified.
+
+                It receives the REAL Employee.id and
+                EmployeeContext.context_id.
+
             ===================================================== */}
 
             <PermissionsModal
-                open={
-                    showPermissionsModal
+                open={showPermissionsModal}
+                admin={selectedAdmin}
+                employeeId={
+                    selectedAdmin?.employee_id
                 }
-                admin={
-                    selectedAdmin
+                contextId={
+                    selectedAdmin?.context_id
                 }
-                onClose={
-                    handleClosePermissions
-                }
-                onSave={
-                    handleSavePermissions
-                }
+                onClose={handleClosePermissions}
+                onSave={handleSavePermissions}
+            />
+
+
+            {/* =====================================================
+                FEEDBACK
+            ===================================================== */}
+
+            <FeedbackModal
+                open={feedback.open}
+                type={feedback.type}
+                title={feedback.title}
+                message={feedback.message}
+                onClose={closeFeedback}
             />
 
         </div>
-
     )
-
 }
 
 

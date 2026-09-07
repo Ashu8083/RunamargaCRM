@@ -9,7 +9,7 @@ import SunIcon from "@heroicons/react/24/outline/SunIcon";
 import { openRightDrawer } from "../features/common/rightDrawerSlice";
 import { RIGHT_DRAWER_TYPES } from "../utils/globalConstantUtil";
 import {
-  getCurrentUser,
+  getStoredUser,
   logout,
   getActiveContext,
   setActiveContext,
@@ -26,7 +26,7 @@ function Header({ onToggleSidebar, sidebarOpen }) {
 
   const { noOfNotifications } = useSelector((state) => state.header);
 
-  const currentUser = getCurrentUser();
+  const currentUser = getStoredUser();
 
   const profileFallback = getDefaultProfileImage(currentUser?.gender);
 

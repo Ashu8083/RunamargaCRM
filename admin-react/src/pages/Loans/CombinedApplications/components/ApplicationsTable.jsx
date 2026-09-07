@@ -1,6 +1,5 @@
-// admin-react/src/pages/Loans/AgentApplications/components/ApplicationsTable.jsx
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
@@ -8,6 +7,7 @@ import BellAlertIcon from "@heroicons/react/24/outline/BellAlertIcon";
 import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftRightIcon";
 import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
+import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
 
 import GlobalChat from "../../../../components/GlobalModels/Loans/GlobalChat";
 
@@ -36,57 +36,262 @@ const STATUS_OPTIONS = [
 // HELPERS
 // =============================================================
 
-const getAgentName = (application) =>
-    application.agentName ??
-    application.agent_name ??
-    application.processingAgentName ??
-    application.processing_agent_name ??
-    application.processingAgent ??
-    application.processing_agent ??
-    application.agent?.name ??
-    "N/A";
+const getAgentName = (application) => {
+
+    if (
+        application.agent &&
+        typeof application.agent === 'object'
+    ) {
+        return application.agent.name || 'N/A'
+    }
+
+    if (
+        application.processingAgent &&
+        typeof application.processingAgent === 'object'
+    ) {
+        return application.processingAgent.name || 'N/A'
+    }
+
+    if (
+        application.agentName &&
+        typeof application.agentName === 'string'
+    ) {
+        return application.agentName
+    }
+
+    if (
+        application.agent_name &&
+        typeof application.agent_name === 'string'
+    ) {
+        return application.agent_name
+    }
+
+    if (
+        typeof application.processingAgent === 'string'
+    ) {
+        return application.processingAgent
+    }
+
+    if (
+        typeof application.processing_agent === 'string'
+    ) {
+        return application.processing_agent
+    }
+
+    return 'N/A'
+}
 
 
-const getRMName = (application) =>
-    application.rmName ??
-    application.rm_name ??
-    application.rm?.name ??
-    application.rm ??
-    "N/A";
+const getRMName = (application) => {
+
+    if (
+        application.rm &&
+        typeof application.rm === 'object'
+    ) {
+        return application.rm.name || 'N/A'
+    }
+
+    if (
+        typeof application.rmName === 'string'
+    ) {
+        return application.rmName
+    }
+
+    if (
+        typeof application.rm_name === 'string'
+    ) {
+        return application.rm_name
+    }
+
+    if (
+        typeof application.rm === 'string'
+    ) {
+        return application.rm
+    }
+
+    return 'N/A'
+}
 
 
-const getTeamLeadName = (application) =>
-    application.teamLeadName ??
-    application.team_lead_name ??
-    application.teamLead?.name ??
-    application.team_lead?.name ??
-    "N/A";
+const getTeamLeadName = (application) => {
 
+    if (
+        application.teamLead &&
+        typeof application.teamLead === 'object'
+    ) {
+        return application.teamLead.name || 'N/A'
+    }
 
-const getAppliedBy = (application) =>
-    application.appliedByName ??
-    application.applied_by_name ??
-    application.appliedBy ??
-    application.applied_by ??
-    application.createdByName ??
-    application.created_by_name ??
-    application.createdBy ??
-    application.created_by ??
-    "N/A";
+    if (
+        application.team_lead &&
+        typeof application.team_lead === 'object'
+    ) {
+        return application.team_lead.name || 'N/A'
+    }
 
+    if (
+        typeof application.teamLeadName === 'string'
+    ) {
+        return application.teamLeadName
+    }
 
-const getReferral = (application) =>
-    application.referralName ??
-    application.referral_name ??
-    application.referral ??
-    application.referredBy ??
-    application.referred_by ??
-    application.referrerName ??
-    application.referrer_name ??
-    application.referrer ??
-    "N/A";
+    if (
+        typeof application.team_lead_name === 'string'
+    ) {
+        return application.team_lead_name
+    }
 
+    return 'N/A'
+}
+const getAppliedBy = (application) => {
 
+    if (
+        application.appliedBy &&
+        typeof application.appliedBy === 'object'
+    ) {
+        return application.appliedBy.name || 'N/A'
+    }
+
+    if (
+        application.applied_by &&
+        typeof application.applied_by === 'object'
+    ) {
+        return application.applied_by.name || 'N/A'
+    }
+
+    if (
+        application.createdBy &&
+        typeof application.createdBy === 'object'
+    ) {
+        return application.createdBy.name || 'N/A'
+    }
+
+    if (
+        application.created_by &&
+        typeof application.created_by === 'object'
+    ) {
+        return application.created_by.name || 'N/A'
+    }
+
+    if (
+        typeof application.appliedBy === 'string'
+    ) {
+        return application.appliedBy
+    }
+
+    if (
+        typeof application.applied_by === 'string'
+    ) {
+        return application.applied_by
+    }
+
+    if (
+        typeof application.createdBy === 'string'
+    ) {
+        return application.createdBy
+    }
+
+    if (
+        typeof application.created_by === 'string'
+    ) {
+        return application.created_by
+    }
+
+    if (
+        typeof application.appliedByName === 'string'
+    ) {
+        return application.appliedByName
+    }
+
+    if (
+        typeof application.applied_by_name === 'string'
+    ) {
+        return application.applied_by_name
+    }
+
+    return 'N/A'
+}
+
+const getReferral = (application) => {
+
+    if (
+        application.referral &&
+        typeof application.referral === 'object'
+    ) {
+        return application.referral.name || 'N/A'
+    }
+
+    if (
+        application.referredBy &&
+        typeof application.referredBy === 'object'
+    ) {
+        return application.referredBy.name || 'N/A'
+    }
+
+    if (
+        application.referred_by &&
+        typeof application.referred_by === 'object'
+    ) {
+        return application.referred_by.name || 'N/A'
+    }
+
+    if (
+        application.referrer &&
+        typeof application.referrer === 'object'
+    ) {
+        return application.referrer.name || 'N/A'
+    }
+
+    if (
+        typeof application.referral === 'string'
+    ) {
+        return application.referral
+    }
+
+    if (
+        typeof application.referralName === 'string'
+    ) {
+        return application.referralName
+    }
+
+    if (
+        typeof application.referral_name === 'string'
+    ) {
+        return application.referral_name
+    }
+
+    if (
+        typeof application.referredBy === 'string'
+    ) {
+        return application.referredBy
+    }
+
+    if (
+        typeof application.referred_by === 'string'
+    ) {
+        return application.referred_by
+    }
+
+    if (
+        typeof application.referrer === 'string'
+    ) {
+        return application.referrer
+    }
+
+    if (
+        typeof application.referrerName === 'string'
+    ) {
+        return application.referrerName
+    }
+
+    if (
+        typeof application.referrer_name === 'string'
+    ) {
+        return application.referrer_name
+    }
+
+    return 'N/A'
+}
 const getLoanId = (application) =>
     application.loanId ??
     application.loan_id ??
@@ -106,6 +311,52 @@ const getAgentId = (application) =>
 
 
 // =============================================================
+// REJECTION HELPERS
+// =============================================================
+
+const getRevertedReason = (application) =>
+    application.reverted_reason ??
+    application.revertedReason ??
+    null;
+
+
+const getRevertedDate = (application) =>
+    application.reverted_date ??
+    application.revertedDate ??
+    null;
+
+
+const getRevertedByName = (application) =>
+    application.reverted_by_name ??
+    application.revertedByName ??
+    application.reverted_by ??
+    application.revertedBy ??
+    null;
+
+
+const getRejectedReason = (application) =>
+    application.rejected_remarks ??
+    application.rejectedRemarks ??
+    application.rejection_reason ??
+    application.rejectionReason ??
+    null;
+
+
+const getRejectedDate = (application) =>
+    application.rejection_date ??
+    application.rejectionDate ??
+    null;
+
+
+const getRejectedByName = (application) =>
+    application.rejected_by_name ??
+    application.rejectedByName ??
+    application.rejected_by ??
+    application.rejectedBy ??
+    null;
+
+
+// =============================================================
 // LOAN TYPE
 // =============================================================
 
@@ -113,9 +364,6 @@ const getLoanTypeName = (
     application,
     loanTypes = []
 ) => {
-
-    // If a resolved name is already present,
-    // use it first.
 
     if (
         application.loanType &&
@@ -131,15 +379,11 @@ const getLoanTypeName = (
         return application.loan_type;
     }
 
-
-    // Otherwise resolve the name from loan_type_id.
-
     const loanTypeId =
         application.loanTypeId ??
         application.loan_type_id ??
         application.loanType?.id ??
         application.loan_type?.id;
-
 
     if (
         loanTypeId === null ||
@@ -149,13 +393,11 @@ const getLoanTypeName = (
         return "Not Assigned";
     }
 
-
     const loanType = loanTypes.find(
         (item) =>
             String(item.id) ===
             String(loanTypeId)
     );
-
 
     return loanType?.name || "Not Assigned";
 };
@@ -173,7 +415,6 @@ const getAmount = (application) => {
         application.loan_amt ??
         application.amount;
 
-
     if (
         amount === null ||
         amount === undefined ||
@@ -182,7 +423,6 @@ const getAmount = (application) => {
         return "N/A";
     }
 
-
     const numericAmount = Number(
         String(amount)
             .replace(/,/g, "")
@@ -190,11 +430,9 @@ const getAmount = (application) => {
             .trim()
     );
 
-
     if (Number.isNaN(numericAmount)) {
         return String(amount);
     }
-
 
     return `₹${numericAmount.toLocaleString("en-IN")}`;
 };
@@ -210,14 +448,11 @@ const formatDate = (value) => {
         return "N/A";
     }
 
-
     const date = new Date(value);
-
 
     if (Number.isNaN(date.getTime())) {
         return String(value);
     }
-
 
     return [
         String(date.getDate()).padStart(2, "0"),
@@ -242,30 +477,17 @@ const getAppliedDate = (application) =>
 // STATUS
 // =============================================================
 
-/**
- * Convert backend status values into the exact
- * status labels used by the UI.
- *
- * inprocess       -> In Process
- * in_process      -> In Process
- * docs_pending    -> Docs Pending
- * docspending     -> Docs Pending
- * revert_rejected -> Revert Rejected
- */
-
 const normalizeStatus = (value) => {
 
     if (!value) {
         return "N/A";
     }
 
-
     const normalized = String(value)
         .trim()
         .toLowerCase()
         .replace(/[_-]+/g, " ")
         .replace(/\s+/g, " ");
-
 
     switch (normalized) {
 
@@ -275,11 +497,9 @@ const normalizeStatus = (value) => {
         case "revert reject":
             return "Revert Rejected";
 
-
         case "rejected":
         case "reject":
             return "Rejected";
-
 
         case "inprocess":
         case "in process":
@@ -287,27 +507,53 @@ const normalizeStatus = (value) => {
         case "processing":
             return "In Process";
 
-
         case "docspending":
         case "docs pending":
         case "document pending":
         case "documents pending":
             return "Docs Pending";
 
-
         case "sanctioned":
         case "sanction":
             return "Sanctioned";
-
 
         case "disbursed":
         case "disbursement":
             return "Disbursed";
 
+        case "login":
+            return "Login";
 
         default:
             return String(value);
     }
+};
+
+
+// =============================================================
+// DISPLAY STATUS
+// =============================================================
+
+const getApplicationStatus = (application) => {
+
+    const baseStatus =
+        normalizeStatus(
+            application.status
+        );
+
+    const revertedReason =
+        getRevertedReason(
+            application
+        );
+
+    if (
+        baseStatus === "Rejected" &&
+        revertedReason
+    ) {
+        return "Revert Rejected";
+    }
+
+    return baseStatus;
 };
 
 
@@ -326,14 +572,12 @@ const getStatusClass = (status) => {
                 bg-[#8BCF00]/10
             `;
 
-
         case "Docs Pending":
             return `
                 text-orange-600
                 border-orange-300
                 bg-orange-50
             `;
-
 
         case "Rejected":
             return `
@@ -342,14 +586,12 @@ const getStatusClass = (status) => {
                 bg-error/5
             `;
 
-
         case "Revert Rejected":
             return `
                 text-yellow-600
                 border-yellow-300
                 bg-yellow-50
             `;
-
 
         case "Sanctioned":
             return `
@@ -358,14 +600,12 @@ const getStatusClass = (status) => {
                 bg-blue-50
             `;
 
-
         case "Disbursed":
             return `
                 text-purple-600
                 border-purple-300
                 bg-purple-50
             `;
-
 
         default:
             return `
@@ -421,7 +661,9 @@ function ApplicationsTable({
     rms = [],
     teamLeads = [],
     agents = [],
-
+    showRM = false,
+    showAgent = false,
+    showTeamLead = false,
     statuses = STATUS_OPTIONS,
 
     selectedLoanType,
@@ -452,8 +694,20 @@ function ApplicationsTable({
     // STATE
     // =========================================================
 
-    const [chatOpen, setChatOpen] =
-        useState(false);
+    const [
+        selectedInfoApplication,
+        setSelectedInfoApplication,
+    ] = useState(null);
+
+    const [
+        infoPopupPosition,
+        setInfoPopupPosition,
+    ] = useState(null);
+
+    const [
+        chatOpen,
+        setChatOpen,
+    ] = useState(false);
 
     const [
         selectedChatApplication,
@@ -464,6 +718,136 @@ function ApplicationsTable({
         expandedPhoneId,
         setExpandedPhoneId,
     ] = useState(null);
+
+
+    // =========================================================
+    // INFO POPUP
+    // =========================================================
+
+    const handleInfoClick = (
+        event,
+        application
+    ) => {
+
+        const rect =
+            event.currentTarget.getBoundingClientRect();
+
+        const popupWidth = 320;
+        const popupHeight = 280;
+        const spacing = 10;
+        const viewportPadding = 16;
+
+        let left =
+            rect.right + spacing;
+
+        if (
+            left + popupWidth >
+            window.innerWidth -
+            viewportPadding
+        ) {
+            left =
+                rect.left -
+                popupWidth -
+                spacing;
+        }
+
+        if (left < viewportPadding) {
+            left = viewportPadding;
+        }
+
+        let top =
+            rect.bottom + spacing;
+
+        if (
+            top + popupHeight >
+            window.innerHeight -
+            viewportPadding
+        ) {
+            top =
+                rect.top -
+                popupHeight -
+                spacing;
+        }
+
+        if (top < viewportPadding) {
+            top = viewportPadding;
+        }
+
+        const isSameApplication =
+            selectedInfoApplication?.id ===
+            application.id;
+
+        if (isSameApplication) {
+
+            setSelectedInfoApplication(
+                null
+            );
+
+            setInfoPopupPosition(
+                null
+            );
+
+            return;
+        }
+
+        setSelectedInfoApplication(
+            application
+        );
+
+        setInfoPopupPosition({
+            top,
+            left,
+        });
+    };
+
+
+    // =========================================================
+    // CLOSE POPUP ON SCROLL / RESIZE
+    // =========================================================
+
+    useEffect(() => {
+
+        if (!selectedInfoApplication) {
+            return;
+        }
+
+        const closePopup = () => {
+
+            setSelectedInfoApplication(
+                null
+            );
+
+            setInfoPopupPosition(
+                null
+            );
+        };
+
+        window.addEventListener(
+            "scroll",
+            closePopup,
+            true
+        );
+
+        window.addEventListener(
+            "resize",
+            closePopup
+        );
+
+        return () => {
+
+            window.removeEventListener(
+                "scroll",
+                closePopup,
+                true
+            );
+
+            window.removeEventListener(
+                "resize",
+                closePopup
+            );
+        };
+
+    }, [selectedInfoApplication]);
 
 
     // =========================================================
@@ -480,7 +864,9 @@ function ApplicationsTable({
     // CHAT
     // =========================================================
 
-    const handleOpenChat = (application) => {
+    const handleOpenChat = (
+        application
+    ) => {
 
         setSelectedChatApplication(
             application
@@ -514,7 +900,6 @@ function ApplicationsTable({
             application.id ??
             application.loanId ??
             application.loan_id;
-
 
         setExpandedPhoneId(
             (currentId) =>
@@ -650,22 +1035,24 @@ function ApplicationsTable({
 
                     <div className="w-44 shrink-0">
 
-                        <RmDropdown
-                            label=""
-                            value={
-                                selectedRM
-                            }
-                            onChange={
-                                setSelectedRM
-                            }
-                            options={
-                                rms
-                            }
-                            allLabel="All RMs"
-                            placeholder="All RMs"
-                            searchPlaceholder="Search RM"
-                            emptyMessage="No RMs found"
-                        />
+                        {/* RM */}
+
+                        {showRM && (
+                            <div className="w-44 shrink-0">
+
+                                <RmDropdown
+                                    label=""
+                                    value={selectedRM}
+                                    onChange={setSelectedRM}
+                                    options={rms}
+                                    allLabel="All RMs"
+                                    placeholder="All RMs"
+                                    searchPlaceholder="Search RM"
+                                    emptyMessage="No RMs found"
+                                />
+
+                            </div>
+                        )}
 
                     </div>
 
@@ -674,30 +1061,22 @@ function ApplicationsTable({
 
                     <div className="w-44 shrink-0">
 
-                        <TeamLeadDropdown
-                            label=""
-                            value={
-                                selectedTeamLead
-                            }
-                            onChange={
-                                setSelectedTeamLead
-                            }
-                            options={
-                                teamLeads
-                            }
-                            allLabel="
-                                All Team Leads
-                            "
-                            placeholder="
-                                All Team Leads
-                            "
-                            searchPlaceholder="
-                                Search team lead
-                            "
-                            emptyMessage="
-                                No team leads found
-                            "
-                        />
+                        {showTeamLead && (
+    <div className="w-44 shrink-0">
+
+        <TeamLeadDropdown
+            label=""
+            value={selectedTeamLead}
+            onChange={setSelectedTeamLead}
+            options={teamLeads}
+            allLabel="All Team Leads"
+            placeholder="All Team Leads"
+            searchPlaceholder="Search Team Lead"
+            emptyMessage="No Team Leads found"
+        />
+
+    </div>
+)}
 
                     </div>
 
@@ -706,22 +1085,22 @@ function ApplicationsTable({
 
                     <div className="w-44 shrink-0">
 
-                        <AgentDropdown
-                            label=""
-                            value={
-                                selectedAgent
-                            }
-                            onChange={
-                                setSelectedAgent
-                            }
-                            options={
-                                agents
-                            }
-                            allLabel="All Agents"
-                            placeholder="All Agents"
-                            searchPlaceholder="Search agent"
-                            emptyMessage="No agents found"
-                        />
+                        {showAgent && (
+    <div className="w-44 shrink-0">
+
+        <AgentDropdown
+            label=""
+            value={selectedAgent}
+            onChange={setSelectedAgent}
+            options={agents}
+            allLabel="All Agents"
+            placeholder="All Agents"
+            searchPlaceholder="Search Agent"
+            emptyMessage="No Agents found"
+        />
+
+    </div>
+)}
 
                     </div>
 
@@ -777,9 +1156,7 @@ function ApplicationsTable({
                         onClick={
                             onRefresh
                         }
-                        title="
-                            Refresh applications
-                        "
+                        title="Refresh applications"
                         className="
                             btn
                             btn-sm
@@ -839,29 +1216,41 @@ function ApplicationsTable({
 
                         <colgroup>
 
+                            {/* # */}
                             <col className="w-[3%]" />
 
+                            {/* Name */}
+                            <col className="w-[10%]" />
+
+                            {/* Phone */}
+                            <col className="w-[8%]" />
+
+                            {/* Loan Type */}
+                            <col className="w-[7%]" />
+
+                            {/* Loan Amount */}
+                            <col className="w-[7%]" />
+
+                            {/* Applied Date */}
+                            <col className="w-[7%]" />
+
+                            {/* Applied By */}
+                            <col className="w-[8%]" />
+
+                            {/* Referral */}
+                            <col className="w-[7%]" />
+
+                            {/* RM */}
+                            <col className="w-[7%]" />
+
+                            {/* Processing Agent */}
+                            <col className="w-[9%]" />
+
+                            {/* Status */}
                             <col className="w-[11%]" />
 
-                            <col className="w-[10%]" />
-
-                            <col className="w-[9%]" />
-
-                            <col className="w-[9%]" />
-
-                            <col className="w-[9%]" />
-
-                            <col className="w-[10%]" />
-
-                            <col className="w-[9%]" />
-
-                            <col className="w-[9%]" />
-
-                            <col className="w-[9%]" />
-
-                            <col className="w-[9%]" />
-
-                            <col className="w-[10%]" />
+                            {/* Actions */}
+                            <col className="w-[7%]" />
 
                         </colgroup>
 
@@ -890,6 +1279,7 @@ function ApplicationsTable({
                                     "Actions",
                                 ].map(
                                     (heading) => (
+
                                         <th
                                             key={
                                                 heading
@@ -903,10 +1293,9 @@ function ApplicationsTable({
                                                 text-base-content/70
                                             "
                                         >
-                                            {
-                                                heading
-                                            }
+                                            {heading}
                                         </th>
+
                                     )
                                 )}
 
@@ -963,8 +1352,8 @@ function ApplicationsTable({
 
 
                                         const status =
-                                            normalizeStatus(
-                                                application.status
+                                            getApplicationStatus(
+                                                application
                                             );
 
 
@@ -1127,14 +1516,12 @@ function ApplicationsTable({
 
                                                             <a
                                                                 href={`tel:${application.phone}`}
-                                                                title={`Call ${
-                                                                    application.name ||
+                                                                title={`Call ${application.name ||
                                                                     application.phone
-                                                                }`}
-                                                                aria-label={`Call ${
-                                                                    application.name ||
+                                                                    }`}
+                                                                aria-label={`Call ${application.name ||
                                                                     application.phone
-                                                                }`}
+                                                                    }`}
                                                                 className="
                                                                     btn
                                                                     btn-ghost
@@ -1316,21 +1703,19 @@ function ApplicationsTable({
                                                 {/* PROCESSING AGENT */}
 
                                                 <td className="
-                                                    px-3
-                                                    py-4
-                                                ">
-
+    px-3
+    py-4
+    align-middle
+">
                                                     <Cell
-                                                        title={
-                                                            agentName
-                                                        }
-                                                        className="text-sm"
+                                                        title={agentName}
+                                                        className="
+            text-sm
+            text-left
+        "
                                                     >
-                                                        {
-                                                            agentName
-                                                        }
+                                                        {agentName}
                                                     </Cell>
-
                                                 </td>
 
 
@@ -1339,39 +1724,81 @@ function ApplicationsTable({
                                                 <td className="
                                                     px-3
                                                     py-4
+                                                    align-middle
                                                 ">
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            onStatusChange?.(
-                                                                application
-                                                            )
-                                                        }
-                                                        title={
-                                                            status
-                                                        }
-                                                        className={`
-                                                            max-w-full
-                                                            inline-flex
+                                                    <div className="
+                                                            flex
                                                             items-center
-                                                            px-2.5
-                                                            py-1
-                                                            rounded-full
-                                                            border
-                                                            text-xs
-                                                            font-medium
-                                                            truncate
-                                                            hover:opacity-80
-                                                            ${getStatusClass(
+                                                            gap-1.5
+                                                            min-w-0
+                                                        ">
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                onStatusChange?.(
+                                                                    application
+                                                                )
+                                                            }
+                                                            title={
                                                                 status
+                                                            }
+                                                            className={`
+                                                                    max-w-full
+                                                                    shrink-0
+                                                                    inline-flex
+                                                                    items-center
+                                                                    px-2.5
+                                                                    py-1
+                                                                    rounded-full
+                                                                    border
+                                                                    text-xs
+                                                                    font-medium
+                                                                    truncate
+                                                                    hover:opacity-80
+                                                                    ${getStatusClass(status)}
+                                                                `}
+                                                        >
+                                                            {status}
+                                                        </button>
+
+
+                                                        {(status === "Rejected" ||
+                                                            status === "Revert Rejected") && (
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(
+                                                                        event
+                                                                    ) =>
+                                                                        handleInfoClick(
+                                                                            event,
+                                                                            application
+                                                                        )
+                                                                    }
+                                                                    title="View rejection details"
+                                                                    aria-label="View rejection details"
+                                                                    className="
+                                                                    shrink-0
+                                                                    text-base-content/50
+                                                                    hover:text-base-content
+                                                                    transition-colors
+                                                                "
+                                                                >
+
+                                                                    <InformationCircleIcon
+                                                                        className="
+                                                                        h-4
+                                                                        w-4
+                                                                    "
+                                                                    />
+
+                                                                </button>
+
                                                             )}
-                                                        `}
-                                                    >
-                                                        {
-                                                            status
-                                                        }
-                                                    </button>
+
+                                                    </div>
 
                                                 </td>
 
@@ -1401,9 +1828,7 @@ function ApplicationsTable({
                                                                     application
                                                                 )
                                                             }
-                                                            title="
-                                                                View application
-                                                            "
+                                                            title="View application"
                                                             className="
                                                                 btn
                                                                 btn-ghost
@@ -1433,9 +1858,7 @@ function ApplicationsTable({
                                                                     application
                                                                 )
                                                             }
-                                                            title="
-                                                                Add reminder
-                                                            "
+                                                            title="Add reminder"
                                                             className="
                                                                 btn
                                                                 btn-ghost
@@ -1465,9 +1888,7 @@ function ApplicationsTable({
                                                                     application
                                                                 )
                                                             }
-                                                            title="
-                                                                Open chat
-                                                            "
+                                                            title="Open chat"
                                                             className="
                                                                 btn
                                                                 btn-ghost
@@ -1506,6 +1927,162 @@ function ApplicationsTable({
                 </div>
 
             </div>
+
+
+            {/* =================================================
+                REJECTION DETAILS POPUP
+            ================================================= */}
+
+            {selectedInfoApplication &&
+                infoPopupPosition &&
+                createPortal(
+
+                    <div
+                        className="
+                            fixed
+                            z-[9999]
+                            w-80
+                            rounded-xl
+                            border
+                            border-base-300
+                            bg-base-100
+                            p-4
+                            shadow-xl
+                        "
+                        style={{
+                            top:
+                                infoPopupPosition.top,
+                            left:
+                                infoPopupPosition.left,
+                        }}
+                    >
+
+                        {/* TITLE */}
+
+                        <div className="
+                            text-sm
+                            font-semibold
+                            text-base-content
+                        ">
+                            Rejection Details
+                        </div>
+
+
+                        {/* TYPE */}
+
+                        <div className="
+                            mt-3
+                            text-sm
+                            text-base-content
+                        ">
+
+                            <span className="font-semibold">
+                                Type:
+                            </span>{" "}
+
+                            {getRevertedReason(
+                                selectedInfoApplication
+                            )
+                                ? "Reverted"
+                                : "Rejected"}
+
+                        </div>
+
+
+                        {/* BY */}
+
+                        <div className="
+                            mt-1
+                            text-sm
+                            text-base-content
+                        ">
+
+                            <span className="font-semibold">
+                                By:
+                            </span>{" "}
+
+                            {getRevertedReason(
+                                selectedInfoApplication
+                            )
+                                ? (
+                                    getRevertedByName(
+                                        selectedInfoApplication
+                                    ) || "—"
+                                )
+                                : (
+                                    getRejectedByName(
+                                        selectedInfoApplication
+                                    ) || "—"
+                                )}
+
+                        </div>
+
+
+                        {/* DATE */}
+
+                        <div className="
+                            mt-1
+                            text-sm
+                            text-base-content
+                        ">
+
+                            <span className="font-semibold">
+                                Date:
+                            </span>{" "}
+
+                            {formatDate(
+                                getRevertedReason(
+                                    selectedInfoApplication
+                                )
+                                    ? getRevertedDate(
+                                        selectedInfoApplication
+                                    )
+                                    : getRejectedDate(
+                                        selectedInfoApplication
+                                    )
+                            )}
+
+                        </div>
+
+
+                        {/* REMARKS */}
+
+                        <div className="
+                            mt-3
+                            text-sm
+                            leading-5
+                            text-base-content
+                        ">
+
+                            <span className="font-semibold">
+                                Remarks:
+                            </span>{" "}
+
+                            <span className="
+                                break-words
+                            ">
+                                {getRevertedReason(
+                                    selectedInfoApplication
+                                )
+                                    ? (
+                                        getRevertedReason(
+                                            selectedInfoApplication
+                                        ) || "—"
+                                    )
+                                    : (
+                                        getRejectedReason(
+                                            selectedInfoApplication
+                                        ) || "—"
+                                    )}
+                            </span>
+
+                        </div>
+
+                    </div>,
+
+                    document.body
+
+                )}
 
 
             {/* =================================================

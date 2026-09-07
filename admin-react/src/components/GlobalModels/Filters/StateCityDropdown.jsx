@@ -66,16 +66,8 @@ const normalizeOption = (option) => {
 
 /*
 |--------------------------------------------------------------------------
-| GET CITY'S STATE ID
+| GET CITY STATE ID
 |--------------------------------------------------------------------------
-|
-| Supports:
-|
-| stateId
-| state_id
-| state.id
-| state.value
-|
 */
 
 const getCityStateId = (city) => {
@@ -92,7 +84,7 @@ const getCityStateId = (city) => {
 
 /*
 |--------------------------------------------------------------------------
-| INDEPENDENT SEARCHABLE DROPDOWN
+| GENERIC SEARCHABLE DROPDOWN
 |--------------------------------------------------------------------------
 */
 
@@ -110,12 +102,6 @@ function LocationDropdown({
     disabled = false,
 }) {
 
-    /*
-     * --------------------------------------------------------------
-     * EACH DROPDOWN HAS ITS OWN STATE
-     * --------------------------------------------------------------
-     */
-
     const [open, setOpen] = useState(false)
     const [search, setSearch] = useState('')
 
@@ -130,10 +116,10 @@ function LocationDropdown({
 
 
     /*
-     * --------------------------------------------------------------
-     * NORMALIZE OPTIONS
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | NORMALIZE
+    |--------------------------------------------------------------------------
+    */
 
     const normalizedOptions = useMemo(() => {
 
@@ -149,10 +135,10 @@ function LocationDropdown({
 
 
     /*
-     * --------------------------------------------------------------
-     * SELECTED OPTION
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | SELECTED OPTION
+    |--------------------------------------------------------------------------
+    */
 
     const selectedOption = useMemo(() => {
 
@@ -169,10 +155,10 @@ function LocationDropdown({
 
 
     /*
-     * --------------------------------------------------------------
-     * SEARCH FILTER
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | SEARCH
+    |--------------------------------------------------------------------------
+    */
 
     const filteredOptions = useMemo(() => {
 
@@ -181,11 +167,9 @@ function LocationDropdown({
                 .trim()
                 .toLowerCase()
 
-
         if (!query) {
             return normalizedOptions
         }
-
 
         return normalizedOptions.filter(
             (option) =>
@@ -201,10 +185,10 @@ function LocationDropdown({
 
 
     /*
-     * --------------------------------------------------------------
-     * UPDATE POSITION
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | POSITION
+    |--------------------------------------------------------------------------
+    */
 
     const updatePosition = () => {
 
@@ -212,10 +196,9 @@ function LocationDropdown({
             return
         }
 
-
         const rect =
-            triggerRef.current.getBoundingClientRect()
-
+            triggerRef.current
+                .getBoundingClientRect()
 
         setPosition({
             top: rect.bottom + 4,
@@ -227,17 +210,16 @@ function LocationDropdown({
 
 
     /*
-     * --------------------------------------------------------------
-     * OPEN / CLOSE
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | TOGGLE
+    |--------------------------------------------------------------------------
+    */
 
     const handleToggle = () => {
 
         if (disabled) {
             return
         }
-
 
         if (!open) {
 
@@ -250,7 +232,6 @@ function LocationDropdown({
             return
         }
 
-
         setOpen(false)
         setSearch('')
 
@@ -258,10 +239,10 @@ function LocationDropdown({
 
 
     /*
-     * --------------------------------------------------------------
-     * POSITION WHILE SCROLLING
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | POSITION ON SCROLL / RESIZE
+    |--------------------------------------------------------------------------
+    */
 
     useEffect(() => {
 
@@ -269,11 +250,9 @@ function LocationDropdown({
             return
         }
 
-
         const handlePosition = () => {
             updatePosition()
         }
-
 
         window.addEventListener(
             'resize',
@@ -285,7 +264,6 @@ function LocationDropdown({
             handlePosition,
             true
         )
-
 
         return () => {
 
@@ -306,10 +284,10 @@ function LocationDropdown({
 
 
     /*
-     * --------------------------------------------------------------
-     * CLICK OUTSIDE
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | CLICK OUTSIDE
+    |--------------------------------------------------------------------------
+    */
 
     useEffect(() => {
 
@@ -317,8 +295,9 @@ function LocationDropdown({
             return
         }
 
-
-        const handleOutsideClick = (event) => {
+        const handleOutsideClick = (
+            event
+        ) => {
 
             const trigger =
                 triggerRef.current
@@ -326,26 +305,26 @@ function LocationDropdown({
             const menu =
                 menuRef.current
 
-
             if (
-                trigger?.contains(event.target) ||
-                menu?.contains(event.target)
+                trigger?.contains(
+                    event.target
+                ) ||
+                menu?.contains(
+                    event.target
+                )
             ) {
                 return
             }
-
 
             setOpen(false)
             setSearch('')
 
         }
 
-
         document.addEventListener(
             'mousedown',
             handleOutsideClick
         )
-
 
         return () => {
 
@@ -360,41 +339,34 @@ function LocationDropdown({
 
 
     /*
-     * --------------------------------------------------------------
-     * SELECT OPTION
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | SELECT
+    |--------------------------------------------------------------------------
+    */
 
-    const handleSelect = (selectedValue) => {
+    const handleSelect = (
+        selectedValue
+    ) => {
 
-        /*
-         * Update parent
-         */
-        onChange?.(selectedValue)
+        onChange?.(
+            selectedValue
+        )
 
-
-        /*
-         * Close THIS dropdown only
-         */
         setOpen(false)
-
         setSearch('')
 
     }
 
 
     /*
-     * --------------------------------------------------------------
-     * RENDER
-     * --------------------------------------------------------------
-     */
+    |--------------------------------------------------------------------------
+    | RENDER
+    |--------------------------------------------------------------------------
+    */
 
     return (
-        <div className="relative w-full">
 
-            {/* ======================================================
-                BUTTON
-            ====================================================== */}
+        <div className="relative w-full">
 
             <button
                 ref={triggerRef}
@@ -424,13 +396,17 @@ function LocationDropdown({
                 "
             >
 
-                <span className="
-                    min-w-0
-                    truncate
-                ">
-                    {selectedOption?.label || placeholder}
+                <span
+                    className="
+                        min-w-0
+                        truncate
+                    "
+                >
+                    {
+                        selectedOption?.label ||
+                        placeholder
+                    }
                 </span>
-
 
                 <ChevronDownIcon
                     className="
@@ -443,10 +419,6 @@ function LocationDropdown({
 
             </button>
 
-
-            {/* ======================================================
-                PORTAL
-            ====================================================== */}
 
             {open &&
                 typeof document !== 'undefined' &&
@@ -471,19 +443,15 @@ function LocationDropdown({
                         "
                     >
 
-                        {/* ==================================================
-                            SEARCH
-                        ================================================== */}
+                        <div
+                            className="
+                                border-b
+                                border-base-300
+                                p-2
+                            "
+                        >
 
-                        <div className="
-                            border-b
-                            border-base-300
-                            p-2
-                        ">
-
-                            <div className="
-                                relative
-                            ">
+                            <div className="relative">
 
                                 <MagnifyingGlassIcon
                                     className="
@@ -498,13 +466,16 @@ function LocationDropdown({
                                     "
                                 />
 
-
                                 <input
                                     type="text"
                                     value={search}
-                                    onChange={(event) =>
+                                    onChange={(
+                                        event
+                                    ) =>
                                         setSearch(
-                                            event.target.value
+                                            event
+                                                .target
+                                                .value
                                         )
                                     }
                                     placeholder={
@@ -527,17 +498,13 @@ function LocationDropdown({
                         </div>
 
 
-                        {/* ==================================================
-                            OPTIONS
-                        ================================================== */}
-
-                        <div className="
-                            max-h-56
-                            overflow-y-auto
-                            p-1
-                        ">
-
-                            {/* ALL */}
+                        <div
+                            className="
+                                max-h-56
+                                overflow-y-auto
+                                p-1
+                            "
+                        >
 
                             <button
                                 type="button"
@@ -561,8 +528,6 @@ function LocationDropdown({
                                 {allLabel}
                             </button>
 
-
-                            {/* OPTIONS */}
 
                             {filteredOptions.map(
                                 (option) => (
@@ -597,17 +562,17 @@ function LocationDropdown({
                             )}
 
 
-                            {/* EMPTY */}
-
                             {filteredOptions.length === 0 && (
 
-                                <div className="
-                                    px-3
-                                    py-3
-                                    text-center
-                                    text-xs
-                                    text-base-content/50
-                                ">
+                                <div
+                                    className="
+                                        px-3
+                                        py-3
+                                        text-center
+                                        text-xs
+                                        text-base-content/50
+                                    "
+                                >
                                     {emptyMessage}
                                 </div>
 
@@ -627,7 +592,7 @@ function LocationDropdown({
 
 /*
 |--------------------------------------------------------------------------
-| STATE + CITY
+| STATE + CITY DROPDOWN
 |--------------------------------------------------------------------------
 */
 
@@ -645,8 +610,8 @@ function StateCityDropdown({
     allStatesLabel = 'All States',
     allCitiesLabel = 'All Cities',
 
-    statePlaceholder = 'Search State',
-    cityPlaceholder = 'Search City',
+    statePlaceholder = 'Select State',
+    cityPlaceholder = 'Select City',
 
     stateSearchPlaceholder = 'Search State',
     citySearchPlaceholder = 'Search City',
@@ -661,44 +626,58 @@ function StateCityDropdown({
 }) {
 
     /*
-     * ==============================================================
-     * LOCAL VALUES
-     * ==============================================================
-     *
-     * These make the dropdown immediately responsive.
-     *
-     * The parent values are still synchronized whenever they change.
-     */
+    |--------------------------------------------------------------------------
+    | LOCAL VALUES
+    |--------------------------------------------------------------------------
+    */
 
-    const [selectedState, setSelectedState] = useState(
+    const [
+        selectedState,
+        setSelectedState,
+    ] = useState(
         stateValue ?? ''
     )
 
-    const [selectedCity, setSelectedCity] = useState(
+    const [
+        selectedCity,
+        setSelectedCity,
+    ] = useState(
         cityValue ?? ''
     )
 
 
     /*
-     * ==============================================================
-     * API DATA
-     * ==============================================================
-     */
+    |--------------------------------------------------------------------------
+    | API DATA
+    |--------------------------------------------------------------------------
+    */
 
-    const [apiStates, setApiStates] = useState([])
+    const [
+        apiStates,
+        setApiStates,
+    ] = useState([])
 
-    const [apiCities, setApiCities] = useState([])
+    const [
+        apiCities,
+        setApiCities,
+    ] = useState([])
 
-    const [statesLoading, setStatesLoading] = useState(false)
+    const [
+        statesLoading,
+        setStatesLoading,
+    ] = useState(false)
 
-    const [citiesLoading, setCitiesLoading] = useState(false)
+    const [
+        citiesLoading,
+        setCitiesLoading,
+    ] = useState(false)
 
 
     /*
-     * ==============================================================
-     * SYNC STATE FROM PARENT
-     * ==============================================================
-     */
+    |--------------------------------------------------------------------------
+    | SYNC STATE FROM PARENT
+    |--------------------------------------------------------------------------
+    */
 
     useEffect(() => {
 
@@ -710,10 +689,10 @@ function StateCityDropdown({
 
 
     /*
-     * ==============================================================
-     * SYNC CITY FROM PARENT
-     * ==============================================================
-     */
+    |--------------------------------------------------------------------------
+    | SYNC CITY FROM PARENT
+    |--------------------------------------------------------------------------
+    */
 
     useEffect(() => {
 
@@ -725,26 +704,19 @@ function StateCityDropdown({
 
 
     /*
-     * ==============================================================
-     * FETCH STATES
-     * ==============================================================
-     *
-     * Only used when states are not supplied through props.
-     */
+    |--------------------------------------------------------------------------
+    | FETCH STATES
+    |--------------------------------------------------------------------------
+    */
 
     useEffect(() => {
 
-        /*
-         * If parent already provides states,
-         * don't make an unnecessary API request.
-         */
         if (
             Array.isArray(states) &&
             states.length > 0
         ) {
             return
         }
-
 
         let cancelled = false
 
@@ -755,20 +727,22 @@ function StateCityDropdown({
 
             try {
 
-                const response = await fetch(
-                    `${API_BASE_URL}/states`,
-                    {
-                        credentials: 'include',
-                    }
-                )
-
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/states`,
+                        {
+                            credentials:
+                                'include',
+                        }
+                    )
 
                 if (!response.ok) {
+
                     throw new Error(
                         `Failed to fetch states: ${response.status}`
                     )
-                }
 
+                }
 
                 const data =
                     await response.json()
@@ -776,11 +750,47 @@ function StateCityDropdown({
 
                 if (!cancelled) {
 
-                    setApiStates(
+                    const stateList =
                         Array.isArray(data)
                             ? data
                             : []
+
+                    setApiStates(
+                        stateList
                     )
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | DEFAULT KARNATAKA
+                    |--------------------------------------------------------------------------
+                    */
+
+                    if (!stateValue) {
+
+                        const karnataka =
+                            stateList.find(
+                                (state) =>
+                                    String(
+                                        state?.name
+                                    )
+                                        .trim()
+                                        .toLowerCase() ===
+                                    'karnataka'
+                            )
+
+                        if (karnataka) {
+
+                            setSelectedState(
+                                karnataka.id
+                            )
+
+                            onStateChange?.(
+                                karnataka.id
+                            )
+
+                        }
+
+                    }
 
                 }
 
@@ -817,39 +827,22 @@ function StateCityDropdown({
 
 
     /*
-     * ==============================================================
-     * FETCH CITIES
-     * ==============================================================
-     *
-     * If cities are supplied through props, the existing prop data
-     * is used and no API request is made.
-     *
-     * Otherwise cities are fetched specifically for the selected
-     * state.
-     */
+    |--------------------------------------------------------------------------
+    | FETCH CITIES FOR SELECTED STATE
+    |--------------------------------------------------------------------------
+    */
 
     useEffect(() => {
 
-        /*
-         * No state selected.
-         *
-         * City dropdown should remain empty.
-         */
         if (!selectedState) {
 
             setApiCities([])
-
-            setCitiesLoading(false)
+            setSelectedCity('')
 
             return
         }
 
 
-        /*
-         * Parent already supplies cities.
-         *
-         * Keep existing functionality and don't fetch again.
-         */
         if (
             Array.isArray(cities) &&
             cities.length > 0
@@ -867,32 +860,99 @@ function StateCityDropdown({
 
             try {
 
-                const response = await fetch(
-                    `${API_BASE_URL}/cities?state_id=${encodeURIComponent(selectedState)}`,
-                    {
-                        credentials: 'include',
-                    }
-                )
-
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/cities?state_id=${encodeURIComponent(
+                            selectedState
+                        )}`,
+                        {
+                            credentials:
+                                'include',
+                        }
+                    )
 
                 if (!response.ok) {
+
                     throw new Error(
                         `Failed to fetch cities: ${response.status}`
                     )
-                }
 
+                }
 
                 const data =
                     await response.json()
 
-
                 if (!cancelled) {
 
-                    setApiCities(
+                    const cityList =
                         Array.isArray(data)
                             ? data
                             : []
+
+                    setApiCities(
+                        cityList
                     )
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | DEFAULT BENGALURU
+                    |--------------------------------------------------------------------------
+                    */
+
+                    const selectedStateObject =
+                        (
+                            Array.isArray(states) &&
+                            states.length > 0
+                                ? states
+                                : apiStates
+                        ).find(
+                            (state) =>
+                                String(
+                                    state?.id
+                                ) ===
+                                String(
+                                    selectedState
+                                )
+                        )
+
+                    const isKarnataka =
+                        selectedStateObject
+                            ?.name
+                            ?.trim()
+                            .toLowerCase() ===
+                        'karnataka'
+
+
+                    if (
+                        isKarnataka &&
+                        !cityValue
+                    ) {
+
+                        const bengaluru =
+                            cityList.find(
+                                (city) =>
+                                    String(
+                                        city?.name
+                                    )
+                                        .trim()
+                                        .toLowerCase() ===
+                                    'bengaluru'
+                            )
+
+                        if (bengaluru) {
+
+                            setSelectedCity(
+                                bengaluru.id
+                            )
+
+                            onCityChange?.(
+                                bengaluru.id
+                            )
+
+                        }
+
+                    }
 
                 }
 
@@ -932,15 +992,10 @@ function StateCityDropdown({
 
 
     /*
-     * ==============================================================
-     * STATES
-     * ==============================================================
-     *
-     * Priority:
-     *
-     * 1. Props
-     * 2. Backend API
-     */
+    |--------------------------------------------------------------------------
+    | STATE OPTIONS
+    |--------------------------------------------------------------------------
+    */
 
     const stateOptions = useMemo(() => {
 
@@ -951,7 +1006,6 @@ function StateCityDropdown({
             return states
         }
 
-
         return apiStates
 
     }, [
@@ -961,15 +1015,10 @@ function StateCityDropdown({
 
 
     /*
-     * ==============================================================
-     * CITIES
-     * ==============================================================
-     *
-     * Priority:
-     *
-     * 1. Props
-     * 2. Backend API
-     */
+    |--------------------------------------------------------------------------
+    | CITY OPTIONS
+    |--------------------------------------------------------------------------
+    */
 
     const cityOptions = useMemo(() => {
 
@@ -980,7 +1029,6 @@ function StateCityDropdown({
             return cities
         }
 
-
         return apiCities
 
     }, [
@@ -990,15 +1038,10 @@ function StateCityDropdown({
 
 
     /*
-     * ==============================================================
-     * FILTER CITIES BY SELECTED STATE
-     * ==============================================================
-     *
-     * This is intentionally kept.
-     *
-     * It preserves the original functionality even when a parent
-     * passes the complete cities array through props.
-     */
+    |--------------------------------------------------------------------------
+    | FILTER CITIES BY STATE
+    |--------------------------------------------------------------------------
+    */
 
     const filteredCities = useMemo(() => {
 
@@ -1006,13 +1049,14 @@ function StateCityDropdown({
             return []
         }
 
-
         return cityOptions.filter(
             (city) =>
                 String(
                     getCityStateId(city)
                 ) ===
-                String(selectedState)
+                String(
+                    selectedState
+                )
         )
 
     }, [
@@ -1022,39 +1066,21 @@ function StateCityDropdown({
 
 
     /*
-     * ==============================================================
-     * STATE CHANGE
-     * ==============================================================
-     */
+    |--------------------------------------------------------------------------
+    | STATE CHANGE
+    |--------------------------------------------------------------------------
+    */
 
-    const handleStateChange = (value) => {
+    const handleStateChange = (
+        value
+    ) => {
 
-        /*
-         * Update local state FIRST.
-         *
-         * This keeps the dropdown immediately responsive.
-         */
         setSelectedState(value)
 
-
-        /*
-         * Clear currently selected city.
-         */
         setSelectedCity('')
 
-
-        /*
-         * Clear old API cities immediately.
-         *
-         * The new city's API request will happen from the
-         * selectedState useEffect above.
-         */
         setApiCities([])
 
-
-        /*
-         * Tell parent.
-         */
         onStateChange?.(value)
 
         onCityChange?.('')
@@ -1063,32 +1089,27 @@ function StateCityDropdown({
 
 
     /*
-     * ==============================================================
-     * CITY CHANGE
-     * ==============================================================
-     */
+    |--------------------------------------------------------------------------
+    | CITY CHANGE
+    |--------------------------------------------------------------------------
+    */
 
-    const handleCityChange = (value) => {
+    const handleCityChange = (
+        value
+    ) => {
 
-        /*
-         * Update local city immediately.
-         */
         setSelectedCity(value)
 
-
-        /*
-         * Tell parent.
-         */
         onCityChange?.(value)
 
     }
 
 
     /*
-     * ==============================================================
-     * RENDER
-     * ==============================================================
-     */
+    |--------------------------------------------------------------------------
+    | RENDER
+    |--------------------------------------------------------------------------
+    */
 
     return (
 
@@ -1103,17 +1124,21 @@ function StateCityDropdown({
             `}
         >
 
-            {/* ======================================================
-                STATE
-            ====================================================== */}
+            {/* STATE */}
 
             <LocationDropdown
 
-                value={selectedState}
+                value={
+                    selectedState
+                }
 
-                options={stateOptions}
+                options={
+                    stateOptions
+                }
 
-                onChange={handleStateChange}
+                onChange={
+                    handleStateChange
+                }
 
                 placeholder={
                     statesLoading
@@ -1125,7 +1150,9 @@ function StateCityDropdown({
                     stateSearchPlaceholder
                 }
 
-                allLabel={allStatesLabel}
+                allLabel={
+                    allStatesLabel
+                }
 
                 emptyMessage={
                     statesLoading
@@ -1141,17 +1168,21 @@ function StateCityDropdown({
             />
 
 
-            {/* ======================================================
-                CITY
-            ====================================================== */}
+            {/* CITY */}
 
             <LocationDropdown
 
-                value={selectedCity}
+                value={
+                    selectedCity
+                }
 
-                options={filteredCities}
+                options={
+                    filteredCities
+                }
 
-                onChange={handleCityChange}
+                onChange={
+                    handleCityChange
+                }
 
                 placeholder={
                     !selectedState
@@ -1165,7 +1196,9 @@ function StateCityDropdown({
                     citySearchPlaceholder
                 }
 
-                allLabel={allCitiesLabel}
+                allLabel={
+                    allCitiesLabel
+                }
 
                 emptyMessage={
                     !selectedState

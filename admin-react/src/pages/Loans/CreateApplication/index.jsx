@@ -1,3 +1,4 @@
+
 // admin-react/src/pages/Loans/CreateApplication/index.jsx
 
 import { useState } from 'react'
@@ -5,60 +6,21 @@ import { useState } from 'react'
 import ApplicationForm from './components/ApplicationForm'
 import ExistingLoan from './components/ExistingLoan'
 
-// =============================================================
-// CREATE APPLICATION
-// =============================================================
-//
-// Flow:
-//
-// ApplicationForm
-//      ↓
-// createLoanApplication()
-//      ↓
-// existing_loan === true
-//      ↓
-// ExistingLoan
-//      ├── Cancel
-//      │     ↓
-//      │   Back to fresh ApplicationForm
-//      │
-//      └── Submit Application
-//            ↓
-//        submitExistingLoan()
-//            ↓
-//        Final submission
-//
-// =============================================================
 
 function CreateApplication() {
 
   // ===========================================================
-  // EXISTING LOAN STATE
+  // EXISTING APPLICATION MODAL STATE
   // ===========================================================
 
   const [
-    existingLoanState,
-    setExistingLoanState,
+    existingLoan,
+    setExistingLoan,
   ] = useState(null)
 
-  // ===========================================================
-  // FINAL SUBMISSION SUCCESS
-  // ===========================================================
-
-  const [
-    successMessage,
-    setSuccessMessage,
-  ] = useState('')
 
   // ===========================================================
-  // EXISTING LOAN DETECTED
-  // ===========================================================
-  //
-  // ApplicationForm sends both:
-  //
-  // 1. existingLoanData
-  // 2. originalApplicationData
-  //
+  // OPEN EXISTING APPLICATION POPUP
   // ===========================================================
 
   const handleExistingLoan = ({
@@ -66,51 +28,32 @@ function CreateApplication() {
     originalApplicationData,
   }) => {
 
-    setSuccessMessage('')
-
-    setExistingLoanState({
-
+    setExistingLoan({
       existingLoanData,
-
       originalApplicationData,
-
     })
-
   }
 
+
   // ===========================================================
-  // CANCEL EXISTING LOAN
-  // ===========================================================
-  //
-  // No API call.
-  //
-  // Removing ExistingLoan from the DOM causes ApplicationForm
-  // to mount again with its INITIAL_FORM values.
-  //
+  // CLOSE EXISTING APPLICATION POPUP
   // ===========================================================
 
   const handleCancelExistingLoan = () => {
 
-    setExistingLoanState(null)
-
+    setExistingLoan(null)
   }
 
+
   // ===========================================================
-  // FINAL EXISTING LOAN SUBMISSION SUCCESS
+  // REQUEST APPROVAL SUCCESS
   // ===========================================================
 
-  const handleExistingLoanSubmitSuccess = (
-    response
-  ) => {
+  const handleExistingLoanSubmitSuccess = () => {
 
-    setExistingLoanState(null)
-
-    setSuccessMessage(
-      response?.message ||
-      'Existing loan application submitted successfully.'
-    )
-
+    setExistingLoan(null)
   }
+
 
   // ===========================================================
   // RENDER
@@ -118,117 +61,88 @@ function CreateApplication() {
 
   return (
 
-    <div
-      className="
-        w-full
-        min-w-0
-      "
-    >
+    <div className="relative w-full">
 
       {/* =====================================================
-          SUCCESS MESSAGE
+          CREATE APPLICATION FORM
       ===================================================== */}
 
-      {successMessage && (
+      <ApplicationForm
+        onExistingLoan={
+          handleExistingLoan
+        }
+      />
+
+
+      {/* =====================================================
+          EXISTING APPLICATION MODAL
+      ===================================================== */}
+
+      {existingLoan && (
 
         <div
           className="
-            mx-3
-            mb-3
+            fixed
+            inset-0
+            z-[9999]
             flex
-            items-start
-            gap-3
-            rounded-lg
-            border
-            border-[#8BCF00]/30
-            bg-[#8BCF00]/10
-            px-4
-            py-3
-            text-[#5E8F00]
-            sm:mx-5
-            lg:mx-6
+            items-center
+            justify-center
+            bg-black/50
+            p-4
+            backdrop-blur-[1px]
           "
+          role="dialog"
+          aria-modal="true"
+          aria-label="Existing loan application"
         >
+
+          {/* =================================================
+              MODAL CONTAINER
+          ================================================= */}
 
           <div
             className="
-              mt-0.5
-              h-2
-              w-2
-              shrink-0
-              rounded-full
-              bg-[#8BCF00]
-            "
-          />
-
-          <p
-            className="
-              text-sm
-              font-medium
+              relative
+              max-h-[90vh]
+              w-full
+              max-w-5xl
+              overflow-y-auto
+              rounded-xl
+              bg-base-100
+              shadow-2xl
             "
           >
-            {successMessage}
-          </p>
 
-          <button
-            type="button"
-            onClick={() => setSuccessMessage('')}
-            className="
-              ml-auto
-              shrink-0
-              text-xs
-              font-medium
-              text-[#5E8F00]
-              opacity-70
-              hover:opacity-100
-            "
-          >
-            Dismiss
-          </button>
+            <ExistingLoan
+
+              existingLoanData={
+                existingLoan.existingLoanData
+              }
+
+              originalApplicationData={
+                existingLoan.originalApplicationData
+              }
+
+              onCancel={
+                handleCancelExistingLoan
+              }
+
+              onSubmitSuccess={
+                handleExistingLoanSubmitSuccess
+              }
+
+            />
+
+          </div>
 
         </div>
 
       )}
 
-      {/* =====================================================
-          APPLICATION FLOW
-      ===================================================== */}
-
-      {existingLoanState ? (
-
-        <ExistingLoan
-
-          existingLoanData={
-            existingLoanState.existingLoanData
-          }
-
-          originalApplicationData={
-            existingLoanState.originalApplicationData
-          }
-
-          onCancel={
-            handleCancelExistingLoan
-          }
-
-          onSubmitSuccess={
-            handleExistingLoanSubmitSuccess
-          }
-
-        />
-
-      ) : (
-
-        <ApplicationForm
-          onExistingLoan={
-            handleExistingLoan
-          }
-        />
-
-      )}
-
     </div>
-
   )
 }
+
 
 export default CreateApplication

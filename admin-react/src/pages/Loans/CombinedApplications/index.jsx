@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getActiveContext } from '../../../app/auth'
+import { useNavigate } from 'react-router-dom'
+import { getActiveContext, getStoredUser } from '../../../app/auth'
 
 import ApplicationsTable from './components/ApplicationsTable'
 
@@ -14,10 +15,11 @@ import {
 import { useToast } from '../../../components/Toast/ToastProvider'
 import {
     getLoanTypes,
-    getEmployeesByContext,
+    getApplicationFilters,
 } from '../../../services/commonservice'
 
 function Applications() {
+    const navigate = useNavigate()
     const {
         showSuccess,
         showError,
@@ -54,7 +56,12 @@ function Applications() {
     const [agents, setAgents] = useState([])
     const [teamLeads, setTeamLeads] = useState([])
 
-
+    const [filterVisibility, setFilterVisibility] =
+        useState({
+            show_rm: false,
+            show_agent: false,
+            show_team_lead: false,
+        })
     // =========================================================
     // FILTER STATE
     // =========================================================
@@ -275,8 +282,9 @@ function Applications() {
                         application.loanType,
 
                     status:
-                        application.status || '',
-
+                        application.reverted_reason
+                            ? 'Revert Rejected'
+                            : application.status || '',
                     appliedDate:
                         application.applied_date || '',
 
@@ -291,9 +299,20 @@ function Applications() {
 
                     docsPendingDate:
                         application.docspending_date,
-
                     revertedStatus:
                         application.reverted_status,
+
+                    revertedReason:
+                        application.reverted_reason ?? '',
+
+                    revertedDate:
+                        application.reverted_date ?? null,
+
+                    revertedByName:
+                        application.reverted_by_name ?? '',
+
+                    revertedByRole:
+                        application.reverted_by_role ?? '',
 
                     stateId:
                         application.state_id,
@@ -348,41 +367,79 @@ function Applications() {
     // =========================================================
 
     const fetchDropdownData = async () => {
-
         try {
+            const user = getStoredUser()
 
-            const activeContext =
-                getActiveContext()
+            const activeContext = getActiveContext(user)
+
+            console.log('STORED USER:', user)
+            console.log('ACTIVE CONTEXT:', activeContext)
 
             if (!activeContext?.id) {
+                setLoanTypes([])
+                setRms([])
+                setAgents([])
+                setTeamLeads([])
+
+                setFilterVisibility({
+                    show_rm: false,
+                    show_agent: false,
+                    show_team_lead: false,
+                })
+
                 return
             }
 
             const [
                 loanTypesData,
-                rmData,
-                agentData,
+                filterResponse,
             ] = await Promise.all([
                 getLoanTypes(),
-                getEmployeesByContext(3),
-                getEmployeesByContext(2),
+                getApplicationFilters(activeContext.id),
             ])
+
+            console.log(
+                'APPLICATION FILTER RESPONSE:',
+                filterResponse
+            )
 
             setLoanTypes(
                 loanTypesData || []
             )
 
+            /*
+             * The backend endpoint returns the
+             * filter data for the active context.
+             */
+            const filterData =
+                filterResponse?.data ||
+                filterResponse
+
             setRms(
-                rmData || []
+                filterData?.rms || []
             )
 
             setAgents(
-                agentData || []
+                filterData?.agents || []
             )
 
-            // Team Lead context does not currently
-            // exist in the database.
-            setTeamLeads([])
+            setTeamLeads(
+                filterData?.team_leads || []
+            )
+
+            setFilterVisibility({
+                show_rm:
+                    filterData?.visibility?.show_rm ??
+                    false,
+
+                show_agent:
+                    filterData?.visibility?.show_agent ??
+                    false,
+
+                show_team_lead:
+                    filterData?.visibility?.show_team_lead ??
+                    false,
+            })
 
         } catch (error) {
 
@@ -396,9 +453,13 @@ function Applications() {
             setAgents([])
             setTeamLeads([])
 
+            setFilterVisibility({
+                show_rm: false,
+                show_agent: false,
+                show_team_lead: false,
+            })
         }
     }
-
 
     // =========================================================
     // INITIAL LOAD + CONTEXT CHANGE
@@ -418,7 +479,6 @@ function Applications() {
             setSelectedTeamLead('')
             setSelectedAgent('')
             setSelectedStatus('')
-
             fetchApplications()
             fetchDropdownData()
         }
@@ -630,12 +690,15 @@ function Applications() {
                 // =================================================
 
                 if (selectedStatus) {
-
                     const applicationStatus =
                         normalizeStatus(
                             application.status
-                        )
-
+                        ) === 'Rejected' &&
+                            application.revertedReason
+                            ? 'Revert Rejected'
+                            : normalizeStatus(
+                                application.status
+                            )
                     if (
                         applicationStatus !==
                         selectedStatus
@@ -841,6 +904,8 @@ function Applications() {
 
             handleCloseStatusModal()
 
+            await fetchApplications()
+
             showSuccess(
                 isRevertRejected
                     ? 'Application rejection reverted successfully'
@@ -920,9 +985,8 @@ function Applications() {
 
     const handleViewApplication = (application) => {
 
-        console.log(
-            'View Application:',
-            application
+        navigate(
+            `/crm/view-application/${application.id}`
         )
 
     }
@@ -938,7 +1002,7 @@ function Applications() {
             'Open Application Chat:',
             {
                 loanId:
-                    application.loanId ||
+                    application.unique_id ||
                     application.id,
 
                 agentId:
@@ -998,7 +1062,17 @@ function Applications() {
                     STATUS_OPTIONS
                 }
 
+                showRM={
+                    filterVisibility.show_rm
+                }
 
+                showAgent={
+                    filterVisibility.show_agent
+                }
+
+                showTeamLead={
+                    filterVisibility.show_team_lead
+                }
                 // =============================================
                 // LOAN TYPE
                 // =============================================

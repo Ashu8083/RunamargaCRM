@@ -1,5 +1,3 @@
-// admin-react/src/pages/CallManagement/PhoneNumbers/components/AddPhoneNumber.jsx
-
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -10,15 +8,10 @@ import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
 function AddPhoneNumber({
     open,
     phoneNumber = null,
-    employees = [],
     EmployeeDropdown,
     onClose,
     onSubmit,
 }) {
-
-    // =========================================================
-    // FORM STATE
-    // =========================================================
 
     const [formData, setFormData] = useState({
         number: '',
@@ -27,13 +20,9 @@ function AddPhoneNumber({
         status: 'Active',
     })
 
-
     const [error, setError] = useState('')
 
-
-    // =========================================================
-    // MODE
-    // =========================================================
+    const [saving, setSaving] = useState(false)
 
     const isEditMode =
         Boolean(phoneNumber)
@@ -49,11 +38,6 @@ function AddPhoneNumber({
             return
         }
 
-
-        // -----------------------------------------------------
-        // EDIT MODE
-        // -----------------------------------------------------
-
         if (phoneNumber) {
 
             setFormData({
@@ -64,8 +48,10 @@ function AddPhoneNumber({
                     '',
 
                 employeeId:
-                    phoneNumber.employeeId !== null &&
-                    phoneNumber.employeeId !== undefined
+                    phoneNumber.employeeId !==
+                        null &&
+                    phoneNumber.employeeId !==
+                        undefined
                         ? String(
                             phoneNumber.employeeId
                         )
@@ -81,13 +67,7 @@ function AddPhoneNumber({
 
             })
 
-        }
-
-        // -----------------------------------------------------
-        // ADD MODE
-        // -----------------------------------------------------
-
-        else {
+        } else {
 
             setFormData({
 
@@ -103,14 +83,16 @@ function AddPhoneNumber({
 
         }
 
-
         setError('')
 
-    }, [open, phoneNumber])
+    }, [
+        open,
+        phoneNumber,
+    ])
 
 
     // =========================================================
-    // LOCK BACKGROUND SCROLL WHEN DRAWER IS OPEN
+    // LOCK BACKGROUND
     // =========================================================
 
     useEffect(() => {
@@ -119,13 +101,11 @@ function AddPhoneNumber({
             return
         }
 
-
         const originalOverflow =
             document.body.style.overflow
 
-
-        document.body.style.overflow = 'hidden'
-
+        document.body.style.overflow =
+            'hidden'
 
         return () => {
 
@@ -138,37 +118,24 @@ function AddPhoneNumber({
 
 
     // =========================================================
-    // SELECTED EMPLOYEE
+    // CHANGE
     // =========================================================
 
-    const selectedEmployee =
-        employees.find(
-            (employee) =>
-                String(employee.id) ===
-                String(formData.employeeId)
-        )
-
-
-    // =========================================================
-    // NORMAL FIELD CHANGE
-    // =========================================================
-
-    const handleChange = (event) => {
+    const handleChange = (
+        event
+    ) => {
 
         const {
             name,
             value,
         } = event.target
 
-
-        setFormData((previous) => ({
-
-            ...previous,
-
-            [name]: value,
-
-        }))
-
+        setFormData(
+            (previous) => ({
+                ...previous,
+                [name]: value,
+            })
+        )
 
         setError('')
 
@@ -179,17 +146,18 @@ function AddPhoneNumber({
     // EMPLOYEE CHANGE
     // =========================================================
 
-    const handleEmployeeChange = (value) => {
+    const handleEmployeeChange = (
+        value
+    ) => {
 
-        setFormData((previous) => ({
+        setFormData(
+            (previous) => ({
+                ...previous,
 
-            ...previous,
-
-            employeeId:
-                value,
-
-        }))
-
+                employeeId:
+                    value,
+            })
+        )
 
         setError('')
 
@@ -197,20 +165,22 @@ function AddPhoneNumber({
 
 
     // =========================================================
-    // TRACKABLE CHANGE
+    // TRACKABLE
     // =========================================================
 
-    const handleTrackableChange = (event) => {
+    const handleTrackableChange = (
+        event
+    ) => {
 
-        setFormData((previous) => ({
+        setFormData(
+            (previous) => ({
+                ...previous,
 
-            ...previous,
-
-            trackable:
-                event.target.value === 'Yes',
-
-        }))
-
+                trackable:
+                    event.target.value ===
+                    'Yes',
+            })
+        )
 
         setError('')
 
@@ -221,18 +191,14 @@ function AddPhoneNumber({
     // SUBMIT
     // =========================================================
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (
+        event
+    ) => {
 
         event.preventDefault()
 
-
         const number =
             formData.number.trim()
-
-
-        // -----------------------------------------------------
-        // PHONE VALIDATION
-        // -----------------------------------------------------
 
         if (!number) {
 
@@ -244,8 +210,11 @@ function AddPhoneNumber({
 
         }
 
-
-        if (!/^[0-9]{10}$/.test(number)) {
+        if (
+            !/^[0-9]{10}$/.test(
+                number
+            )
+        ) {
 
             setError(
                 'Please enter a valid 10-digit phone number.'
@@ -255,12 +224,9 @@ function AddPhoneNumber({
 
         }
 
-
-        // -----------------------------------------------------
-        // EMPLOYEE VALIDATION
-        // -----------------------------------------------------
-
-        if (!formData.employeeId) {
+        if (
+            !formData.employeeId
+        ) {
 
             setError(
                 'Please select an employee.'
@@ -270,61 +236,53 @@ function AddPhoneNumber({
 
         }
 
+        try {
 
-        // -----------------------------------------------------
-        // SUBMIT
-        // -----------------------------------------------------
+            setSaving(true)
 
-        onSubmit?.({
+            setError('')
 
-            number,
+            await onSubmit?.({
 
-            employeeId:
-                formData.employeeId,
+                number,
 
-            employeeName:
-                selectedEmployee?.name ||
-                '',
+                employeeId:
+                    formData.employeeId,
 
-            teamId:
-                selectedEmployee?.teamId ||
-                null,
+                trackable:
+                    formData.trackable,
 
-            teamName:
-                selectedEmployee?.teamName ||
-                '',
+                status:
+                    formData.status,
 
-            trackable:
-                formData.trackable,
+            })
 
-            status:
-                formData.status,
+        } catch (error) {
 
-        })
+            console.error(
+                'Failed to submit phone number:',
+                error
+            )
+
+            setError(
+                error?.response?.data?.detail ||
+                error?.message ||
+                'Failed to save phone number.'
+            )
+
+        } finally {
+
+            setSaving(false)
+
+        }
 
     }
 
-
-    // =========================================================
-    // CLOSED
-    // =========================================================
 
     if (!open) {
         return null
     }
 
-
-    // =========================================================
-    // DRAWER
-    //
-    // IMPORTANT:
-    //
-    // The entire drawer is rendered into document.body
-    // using createPortal().
-    //
-    // This prevents parent layout CSS from affecting
-    // position: fixed.
-    // =========================================================
 
     return createPortal(
 
@@ -384,7 +342,6 @@ function AddPhoneNumber({
                 "
                 role="dialog"
                 aria-modal="true"
-                aria-labelledby="add-phone-number-title"
             >
 
                 {/* =================================================
@@ -399,7 +356,6 @@ function AddPhoneNumber({
                     justify-between
                     border-b
                     border-base-300
-                    bg-base-100
                     px-5
                     py-4
                 ">
@@ -410,10 +366,6 @@ function AddPhoneNumber({
                         items-center
                         gap-3
                     ">
-
-                        {/* =================================================
-                            ICON
-                        ================================================= */}
 
                         <div className="
                             flex
@@ -435,23 +387,12 @@ function AddPhoneNumber({
                         </div>
 
 
-                        {/* =================================================
-                            TITLE
-                        ================================================= */}
+                        <div>
 
-                        <div className="
-                            min-w-0
-                        ">
-
-                            <h3
-                                id="add-phone-number-title"
-                                className="
-                                    text-lg
-                                    font-semibold
-                                    leading-tight
-                                    text-base-content
-                                "
-                            >
+                            <h3 className="
+                                text-lg
+                                font-semibold
+                            ">
 
                                 {isEditMode
                                     ? 'Edit Phone Number'
@@ -464,7 +405,6 @@ function AddPhoneNumber({
                             <p className="
                                 mt-1
                                 text-xs
-                                leading-5
                                 text-base-content/50
                             ">
 
@@ -480,10 +420,6 @@ function AddPhoneNumber({
                     </div>
 
 
-                    {/* =================================================
-                        CLOSE BUTTON
-                    ================================================= */}
-
                     <button
                         type="button"
                         onClick={onClose}
@@ -492,10 +428,7 @@ function AddPhoneNumber({
                             btn-sm
                             btn-ghost
                             btn-circle
-                            ml-3
-                            shrink-0
                         "
-                        aria-label="Close"
                     >
 
                         <XMarkIcon className="
@@ -522,10 +455,6 @@ function AddPhoneNumber({
                     "
                 >
 
-                    {/* =================================================
-                        CONTENT
-                    ================================================= */}
-
                     <div className="
                         min-h-0
                         flex-1
@@ -538,10 +467,7 @@ function AddPhoneNumber({
                             space-y-5
                         ">
 
-
-                            {/* =================================================
-                                PHONE NUMBER
-                            ================================================= */}
+                            {/* PHONE */}
 
                             <div>
 
@@ -552,12 +478,10 @@ function AddPhoneNumber({
                                         block
                                         text-sm
                                         font-medium
-                                        text-base-content
                                     "
                                 >
                                     Phone Number
                                 </label>
-
 
                                 <input
                                     id="phone-number"
@@ -578,9 +502,6 @@ function AddPhoneNumber({
                                         input-bordered
                                         h-12
                                         w-full
-                                        bg-base-100
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
                                     "
                                     autoFocus
                                 />
@@ -588,9 +509,7 @@ function AddPhoneNumber({
                             </div>
 
 
-                            {/* =================================================
-                                EMPLOYEE
-                            ================================================= */}
+                            {/* EMPLOYEE */}
 
                             <div>
 
@@ -599,11 +518,9 @@ function AddPhoneNumber({
                                     block
                                     text-sm
                                     font-medium
-                                    text-base-content
                                 ">
                                     Employee
                                 </label>
-
 
                                 {EmployeeDropdown ? (
 
@@ -614,41 +531,25 @@ function AddPhoneNumber({
                                         onChange={
                                             handleEmployeeChange
                                         }
-                                        options={
-                                            employees
-                                        }
                                         showLabel={false}
                                         className="w-full"
                                     />
 
                                 ) : (
 
-                                    <div className="
-                                        rounded-lg
-                                        border
-                                        border-error/30
-                                        bg-error/5
-                                        px-3
-                                        py-3
+                                    <p className="
+                                        text-xs
+                                        text-error
                                     ">
-
-                                        <p className="
-                                            text-xs
-                                            text-error
-                                        ">
-                                            Employee selector is unavailable.
-                                        </p>
-
-                                    </div>
+                                        Employee selector is unavailable.
+                                    </p>
 
                                 )}
 
                             </div>
 
 
-                            {/* =================================================
-                                TEAM
-                            ================================================= */}
+                            {/* TEAM */}
 
                             <div>
 
@@ -657,11 +558,9 @@ function AddPhoneNumber({
                                     block
                                     text-sm
                                     font-medium
-                                    text-base-content
                                 ">
                                     Team
                                 </label>
-
 
                                 <div className="
                                     flex
@@ -676,13 +575,9 @@ function AddPhoneNumber({
 
                                     <span className="
                                         text-sm
-                                        text-base-content/70
+                                        text-base-content/60
                                     ">
-
-                                        {selectedEmployee?.teamName ||
-                                            'Team will be assigned automatically'
-                                        }
-
+                                        Team is assigned automatically.
                                     </span>
 
                                 </div>
@@ -690,29 +585,20 @@ function AddPhoneNumber({
                             </div>
 
 
-                            {/* =================================================
-                                TRACKABLE
-                            ================================================= */}
+                            {/* TRACKABLE */}
 
                             <div>
 
-                                <label
-                                    htmlFor="phone-trackable"
-                                    className="
-                                        mb-2
-                                        block
-                                        text-sm
-                                        font-medium
-                                        text-base-content
-                                    "
-                                >
+                                <label className="
+                                    mb-2
+                                    block
+                                    text-sm
+                                    font-medium
+                                ">
                                     Trackable
                                 </label>
 
-
                                 <select
-                                    id="phone-trackable"
-                                    name="trackable"
                                     value={
                                         formData.trackable
                                             ? 'Yes'
@@ -726,9 +612,6 @@ function AddPhoneNumber({
                                         select-bordered
                                         h-12
                                         w-full
-                                        bg-base-100
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
                                     "
                                 >
 
@@ -745,28 +628,20 @@ function AddPhoneNumber({
                             </div>
 
 
-                            {/* =================================================
-                                STATUS
-                            ================================================= */}
+                            {/* STATUS */}
 
                             <div>
 
-                                <label
-                                    htmlFor="phone-status"
-                                    className="
-                                        mb-2
-                                        block
-                                        text-sm
-                                        font-medium
-                                        text-base-content
-                                    "
-                                >
+                                <label className="
+                                    mb-2
+                                    block
+                                    text-sm
+                                    font-medium
+                                ">
                                     Status
                                 </label>
 
-
                                 <select
-                                    id="phone-status"
                                     name="status"
                                     value={
                                         formData.status
@@ -779,9 +654,6 @@ function AddPhoneNumber({
                                         select-bordered
                                         h-12
                                         w-full
-                                        bg-base-100
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
                                     "
                                 >
 
@@ -798,9 +670,7 @@ function AddPhoneNumber({
                             </div>
 
 
-                            {/* =================================================
-                                ERROR
-                            ================================================= */}
+                            {/* ERROR */}
 
                             {error && (
 
@@ -815,7 +685,6 @@ function AddPhoneNumber({
 
                                     <p className="
                                         text-xs
-                                        leading-5
                                         text-error
                                     ">
                                         {error}
@@ -830,19 +699,15 @@ function AddPhoneNumber({
                     </div>
 
 
-                    {/* =================================================
-                        FOOTER
-                    ================================================= */}
+                    {/* FOOTER */}
 
                     <div className="
                         flex
                         shrink-0
-                        items-center
                         justify-end
                         gap-2
                         border-t
                         border-base-300
-                        bg-base-100
                         px-5
                         py-4
                     ">
@@ -850,10 +715,10 @@ function AddPhoneNumber({
                         <button
                             type="button"
                             onClick={onClose}
+                            disabled={saving}
                             className="
                                 btn
                                 btn-sm
-                                min-w-20
                                 btn-ghost
                             "
                         >
@@ -863,6 +728,7 @@ function AddPhoneNumber({
 
                         <button
                             type="submit"
+                            disabled={saving}
                             className="
                                 btn
                                 btn-sm
@@ -875,9 +741,11 @@ function AddPhoneNumber({
                             "
                         >
 
-                            {isEditMode
-                                ? 'Update Number'
-                                : 'Add Number'
+                            {saving
+                                ? 'Saving...'
+                                : isEditMode
+                                    ? 'Update Number'
+                                    : 'Add Number'
                             }
 
                         </button>

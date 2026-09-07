@@ -17,19 +17,9 @@ export const getLoanTypes = async () => {
     return response.data;
 };
 
-export const getEmployeesByContext = async (contextId) => {
-    const response = await apiClient.get("/common/employees", {
-        params: {
-            context_id: contextId,
-        },
-    });
-
-    return response.data;
-};
-
-export const getRelationshipManagers = async (contextId) => {
+export const getApplicationFilters = async (contextId) => {
     const response = await apiClient.get(
-        '/common/relationship-managers',
+        '/common/application-filters',
         {
             params: {
                 context_id: contextId,

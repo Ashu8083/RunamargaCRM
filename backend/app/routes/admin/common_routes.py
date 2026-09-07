@@ -9,6 +9,8 @@ from app.core.access_control import AccessControl
 
 from app.models.roles import Role
 from app.models.permissions import Permission
+from app.models.states import State
+from app.models.cities import City
 from app.models.loan_types import LoanType
 from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
@@ -524,3 +526,73 @@ def delete_employee_context_permission(
         "context_id": context_id,
         "permission_id": permission_id,
     }
+
+@router.get("/application-filters")
+def get_application_filters(
+    context_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
+):
+    """
+    Return Agent, RM and Team Lead filter options
+    available to the currently authenticated employee.
+    """
+
+    try:
+        return AccessControl.get_application_filter_options(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to load application filter options.",
+        ) from exc
+# ============================================================================
+# GET /common/states
+# ============================================================================
+
+@router.get("/states")
+def get_states(
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(State)
+        .filter(
+            State.deleted_at.is_(None)
+        )
+        .order_by(State.id)
+        .all()
+    )
+
+
+# ============================================================================
+# GET /common/cities
+# ============================================================================
+
+@router.get("/cities")
+def get_cities(
+    state_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+
+    query = (
+        db.query(City)
+        .filter(
+            City.deleted_at.is_(None)
+        )
+    )
+
+    if state_id is not None:
+
+        query = query.filter(
+            City.state_id == state_id
+        )
+
+    return (
+        query
+        .order_by(City.id)
+        .all()
+    )

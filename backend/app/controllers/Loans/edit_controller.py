@@ -1,10 +1,18 @@
-# backend/app/controllers/application_controller.py
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
+from fastapi import HTTPException
 from datetime import datetime
+
 from app.core.access_control import AccessControl
 from app.models.employees import Employee
 from app.models.loan_applications import LoanApplication, LoanStatus
 from app.models.reverted_loans import RevertedLoan
+
+
+# =============================================================
+# GET APPLICATIONS
+# =============================================================
+
 def get_applications(
     db: Session,
     employee: Employee,
@@ -17,7 +25,6 @@ def get_applications(
         db=db,
         employee=employee,
         context_id=context_id,
-
     )
 
     applications = (
@@ -26,91 +33,163 @@ def get_applications(
         .all()
     )
 
+    data = []
+
+    for application in applications:
+
+        # =====================================================
+        # LATEST ACTIVE REVERT RECORD
+        # =====================================================
+
+        latest_revert = (
+            db.query(RevertedLoan)
+            .filter(
+                RevertedLoan.loan_id == application.id,
+                RevertedLoan.deleted_at.is_(None),
+            )
+            .order_by(
+                RevertedLoan.reverted_at.desc(),
+                RevertedLoan.id.desc(),
+            )
+            .first()
+        )
+
+        data.append({
+            "id": application.id,
+            "unique_id": application.unique_id,
+
+            "name": application.name,
+            "email": application.email,
+            "phone": application.phone,
+            "gender": application.gender,
+            "alternate_phone": application.alternate_phone,
+            "alternate_email": application.alternate_email,
+            "marital_status": application.marital_status,
+            "dob": application.dob,
+
+            "loan_type_id": application.loan_type_id,
+            "loan_amt": application.loan_amt,
+            "loan_tenure": application.loan_tenure,
+            "loan_purpose": application.loan_purpose,
+            "credit_score": application.credit_score,
+            "referral": application.referral,
+
+            # =================================================
+            # NORMAL REJECTION DETAILS
+            # =================================================
+
+            "rejection_date": application.rejection_date,
+            "rejected_remarks": application.rejected_remarks,
+
+            # =================================================
+            # ASSIGNMENTS
+            # =================================================
+
+            "applied_by_id": application.applied_by_id,
+            "agent_id": application.agent_id,
+            "rm_id": application.rm_id,
+
+            "applied_by": (
+                {
+                    "id": application.applied_by.id,
+                    "name": application.applied_by.name,
+                }
+                if application.applied_by
+                else None
+            ),
+
+            "agent": (
+                {
+                    "id": application.agent.id,
+                    "name": application.agent.name,
+                }
+                if application.agent
+                else None
+            ),
+
+            "rm": (
+                {
+                    "id": application.rm.id,
+                    "name": application.rm.name,
+                }
+                if application.rm
+                else None
+            ),
+
+            # =================================================
+            # STATUS
+            # =================================================
+
+            "status": application.status,
+
+            "applied_date": application.applied_date,
+            "sanction_date": application.sanction_date,
+            "loggedin_date": application.loggedin_date,
+            "docspending_date": application.docspending_date,
+
+            # =================================================
+            # REVERT STATUS
+            # =================================================
+
+            "reverted_status": application.reverted_status,
+
+            # =================================================
+            # REVERT REJECTION DETAILS
+            # =================================================
+
+            "reverted_reason": (
+                latest_revert.remarks
+                if latest_revert
+                else None
+            ),
+
+            "reverted_date": (
+                latest_revert.reverted_at
+                if latest_revert
+                else None
+            ),
+
+            "reverted_by_name": (
+                latest_revert.reverted_by_name
+                if latest_revert
+                else None
+            ),
+
+            "reverted_by_role": (
+                latest_revert.reverted_by_role
+                if latest_revert
+                else None
+            ),
+
+            "state_id": application.state_id,
+            "city_id": application.city_id,
+            "language_id": application.language_id,
+            "ivr_id": application.ivr_id,
+
+            "created_at": application.created_at,
+            "updated_at": application.updated_at,
+        })
+
     return {
         "success": True,
-        "count": len(applications),
-        "data": [
-    {
-        "id": application.id,
-        "unique_id": application.unique_id,
-
-        "name": application.name,
-        "email": application.email,
-        "phone": application.phone,
-
-        "gender": application.gender,
-        "alternate_phone": application.alternate_phone,
-        "alternate_email": application.alternate_email,
-        "marital_status": application.marital_status,
-        "dob": application.dob,
-
-        "loan_type_id": application.loan_type_id,
-        "loan_amt": application.loan_amt,
-        "loan_tenure": application.loan_tenure,
-        "loan_purpose": application.loan_purpose,
-        "credit_score": application.credit_score,
-        "referral": application.referral,
-        "rejection_date": application.rejection_date,
-        "rejected_remarks": application.rejected_remarks,
-        "applied_by_id": application.applied_by_id,
-        "agent_id": application.agent_id,
-        "rm_id": application.rm_id,
-
-        "applied_by": (
-            {
-                "id": application.applied_by.id,
-                "name": application.applied_by.name,
-            }
-            if application.applied_by
-            else None
-        ),
-
-        "agent": (
-            {
-                "id": application.agent.id,
-                "name": application.agent.name,
-            }
-            if application.agent
-            else None
-        ),
-
-        "rm": (
-            {
-                "id": application.rm.id,
-                "name": application.rm.name,
-            }
-            if application.rm
-            else None
-        ),
-
-        "status": application.status,
-        "applied_date": application.applied_date,
-        "sanction_date": application.sanction_date,
-        "rejection_date": application.rejection_date,
-        "loggedin_date": application.loggedin_date,
-        "docspending_date": application.docspending_date,
-        "reverted_status": application.reverted_status,
-
-        "state_id": application.state_id,
-        "city_id": application.city_id,
-        "language_id": application.language_id,
-        "ivr_id": application.ivr_id,
-
-        "created_at": application.created_at,
-        "updated_at": application.updated_at,
+        "count": len(data),
+        "data": data,
     }
-    for application in applications
-],
-    }
+
+
+# =============================================================
+# VIEW APPLICATION
+# =============================================================
+
 def view_application(
     db: Session,
     employee: Employee,
-    application_id: int,
+    application_id: str,
 ):
     application = (
         db.query(LoanApplication)
         .filter(
-            LoanApplication.id == application_id,
+            LoanApplication.unique_id == application_id,
             LoanApplication.deleted_at.is_(None),
         )
         .first()
@@ -119,8 +198,10 @@ def view_application(
     if not application:
         return None
 
-    # Check whether the logged-in employee is allowed
-    # to access this particular application.
+    # =========================================================
+    # RBAC
+    # =========================================================
+
     scoped_query = AccessControl.apply_application_scope(
         query=db.query(LoanApplication),
         db=db,
@@ -137,6 +218,23 @@ def view_application(
 
     if not allowed_application:
         return None
+
+    # =========================================================
+    # LATEST ACTIVE REVERT
+    # =========================================================
+
+    latest_revert = (
+        db.query(RevertedLoan)
+        .filter(
+            RevertedLoan.loan_id == application.id,
+            RevertedLoan.deleted_at.is_(None),
+        )
+        .order_by(
+            RevertedLoan.reverted_at.desc(),
+            RevertedLoan.id.desc(),
+        )
+        .first()
+    )
 
     return {
         "id": application.id,
@@ -167,15 +265,54 @@ def view_application(
         "agent_id": application.agent_id,
         "rm_id": application.rm_id,
 
+        # =====================================================
+        # STATUS
+        # =====================================================
+
         "status": application.status,
+
         "applied_date": application.applied_date,
         "sanction_date": application.sanction_date,
         "rejection_date": application.rejection_date,
         "loggedin_date": application.loggedin_date,
         "docspending_date": application.docspending_date,
+
         "reverted_status": application.reverted_status,
-        "rejection_date": application.rejection_date,
+
+        # =====================================================
+        # NORMAL REJECTION
+        # =====================================================
+
         "rejected_remarks": application.rejected_remarks,
+
+        # =====================================================
+        # REVERT REJECTION
+        # =====================================================
+
+        "reverted_reason": (
+            latest_revert.remarks
+            if latest_revert
+            else None
+        ),
+
+        "reverted_date": (
+            latest_revert.reverted_at
+            if latest_revert
+            else None
+        ),
+
+        "reverted_by_name": (
+            latest_revert.reverted_by_name
+            if latest_revert
+            else None
+        ),
+
+        "reverted_by_role": (
+            latest_revert.reverted_by_role
+            if latest_revert
+            else None
+        ),
+
         "state_id": application.state_id,
         "city_id": application.city_id,
         "language_id": application.language_id,
@@ -218,6 +355,12 @@ def view_application(
         "co_applicants": [],
         "bank_processing": [],
     }
+
+
+# =============================================================
+# UPDATE LOAN TYPE
+# =============================================================
+
 def update_application_loan_type(
     db: Session,
     employee: Employee,
@@ -236,7 +379,10 @@ def update_application_loan_type(
     if not application:
         return None
 
-    # Check RBAC access to this application.
+    # =========================================================
+    # RBAC
+    # =========================================================
+
     scoped_query = AccessControl.apply_application_scope(
         query=db.query(LoanApplication),
         db=db,
@@ -257,7 +403,10 @@ def update_application_loan_type(
             detail="You are not allowed to update this application",
         )
 
-    # Make sure the loan type exists.
+    # =========================================================
+    # LOAN TYPE
+    # =========================================================
+
     from app.models.loan_types import LoanType
 
     loan_type = (
@@ -289,6 +438,12 @@ def update_application_loan_type(
             "updated_at": application.updated_at,
         },
     }
+
+
+# =============================================================
+# UPDATE APPLICATION STATUS
+# =============================================================
+
 def update_application_status(
     db: Session,
     employee: Employee,
@@ -349,7 +504,7 @@ def update_application_status(
     )
 
     # =========================================================
-    # MAP UI STATUS → DATABASE STATUS
+    # STATUS MAPPING
     # =========================================================
 
     status_mapping = {
@@ -390,7 +545,7 @@ def update_application_status(
         )
 
     # =========================================================
-    # VALIDATE REJECTION REMARKS
+    # FLAGS
     # =========================================================
 
     is_rejected = normalized_status in {
@@ -404,16 +559,23 @@ def update_application_status(
         "revert reject",
     }
 
+    # =========================================================
+    # VALIDATE REJECTION REMARKS
+    # =========================================================
+
     if is_rejected or is_revert_rejected:
 
-        if not rejected_remarks or not rejected_remarks.strip():
+        if (
+            not rejected_remarks
+            or not rejected_remarks.strip()
+        ):
             raise HTTPException(
                 status_code=400,
                 detail="Rejection remarks are required",
             )
 
     # =========================================================
-    # UPDATE APPLICATION
+    # UPDATE STATUS
     # =========================================================
 
     application.status = database_status
@@ -424,11 +586,16 @@ def update_application_status(
 
     if is_rejected:
 
-        application.rejection_date = datetime.utcnow().date()
+        application.rejection_date = (
+            datetime.utcnow().date()
+        )
 
         application.rejected_remarks = (
             rejected_remarks.strip()
         )
+
+        # This is a normal rejection.
+        application.reverted_status = None
 
     # =========================================================
     # REVERT REJECTED
@@ -436,10 +603,16 @@ def update_application_status(
 
     elif is_revert_rejected:
 
-        # The application remains REJECTED.
+        # IMPORTANT:
+        # Database status remains REJECTED.
         application.status = LoanStatus.rejected
 
-        # Store the reason on the application itself.
+        # Mark this application as reverted-rejected.
+        application.reverted_status = (
+            "revert_rejected"
+        )
+
+        # Store reason on application.
         application.rejected_remarks = (
             rejected_remarks.strip()
         )
@@ -453,11 +626,22 @@ def update_application_status(
         if revert_rejection_date:
 
             try:
-                reverted_at = datetime.combine(
+
+                if isinstance(
                     revert_rejection_date,
-                    datetime.min.time(),
-                )
-            except ValueError:
+                    datetime,
+                ):
+                    reverted_at = (
+                        revert_rejection_date
+                    )
+
+                else:
+                    reverted_at = datetime.combine(
+                        revert_rejection_date,
+                        datetime.min.time(),
+                    )
+
+            except (ValueError, TypeError):
                 raise HTTPException(
                     status_code=400,
                     detail="Invalid revert rejection date",
@@ -470,13 +654,13 @@ def update_application_status(
         # Employee role
         # -----------------------------------------------------
 
-        role_name = None
+        role_name = ""
 
         if employee.role:
-            role_name = employee.role.name
+            role_name = employee.role.name or ""
 
         # -----------------------------------------------------
-        # Create reverted loan record
+        # Create revert record
         # -----------------------------------------------------
 
         reverted_loan = RevertedLoan(
@@ -490,7 +674,7 @@ def update_application_status(
 
             rejection_type="revert_rejected",
 
-            reverted_by_role=role_name or "",
+            reverted_by_role=role_name,
 
             reverted_at=reverted_at,
         )
@@ -498,12 +682,14 @@ def update_application_status(
         db.add(reverted_loan)
 
     # =========================================================
-    # CLEAR OLD REJECTION DATA WHEN MOVING AWAY
+    # MOVING AWAY FROM REJECTION
     # =========================================================
 
     elif database_status != LoanStatus.rejected:
 
         application.rejected_remarks = None
+
+        application.reverted_status = None
 
     # =========================================================
     # STATUS-SPECIFIC DATES
@@ -512,12 +698,15 @@ def update_application_status(
     today = datetime.utcnow().date()
 
     if database_status == LoanStatus.docspending:
+
         application.docspending_date = today
 
     elif database_status == LoanStatus.sanctioned:
+
         application.sanction_date = today
 
     elif database_status == LoanStatus.login:
+
         application.loggedin_date = today
 
     # =========================================================
@@ -532,14 +721,32 @@ def update_application_status(
         "message": "Application status updated successfully",
         "data": {
             "id": application.id,
-            "status": application.status.value
+
+            "status": (
+                application.status.value
                 if application.status
-                else None,
-            "rejected_remarks": application.rejected_remarks,
-            "rejection_date": application.rejection_date,
-            "docspending_date": application.docspending_date,
-            "sanction_date": application.sanction_date,
-            "loggedin_date": application.loggedin_date,
-            "updated_at": application.updated_at,
+                else None
+            ),
+
+            "reverted_status":
+                application.reverted_status,
+
+            "rejected_remarks":
+                application.rejected_remarks,
+
+            "rejection_date":
+                application.rejection_date,
+
+            "docspending_date":
+                application.docspending_date,
+
+            "sanction_date":
+                application.sanction_date,
+
+            "loggedin_date":
+                application.loggedin_date,
+
+            "updated_at":
+                application.updated_at,
         },
     }

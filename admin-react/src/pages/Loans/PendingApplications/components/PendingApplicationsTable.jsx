@@ -1,6 +1,7 @@
 // admin-react/src/pages/Loans/PendingApplications/components/PendingApplicationsTable.jsx
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
@@ -8,6 +9,7 @@ import BellAlertIcon from '@heroicons/react/24/outline/BellAlertIcon'
 import ChatBubbleLeftRightIcon from '@heroicons/react/24/outline/ChatBubbleLeftRightIcon'
 import EyeIcon from '@heroicons/react/24/outline/EyeIcon'
 import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
+import InformationCircleIcon from '@heroicons/react/24/outline/InformationCircleIcon'
 
 import GlobalChat from '../../../../components/GlobalModels/Loans/GlobalChat'
 
@@ -44,7 +46,9 @@ function PendingApplicationsTable({
 
     selectedStatus,
     setSelectedStatus,
-
+    showRM = false,
+    showAgent = false,
+    showTeamLead = false,
     onClearFilters,
     onLoanTypeChange,
     onStatusChange,
@@ -53,13 +57,43 @@ function PendingApplicationsTable({
     onViewApplication,
     onRefresh,
 }) {
+    // =============================================================
+    // CONSTANTS
+    // =============================================================
+
+    const STATUS_OPTIONS = [
+        "Revert Rejected",
+        "Rejected",
+        "In Process",
+        "Docs Pending",
+        "Sanctioned",
+        "Disbursed",
+    ];
     // =========================================================
     // CHAT
     // =========================================================
 
     const [chatOpen, setChatOpen] = useState(false)
-    const [selectedChatApplication, setSelectedChatApplication] =
-        useState(null)
+
+    const [
+        selectedChatApplication,
+        setSelectedChatApplication,
+    ] = useState(null)
+
+
+    // =========================================================
+    // REJECTION INFO POPUP
+    // =========================================================
+
+    const [
+        selectedInfoApplication,
+        setSelectedInfoApplication,
+    ] = useState(null)
+
+    const [
+        infoPopupPosition,
+        setInfoPopupPosition,
+    ] = useState(null)
 
 
     // =========================================================
@@ -67,11 +101,6 @@ function PendingApplicationsTable({
     // =========================================================
 
     const getLoanTypeName = (application) => {
-        /*
-         * Backend now returns loan_type_id.
-         * Resolve that ID using the common loanTypes list.
-         */
-
         const loanTypeId =
             application.loanTypeId ??
             application.loan_type_id
@@ -85,11 +114,6 @@ function PendingApplicationsTable({
         if (loanType?.name) {
             return loanType.name
         }
-
-        /*
-         * Fallback in case the API already sends
-         * a loan type object or name.
-         */
 
         if (
             application.loanType &&
@@ -130,7 +154,10 @@ function PendingApplicationsTable({
             application.processingAgent &&
             typeof application.processingAgent === 'object'
         ) {
-            return application.processingAgent.name || 'N/A'
+            return (
+                application.processingAgent.name ||
+                'N/A'
+            )
         }
 
         return (
@@ -182,15 +209,11 @@ function PendingApplicationsTable({
             return application.applied_by
         }
 
-        if (
-            application.createdBy?.name
-        ) {
+        if (application.createdBy?.name) {
             return application.createdBy.name
         }
 
-        if (
-            application.created_by?.name
-        ) {
+        if (application.created_by?.name) {
             return application.created_by.name
         }
 
@@ -203,21 +226,30 @@ function PendingApplicationsTable({
             application.referral &&
             typeof application.referral === 'object'
         ) {
-            return application.referral.name || 'N/A'
+            return (
+                application.referral.name ||
+                'N/A'
+            )
         }
 
         if (
             application.referredBy &&
             typeof application.referredBy === 'object'
         ) {
-            return application.referredBy.name || 'N/A'
+            return (
+                application.referredBy.name ||
+                'N/A'
+            )
         }
 
         if (
             application.referrer &&
             typeof application.referrer === 'object'
         ) {
-            return application.referrer.name || 'N/A'
+            return (
+                application.referrer.name ||
+                'N/A'
+            )
         }
 
         return (
@@ -253,6 +285,146 @@ function PendingApplicationsTable({
         null
 
 
+    // =========================================================
+    // REJECTION / REVERT HELPERS
+    // =========================================================
+
+    const getRevertedReason = (application) =>
+        application.reverted_reason ??
+        application.revertedReason ??
+        null
+
+
+    const getRevertedDate = (application) =>
+        application.reverted_date ??
+        application.revertedDate ??
+        null
+
+
+    const getRevertedByName = (application) =>
+        application.reverted_by_name ??
+        application.revertedByName ??
+        application.reverted_by ??
+        application.revertedBy ??
+        null
+
+
+    const getRejectedReason = (application) =>
+        application.rejected_remarks ??
+        application.rejectedRemarks ??
+        application.rejection_reason ??
+        application.rejectionReason ??
+        null
+
+
+    const getRejectedDate = (application) =>
+        application.rejection_date ??
+        application.rejectionDate ??
+        null
+
+
+    const getRejectedByName = (application) =>
+        application.rejected_by_name ??
+        application.rejectedByName ??
+        application.rejected_by ??
+        application.rejectedBy ??
+        null
+
+
+    // =========================================================
+    // STATUS
+    // =========================================================
+
+    const normalizeStatus = (status) =>
+        String(status || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[_-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+
+
+    const getApplicationStatus = (application) => {
+        const status = normalizeStatus(
+            application.status
+        )
+
+        /*
+         * Backend currently stores revert-rejected
+         * applications as rejected, but returns
+         * reverted_reason / reverted_date.
+         *
+         * Therefore we display Revert Rejected
+         * whenever revert information exists.
+         */
+
+        if (
+            status === 'rejected' &&
+            (
+                getRevertedReason(application) ||
+                getRevertedDate(application)
+            )
+        ) {
+            return 'Revert Rejected'
+        }
+
+        switch (status) {
+            case 'inprocess':
+            case 'in process':
+                return 'In Process'
+
+            case 'docspending':
+            case 'docs pending':
+            case 'documents pending':
+                return 'Docs Pending'
+
+            case 'rejected':
+                return 'Rejected'
+
+            case 'revert rejected':
+            case 'reverted rejected':
+                return 'Revert Rejected'
+
+            case 'sanctioned':
+                return 'Sanctioned'
+
+            case 'disbursed':
+                return 'Disbursed'
+
+            case 'login':
+                return 'Login'
+
+            default:
+                return application.status || 'N/A'
+        }
+    }
+
+
+    const isRejectedApplication = (application) => {
+        const status = getApplicationStatus(
+            application
+        )
+
+        return (
+            status === 'Rejected' ||
+            status === 'Revert Rejected'
+        )
+    }
+
+
+    const isRevertRejectedApplication = (
+        application
+    ) => {
+        return (
+            getApplicationStatus(application) ===
+            'Revert Rejected'
+        )
+    }
+
+
+    // =========================================================
+    // AMOUNT
+    // =========================================================
+
     const getAmount = (application) => {
         const amount =
             application.loanAmt ??
@@ -277,9 +449,15 @@ function PendingApplicationsTable({
 
         return Number.isNaN(numericAmount)
             ? String(amount)
-            : `₹${numericAmount.toLocaleString('en-IN')}`
+            : `₹${numericAmount.toLocaleString(
+                'en-IN'
+            )}`
     }
 
+
+    // =========================================================
+    // DATE
+    // =========================================================
 
     const formatDate = (value) => {
         if (!value) {
@@ -293,8 +471,13 @@ function PendingApplicationsTable({
         }
 
         return [
-            String(date.getDate()).padStart(2, '0'),
-            String(date.getMonth() + 1).padStart(2, '0'),
+            String(date.getDate()).padStart(
+                2,
+                '0'
+            ),
+            String(
+                date.getMonth() + 1
+            ).padStart(2, '0'),
             date.getFullYear(),
         ].join('/')
     }
@@ -310,12 +493,13 @@ function PendingApplicationsTable({
         )
 
 
+    // =========================================================
+    // STATUS CLASS
+    // =========================================================
+
     const getStatusClass = (status) => {
-        const normalizedStatus = String(
-            status || ''
-        )
-            .trim()
-            .toLowerCase()
+        const normalizedStatus =
+            normalizeStatus(status)
 
         switch (normalizedStatus) {
             case 'inprocess':
@@ -328,6 +512,7 @@ function PendingApplicationsTable({
 
             case 'docs pending':
             case 'docspending':
+            case 'documents pending':
                 return `
                     text-orange-600
                     border-orange-300
@@ -342,11 +527,11 @@ function PendingApplicationsTable({
                 `
 
             case 'revert rejected':
-            case 'revert_rejected':
+            case 'reverted rejected':
                 return `
-                    text-[#78B300]
-                    border-[#8BCF00]/40
-                    bg-[#8BCF00]/10
+                    text-amber-600
+                    border-amber-300
+                    bg-amber-50
                 `
 
             case 'sanctioned':
@@ -363,6 +548,13 @@ function PendingApplicationsTable({
                     bg-purple-50
                 `
 
+            case 'login':
+                return `
+                    text-cyan-600
+                    border-cyan-300
+                    bg-cyan-50
+                `
+
             default:
                 return `
                     text-base-content/60
@@ -374,6 +566,140 @@ function PendingApplicationsTable({
 
 
     // =========================================================
+    // REJECTION INFO POPUP
+    // =========================================================
+
+    const handleInfoClick = (
+        event,
+        application
+    ) => {
+        event.stopPropagation()
+
+        /*
+         * Clicking the same application's icon
+         * closes the popup.
+         */
+
+        if (
+            selectedInfoApplication?.id ===
+            application.id
+        ) {
+            setSelectedInfoApplication(null)
+            setInfoPopupPosition(null)
+            return
+        }
+
+        const rect =
+            event.currentTarget.getBoundingClientRect()
+
+        const popupWidth = 320
+        const popupHeight = 230
+        const spacing = 10
+        const viewportPadding = 16
+
+        /*
+         * Prefer popup on the right side.
+         */
+
+        let left =
+            rect.right + spacing
+
+        /*
+         * If there isn't enough space,
+         * move it to the left.
+         */
+
+        if (
+            left + popupWidth >
+            window.innerWidth -
+            viewportPadding
+        ) {
+            left =
+                rect.left -
+                popupWidth -
+                spacing
+        }
+
+        if (left < viewportPadding) {
+            left = viewportPadding
+        }
+
+        /*
+         * Vertically align close to the
+         * info icon.
+         */
+
+        let top =
+            rect.top -
+            15
+
+        if (
+            top + popupHeight >
+            window.innerHeight -
+            viewportPadding
+        ) {
+            top =
+                window.innerHeight -
+                popupHeight -
+                viewportPadding
+        }
+
+        if (top < viewportPadding) {
+            top = viewportPadding
+        }
+
+        setSelectedInfoApplication(
+            application
+        )
+
+        setInfoPopupPosition({
+            top,
+            left,
+        })
+    }
+
+
+    // =========================================================
+    // CLOSE INFO POPUP ON SCROLL / RESIZE
+    // =========================================================
+
+    useEffect(() => {
+        if (!selectedInfoApplication) {
+            return
+        }
+
+        const closePopup = () => {
+            setSelectedInfoApplication(null)
+            setInfoPopupPosition(null)
+        }
+
+        window.addEventListener(
+            'scroll',
+            closePopup,
+            true
+        )
+
+        window.addEventListener(
+            'resize',
+            closePopup
+        )
+
+        return () => {
+            window.removeEventListener(
+                'scroll',
+                closePopup,
+                true
+            )
+
+            window.removeEventListener(
+                'resize',
+                closePopup
+            )
+        }
+    }, [selectedInfoApplication])
+
+
+    // =========================================================
     // CLEAR
     // =========================================================
 
@@ -381,13 +707,35 @@ function PendingApplicationsTable({
         onClearFilters?.()
     }
 
+    // =========================================================
+    // SEARCH
+    // =========================================================
 
+    const handleSearchChange = (
+        event
+    ) => {
+
+        setSearch(
+            event.target.value
+        );
+    };
+    // =========================================================
+    // FILTER STATUS OPTIONS
+    // =========================================================
+
+    const statusOptions =
+        statuses?.length
+            ? statuses
+            : STATUS_OPTIONS;
     // =========================================================
     // CHAT
     // =========================================================
 
     const handleOpenChat = (application) => {
-        setSelectedChatApplication(application)
+        setSelectedChatApplication(
+            application
+        )
+
         setChatOpen(true)
 
         onChat?.(application)
@@ -396,6 +744,7 @@ function PendingApplicationsTable({
 
     const handleCloseChat = () => {
         setChatOpen(false)
+
         setSelectedChatApplication(null)
     }
 
@@ -433,7 +782,7 @@ function PendingApplicationsTable({
     // =========================================================
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 p-5">
 
             {/* =================================================
                 FILTERS
@@ -448,6 +797,7 @@ function PendingApplicationsTable({
                     shadow-sm
                 "
             >
+
                 <div
                     className="
                         p-3
@@ -460,7 +810,8 @@ function PendingApplicationsTable({
 
                     {/* SEARCH */}
 
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
+
                         <div className="relative">
 
                             <SearchIcon
@@ -479,12 +830,12 @@ function PendingApplicationsTable({
                             <input
                                 type="text"
                                 value={search}
-                                onChange={(event) =>
-                                    setSearch(
-                                        event.target.value
-                                    )
+                                onChange={
+                                    handleSearchChange
                                 }
-                                placeholder="Search name, loan ID, email or RM, Agent..."
+                                placeholder="
+                                    Search name, loan ID, email or Agent...
+                                "
                                 className="
                                     input
                                     input-bordered
@@ -496,82 +847,153 @@ function PendingApplicationsTable({
                             />
 
                         </div>
+
                     </div>
 
 
                     {/* LOAN TYPE */}
 
-                    <LoanTypeDropdown
-                        value={selectedLoanType}
-                        onChange={setSelectedLoanType}
-                        options={loanTypes}
-                        showLabel={false}
-                        className="w-44 shrink-0"
-                    />
+                    <div className="w-44 shrink-0">
+
+                        <LoanTypeDropdown
+                            label=""
+                            value={
+                                selectedLoanType
+                            }
+                            onChange={
+                                setSelectedLoanType
+                            }
+                            options={
+                                loanTypes
+                            }
+                            allLabel="
+                                All Loan Types
+                            "
+                            placeholder="
+                                All Loan Types
+                            "
+                            searchPlaceholder="
+                                Search loan type
+                            "
+                            emptyMessage="
+                                No loan types found
+                            "
+                        />
+
+                    </div>
 
 
                     {/* RM */}
 
-                    <RmDropdown
-                        label=""
-                        value={selectedRM}
-                        onChange={setSelectedRM}
-                        options={rms}
-                        allLabel="All RMs"
-                        placeholder="All RMs"
-                        searchPlaceholder="Search RM"
-                        emptyMessage="No RMs found"
-                    />
+                    <div className="w-44 shrink-0">
+
+                        {/* RM */}
+
+                        {showRM && (
+                            <div className="w-44 shrink-0">
+
+                                <RmDropdown
+                                    label=""
+                                    value={selectedRM}
+                                    onChange={setSelectedRM}
+                                    options={rms}
+                                    allLabel="All RMs"
+                                    placeholder="All RMs"
+                                    searchPlaceholder="Search RM"
+                                    emptyMessage="No RMs found"
+                                />
+
+                            </div>
+                        )}
+
+                    </div>
 
 
                     {/* TEAM LEAD */}
 
-                    <TeamLeadDropdown
-                        label=""
-                        value={selectedTeamLead}
-                        onChange={setSelectedTeamLead}
-                        options={teamLeads}
-                        allLabel="All Team Leads"
-                        placeholder="All Team Leads"
-                        searchPlaceholder="Search team lead"
-                        emptyMessage="No team leads found"
-                    />
+                    <div className="w-44 shrink-0">
+
+                        {showTeamLead && (
+                            <div className="w-44 shrink-0">
+
+                                <TeamLeadDropdown
+                                    label=""
+                                    value={selectedTeamLead}
+                                    onChange={setSelectedTeamLead}
+                                    options={teamLeads}
+                                    allLabel="All Team Leads"
+                                    placeholder="All Team Leads"
+                                    searchPlaceholder="Search Team Lead"
+                                    emptyMessage="No Team Leads found"
+                                />
+
+                            </div>
+                        )}
+
+                    </div>
 
 
                     {/* AGENT */}
 
-                    <AgentDropdown
-                        value={selectedAgent}
-                        onChange={setSelectedAgent}
-                        options={agents}
-                        showLabel={false}
-                        className="w-48 shrink-0"
-                    />
+                    <div className="w-44 shrink-0">
+
+                        {showAgent && (
+                            <div className="w-44 shrink-0">
+
+                                <AgentDropdown
+                                    label=""
+                                    value={selectedAgent}
+                                    onChange={setSelectedAgent}
+                                    options={agents}
+                                    allLabel="All Agents"
+                                    placeholder="All Agents"
+                                    searchPlaceholder="Search Agent"
+                                    emptyMessage="No Agents found"
+                                />
+
+                            </div>
+                        )}
+
+                    </div>
 
 
                     {/* STATUS */}
 
-                    <StatusDropdown
-                        label=""
-                        value={selectedStatus}
-                        onChange={setSelectedStatus}
-                        options={statuses}
-                        allLabel="All Statuses"
-                        placeholder="All Statuses"
-                        searchPlaceholder="Search status"
-                        emptyMessage="No statuses found"
-                    />
+                    <div className="w-44 shrink-0">
+
+                        <StatusDropdown
+                            label=""
+                            value={
+                                selectedStatus
+                            }
+                            onChange={
+                                setSelectedStatus
+                            }
+                            options={
+                                statusOptions
+                            }
+                            allLabel="All Statuses"
+                            placeholder="All Statuses"
+                            searchPlaceholder="Search status"
+                            emptyMessage="No statuses found"
+                        />
+
+                    </div>
 
 
                     {/* CLEAR */}
 
                     <button
                         type="button"
-                        onClick={handleClear}
+                        onClick={
+                            onClearFilters
+                        }
                         className="
                             btn
                             btn-ghost
                             btn-sm
+                            h-10
+                            min-h-10
                             shrink-0
                         "
                     >
@@ -583,12 +1005,16 @@ function PendingApplicationsTable({
 
                     <button
                         type="button"
-                        onClick={onRefresh}
-                        title="Refresh pending applications"
+                        onClick={
+                            onRefresh
+                        }
+                        title="Refresh applications"
                         className="
                             btn
                             btn-sm
                             btn-square
+                            h-10
+                            min-h-10
                             shrink-0
                             border-[#8BCF00]
                             text-[#78B300]
@@ -596,11 +1022,15 @@ function PendingApplicationsTable({
                             hover:text-white
                         "
                     >
-                        <ArrowPathIcon className="w-4 h-4" />
+                        <ArrowPathIcon
+                            className="w-4 h-4"
+                        />
                     </button>
 
                 </div>
+
             </div>
+
 
 
             {/* =================================================
@@ -637,18 +1067,43 @@ function PendingApplicationsTable({
                     >
 
                         <colgroup>
+
+                            {/* # */}
                             <col className="w-[3%]" />
+
+                            {/* Name */}
                             <col className="w-[10%]" />
-                            <col className="w-[9%]" />
-                            <col className="w-[9%]" />
-                            <col className="w-[9%]" />
+
+                            {/* Phone */}
                             <col className="w-[8%]" />
-                            <col className="w-[9%]" />
-                            <col className="w-[9%]" />
-                            <col className="w-[8%]" />
-                            <col className="w-[9%]" />
+
+                            {/* Loan Type */}
                             <col className="w-[7%]" />
-                            <col className="w-[10%]" />
+
+                            {/* Loan Amount */}
+                            <col className="w-[7%]" />
+
+                            {/* Applied Date */}
+                            <col className="w-[7%]" />
+
+                            {/* Applied By */}
+                            <col className="w-[8%]" />
+
+                            {/* Referral */}
+                            <col className="w-[7%]" />
+
+                            {/* RM */}
+                            <col className="w-[7%]" />
+
+                            {/* Processing Agent */}
+                            <col className="w-[9%]" />
+
+                            {/* Status */}
+                            <col className="w-[11%]" />
+
+                            {/* Actions */}
+                            <col className="w-[7%]" />
+
                         </colgroup>
 
 
@@ -687,6 +1142,7 @@ function PendingApplicationsTable({
                                             text-[11px]
                                             font-semibold
                                             text-base-content/70
+                                            align-middle
                                         "
                                     >
                                         {heading}
@@ -722,7 +1178,10 @@ function PendingApplicationsTable({
                             ) : (
 
                                 applications.map(
-                                    (application, index) => {
+                                    (
+                                        application,
+                                        index
+                                    ) => {
 
                                         const loanTypeName =
                                             getLoanTypeName(
@@ -759,6 +1218,11 @@ function PendingApplicationsTable({
                                                 application
                                             )
 
+                                        const displayStatus =
+                                            getApplicationStatus(
+                                                application
+                                            )
+
                                         return (
                                             <tr
                                                 key={
@@ -776,7 +1240,7 @@ function PendingApplicationsTable({
 
                                                 {/* # */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="px-3 py-4 align-middle">
                                                     <Cell
                                                         className="
                                                             text-sm
@@ -790,7 +1254,7 @@ function PendingApplicationsTable({
 
                                                 {/* NAME */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="px-3 py-4 align-middle">
                                                     <Cell
                                                         title={
                                                             application.name
@@ -810,7 +1274,7 @@ function PendingApplicationsTable({
 
                                                 {/* PHONE */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="px-3 py-4 align-middle">
 
                                                     <div
                                                         className="
@@ -840,14 +1304,12 @@ function PendingApplicationsTable({
                                                         {application.phone && (
                                                             <a
                                                                 href={`tel:${application.phone}`}
-                                                                title={`Call ${
-                                                                    application.name ||
+                                                                title={`Call ${application.name ||
                                                                     application.phone
-                                                                }`}
-                                                                aria-label={`Call ${
-                                                                    application.name ||
+                                                                    }`}
+                                                                aria-label={`Call ${application.name ||
                                                                     application.phone
-                                                                }`}
+                                                                    }`}
                                                                 className="
                                                                     btn
                                                                     btn-ghost
@@ -875,7 +1337,7 @@ function PendingApplicationsTable({
 
                                                 {/* LOAN TYPE */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="px-3 py-4 align-middle">
 
                                                     <button
                                                         type="button"
@@ -904,7 +1366,9 @@ function PendingApplicationsTable({
                                                             hover:bg-[#8BCF00]/20
                                                         "
                                                     >
-                                                        {loanTypeName}
+                                                        {
+                                                            loanTypeName
+                                                        }
                                                     </button>
 
                                                 </td>
@@ -912,16 +1376,20 @@ function PendingApplicationsTable({
 
                                                 {/* LOAN AMOUNT */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="px-3 py-4 align-middle">
 
                                                     <Cell
-                                                        title={amount}
+                                                        title={
+                                                            amount
+                                                        }
                                                         className="
                                                             text-sm
                                                             font-medium
                                                         "
                                                     >
-                                                        {amount}
+                                                        {
+                                                            amount
+                                                        }
                                                     </Cell>
 
                                                 </td>
@@ -929,13 +1397,17 @@ function PendingApplicationsTable({
 
                                                 {/* APPLIED DATE */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="px-3 py-4 align-middle">
 
                                                     <Cell
-                                                        title={appliedDate}
+                                                        title={
+                                                            appliedDate
+                                                        }
                                                         className="text-sm"
                                                     >
-                                                        {appliedDate}
+                                                        {
+                                                            appliedDate
+                                                        }
                                                     </Cell>
 
                                                 </td>
@@ -943,13 +1415,17 @@ function PendingApplicationsTable({
 
                                                 {/* APPLIED BY */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="px-3 py-4 align-middle">
 
                                                     <Cell
-                                                        title={appliedBy}
+                                                        title={
+                                                            appliedBy
+                                                        }
                                                         className="text-sm"
                                                     >
-                                                        {appliedBy}
+                                                        {
+                                                            appliedBy
+                                                        }
                                                     </Cell>
 
                                                 </td>
@@ -957,7 +1433,7 @@ function PendingApplicationsTable({
 
                                                 {/* REFERRAL */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="px-3 py-4 align-middle">
 
                                                     <Cell
                                                         title={
@@ -965,7 +1441,9 @@ function PendingApplicationsTable({
                                                         }
                                                         className="text-sm"
                                                     >
-                                                        {referralName}
+                                                        {
+                                                            referralName
+                                                        }
                                                     </Cell>
 
                                                 </td>
@@ -973,13 +1451,17 @@ function PendingApplicationsTable({
 
                                                 {/* RM */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="px-3 py-4 align-middle">
 
                                                     <Cell
-                                                        title={rmName}
+                                                        title={
+                                                            rmName
+                                                        }
                                                         className="text-sm"
                                                     >
-                                                        {rmName}
+                                                        {
+                                                            rmName
+                                                        }
                                                     </Cell>
 
                                                 </td>
@@ -987,7 +1469,7 @@ function PendingApplicationsTable({
 
                                                 {/* PROCESSING AGENT */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="px-3 py-4 align-middle">
 
                                                     <Cell
                                                         title={
@@ -995,7 +1477,9 @@ function PendingApplicationsTable({
                                                         }
                                                         className="text-sm"
                                                     >
-                                                        {agentName}
+                                                        {
+                                                            agentName
+                                                        }
                                                     </Cell>
 
                                                 </td>
@@ -1003,48 +1487,106 @@ function PendingApplicationsTable({
 
                                                 {/* STATUS */}
 
-                                                <td className="px-3 py-4">
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                    align-middle
+                                                ">
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            onStatusChange?.(
-                                                                application
-                                                            )
-                                                        }
-                                                        title={
-                                                            application.status ||
-                                                            'N/A'
-                                                        }
-                                                        className={`
-                                                            max-w-full
-                                                            inline-flex
+                                                    <div
+                                                        className="
+                                                            flex
                                                             items-center
-                                                            px-2.5
-                                                            py-1
-                                                            rounded-full
-                                                            border
-                                                            text-xs
-                                                            font-medium
-                                                            truncate
-                                                            hover:opacity-80
-                                                            ${getStatusClass(
-                                                                application.status
-                                                            )}
-                                                        `}
+                                                            gap-1.5
+                                                            min-w-0
+                                                        "
                                                     >
-                                                        {
-                                                            application.status ||
-                                                            'N/A'
-                                                        }
-                                                    </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                onStatusChange?.(
+                                                                    application
+                                                                )
+                                                            }
+                                                            title={
+                                                                displayStatus
+                                                            }
+                                                            className={`
+                                                                min-w-0
+                                                                max-w-full
+                                                                inline-flex
+                                                                items-center
+                                                                justify-center
+                                                                px-2.5
+                                                                py-1
+                                                                rounded-full
+                                                                border
+                                                                text-xs
+                                                                font-medium
+                                                                truncate
+                                                                hover:opacity-80
+                                                                ${getStatusClass(
+                                                                displayStatus
+                                                            )}
+                                                            `}
+                                                        >
+                                                            <span className="
+                                                                truncate
+                                                            ">
+                                                                {
+                                                                    displayStatus
+                                                                }
+                                                            </span>
+                                                        </button>
+
+
+                                                        {/* INFO ICON */}
+
+                                                        {isRejectedApplication(
+                                                            application
+                                                        ) && (
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(
+                                                                        event
+                                                                    ) =>
+                                                                        handleInfoClick(
+                                                                            event,
+                                                                            application
+                                                                        )
+                                                                    }
+                                                                    title="View rejection details"
+                                                                    aria-label="View rejection details"
+                                                                    className="
+                                                                    shrink-0
+                                                                    flex
+                                                                    items-center
+                                                                    justify-center
+                                                                    text-base-content/45
+                                                                    hover:text-base-content
+                                                                    transition-colors
+                                                                "
+                                                                >
+                                                                    <InformationCircleIcon
+                                                                        className="
+                                                                        h-4
+                                                                        w-4
+                                                                    "
+                                                                    />
+                                                                </button>
+
+                                                            )}
+
+                                                    </div>
 
                                                 </td>
 
 
                                                 {/* ACTIONS */}
 
-                                                <td className="px-2 py-4">
+                                                <td className="px-2 py-4 align-middle">
 
                                                     <div
                                                         className="
@@ -1180,6 +1722,173 @@ function PendingApplicationsTable({
                     }
                 />
             )}
+
+
+            {/* =================================================
+                REJECTION DETAILS POPUP
+            ================================================= */}
+
+            {selectedInfoApplication &&
+                infoPopupPosition &&
+                createPortal(
+
+                    <div
+                        className="
+                            fixed
+                            z-[9999]
+                            w-80
+                            rounded-xl
+                            border
+                            border-base-300
+                            bg-base-100
+                            p-4
+                            shadow-xl
+                        "
+                        style={{
+                            top:
+                                infoPopupPosition.top,
+                            left:
+                                infoPopupPosition.left,
+                        }}
+                    >
+
+                        {/* TITLE */}
+
+                        <div
+                            className="
+                                text-sm
+                                font-semibold
+                                text-base-content
+                            "
+                        >
+                            Rejection Details
+                        </div>
+
+
+                        {/* TYPE */}
+
+                        <div
+                            className="
+                                mt-3
+                                text-sm
+                                text-base-content
+                            "
+                        >
+                            <span className="font-semibold">
+                                Type:
+                            </span>{' '}
+
+                            {
+                                isRevertRejectedApplication(
+                                    selectedInfoApplication
+                                )
+                                    ? 'Reverted'
+                                    : 'Rejected'
+                            }
+                        </div>
+
+
+                        {/* BY */}
+
+                        <div
+                            className="
+                                mt-1
+                                text-sm
+                                text-base-content
+                            "
+                        >
+                            <span className="font-semibold">
+                                By:
+                            </span>{' '}
+
+                            {
+                                isRevertRejectedApplication(
+                                    selectedInfoApplication
+                                )
+                                    ? (
+                                        getRevertedByName(
+                                            selectedInfoApplication
+                                        ) ||
+                                        '—'
+                                    )
+                                    : (
+                                        getRejectedByName(
+                                            selectedInfoApplication
+                                        ) ||
+                                        '—'
+                                    )
+                            }
+                        </div>
+
+
+                        {/* DATE */}
+
+                        <div
+                            className="
+                                mt-1
+                                text-sm
+                                text-base-content
+                            "
+                        >
+                            <span className="font-semibold">
+                                Date:
+                            </span>{' '}
+
+                            {
+                                formatDate(
+                                    isRevertRejectedApplication(
+                                        selectedInfoApplication
+                                    )
+                                        ? getRevertedDate(
+                                            selectedInfoApplication
+                                        )
+                                        : getRejectedDate(
+                                            selectedInfoApplication
+                                        )
+                                )
+                            }
+                        </div>
+
+
+                        {/* REMARKS */}
+
+                        <div
+                            className="
+                                mt-3
+                                text-sm
+                                leading-5
+                                text-base-content
+                            "
+                        >
+                            <span className="font-semibold">
+                                Remarks:
+                            </span>{' '}
+
+                            <span className="break-words">
+                                {
+                                    isRevertRejectedApplication(
+                                        selectedInfoApplication
+                                    )
+                                        ? (
+                                            getRevertedReason(
+                                                selectedInfoApplication
+                                            ) ||
+                                            '—'
+                                        )
+                                        : (
+                                            getRejectedReason(
+                                                selectedInfoApplication
+                                            ) ||
+                                            '—'
+                                        )
+                                }
+                            </span>
+                        </div>
+
+                    </div>,
+
+                    document.body
+                )}
 
         </div>
     )

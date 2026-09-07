@@ -54,23 +54,56 @@ const normalizeStatusResponse = (response, fallbackMessage) => {
             fallbackMessage,
     }
 }
-
-export const getCurrentUser = () => {
+export const getStoredUser = () => {
     return readJson(
         localStorage.getItem(AUTH_USER_KEY)
     )
 }
+export const getCurrentUser = async () => {
+    try {
+        const response = await authClient.get('/auth/me')
 
+        const user = response.data?.data
+
+        if (user) {
+            localStorage.setItem(
+                AUTH_USER_KEY,
+                JSON.stringify(user)
+            )
+        }
+
+        return user
+
+    } catch (error) {
+
+        if (error.response?.status !== 401) {
+            throw error
+        }
+
+        const refreshed = await refreshAccessToken()
+
+        if (!refreshed) {
+            throw error
+        }
+
+        const response = await authClient.get('/auth/me')
+
+        const user = response.data?.data
+
+        if (user) {
+            localStorage.setItem(
+                AUTH_USER_KEY,
+                JSON.stringify(user)
+            )
+        }
+
+        return user
+    }
+}
 export const getActiveContext = (
-    user = getCurrentUser()
+    user = getStoredUser()
 ) => {
-    if (!user) return null
-
-    const contexts = Array.isArray(user.contexts)
-        ? user.contexts
-        : []
-
-    if (contexts.length === 0) {
+    if (!user?.contexts?.length) {
         return null
     }
 
@@ -78,24 +111,31 @@ export const getActiveContext = (
         localStorage.getItem('active_context_id')
 
     if (storedContextId) {
-        const storedContext = contexts.find(
-            (context) =>
-                String(context.id) ===
-                String(storedContextId)
-        )
+        const activeContext =
+            user.contexts.find(
+                context =>
+                    String(context.id) ===
+                    String(storedContextId)
+            )
 
-        if (storedContext) {
-            return storedContext
+        if (activeContext) {
+            return activeContext
         }
     }
 
-    return (
-        contexts.find(
-            (context) => context.is_default
-        ) || contexts[0]
-    )
-}
+    // Fall back to the user's default context
+    const defaultContext =
+        user.contexts.find(
+            context => context.is_default
+        )
 
+    if (defaultContext) {
+        return defaultContext
+    }
+
+    // Final fallback
+    return user.contexts[0]
+}
 export const setActiveContext = (context) => {
     if (!context?.id) return
 
@@ -113,11 +153,9 @@ export const clearAuthSession = () => {
 
     notifyAuthChanged()
 }
-
 export const isAuthenticated = () => {
-    return Boolean(getCurrentUser())
+    return Boolean(getStoredUser())
 }
-
 export const requestLoginOtp = async (payload) => {
     const response = await authClient.post(
         AUTH_ENDPOINTS.requestOtp,
