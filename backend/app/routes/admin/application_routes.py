@@ -1,165 +1,69 @@
 # backend/app/routes/application_routes.py
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-
+from app.dependency.get_access_control_dependency import check_permission
 from app.config.database import get_db
 from app.core.security import get_current_employee
-
-from app.controllers.contexts_controller import (
-    list_contexts,
-    retrieve_context,
-    create_new_context,
-    update_existing_context,
-    delete_existing_context,
+from app.controllers.Loans.application_controller import (
+    get_applications,
+    view_application,
+    create_application,
 )
 
-from app.schemas.contexts import (
-    ContextCreate,
-    ContextResponse,
-    ContextUpdate,
-)
-
+from app.schemas.application_schema import LoanApplicationCreateRequest
 from app.models.employees import Employee
 
-
 router = APIRouter(
-    prefix="/contexts",
-    tags=["Contexts"],
+    prefix="/applications",
+    tags=["Applications"],
 )
 
 
-# ============================================================================
-# GET /contexts
-# ============================================================================
-
-@router.get(
-    "",
-    response_model=list[ContextResponse],
-    status_code=status.HTTP_200_OK,
-)
-def get_all_contexts(
+@router.get("")
+def get_applications_route(
+    context_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
-    """
-    Get all roles/contexts.
-
-    Authentication:
-        Required.
-
-    The authenticated employee is resolved through
-    get_current_employee before the controller is called.
-    """
-
-    return list_contexts(
+    return get_applications(
         db=db,
-    )
-
-
-# ============================================================================
-# GET /contexts/{context_id}
-# ============================================================================
-
-@router.get(
-    "/{context_id}",
-    response_model=ContextResponse,
-    status_code=status.HTTP_200_OK,
-)
-def get_context(
-    context_id: int,
-    db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_employee),
-):
-    """
-    Get one role/context by ID.
-
-    Authentication:
-        Required.
-    """
-
-    return retrieve_context(
-        db=db,
+        employee=employee,
         context_id=context_id,
     )
 
 
-# ============================================================================
-# POST /contexts
-# ============================================================================
-
-@router.post(
-    "",
-    response_model=ContextResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_context(
-    context_data: ContextCreate,
+@router.get("/{application_id}")
+def view_application_route(
+    application_id: str,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
-    """
-    Create a new role/context.
-
-    Authentication:
-        Required.
-    """
-
-    return create_new_context(
+    application = view_application(
         db=db,
-        context_data=context_data,
+        employee=employee,
+        application_id=application_id,
     )
 
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
 
-# ============================================================================
-# PATCH /contexts/{context_id}
-# ============================================================================
+    return {
+        "success": True,
+        "data": application,
+    }
 
-@router.patch(
-    "/{context_id}",
-    response_model=ContextResponse,
-    status_code=status.HTTP_200_OK,
-)
-def update_context(
-    context_id: int,
-    context_data: ContextUpdate,
+
+@router.post("/create")
+def create_loan_application(
+    payload: LoanApplicationCreateRequest,
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_employee),
+    employee=Depends(check_permission("loans:create")),
 ):
-    """
-    Partially update a role/context.
-
-    Authentication:
-        Required.
-    """
-
-    return update_existing_context(
+    return create_application(
         db=db,
-        context_id=context_id,
-        context_data=context_data,
-    )
-
-
-# ============================================================================
-# DELETE /contexts/{context_id}
-# ============================================================================
-
-@router.delete(
-    "/{context_id}",
-    status_code=status.HTTP_200_OK,
-)
-def delete_context(
-    context_id: int,
-    db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_employee),
-):
-    """
-    Delete a role/context.
-
-    Authentication:
-        Required.
-    """
-
-    return delete_existing_context(
-        db=db,
-        context_id=context_id,
+        employee=employee,
+        payload=payload,
     )
