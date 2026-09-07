@@ -49,80 +49,39 @@ export const getApplicationFilters = async (
     }
 }
 
+export const createLoanApplication = async (data) => {
+  if (!data) {
+    throw new Error('Application data is required.')
+  }
 
-// =============================================================
-// CREATE LOAN APPLICATION
-// =============================================================
+  try {
+    const response = await apiClient.post(
+      '/applications/create',
+      data
+    )
 
-export const createLoanApplication = async (
-    data
-) => {
+    return response.data
+  } catch (error) {
+    console.error(
+      'CREATE APPLICATION ERROR RESPONSE:',
+      error.response?.data
+    )
 
-    if (!data) {
+    const detail = error.response?.data?.detail
 
-        throw new Error(
-            'Application data is required.'
-        )
+    let message = error.response?.data?.message
 
+    if (Array.isArray(detail)) {
+      message = detail
+        .map((item) => item?.msg || 'Validation error')
+        .join(', ')
+    } else if (typeof detail === 'string') {
+      message = detail
     }
 
-    try {
-
-        const response =
-            await apiClient.post(
-                '/applications/create',
-                data
-            )
-
-        return response.data
-
-    } catch (error) {
-
-        console.error(
-            'Failed to create loan application:',
-            error
-        )
-
-        const detail =
-            error.response?.data?.detail
-
-        let message =
-            error.response?.data?.message
-
-
-        // -------------------------------------------------------
-        // FastAPI validation error
-        // -------------------------------------------------------
-
-        if (Array.isArray(detail)) {
-
-            message =
-                detail
-                    .map(
-                        (item) =>
-                            item?.msg ||
-                            'Validation error'
-                    )
-                    .join(', ')
-
-        }
-
-        // -------------------------------------------------------
-        // FastAPI HTTPException
-        // -------------------------------------------------------
-
-        else if (
-            typeof detail === 'string'
-        ) {
-
-            message = detail
-
-        }
-
-
-        throw new Error(
-            message ||
-            'Failed to create loan application.'
-        )
-    }
+    throw new Error(
+      message ||
+      'Failed to create loan application.'
+    )
+  }
 }

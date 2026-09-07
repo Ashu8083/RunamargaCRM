@@ -1,45 +1,41 @@
-// admin-react/src/pages/Loans/CreateApplication/components/ExistingLoan/API.js
-
 import apiClient from '../../../../../app/apiClient'
 
-// =============================================================
-// REQUEST DUPLICATE APPLICATION APPROVAL
-// =============================================================
-
 export const submitExistingLoan = async (data) => {
+    if (!data?.loan_application_id) {
+        throw new Error(
+            'Existing application ID is required.'
+        )
+    }
 
-  if (!data) {
-    throw new Error(
-      'Application data is required.'
-    )
-  }
+    try {
+        const response = await apiClient.post(
+            '/duplicate-approvals',
+            data
+        )
 
-  if (!data.loan_application_id) {
-    throw new Error(
-      'Existing application ID is required.'
-    )
-  }
+        return response.data
+    } catch (error) {
+        const detail =
+            error.response?.data?.detail
 
-  try {
+        let message =
+            error.response?.data?.message
 
-    const response = await apiClient.post(
-      '/duplicate-approvals',
-      data
-    )
+        if (Array.isArray(detail)) {
+            message = detail
+                .map(
+                    (item) =>
+                        item?.msg ||
+                        'Validation error'
+                )
+                .join(', ')
+        } else if (typeof detail === 'string') {
+            message = detail
+        }
 
-    return response.data
-
-  } catch (error) {
-
-    console.error(
-      'Duplicate approval request failed:',
-      error
-    )
-
-    throw new Error(
-      error.response?.data?.detail ||
-      error.response?.data?.message ||
-      'Unable to request approval.'
-    )
-  }
+        throw new Error(
+            message ||
+            'Unable to submit approval request.'
+        )
+    }
 }

@@ -104,7 +104,7 @@ function ApplicationForm({
   const [selectedLoanType, setSelectedLoanType] =
     useState(null)
 
- 
+
   // ===========================================================
   // RM OPTIONS
   // ===========================================================
@@ -127,7 +127,7 @@ function ApplicationForm({
       title: '',
       message: '',
     })
-  
+
   // ===========================================================
   // LOAD RM OPTIONS
   // ===========================================================
@@ -1692,7 +1692,7 @@ function ApplicationForm({
                         handleCityChange
                       }
 
-                 
+
 
 
                       stateLabel=""
@@ -2403,7 +2403,18 @@ function ApplicationForm({
         </form>
 
       </div>
-
+      <FeedbackModal
+        open={feedback.open}
+        type={feedback.type}
+        title={feedback.title}
+        message={feedback.message}
+        onClose={() => {
+          setFeedback((previous) => ({
+            ...previous,
+            open: false,
+          }))
+        }}
+      />
     </div>
   )
 }
