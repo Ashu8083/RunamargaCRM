@@ -1,8 +1,13 @@
+// admin-react\src\components\GlobalModels\Filters\SearchableFilterDropdown.jsx
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 
+
+// =============================================================
+// DEFAULT OPTION VALUE
+// =============================================================
 
 const getDefaultOptionValue = (option) =>
     option?.value ??
@@ -13,6 +18,10 @@ const getDefaultOptionValue = (option) =>
     ''
 
 
+// =============================================================
+// DEFAULT OPTION LABEL
+// =============================================================
+
 const getDefaultOptionLabel = (option) =>
     option?.label ??
     option?.name ??
@@ -20,6 +29,10 @@ const getDefaultOptionLabel = (option) =>
     option?.title ??
     String(getDefaultOptionValue(option) || '')
 
+
+// =============================================================
+// NORMALIZE OPTION
+// =============================================================
 
 function normalizeOption(
     option,
@@ -37,6 +50,7 @@ function normalizeOption(
             key: `${String(option)}-${index}`,
             value: option,
             label: String(option),
+            originalOption: option,
         }
 
     }
@@ -58,10 +72,15 @@ function normalizeOption(
         key: `${String(value || label)}-${index}`,
         value,
         label: String(label || value || ''),
+        originalOption: option,
     }
 
 }
 
+
+// =============================================================
+// COMPONENT
+// =============================================================
 
 function SearchableFilterDropdown({
     label,
@@ -90,6 +109,10 @@ function SearchableFilterDropdown({
 
     const dropdownRef = useRef(null)
 
+
+    // =========================================================
+    // NORMALIZED OPTIONS
+    // =========================================================
 
     const normalizedOptions = useMemo(() => {
 
@@ -136,6 +159,10 @@ function SearchableFilterDropdown({
     ])
 
 
+    // =========================================================
+    // CLOSE ON OUTSIDE CLICK
+    // =========================================================
+
     useEffect(() => {
 
         const handleClickOutside = (event) => {
@@ -171,11 +198,19 @@ function SearchableFilterDropdown({
     }, [])
 
 
+    // =========================================================
+    // SELECTED OPTION
+    // =========================================================
+
     const selectedOption = normalizedOptions.find(
         (option) =>
             String(option.value) === String(value)
     )
 
+
+    // =========================================================
+    // DISPLAY VALUE
+    // =========================================================
 
     const displayValue =
         selectedOption?.label ||
@@ -185,6 +220,10 @@ function SearchableFilterDropdown({
                 : placeholder || allLabel
         )
 
+
+    // =========================================================
+    // FILTER OPTIONS
+    // =========================================================
 
     const filteredOptions = useMemo(() => {
 
@@ -212,9 +251,24 @@ function SearchableFilterDropdown({
     ])
 
 
-    const handleSelect = (selectedValue) => {
+    // =========================================================
+    // HANDLE SELECT
+    // =========================================================
 
-        onChange?.(selectedValue)
+    const handleSelect = (option) => {
+
+        if (!option) {
+
+            onChange?.('', null)
+
+        } else {
+
+            onChange?.(
+                option.value,
+                option.originalOption
+            )
+
+        }
 
         setOpen(false)
         setSearch('')
@@ -222,12 +276,18 @@ function SearchableFilterDropdown({
     }
 
 
+    // =========================================================
+    // COMPONENT
+    // =========================================================
+
     return (
 
         <div
             ref={dropdownRef}
             className={`relative ${className}`}
         >
+
+            {/* LABEL */}
 
             {showLabel && (
 
@@ -243,6 +303,8 @@ function SearchableFilterDropdown({
 
             )}
 
+
+            {/* BUTTON */}
 
             <button
                 type="button"
@@ -297,6 +359,8 @@ function SearchableFilterDropdown({
             </button>
 
 
+            {/* DROPDOWN */}
+
             {open && (
 
                 <div className={`
@@ -313,6 +377,8 @@ function SearchableFilterDropdown({
                     shadow-lg
                     ${menuClassName}
                 `}>
+
+                    {/* SEARCH */}
 
                     <div className="
                         border-b
@@ -361,17 +427,21 @@ function SearchableFilterDropdown({
                     </div>
 
 
+                    {/* OPTIONS */}
+
                     <div className="
                         max-h-56
                         overflow-y-auto
                         p-1
                     ">
 
+                        {/* ALL */}
+
                         {includeAllOption && (
 
                             <button
                                 type="button"
-                                onClick={() => handleSelect('')}
+                                onClick={() => handleSelect(null)}
                                 className={
                                     !value
                                         ? 'w-full rounded-md bg-[#8BCF00]/10 px-3 py-2 text-left text-sm font-medium text-[#78B300]'
@@ -383,6 +453,8 @@ function SearchableFilterDropdown({
 
                         )}
 
+
+                        {/* LOADING */}
 
                         {loading && (
 
@@ -399,6 +471,8 @@ function SearchableFilterDropdown({
                         )}
 
 
+                        {/* OPTIONS */}
+
                         {!loading &&
                             filteredOptions.map((option) => (
 
@@ -406,7 +480,7 @@ function SearchableFilterDropdown({
                                     key={option.key}
                                     type="button"
                                     onClick={() =>
-                                        handleSelect(option.value)
+                                        handleSelect(option)
                                     }
                                     className={
                                         String(value) === String(option.value)
@@ -419,6 +493,8 @@ function SearchableFilterDropdown({
 
                             ))}
 
+
+                        {/* EMPTY */}
 
                         {!loading &&
                             filteredOptions.length === 0 && (

@@ -1,181 +1,77 @@
 // admin-react/src/pages/Loans/CreateApplication/components/ApplicationForm/API.js
 
+import { API_BASE_URL } from '../../../../../config/url'
 
 // =============================================================
 // CREATE LOAN APPLICATION
 // =============================================================
 //
-// API used when the user initially submits the application form.
+// This API receives the complete application payload.
 //
-// Possible backend responses:
+// Common fields:
+//   rm_id
+//   state_id
+//   city_id
+//   loan_type_id
+//   name
+//   phone
+//   loan_amount
+//   credit_score
+//   reference_name
+//   loan_purpose
+//   remarks
+//   gender
 //
-// 1. New application
-//    {
-//      success: true,
-//      existing_loan: false,
-//      data: {...}
-//    }
+// Dynamic loan-type fields are also accepted.
+// Example:
+//   business_name
 //
-// 2. Existing loan found
-//    {
-//      success: true,
-//      existing_loan: true,
-//      data: {
-//        ...existing application details
-//      }
-//    }
-//
-// The ApplicationForm will pass the complete original form
-// payload. If an existing loan is found, the response is passed
-// to CreateApplication/index.jsx, which will open ExistingLoan.
+// Future loan-type-specific fields do NOT need any changes here.
+// They are forwarded as part of the payload received from
+// ApplicationForm/index.jsx.
 // =============================================================
 
-export const createLoanApplication = (data) => {
+export const createLoanApplication = async (data) => {
+  if (!data) {
+    throw new Error('Application data is required.')
+  }
 
-    return new Promise((resolve, reject) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/loan-applications`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      }
+    )
 
-        setTimeout(() => {
+    let responseData = null
 
-            try {
+    try {
+      responseData = await response.json()
+    } catch {
+      responseData = null
+    }
 
-                // -------------------------------------------------
-                // Basic validation
-                // -------------------------------------------------
+    if (!response.ok) {
+      throw new Error(
+        responseData?.detail ||
+          responseData?.message ||
+          `Failed to create loan application (${response.status})`
+      )
+    }
 
-                if (!data) {
+    return responseData
+  } catch (error) {
+    console.error(
+      'Failed to create loan application:',
+      error
+    )
 
-                    throw new Error(
-                        'Application data is required.'
-                    )
-
-                }
-
-
-                // -------------------------------------------------
-                // Existing Loan Check
-                // -------------------------------------------------
-                //
-                // Replace this mock condition with the actual
-                // backend response.
-                //
-                // Example real backend response:
-                //
-                // {
-                //     success: true,
-                //     existing_loan: true,
-                //     data: {...}
-                // }
-                //
-                // For now, keep this false so normal application
-                // creation continues to work.
-                //
-                // You can temporarily change this to true while
-                // testing the ExistingLoan component.
-                // -------------------------------------------------
-
-                const existingLoan = false
-
-
-                // -------------------------------------------------
-                // Existing Loan Response
-                // -------------------------------------------------
-
-                if (existingLoan) {
-
-                    const response = {
-
-                        success: true,
-
-                        existing_loan: true,
-
-                        message:
-                            'An existing loan application was found.',
-
-                        data: {
-
-                            application_id:
-                                `APP-${Date.now()}`,
-
-                            applicant_name:
-                                data.name,
-
-                            phone:
-                                data.phone,
-
-                            loan_type:
-                                data.loan_type_id,
-
-                            loan_amount:
-                                data.loan_amount,
-
-                            credit_score:
-                                data.credit_score,
-
-                            rm_name:
-                                'Rajesh Kumar',
-
-                            agent_name:
-                                'Manoj Kumar',
-
-                            applied_by:
-                                'Rajesh Kumar',
-
-                            applied_at:
-                                new Date().toISOString(),
-
-                            status:
-                                'IN_PROCESS',
-
-                        },
-
-                    }
-
-
-                    resolve(response)
-
-                    return
-
-                }
-
-
-                // -------------------------------------------------
-                // New Application Response
-                // -------------------------------------------------
-
-                const response = {
-
-                    success: true,
-
-                    existing_loan: false,
-
-                    message:
-                        'Loan application created successfully.',
-
-                    data: {
-
-                        id:
-                            `LA-${Date.now()}`,
-
-                        ...data,
-
-                        created_at:
-                            new Date().toISOString(),
-
-                    },
-
-                }
-
-
-                resolve(response)
-
-            } catch (error) {
-
-                reject(error)
-
-            }
-
-        }, 1200)
-
-    })
-
+    throw error
+  }
 }
