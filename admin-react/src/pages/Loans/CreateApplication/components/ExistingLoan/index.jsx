@@ -291,7 +291,17 @@ function ExistingLoan({
   const [submitting, setSubmitting] = useState(false)
 
   const [notification, setNotification] = useState(null)
+  // ===========================================================
+  // FEEDBACK MODAL
+  // ===========================================================
 
+  const [feedback, setFeedback] =
+    useState({
+      open: false,
+      type: 'success',
+      title: '',
+      message: '',
+    })
   // ===========================================================
   // DATA
   // ===========================================================
@@ -369,7 +379,56 @@ function ExistingLoan({
       existingLoanData?.applicationStatus
     )
   )
+  const handleRequestApproval = async () => {
+    const existingApplicationId =
+      existingLoanData?.application_id ||
+      existingLoanData?.applicationId ||
+      existingLoanData?.id
 
+    if (!existingApplicationId) {
+      setFeedback({
+        open: true,
+        type: 'error',
+        title: 'Unable to Request Approval',
+        message:
+          'Existing application ID is missing.',
+      })
+
+      return
+    }
+
+    setSubmitting(true)
+
+    try {
+      const response = await submitExistingLoan({
+        loan_application_id:
+          Number(existingApplicationId),
+      })
+
+      setFeedback({
+        open: true,
+        type: 'success',
+        title: 'Approval Requested',
+        message:
+          response?.message ||
+          'Approval request submitted successfully.',
+      })
+
+      // Optional: close existing-loan popup after success
+      // after user closes FeedbackModal / according to your UX
+    } catch (error) {
+      setFeedback({
+        open: true,
+        type: 'error',
+        title: 'Unable to Request Approval',
+        message:
+          error?.message ||
+          'Unable to submit the approval request.',
+      })
+    } finally {
+      setSubmitting(false)
+    }
+  }
   // ===========================================================
   // HANDLE CANCEL
   // ===========================================================
@@ -1005,65 +1064,28 @@ function ExistingLoan({
 
           </button>
 
-          {/* Submit Application */}
-
           <button
             type="button"
-            onClick={handleSubmit}
+            onClick={handleRequestApproval}
             disabled={submitting}
             className="
-              btn
-              btn-sm
-              h-10
-              min-h-10
-              border-[#8BCF00]
-              bg-[#8BCF00]
-              px-5
-              text-white
-              hover:border-[#6FA800]
-              hover:bg-[#6FA800]
-              disabled:cursor-not-allowed
-              disabled:border-[#8BCF00]
-              disabled:bg-[#8BCF00]
-              disabled:opacity-60
-            "
+        btn
+        btn-sm
+        bg-[#8BCF00]
+        text-white
+        hover:bg-[#6FA800]
+        disabled:opacity-60
+    "
           >
-
             {submitting ? (
-
               <>
-
-                <span
-                  className="
-                    loading
-                    loading-spinner
-                    loading-xs
-                  "
-                />
-
-                Submitting...
-
+                <span className="loading loading-spinner loading-xs" />
+                Requesting...
               </>
-
             ) : (
-
-              <>
-
-                <PaperAirplaneIcon
-                  className="
-                    h-4
-                    w-4
-                  "
-                />
-
-                Submit Application
-
-              </>
-
+              'Request Approval'
             )}
-
           </button>
-
         </div>
 
       </div>

@@ -91,6 +91,19 @@ apiClient.interceptors.response.use(
                     headers: undefined,
                 }
 
+                if (typeof retryRequest.data === 'string') {
+                    try {
+                        retryRequest.data = JSON.parse(
+                            retryRequest.data
+                        )
+                    } catch (parseError) {
+                        console.error(
+                            'Failed to restore retry request body:',
+                            parseError
+                        )
+                    }
+                }
+
                 return apiClient(retryRequest)
 
             } catch (refreshError) {
