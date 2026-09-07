@@ -26,11 +26,7 @@ function PendingApplicationsTable({
     search,
     setSearch,
 
-    loanTypes = [],
-    rms = [],
-    teamLeads = [],
-    agents = [],
-    statuses = [],
+
 
     selectedLoanType,
     setSelectedLoanType,
@@ -46,9 +42,7 @@ function PendingApplicationsTable({
 
     selectedStatus,
     setSelectedStatus,
-    showRM = false,
-    showAgent = false,
-    showTeamLead = false,
+    statuses = [],
     onClearFilters,
     onLoanTypeChange,
     onStatusChange,
@@ -101,20 +95,6 @@ function PendingApplicationsTable({
     // =========================================================
 
     const getLoanTypeName = (application) => {
-        const loanTypeId =
-            application.loanTypeId ??
-            application.loan_type_id
-
-        const loanType = loanTypes.find(
-            (item) =>
-                String(item.id) ===
-                String(loanTypeId)
-        )
-
-        if (loanType?.name) {
-            return loanType.name
-        }
-
         if (
             application.loanType &&
             typeof application.loanType === 'object'
@@ -143,7 +123,6 @@ function PendingApplicationsTable({
 
         return 'Not Assigned'
     }
-
 
     const getAgentName = (application) => {
         if (application.agent?.name) {
@@ -863,9 +842,7 @@ function PendingApplicationsTable({
                             onChange={
                                 setSelectedLoanType
                             }
-                            options={
-                                loanTypes
-                            }
+
                             allLabel="
                                 All Loan Types
                             "
@@ -889,22 +866,15 @@ function PendingApplicationsTable({
 
                         {/* RM */}
 
-                        {showRM && (
-                            <div className="w-44 shrink-0">
-
-                                <RmDropdown
-                                    label=""
-                                    value={selectedRM}
-                                    onChange={setSelectedRM}
-                                    options={rms}
-                                    allLabel="All RMs"
-                                    placeholder="All RMs"
-                                    searchPlaceholder="Search RM"
-                                    emptyMessage="No RMs found"
-                                />
-
-                            </div>
-                        )}
+                        <RmDropdown
+                            label=""
+                            value={selectedRM}
+                            onChange={setSelectedRM}
+                            allLabel="All RMs"
+                            placeholder="All RMs"
+                            searchPlaceholder="Search RM"
+                            emptyMessage="No RMs found"
+                        />
 
                     </div>
 
@@ -913,22 +883,15 @@ function PendingApplicationsTable({
 
                     <div className="w-44 shrink-0">
 
-                        {showTeamLead && (
-                            <div className="w-44 shrink-0">
-
-                                <TeamLeadDropdown
-                                    label=""
-                                    value={selectedTeamLead}
-                                    onChange={setSelectedTeamLead}
-                                    options={teamLeads}
-                                    allLabel="All Team Leads"
-                                    placeholder="All Team Leads"
-                                    searchPlaceholder="Search Team Lead"
-                                    emptyMessage="No Team Leads found"
-                                />
-
-                            </div>
-                        )}
+                        <TeamLeadDropdown
+                            label=""
+                            value={selectedTeamLead}
+                            onChange={setSelectedTeamLead}
+                            allLabel="All Team Leads"
+                            placeholder="All Team Leads"
+                            searchPlaceholder="Search Team Lead"
+                            emptyMessage="No Team Leads found"
+                        />
 
                     </div>
 
@@ -936,23 +899,15 @@ function PendingApplicationsTable({
                     {/* AGENT */}
 
                     <div className="w-44 shrink-0">
-
-                        {showAgent && (
-                            <div className="w-44 shrink-0">
-
-                                <AgentDropdown
-                                    label=""
-                                    value={selectedAgent}
-                                    onChange={setSelectedAgent}
-                                    options={agents}
-                                    allLabel="All Agents"
-                                    placeholder="All Agents"
-                                    searchPlaceholder="Search Agent"
-                                    emptyMessage="No Agents found"
-                                />
-
-                            </div>
-                        )}
+                        <AgentDropdown
+                            label=""
+                            value={selectedAgent}
+                            onChange={setSelectedAgent}
+                            allLabel="All Agents"
+                            placeholder="All Agents"
+                            searchPlaceholder="Search Agent"
+                            emptyMessage="No Agents found"
+                        />
 
                     </div>
 

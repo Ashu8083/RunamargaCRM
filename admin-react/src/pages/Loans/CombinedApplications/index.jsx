@@ -11,12 +11,8 @@ import {
     getApplications,
     updateApplicationLoanType,
     updateApplicationStatus,
-} from '../../../services/applicationService'
+} from '../Api'
 import { useToast } from '../../../components/Toast/ToastProvider'
-import {
-    getLoanTypes,
-    getApplicationFilters,
-} from '../../../services/commonservice'
 
 function Applications() {
     const navigate = useNavigate()
@@ -51,17 +47,8 @@ function Applications() {
     // FILTER DATA
     // =========================================================
 
-    const [loanTypes, setLoanTypes] = useState([])
-    const [rms, setRms] = useState([])
-    const [agents, setAgents] = useState([])
-    const [teamLeads, setTeamLeads] = useState([])
 
-    const [filterVisibility, setFilterVisibility] =
-        useState({
-            show_rm: false,
-            show_agent: false,
-            show_team_lead: false,
-        })
+    
     // =========================================================
     // FILTER STATE
     // =========================================================
@@ -362,104 +349,7 @@ function Applications() {
         }
     }
 
-    // =========================================================
-    // FETCH DROPDOWN DATA
-    // =========================================================
 
-    const fetchDropdownData = async () => {
-        try {
-            const user = getStoredUser()
-
-            const activeContext = getActiveContext(user)
-
-            console.log('STORED USER:', user)
-            console.log('ACTIVE CONTEXT:', activeContext)
-
-            if (!activeContext?.id) {
-                setLoanTypes([])
-                setRms([])
-                setAgents([])
-                setTeamLeads([])
-
-                setFilterVisibility({
-                    show_rm: false,
-                    show_agent: false,
-                    show_team_lead: false,
-                })
-
-                return
-            }
-
-            const [
-                loanTypesData,
-                filterResponse,
-            ] = await Promise.all([
-                getLoanTypes(),
-                getApplicationFilters(activeContext.id),
-            ])
-
-            console.log(
-                'APPLICATION FILTER RESPONSE:',
-                filterResponse
-            )
-
-            setLoanTypes(
-                loanTypesData || []
-            )
-
-            /*
-             * The backend endpoint returns the
-             * filter data for the active context.
-             */
-            const filterData =
-                filterResponse?.data ||
-                filterResponse
-
-            setRms(
-                filterData?.rms || []
-            )
-
-            setAgents(
-                filterData?.agents || []
-            )
-
-            setTeamLeads(
-                filterData?.team_leads || []
-            )
-
-            setFilterVisibility({
-                show_rm:
-                    filterData?.visibility?.show_rm ??
-                    false,
-
-                show_agent:
-                    filterData?.visibility?.show_agent ??
-                    false,
-
-                show_team_lead:
-                    filterData?.visibility?.show_team_lead ??
-                    false,
-            })
-
-        } catch (error) {
-
-            console.error(
-                'Failed to fetch application dropdown data:',
-                error
-            )
-
-            setLoanTypes([])
-            setRms([])
-            setAgents([])
-            setTeamLeads([])
-
-            setFilterVisibility({
-                show_rm: false,
-                show_agent: false,
-                show_team_lead: false,
-            })
-        }
-    }
 
     // =========================================================
     // INITIAL LOAD + CONTEXT CHANGE
@@ -468,7 +358,6 @@ function Applications() {
     useEffect(() => {
 
         fetchApplications()
-        fetchDropdownData()
 
         const handleContextChange = () => {
 
@@ -480,7 +369,6 @@ function Applications() {
             setSelectedAgent('')
             setSelectedStatus('')
             fetchApplications()
-            fetchDropdownData()
         }
 
         window.addEventListener(
@@ -1050,29 +938,11 @@ function Applications() {
                 search={search}
                 setSearch={setSearch}
 
-                loanTypes={loanTypes}
-
-                rms={rms}
-
-                teamLeads={teamLeads}
-
-                agents={agents}
 
                 statuses={
                     STATUS_OPTIONS
                 }
 
-                showRM={
-                    filterVisibility.show_rm
-                }
-
-                showAgent={
-                    filterVisibility.show_agent
-                }
-
-                showTeamLead={
-                    filterVisibility.show_team_lead
-                }
                 // =============================================
                 // LOAN TYPE
                 // =============================================
@@ -1180,7 +1050,6 @@ function Applications() {
             <LoanTypeModal
                 open={showLoanTypeModal}
                 application={selectedApplication}
-                loanTypes={loanTypes}
                 onClose={handleCloseLoanTypeModal}
                 onSubmit={handleLoanTypeSubmit}
             />

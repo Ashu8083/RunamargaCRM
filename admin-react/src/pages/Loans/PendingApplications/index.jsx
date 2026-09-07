@@ -6,12 +6,7 @@ import { getActiveContext } from '../../../app/auth'
 import {
     getApplications,
     updateApplicationLoanType,
-} from '../../../services/applicationService'
-
-import {
-    getLoanTypes,
-    getApplicationFilters,
-} from '../../../services/commonservice'
+} from '../Api'
 
 import PendingApplicationsTable from './components/PendingApplicationsTable'
 
@@ -263,16 +258,6 @@ const PendingApplications = () => {
     const [applications, setApplications] = useState([])
     const [loading, setLoading] = useState(false)
 
-    const [loanTypes, setLoanTypes] = useState([])
-    const [rms, setRms] = useState([])
-    const [agents, setAgents] = useState([])
-    const [teamLeads, setTeamLeads] = useState([])
-    const [filterVisibility, setFilterVisibility] =
-        useState({
-            show_rm: false,
-            show_agent: false,
-            show_team_lead: false,
-        })
     const [search, setSearch] = useState('')
 
     const [selectedLoanType, setSelectedLoanType] = useState('')
@@ -291,7 +276,7 @@ const PendingApplications = () => {
         getActiveContext()
     )
 
-
+   
     /*
      * FETCH APPLICATIONS
      */
@@ -338,79 +323,6 @@ const PendingApplications = () => {
     }, [showError])
 
 
-    /*
-     * FETCH DROPDOWN DATA
-     */
-
-    const fetchDropdownData = useCallback(async () => {
-        try {
-            const activeContext = getActiveContext()
-
-            if (!activeContext?.id) {
-                setLoanTypes([])
-                setRms([])
-                setAgents([])
-                setTeamLeads([])
-
-                setFilterVisibility({
-                    show_rm: false,
-                    show_agent: false,
-                    show_team_lead: false,
-                })
-
-                return
-            }
-
-            const [
-                loanTypesData,
-                filterData,
-            ] = await Promise.all([
-                getLoanTypes(),
-                getApplicationFilters(activeContext.id),
-            ])
-
-            setLoanTypes(
-                loanTypesData || []
-            )
-
-            setRms(
-                filterData?.rms || []
-            )
-
-            setAgents(
-                filterData?.agents || []
-            )
-
-            setTeamLeads(
-                filterData?.team_leads || []
-            )
-
-            setFilterVisibility(
-                filterData?.visibility || {
-                    show_rm: false,
-                    show_agent: false,
-                    show_team_lead: false,
-                }
-            )
-
-        } catch (error) {
-            console.error(
-                'Failed to fetch application dropdown data:',
-                error
-            )
-
-            setLoanTypes([])
-            setRms([])
-            setAgents([])
-            setTeamLeads([])
-
-            setFilterVisibility({
-                show_rm: false,
-                show_agent: false,
-                show_team_lead: false,
-            })
-        }
-    },[])
 
 
     /*
@@ -419,10 +331,8 @@ const PendingApplications = () => {
 
     useEffect(() => {
         fetchApplications()
-        fetchDropdownData()
     }, [
-        fetchApplications,
-        fetchDropdownData,
+        fetchApplications
     ])
 
 
@@ -470,11 +380,9 @@ const PendingApplications = () => {
         }
 
         fetchApplications()
-        fetchDropdownData()
     }, [
         activeContext?.id,
-        fetchApplications,
-        fetchDropdownData,
+        fetchApplications
     ])
 
 
@@ -641,7 +549,6 @@ const PendingApplications = () => {
 
     const handleRefresh = () => {
         fetchApplications()
-        fetchDropdownData()
     }
 
 
@@ -806,10 +713,7 @@ const PendingApplications = () => {
                 search={search}
                 setSearch={setSearch}
 
-                loanTypes={loanTypes}
-                rms={rms}
-                teamLeads={teamLeads}
-                agents={agents}
+
                 statuses={STATUS_OPTIONS}
 
                 selectedLoanType={
@@ -818,17 +722,7 @@ const PendingApplications = () => {
                 setSelectedLoanType={
                     setSelectedLoanType
                 }
-                showRM={
-                    filterVisibility.show_rm
-                }
 
-                showAgent={
-                    filterVisibility.show_agent
-                }
-
-                showTeamLead={
-                    filterVisibility.show_team_lead
-                }
                 selectedRM={selectedRM}
                 setSelectedRM={setSelectedRM}
 
@@ -878,7 +772,6 @@ const PendingApplications = () => {
                 application={
                     selectedApplication
                 }
-                loanTypes={loanTypes}
                 onClose={
                     handleCloseLoanTypeModal
                 }

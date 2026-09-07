@@ -1,6 +1,4 @@
 // admin-react/src/components/GlobalModels/Filters/LoanTypeDropdown.jsx
-// admin-react/src/components/GlobalModels/Filters/LoanTypeDropdown.jsx
-
 import { useEffect, useState } from 'react'
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'

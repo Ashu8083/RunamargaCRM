@@ -1030,29 +1030,21 @@ function ApplicationsTable({
 
                     </div>
 
-
                     {/* RM */}
 
                     <div className="w-44 shrink-0">
 
                         {/* RM */}
 
-                        {showRM && (
-                            <div className="w-44 shrink-0">
-
-                                <RmDropdown
-                                    label=""
-                                    value={selectedRM}
-                                    onChange={setSelectedRM}
-                                    options={rms}
-                                    allLabel="All RMs"
-                                    placeholder="All RMs"
-                                    searchPlaceholder="Search RM"
-                                    emptyMessage="No RMs found"
-                                />
-
-                            </div>
-                        )}
+                        <RmDropdown
+                            label=""
+                            value={selectedRM}
+                            onChange={setSelectedRM}
+                            allLabel="All RMs"
+                            placeholder="All RMs"
+                            searchPlaceholder="Search RM"
+                            emptyMessage="No RMs found"
+                        />
 
                     </div>
 
@@ -1061,22 +1053,15 @@ function ApplicationsTable({
 
                     <div className="w-44 shrink-0">
 
-                        {showTeamLead && (
-    <div className="w-44 shrink-0">
-
-        <TeamLeadDropdown
-            label=""
-            value={selectedTeamLead}
-            onChange={setSelectedTeamLead}
-            options={teamLeads}
-            allLabel="All Team Leads"
-            placeholder="All Team Leads"
-            searchPlaceholder="Search Team Lead"
-            emptyMessage="No Team Leads found"
-        />
-
-    </div>
-)}
+                        <TeamLeadDropdown
+                            label=""
+                            value={selectedTeamLead}
+                            onChange={setSelectedTeamLead}
+                            allLabel="All Team Leads"
+                            placeholder="All Team Leads"
+                            searchPlaceholder="Search Team Lead"
+                            emptyMessage="No Team Leads found"
+                        />
 
                     </div>
 
@@ -1084,27 +1069,17 @@ function ApplicationsTable({
                     {/* AGENT */}
 
                     <div className="w-44 shrink-0">
-
-                        {showAgent && (
-    <div className="w-44 shrink-0">
-
-        <AgentDropdown
-            label=""
-            value={selectedAgent}
-            onChange={setSelectedAgent}
-            options={agents}
-            allLabel="All Agents"
-            placeholder="All Agents"
-            searchPlaceholder="Search Agent"
-            emptyMessage="No Agents found"
-        />
-
-    </div>
-)}
+                        <AgentDropdown
+                            label=""
+                            value={selectedAgent}
+                            onChange={setSelectedAgent}
+                            allLabel="All Agents"
+                            placeholder="All Agents"
+                            searchPlaceholder="Search Agent"
+                            emptyMessage="No Agents found"
+                        />
 
                     </div>
-
-
                     {/* STATUS */}
 
                     <div className="w-44 shrink-0">
