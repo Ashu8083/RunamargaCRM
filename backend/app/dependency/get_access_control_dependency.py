@@ -4,6 +4,8 @@ from app.core.access_control import AccessControl
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from app.schemas import employee
+
 
 def check_permission(permission: str):
     def permission_dependency(
