@@ -588,3 +588,34 @@ admin-react/src/app/apiClient.js — handles API requests and access-token refre
 14. Production-Grade Responsibility
 
 Synchronizing /auth/me fixes stale frontend permission state. For full production-grade authorization, protected backend endpoints must also enforce permissions using the backend AccessControl layer. The frontend should never be the only authorization check.
+
+
+
+
+                    Employee
+                       │
+                       ▼
+                EmployeeContext
+                       │
+                       ▼
+                Active Context
+                       │
+             ┌─────────┴─────────┐
+             ▼                   ▼
+        Permissions        Hierarchy
+             │                   │
+             ▼                   ▼
+       What can user       Which people can
+          DO?              user interact with?
+             │                   │
+             └─────────┬─────────┘
+                       ▼
+              Application Filters API
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+         RM          Agent       Team Lead
+          │            │            │
+          └────────────┼────────────┘
+                       ▼
+                  React Dropdowns

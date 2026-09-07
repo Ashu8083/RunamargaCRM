@@ -46,7 +46,9 @@ function PendingApplicationsTable({
 
     selectedStatus,
     setSelectedStatus,
-
+    showRM = false,
+    showAgent = false,
+    showTeamLead = false,
     onClearFilters,
     onLoanTypeChange,
     onStatusChange,
@@ -55,6 +57,18 @@ function PendingApplicationsTable({
     onViewApplication,
     onRefresh,
 }) {
+    // =============================================================
+    // CONSTANTS
+    // =============================================================
+
+    const STATUS_OPTIONS = [
+        "Revert Rejected",
+        "Rejected",
+        "In Process",
+        "Docs Pending",
+        "Sanctioned",
+        "Disbursed",
+    ];
     // =========================================================
     // CHAT
     // =========================================================
@@ -693,7 +707,26 @@ function PendingApplicationsTable({
         onClearFilters?.()
     }
 
+    // =========================================================
+    // SEARCH
+    // =========================================================
 
+    const handleSearchChange = (
+        event
+    ) => {
+
+        setSearch(
+            event.target.value
+        );
+    };
+    // =========================================================
+    // FILTER STATUS OPTIONS
+    // =========================================================
+
+    const statusOptions =
+        statuses?.length
+            ? statuses
+            : STATUS_OPTIONS;
     // =========================================================
     // CHAT
     // =========================================================
@@ -764,6 +797,7 @@ function PendingApplicationsTable({
                     shadow-sm
                 "
             >
+
                 <div
                     className="
                         p-3
@@ -776,7 +810,8 @@ function PendingApplicationsTable({
 
                     {/* SEARCH */}
 
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
+
                         <div className="relative">
 
                             <SearchIcon
@@ -795,12 +830,12 @@ function PendingApplicationsTable({
                             <input
                                 type="text"
                                 value={search}
-                                onChange={(event) =>
-                                    setSearch(
-                                        event.target.value
-                                    )
+                                onChange={
+                                    handleSearchChange
                                 }
-                                placeholder="Search name, loan ID, email or RM, Agent..."
+                                placeholder="
+                                    Search name, loan ID, email or Agent...
+                                "
                                 className="
                                     input
                                     input-bordered
@@ -812,90 +847,153 @@ function PendingApplicationsTable({
                             />
 
                         </div>
+
                     </div>
 
 
                     {/* LOAN TYPE */}
 
-                    <LoanTypeDropdown
-                        value={selectedLoanType}
-                        onChange={
-                            setSelectedLoanType
-                        }
-                        options={loanTypes}
-                        showLabel={false}
-                        className="w-44 shrink-0"
-                    />
+                    <div className="w-44 shrink-0">
+
+                        <LoanTypeDropdown
+                            label=""
+                            value={
+                                selectedLoanType
+                            }
+                            onChange={
+                                setSelectedLoanType
+                            }
+                            options={
+                                loanTypes
+                            }
+                            allLabel="
+                                All Loan Types
+                            "
+                            placeholder="
+                                All Loan Types
+                            "
+                            searchPlaceholder="
+                                Search loan type
+                            "
+                            emptyMessage="
+                                No loan types found
+                            "
+                        />
+
+                    </div>
 
 
                     {/* RM */}
 
-                    <RmDropdown
-                        label=""
-                        value={selectedRM}
-                        onChange={setSelectedRM}
-                        options={rms}
-                        allLabel="All RMs"
-                        placeholder="All RMs"
-                        searchPlaceholder="Search RM"
-                        emptyMessage="No RMs found"
-                    />
+                    <div className="w-44 shrink-0">
+
+                        {/* RM */}
+
+                        {showRM && (
+                            <div className="w-44 shrink-0">
+
+                                <RmDropdown
+                                    label=""
+                                    value={selectedRM}
+                                    onChange={setSelectedRM}
+                                    options={rms}
+                                    allLabel="All RMs"
+                                    placeholder="All RMs"
+                                    searchPlaceholder="Search RM"
+                                    emptyMessage="No RMs found"
+                                />
+
+                            </div>
+                        )}
+
+                    </div>
 
 
                     {/* TEAM LEAD */}
 
-                    <TeamLeadDropdown
-                        label=""
-                        value={selectedTeamLead}
-                        onChange={
-                            setSelectedTeamLead
-                        }
-                        options={teamLeads}
-                        allLabel="All Team Leads"
-                        placeholder="All Team Leads"
-                        searchPlaceholder="Search team lead"
-                        emptyMessage="No team leads found"
-                    />
+                    <div className="w-44 shrink-0">
+
+                        {showTeamLead && (
+                            <div className="w-44 shrink-0">
+
+                                <TeamLeadDropdown
+                                    label=""
+                                    value={selectedTeamLead}
+                                    onChange={setSelectedTeamLead}
+                                    options={teamLeads}
+                                    allLabel="All Team Leads"
+                                    placeholder="All Team Leads"
+                                    searchPlaceholder="Search Team Lead"
+                                    emptyMessage="No Team Leads found"
+                                />
+
+                            </div>
+                        )}
+
+                    </div>
 
 
                     {/* AGENT */}
 
-                    <AgentDropdown
-                        value={selectedAgent}
-                        onChange={
-                            setSelectedAgent
-                        }
-                        options={agents}
-                        showLabel={false}
-                        className="w-48 shrink-0"
-                    />
+                    <div className="w-44 shrink-0">
+
+                        {showAgent && (
+                            <div className="w-44 shrink-0">
+
+                                <AgentDropdown
+                                    label=""
+                                    value={selectedAgent}
+                                    onChange={setSelectedAgent}
+                                    options={agents}
+                                    allLabel="All Agents"
+                                    placeholder="All Agents"
+                                    searchPlaceholder="Search Agent"
+                                    emptyMessage="No Agents found"
+                                />
+
+                            </div>
+                        )}
+
+                    </div>
 
 
                     {/* STATUS */}
 
-                    <StatusDropdown
-                        label=""
-                        value={selectedStatus}
-                        onChange={
-                            setSelectedStatus
-                        }
-                        options={statuses}
-                        allLabel="All Statuses"
-                        placeholder="All Statuses"
-                        searchPlaceholder="Search status"
-                        emptyMessage="No statuses found"
-                    />
+                    <div className="w-44 shrink-0">
+
+                        <StatusDropdown
+                            label=""
+                            value={
+                                selectedStatus
+                            }
+                            onChange={
+                                setSelectedStatus
+                            }
+                            options={
+                                statusOptions
+                            }
+                            allLabel="All Statuses"
+                            placeholder="All Statuses"
+                            searchPlaceholder="Search status"
+                            emptyMessage="No statuses found"
+                        />
+
+                    </div>
 
 
                     {/* CLEAR */}
 
                     <button
                         type="button"
-                        onClick={handleClear}
+                        onClick={
+                            onClearFilters
+                        }
                         className="
                             btn
                             btn-ghost
                             btn-sm
+                            h-10
+                            min-h-10
                             shrink-0
                         "
                     >
@@ -907,12 +1005,16 @@ function PendingApplicationsTable({
 
                     <button
                         type="button"
-                        onClick={onRefresh}
-                        title="Refresh pending applications"
+                        onClick={
+                            onRefresh
+                        }
+                        title="Refresh applications"
                         className="
                             btn
                             btn-sm
                             btn-square
+                            h-10
+                            min-h-10
                             shrink-0
                             border-[#8BCF00]
                             text-[#78B300]
@@ -926,7 +1028,9 @@ function PendingApplicationsTable({
                     </button>
 
                 </div>
+
             </div>
+
 
 
             {/* =================================================

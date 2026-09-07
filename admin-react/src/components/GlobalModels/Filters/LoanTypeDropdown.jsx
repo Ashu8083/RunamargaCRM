@@ -1,9 +1,11 @@
 // admin-react/src/components/GlobalModels/Filters/LoanTypeDropdown.jsx
+// admin-react/src/components/GlobalModels/Filters/LoanTypeDropdown.jsx
 
 import { useEffect, useState } from 'react'
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'
-import { API_BASE_URL } from '../../../config/url'
+import apiClient from '../../../app/apiClient'
+
 
 const LoanTypeDropdown = ({
   value = '',
@@ -16,38 +18,47 @@ const LoanTypeDropdown = ({
   required = false,
   onOptionsLoaded,
 }) => {
+
   const [loanTypes, setLoanTypes] = useState([])
+
   const [loading, setLoading] = useState(false)
+
   const [fetchError, setFetchError] = useState('')
 
+
   useEffect(() => {
+
     let isMounted = true
 
+
     const fetchLoanTypes = async () => {
+
       setLoading(true)
+
       setFetchError('')
 
+
       try {
-        const response = await fetch(`${API_BASE_URL}/common/loan-types`, {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch loan types (${response.status})`
-          )
-        }
-
-        const data = await response.json()
 
         /*
-         * Only use loan types returned by the backend.
-         *
+         * Authentication, cookies, token refresh,
+         * retry and baseURL are handled by apiClient.
+         */
+        const response = await apiClient({
+
+          method: 'GET',
+
+          url: '/common/loan-types',
+
+        })
+
+
+        const data = response.data
+
+
+        /*
          * Backend response:
+         *
          * [
          *   { id: 1, name: 'Personal' },
          *   { id: 2, name: 'Business' },
@@ -59,9 +70,14 @@ const LoanTypeDropdown = ({
          *   { id: 8, name: 'Credit Card' },
          *   { id: 9, name: 'Agricultural' }
          * ]
+         *
+         * Only use loan types returned by
+         * the backend.
          */
 
+
         const formattedLoanTypes = Array.isArray(data)
+
           ? data
               .filter(
                 (loanType) =>
@@ -70,39 +86,77 @@ const LoanTypeDropdown = ({
                   loanType.id !== null &&
                   loanType.name
               )
+
               .map((loanType) => ({
                 id: Number(loanType.id),
+
                 name: loanType.name,
               }))
+
           : []
 
+
         if (!isMounted) return
+
 
         setLoanTypes(formattedLoanTypes)
 
-        if (typeof onOptionsLoaded === 'function') {
-          onOptionsLoaded(formattedLoanTypes)
+
+        /*
+         * Send loaded options to parent.
+         */
+        if (
+          typeof onOptionsLoaded === 'function'
+        ) {
+
+          onOptionsLoaded(
+            formattedLoanTypes
+          )
         }
+
       } catch (error) {
+
         if (!isMounted) return
 
-        console.error('Failed to fetch loan types:', error)
+
+        console.error(
+          'Failed to fetch loan types:',
+          error
+        )
+
 
         setLoanTypes([])
-        setFetchError('Unable to load loan types.')
+
+
+        /*
+         * Keep the original error message.
+         */
+        setFetchError(
+          'Unable to load loan types.'
+        )
+
       } finally {
+
         if (isMounted) {
+
           setLoading(false)
+
         }
       }
     }
 
+
     fetchLoanTypes()
 
+
     return () => {
+
       isMounted = false
+
     }
+
   }, [onOptionsLoaded])
+
 
   /*
    * SearchableFilterDropdown returns:
@@ -110,63 +164,146 @@ const LoanTypeDropdown = ({
    * onChange(value, originalOption)
    *
    * Example:
+   *
    * onChange(3, {
    *   id: 3,
    *   name: 'Home'
    * })
    */
-  const handleChange = (selectedValue, selectedOption) => {
-    if (typeof onChange === 'function') {
-      onChange(selectedValue, selectedOption)
+  const handleChange = (
+    selectedValue,
+    selectedOption
+  ) => {
+
+    if (
+      typeof onChange === 'function'
+    ) {
+
+      onChange(
+        selectedValue,
+        selectedOption
+      )
     }
   }
 
-  const dropdownError = error || fetchError
+
+  /*
+   * Parent error takes priority.
+   *
+   * If there is no parent error,
+   * show API fetch error.
+   */
+  const dropdownError =
+    error || fetchError
+
 
   return (
-    <div className={`w-full ${className}`}>
+
+    <div
+      className={`w-full ${className}`}
+    >
+
       {label && (
-        <label className="mb-1.5 block text-sm font-medium text-base-content">
+
+        <label
+          className="mb-1.5 block text-sm font-medium text-base-content"
+        >
+
           {label}
 
+
           {required && (
+
             <span className="ml-1 text-error">
+
               *
+
             </span>
+
           )}
+
         </label>
+
       )}
 
+
       <SearchableFilterDropdown
+
         value={value}
+
         options={loanTypes}
+
         onChange={handleChange}
 
-        /* Same design, but no ALL option */
+
+        /*
+         * Same design.
+         *
+         * Do not show ALL option.
+         */
         includeAllOption={false}
 
-        /* Fix "Search undefined" */
+
+        /*
+         * Prevent:
+         *
+         * Search undefined
+         */
         searchPlaceholder="Search Loan Type"
 
+
+        /*
+         * Show loading text while
+         * fetching loan types.
+         */
         placeholder={
           loading
             ? 'Loading Loan Types...'
             : placeholder
         }
 
-        disabled={disabled || loading}
 
-        getOptionValue={(option) => option.id}
-        getOptionLabel={(option) => option.name}
+        /*
+         * Disable dropdown while loading
+         * or when parent disables it.
+         */
+        disabled={
+          disabled || loading
+        }
+
+
+        /*
+         * Value stored in the dropdown.
+         */
+        getOptionValue={
+          (option) => option.id
+        }
+
+
+        /*
+         * Text displayed in the dropdown.
+         */
+        getOptionLabel={
+          (option) => option.name
+        }
+
       />
 
+
       {dropdownError && (
+
         <p className="mt-1 text-xs text-error">
+
           {dropdownError}
+
         </p>
+
       )}
+
     </div>
+
   )
 }
+
 
 export default LoanTypeDropdown

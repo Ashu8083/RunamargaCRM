@@ -1,545 +1,445 @@
 // admin-react/src/pages/Roles&Teams/Agents/index.jsx
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import AgentTable from './components/AgentTable'
 import AgentModal from './components/AgentModal'
 import AssignedTeamLeadsModal from './components/AssignedTeamLeadsModal'
 
 import PermissionsModal from '../../../components/GlobalModels/PermissionsModal'
+import FeedbackModal from '../../../components/GlobalModels/FeedbackModal'
+
+import {
+    getAgents,
+    createAgent,
+    updateAgent,
+    deleteAgent,
+    updateAgentStatus,
+    getEmployees,
+    getAgentRoles,
+    getAvailableTeamLeads,
+    getAssignedTeamLeads,
+    assignTeamLead,
+    removeTeamLead,
+    getApiErrorMessage,
+} from './API'
 
 
-// =============================================================
-// MOCK API
-// Replace this function with the backend API later.
-// =============================================================
+const Agents = () => {
 
-const fetchAgents = async () => {
+    // ========================================================================
+    // STATE
+    // ========================================================================
 
-    return new Promise((resolve) => {
-
-        setTimeout(() => {
-
-            resolve([
-                {
-                    id: 1,
-
-                    employeeId: 1001,
-
-                    name: 'Agent One',
-
-                    phone: '9876543210',
-
-                    email: 'agent1@example.com',
-
-                    status: 'Active',
-
-                    createdAt: 'Apr 7, 2026, 3:13:50 PM',
-
-                    updatedAt: 'N/A',
-
-                    rmTeamLeads: [
-                        {
-                            id: 1,
-                            name: 'RM Team Lead One',
-                            loanType: 'Personal Loan',
-                        },
-                    ],
-
-                    agentTeamLeads: [
-                        {
-                            id: 2,
-                            name: 'Agent Team Lead One',
-                            loanType: 'Business Loan',
-                        },
-                    ],
-
-                    permissions: [],
-
-                    availablePermissionGroups: undefined,
-
-                    availableRMTeamLeads: [
-                        {
-                            id: 1,
-                            name: 'RM Team Lead One',
-                            loanTypes: [
-                                'Personal Loan',
-                                'Home Loan',
-                            ],
-                        },
-                        {
-                            id: 2,
-                            name: 'RM Team Lead Two',
-                            loanTypes: [
-                                'Business Loan',
-                            ],
-                        },
-                    ],
-
-                    availableAgentTeamLeads: [
-                        {
-                            id: 3,
-                            name: 'Agent Team Lead One',
-                            loanTypes: [
-                                'Personal Loan',
-                            ],
-                        },
-                        {
-                            id: 4,
-                            name: 'Agent Team Lead Two',
-                            loanTypes: [
-                                'Business Loan',
-                                'Personal Loan',
-                            ],
-                        },
-                    ],
-                },
-
-                {
-                    id: 2,
-
-                    employeeId: 1002,
-
-                    name: 'Agent Two',
-
-                    phone: '9876543211',
-
-                    email: 'agent2@example.com',
-
-                    status: 'Absent',
-
-                    createdAt: 'Apr 8, 2026, 10:20:15 AM',
-
-                    updatedAt: 'Apr 10, 2026, 2:30:10 PM',
-
-                    rmTeamLeads: [],
-
-                    agentTeamLeads: [],
-
-                    permissions: [],
-
-                    availablePermissionGroups: undefined,
-
-                    availableRMTeamLeads: [
-                        {
-                            id: 1,
-                            name: 'RM Team Lead One',
-                            loanTypes: [
-                                'Personal Loan',
-                                'Home Loan',
-                            ],
-                        },
-                    ],
-
-                    availableAgentTeamLeads: [
-                        {
-                            id: 3,
-                            name: 'Agent Team Lead One',
-                            loanTypes: [
-                                'Personal Loan',
-                            ],
-                        },
-                    ],
-                },
-            ])
-
-        }, 400)
-
-    })
-
-}
-
-
-// =============================================================
-// DATE FORMAT
-// =============================================================
-
-const getCurrentDateTime = () => {
-
-    return new Date().toLocaleString(
-        'en-IN',
-        {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            second: '2-digit',
-        }
-    )
-
-}
-
-
-// =============================================================
-// PAGE
-// =============================================================
-
-function Agents() {
-
-    // =========================================================
-    // DATA
-    // =========================================================
-
-    const [agents, setAgents] = useState([
-        {
-            id: 1,
-            employeeId: 1001,
-            name: 'Agent One',
-            phone: '9876543210',
-            email: 'agent1@example.com',
-            status: 'Active',
-            createdAt: 'Apr 7, 2026, 3:13:50 PM',
-            updatedAt: 'N/A',
-
-            rmTeamLeads: [
-                {
-                    id: 1,
-                    name: 'RM Team Lead One',
-                    loanType: 'Personal Loan',
-                },
-            ],
-
-            agentTeamLeads: [
-                {
-                    id: 2,
-                    name: 'Agent Team Lead One',
-                    loanType: 'Business Loan',
-                },
-            ],
-
-            permissions: [],
-        },
-
-        {
-            id: 2,
-            employeeId: 1002,
-            name: 'Agent Two',
-            phone: '9876543211',
-            email: 'agent2@example.com',
-            status: 'Absent',
-            createdAt: 'Apr 8, 2026, 10:20:15 AM',
-            updatedAt: 'Apr 10, 2026, 2:30:10 PM',
-
-            rmTeamLeads: [],
-
-            agentTeamLeads: [],
-
-            permissions: [],
-        },
-    ])
-
+    const [agents, setAgents] = useState([])
+    const [employees, setEmployees] = useState([])
+    const [roles, setRoles] = useState([])
+    const [teamLeads, setTeamLeads] = useState([])
 
     const [loading, setLoading] = useState(false)
+    const [modalLoading, setModalLoading] = useState(false)
 
-
-    // =========================================================
-    // SEARCH
-    // =========================================================
-
-    const [search, setSearch] = useState('')
-
-
-    // =========================================================
-    // ADD / EDIT MODAL
-    //
-    // Only status can be edited for an existing agent.
-    // =========================================================
-
-    const [showModal, setShowModal] = useState(false)
-
-    const [editingAgent, setEditingAgent] = useState(null)
-
-
-    // =========================================================
-    // TEAM LEADS MODAL
-    // =========================================================
-
-    const [showTeamLeadsModal, setShowTeamLeadsModal] =
-        useState(false)
-
-    const [selectedAgent, setSelectedAgent] =
-        useState(null)
-
-
-    // =========================================================
-    // GLOBAL PERMISSIONS MODAL
-    // =========================================================
-
+    const [showAgentModal, setShowAgentModal] = useState(false)
+    const [showTeamLeadModal, setShowTeamLeadModal] = useState(false)
     const [showPermissionsModal, setShowPermissionsModal] =
         useState(false)
 
+    const [selectedAgent, setSelectedAgent] = useState(null)
+    const [assignedTeamLead, setAssignedTeamLead] = useState(null)
 
-    // =========================================================
-    // FILTERED DATA
-    // =========================================================
-
-    const filteredAgents = useMemo(() => {
-
-        const searchValue =
-            search
-                .trim()
-                .toLowerCase()
+    const [feedback, setFeedback] = useState({
+        open: false,
+        type: 'success',
+        title: '',
+        message: '',
+    })
 
 
-        if (!searchValue) {
-            return agents
-        }
+    // ========================================================================
+    // FEEDBACK
+    // ========================================================================
+
+    const showFeedback = useCallback(
+        (
+            type,
+            title,
+            message
+        ) => {
+
+            setFeedback({
+                open: true,
+                type,
+                title,
+                message,
+            })
+        },
+        []
+    )
 
 
-        return agents.filter((agent) => {
+    const closeFeedback = useCallback(() => {
 
-            return (
+        setFeedback((previous) => ({
+            ...previous,
+            open: false,
+        }))
 
-                agent.name
-                    ?.toLowerCase()
-                    .includes(searchValue)
+    }, [])
 
-                ||
 
-                agent.phone
-                    ?.toLowerCase()
-                    .includes(searchValue)
+    // ========================================================================
+    // LOAD AGENTS
+    // ========================================================================
 
-                ||
+    const loadAgents = useCallback(
+        async () => {
 
-                agent.email
-                    ?.toLowerCase()
-                    .includes(searchValue)
+            try {
 
-                ||
+                setLoading(true)
 
-                agent.status
-                    ?.toLowerCase()
-                    .includes(searchValue)
+                const response =
+                    await getAgents()
 
-                ||
-
-                String(
-                    agent.employeeId || ''
+                setAgents(
+                    Array.isArray(response)
+                        ? response
+                        : []
                 )
-                    .toLowerCase()
-                    .includes(searchValue)
 
-            )
+            } catch (error) {
 
-        })
+                console.error(
+                    'Failed to load agents:',
+                    error
+                )
+
+                showFeedback(
+                    'error',
+                    'Failed to Load Agents',
+                    getApiErrorMessage(
+                        error,
+                        'Unable to load agents.'
+                    )
+                )
+
+            } finally {
+
+                setLoading(false)
+            }
+
+        },
+        [showFeedback]
+    )
+
+
+    // ========================================================================
+    // LOAD EMPLOYEES
+    // ========================================================================
+
+    const loadEmployees = useCallback(
+        async () => {
+
+            try {
+
+                const response =
+                    await getEmployees()
+
+                setEmployees(
+                    Array.isArray(response)
+                        ? response
+                        : []
+                )
+
+            } catch (error) {
+
+                console.error(
+                    'Failed to load employees:',
+                    error
+                )
+
+                showFeedback(
+                    'error',
+                    'Failed to Load Employees',
+                    getApiErrorMessage(
+                        error,
+                        'Unable to load employees.'
+                    )
+                )
+            }
+
+        },
+        [showFeedback]
+    )
+
+
+    // ========================================================================
+    // LOAD AGENT ROLES
+    // ========================================================================
+
+    const loadRoles = useCallback(
+        async () => {
+
+            try {
+
+                const response =
+                    await getAgentRoles()
+
+                setRoles(
+                    Array.isArray(response)
+                        ? response
+                        : []
+                )
+
+            } catch (error) {
+
+                console.error(
+                    'Failed to load agent roles:',
+                    error
+                )
+
+                showFeedback(
+                    'error',
+                    'Failed to Load Roles',
+                    getApiErrorMessage(
+                        error,
+                        'Unable to load agent roles.'
+                    )
+                )
+            }
+
+        },
+        [showFeedback]
+    )
+
+
+    // ========================================================================
+    // LOAD TEAM LEADS
+    // ========================================================================
+
+    const loadTeamLeads = useCallback(
+        async () => {
+
+            try {
+
+                const response =
+                    await getAvailableTeamLeads()
+
+                setTeamLeads(
+                    Array.isArray(response)
+                        ? response
+                        : []
+                )
+
+            } catch (error) {
+
+                console.error(
+                    'Failed to load team leads:',
+                    error
+                )
+
+                showFeedback(
+                    'error',
+                    'Failed to Load Team Leads',
+                    getApiErrorMessage(
+                        error,
+                        'Unable to load team leads.'
+                    )
+                )
+            }
+
+        },
+        [showFeedback]
+    )
+
+
+    // ========================================================================
+    // INITIAL LOAD
+    // ========================================================================
+
+    useEffect(() => {
+
+        const loadInitialData =
+            async () => {
+
+                await Promise.all([
+                    loadAgents(),
+                    loadEmployees(),
+                    loadRoles(),
+                    loadTeamLeads(),
+                ])
+            }
+
+        loadInitialData()
 
     }, [
-        agents,
-        search,
+        loadAgents,
+        loadEmployees,
+        loadRoles,
+        loadTeamLeads,
     ])
 
 
-    // =========================================================
-    // LOAD / REFRESH
-    // =========================================================
+    // ========================================================================
+    // REFRESH
+    // ========================================================================
 
     const handleRefresh = async () => {
 
+        await Promise.all([
+            loadAgents(),
+            loadTeamLeads(),
+        ])
+    }
+
+
+    // ========================================================================
+    // ADD AGENT
+    // ========================================================================
+
+    const handleAddAgent = () => {
+
+        setSelectedAgent(null)
+
+        setShowAgentModal(true)
+    }
+
+
+    // ========================================================================
+    // EDIT AGENT
+    // ========================================================================
+
+    const handleEditAgent = (agent) => {
+
+        setSelectedAgent(agent)
+
+        setShowAgentModal(true)
+    }
+
+
+    // ========================================================================
+    // CLOSE AGENT MODAL
+    // ========================================================================
+
+    const handleCloseAgentModal = () => {
+
+        if (modalLoading) {
+            return
+        }
+
+        setShowAgentModal(false)
+
+        setSelectedAgent(null)
+    }
+
+
+    // ========================================================================
+    // SAVE AGENT
+    // ========================================================================
+
+    const handleSaveAgent = async (data) => {
+
         try {
 
-            setLoading(true)
+            setModalLoading(true)
 
-            const response =
-                await fetchAgents()
 
-            if (Array.isArray(response)) {
+            // ----------------------------------------------------------------
+            // UPDATE
+            // ----------------------------------------------------------------
 
-                setAgents(response)
+            if (data.isEdit) {
+
+                await updateAgent(
+                    data.agentId,
+                    {
+                        context_id:
+                            Number(data.roleId),
+                    }
+                )
+
+                showFeedback(
+                    'success',
+                    'Agent Updated',
+                    'Agent details have been updated successfully.'
+                )
 
             }
+
+            // ----------------------------------------------------------------
+            // CREATE
+            // ----------------------------------------------------------------
+
+            else {
+
+                await createAgent({
+                    employee_id:
+                        Number(data.employeeId),
+
+                    context_id:
+                        Number(data.roleId),
+
+                    status:
+                        data.status || 'Active',
+                })
+
+                showFeedback(
+                    'success',
+                    'Agent Created',
+                    'Agent has been created successfully.'
+                )
+            }
+
+
+            setShowAgentModal(false)
+
+            setSelectedAgent(null)
+
+            await loadAgents()
 
         } catch (error) {
 
             console.error(
-                'Failed to load agents:',
+                'Failed to save agent:',
                 error
+            )
+
+            showFeedback(
+                'error',
+                data.isEdit
+                    ? 'Failed to Update Agent'
+                    : 'Failed to Create Agent',
+                getApiErrorMessage(
+                    error,
+                    data.isEdit
+                        ? 'Unable to update agent.'
+                        : 'Unable to create agent.'
+                )
             )
 
         } finally {
 
-            setLoading(false)
-
+            setModalLoading(false)
         }
-
     }
 
 
-    // =========================================================
-    // CREATE
-    //
-    // New agent is selected from employees.
-    // AgentModal handles employee selection.
-    // =========================================================
+    // ========================================================================
+    // DELETE AGENT
+    // ========================================================================
 
-    const handleCreate = () => {
+    const handleDeleteAgent = async (agent) => {
 
-        setEditingAgent(null)
-
-        setShowModal(true)
-
-    }
-
-
-    // =========================================================
-    // EDIT
-    //
-    // Existing agent:
-    // Only status should be changed.
-    // =========================================================
-
-    const handleEdit = (agent) => {
-
-        setEditingAgent(agent)
-
-        setShowModal(true)
-
-    }
-
-
-    // =========================================================
-    // CLOSE ADD / EDIT
-    // =========================================================
-
-    const handleCloseModal = () => {
-
-        setShowModal(false)
-
-        setEditingAgent(null)
-
-    }
-
-
-    // =========================================================
-    // CREATE / UPDATE
-    // =========================================================
-
-    const handleSubmit = (data) => {
-
-        // =====================================================
-        // UPDATE EXISTING AGENT
-        //
-        // Only status is accepted.
-        // =====================================================
-
-        if (editingAgent) {
-
-            setAgents((previous) =>
-                previous.map((agent) => {
-
-                    if (
-                        agent.id !==
-                        editingAgent.id
-                    ) {
-                        return agent
-                    }
-
-
-                    return {
-
-                        ...agent,
-
-                        status:
-                            data.status ||
-                            agent.status,
-
-                        updatedAt:
-                            getCurrentDateTime(),
-
-                    }
-
-                })
-            )
-
-            handleCloseModal()
-
+        if (!agent?.id) {
             return
-
         }
 
-
-        // =====================================================
-        // CREATE AGENT
-        //
-        // Employee information comes from selected employee.
-        // =====================================================
-
-        if (!data.employee) {
-
-            return
-
-        }
-
-
-        const employee =
-            data.employee
-
-
-        const newAgent = {
-
-            id: Date.now(),
-
-            employeeId:
-                employee.id ??
-                employee.employeeId ??
-                Date.now(),
-
-            name:
-                employee.name ??
-                employee.fullName ??
-                employee.label ??
-                '',
-
-            phone:
-                employee.phone ??
-                employee.mobile ??
-                employee.phoneNumber ??
-                '',
-
-            email:
-                employee.email ??
-                '',
-
-            status:
-                data.status ||
-                'Active',
-
-            createdAt:
-                getCurrentDateTime(),
-
-            updatedAt:
-                'N/A',
-
-            rmTeamLeads: [],
-
-            agentTeamLeads: [],
-
-            permissions: [],
-
-        }
-
-
-        setAgents((previous) => [
-            ...previous,
-            newAgent,
-        ])
-
-
-        handleCloseModal()
-
-    }
-
-
-    // =========================================================
-    // DELETE
-    // =========================================================
-
-    const handleDelete = (agent) => {
 
         const confirmed =
             window.confirm(
-                `Delete agent "${agent.name}"?`
+                `Are you sure you want to delete ${
+                    agent.name || 'this agent'
+                }?`
             )
 
 
@@ -548,347 +448,450 @@ function Agents() {
         }
 
 
-        setAgents((previous) =>
-            previous.filter(
-                (item) =>
-                    item.id !== agent.id
-            )
-        )
+        try {
 
+            setLoading(true)
+
+            await deleteAgent(
+                agent.id
+            )
+
+            showFeedback(
+                'success',
+                'Agent Deleted',
+                'Agent has been deleted successfully.'
+            )
+
+            await loadAgents()
+
+        } catch (error) {
+
+            console.error(
+                'Failed to delete agent:',
+                error
+            )
+
+            showFeedback(
+                'error',
+                'Failed to Delete Agent',
+                getApiErrorMessage(
+                    error,
+                    'Unable to delete agent.'
+                )
+            )
+
+        } finally {
+
+            setLoading(false)
+        }
     }
 
 
-    // =========================================================
+    // ========================================================================
     // STATUS CHANGE
-    // =========================================================
+    // ========================================================================
 
-    const handleStatusChange = (
+    const handleStatusChange = async (
         agent,
         status
     ) => {
 
-        setAgents((previous) =>
-            previous.map((item) => {
-
-                if (
-                    item.id !==
-                    agent.id
-                ) {
-                    return item
-                }
-
-
-                return {
-
-                    ...item,
-
-                    status,
-
-                    updatedAt:
-                        getCurrentDateTime(),
-
-                }
-
-            })
-        )
-
-    }
-
-
-    // =========================================================
-    // VIEW TEAM LEADS
-    // =========================================================
-
-    const handleViewTeamLeads = (
-        agent
-    ) => {
-
-        setSelectedAgent(agent)
-
-        setShowTeamLeadsModal(true)
-
-    }
-
-
-    // =========================================================
-    // CLOSE TEAM LEADS
-    // =========================================================
-
-    const handleCloseTeamLeads = () => {
-
-        setShowTeamLeadsModal(false)
-
-        setSelectedAgent(null)
-
-    }
-
-
-    // =========================================================
-    // TEAM LEAD ASSIGNMENT CHANGE
-    // =========================================================
-
-    const handleAssignmentChange = (
-        assignment
-    ) => {
-
-        if (!selectedAgent) {
+        if (!agent?.id) {
             return
         }
 
 
-        setAgents((previous) =>
-            previous.map((agent) => {
+        try {
 
-                if (
-                    agent.id !==
-                    selectedAgent.id
-                ) {
-                    return agent
-                }
+            setLoading(true)
 
+            await updateAgentStatus(
+                agent.id,
+                status
+            )
 
-                if (
-                    assignment.type ===
-                    'rm'
-                ) {
+            showFeedback(
+                'success',
+                'Status Updated',
+                `Agent status changed to ${status}.`
+            )
 
-                    return {
+            await loadAgents()
 
-                        ...agent,
+        } catch (error) {
 
-                        rmTeamLeads:
-                            assignment.assignments,
+            console.error(
+                'Failed to update agent status:',
+                error
+            )
 
-                    }
+            showFeedback(
+                'error',
+                'Failed to Update Status',
+                getApiErrorMessage(
+                    error,
+                    'Unable to update agent status.'
+                )
+            )
 
-                }
+        } finally {
 
-
-                if (
-                    assignment.type ===
-                    'agent'
-                ) {
-
-                    return {
-
-                        ...agent,
-
-                        agentTeamLeads:
-                            assignment.assignments,
-
-                    }
-
-                }
-
-
-                return agent
-
-            })
-        )
-
-
-        /*
-         * Keep selectedAgent synchronized
-         * with the latest assignment.
-         */
-
-        setSelectedAgent((previous) => {
-
-            if (!previous) {
-                return previous
-            }
-
-
-            if (
-                assignment.type ===
-                'rm'
-            ) {
-
-                return {
-
-                    ...previous,
-
-                    rmTeamLeads:
-                        assignment.assignments,
-
-                }
-
-            }
-
-
-            if (
-                assignment.type ===
-                'agent'
-            ) {
-
-                return {
-
-                    ...previous,
-
-                    agentTeamLeads:
-                        assignment.assignments,
-
-                }
-
-            }
-
-
-            return previous
-
-        })
-
+            setLoading(false)
+        }
     }
 
 
-    // =========================================================
-    // MANAGE PERMISSIONS
-    //
-    // Uses the GLOBAL PermissionsModal.
-    //
-    // Global component expects:
-    //
-    // <PermissionsModal
-    //     open={...}
-    //     admin={...}
-    //     onClose={...}
-    // />
-    // =========================================================
+    // ========================================================================
+    // OPEN TEAM LEAD MODAL
+    // ========================================================================
 
-    const handleManagePermissions = (
+    const handleViewTeamLeads = async (
         agent
     ) => {
+
+        if (!agent?.id) {
+            return
+        }
+
+
+        try {
+
+            setSelectedAgent(agent)
+
+            setAssignedTeamLead(null)
+
+            setModalLoading(true)
+
+            setShowTeamLeadModal(true)
+
+
+            const response =
+                await getAssignedTeamLeads(
+                    agent.id
+                )
+
+
+            const assigned =
+                Array.isArray(response)
+                    ? response
+                    : []
+
+
+            // Only one Team Lead is possible because:
+            //
+            // Agent EmployeeContext.reports_to_id
+            //
+            // is a single FK to Team Lead EmployeeContext.id.
+
+            setAssignedTeamLead(
+                assigned[0] || null
+            )
+
+        } catch (error) {
+
+            console.error(
+                'Failed to load assigned team lead:',
+                error
+            )
+
+            setShowTeamLeadModal(false)
+
+            showFeedback(
+                'error',
+                'Failed to Load Team Lead',
+                getApiErrorMessage(
+                    error,
+                    'Unable to load assigned team lead.'
+                )
+            )
+
+        } finally {
+
+            setModalLoading(false)
+        }
+    }
+
+
+    // ========================================================================
+    // TEAM LEAD ASSIGNMENT
+    // ========================================================================
+
+    const handleAssignmentChange = async (
+        teamLead
+    ) => {
+
+        if (!selectedAgent?.id) {
+            return
+        }
+
+
+        try {
+
+            setModalLoading(true)
+
+
+            // ----------------------------------------------------------------
+            // ASSIGN
+            // ----------------------------------------------------------------
+
+            if (teamLead) {
+
+                const teamLeadId =
+                    teamLead.id ??
+                    teamLead.employee_context_id
+
+
+                if (
+                    teamLeadId === null ||
+                    teamLeadId === undefined
+                ) {
+
+                    throw new Error(
+                        'Team Lead EmployeeContext ID is missing.'
+                    )
+                }
+
+
+                await assignTeamLead(
+                    selectedAgent.id,
+                    Number(teamLeadId)
+                )
+
+
+                // Update modal immediately.
+                setAssignedTeamLead(
+                    teamLead
+                )
+
+
+                showFeedback(
+                    'success',
+                    'Team Lead Assigned',
+                    `${teamLead.name || 'Team Lead'} has been assigned successfully.`
+                )
+
+            }
+
+            // ----------------------------------------------------------------
+            // REMOVE
+            // ----------------------------------------------------------------
+
+            else {
+
+                await removeTeamLead(
+                    selectedAgent.id
+                )
+
+
+                setAssignedTeamLead(null)
+
+
+                showFeedback(
+                    'success',
+                    'Team Lead Removed',
+                    'Team Lead assignment has been removed successfully.'
+                )
+            }
+
+
+            await loadAgents()
+
+        } catch (error) {
+
+            console.error(
+                'Failed to update team lead assignment:',
+                error
+            )
+
+            showFeedback(
+                'error',
+                teamLead
+                    ? 'Failed to Assign Team Lead'
+                    : 'Failed to Remove Team Lead',
+                getApiErrorMessage(
+                    error,
+                    teamLead
+                        ? 'Unable to assign Team Lead.'
+                        : 'Unable to remove Team Lead.'
+                )
+            )
+
+        } finally {
+
+            setModalLoading(false)
+        }
+    }
+
+
+    // ========================================================================
+    // CLOSE TEAM LEAD MODAL
+    // ========================================================================
+
+    const handleCloseTeamLeadModal = () => {
+
+        if (modalLoading) {
+            return
+        }
+
+        setShowTeamLeadModal(false)
+
+        setSelectedAgent(null)
+
+        setAssignedTeamLead(null)
+    }
+
+
+    // ========================================================================
+    // PERMISSIONS
+    // ========================================================================
+
+    const handlePermissions = (
+        agent
+    ) => {
+
+        if (!agent) {
+            return
+        }
+
+
+        if (
+            agent.status === 'Inactive' ||
+            !agent.is_active
+        ) {
+
+            showFeedback(
+                'error',
+                'Inactive Agent',
+                'Permissions cannot be managed for an inactive agent.'
+            )
+
+            return
+        }
+
 
         setSelectedAgent(agent)
 
         setShowPermissionsModal(true)
-
     }
 
 
-    // =========================================================
+    // ========================================================================
     // CLOSE PERMISSIONS
-    // =========================================================
+    // ========================================================================
 
     const handleClosePermissions = () => {
 
         setShowPermissionsModal(false)
 
         setSelectedAgent(null)
-
     }
 
 
-    // =========================================================
+    // ========================================================================
     // RENDER
-    // =========================================================
+    // ========================================================================
 
     return (
+        <div className="w-full p-4">
 
-        <div className="
-            space-y-5
-            p-4
-            sm:p-6
-        ">
-
-            {/* =================================================
-                PAGE HEADER
-            ================================================= */}
-
-            <div>
-
-                <h1 className="
-                    text-2xl
-                    font-semibold
-                    sm:text-3xl
-                ">
-                    Agents
-                </h1>
-
-
-                <p className="
-                    mt-1
-                    text-sm
-                    text-base-content/60
-                ">
-                    Manage agent assignments and status.
-                </p>
-
-            </div>
-
-
-            {/* =================================================
-                AGENT TABLE
-            ================================================= */}
+            {/* ================================================================ */}
+            {/* AGENT TABLE */}
+            {/* ================================================================ */}
 
             <AgentTable
-                agents={filteredAgents}
-                search={search}
-                setSearch={setSearch}
-
-                onCreate={handleCreate}
-
-                onEdit={handleEdit}
-
-                onDelete={handleDelete}
-
-                onRefresh={handleRefresh}
-
-                onViewTeamLeads={
+                agents={agents}
+                loading={loading}
+                onEdit={handleEditAgent}
+                onDelete={handleDeleteAgent}
+                onStatusChange={handleStatusChange}
+                onManageTeamLeads={
                     handleViewTeamLeads
                 }
-
                 onManagePermissions={
-                    handleManagePermissions
+                    handlePermissions
                 }
-
-                onStatusChange={
-                    handleStatusChange
-                }
-
-                loading={loading}
+                onAdd={handleAddAgent}
+                onRefresh={handleRefresh}
             />
 
 
-            {/* =================================================
-                ADD / EDIT
-            ================================================= */}
+            {/* ================================================================ */}
+            {/* AGENT CREATE / EDIT MODAL */}
+            {/* ================================================================ */}
 
             <AgentModal
-                open={showModal}
-                agent={editingAgent}
-                onClose={handleCloseModal}
-                onSubmit={handleSubmit}
+                open={showAgentModal}
+                agent={selectedAgent}
+                employees={employees}
+                roles={roles}
+                loading={modalLoading}
+                onClose={handleCloseAgentModal}
+                onSubmit={handleSaveAgent}
             />
 
 
-            {/* =================================================
-                ASSIGNED TEAM LEADS
-            ================================================= */}
+            {/* ================================================================ */}
+            {/* TEAM LEAD MODAL */}
+            {/* ================================================================ */}
 
             <AssignedTeamLeadsModal
-                open={showTeamLeadsModal}
+                open={showTeamLeadModal}
                 agent={selectedAgent}
-                onClose={handleCloseTeamLeads}
+                teamLeads={teamLeads}
+                assignedTeamLead={
+                    assignedTeamLead
+                }
+                loading={modalLoading}
+                onClose={
+                    handleCloseTeamLeadModal
+                }
                 onAssignmentChange={
                     handleAssignmentChange
                 }
             />
 
 
-            {/* =================================================
-                GLOBAL PERMISSIONS MODAL
-            ================================================= */}
+            {/* ================================================================ */}
+            {/* PERMISSIONS MODAL */}
+            {/* ================================================================ */}
 
             <PermissionsModal
                 open={showPermissionsModal}
+
+                employeeId={
+                    selectedAgent?.employee_id ??
+                    selectedAgent?.employeeId ??
+                    null
+                }
+
+                contextId={
+                    selectedAgent?.context_id ??
+                    selectedAgent?.contextId ??
+                    null
+                }
+
                 admin={selectedAgent}
-                onClose={handleClosePermissions}
+
+                onClose={
+                    handleClosePermissions
+                }
+            />
+
+
+            {/* ================================================================ */}
+            {/* FEEDBACK MODAL */}
+            {/* ================================================================ */}
+
+            <FeedbackModal
+                open={feedback.open}
+                type={feedback.type}
+                title={feedback.title}
+                message={feedback.message}
+                onClose={closeFeedback}
             />
 
         </div>
-
     )
-
 }
 
 

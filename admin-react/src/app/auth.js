@@ -101,15 +101,9 @@ export const getCurrentUser = async () => {
     }
 }
 export const getActiveContext = (
-    user = getCurrentUser()
+    user = getStoredUser()
 ) => {
-    if (!user) return null
-
-    const contexts = Array.isArray(user.contexts)
-        ? user.contexts
-        : []
-
-    if (contexts.length === 0) {
+    if (!user?.contexts?.length) {
         return null
     }
 
@@ -117,24 +111,31 @@ export const getActiveContext = (
         localStorage.getItem('active_context_id')
 
     if (storedContextId) {
-        const storedContext = contexts.find(
-            (context) =>
-                String(context.id) ===
-                String(storedContextId)
-        )
+        const activeContext =
+            user.contexts.find(
+                context =>
+                    String(context.id) ===
+                    String(storedContextId)
+            )
 
-        if (storedContext) {
-            return storedContext
+        if (activeContext) {
+            return activeContext
         }
     }
 
-    return (
-        contexts.find(
-            (context) => context.is_default
-        ) || contexts[0]
-    )
-}
+    // Fall back to the user's default context
+    const defaultContext =
+        user.contexts.find(
+            context => context.is_default
+        )
 
+    if (defaultContext) {
+        return defaultContext
+    }
+
+    // Final fallback
+    return user.contexts[0]
+}
 export const setActiveContext = (context) => {
     if (!context?.id) return
 

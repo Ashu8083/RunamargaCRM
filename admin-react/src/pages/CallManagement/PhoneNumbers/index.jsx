@@ -1,331 +1,697 @@
-// admin-react\src\pages\CallManagement\PhoneNumbers\index.jsx
-import { useMemo, useState } from 'react'
+// admin-react/src/pages/CallManagement/PhoneNumbers/index.jsx
+
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
+
+
+// =============================================================
+// PHONE NUMBER COMPONENTS
+// =============================================================
 
 import PhoneNumberSummary from './components/PhoneNumberSummary'
 import PhoneNumberTable from './components/PhoneNumberTable'
 import AddPhoneNumber from './components/AddPhoneNumber'
 import PhoneNumberDetails from './components/PhoneNumberDetails'
 
-import EmployeeDropdown from '../../../components/GlobalModels/Filters/EmployeeDropdown'
 
+// =============================================================
+// API
+// =============================================================
+
+import {
+    getPhoneNumbers,
+    createPhoneNumber,
+    updatePhoneNumber,
+} from './Api'
+
+
+// =============================================================
+// GLOBAL COMPONENTS
+// =============================================================
+
+import EmployeeDropdown from '../../../components/GlobalModels/Filters/EmployeeDropdown'
+import FeedbackModal from '../../../components/GlobalModels/FeedbackModal'
+
+
+// =============================================================
+// COMPONENT
+// =============================================================
 
 function PhoneNumbers() {
 
-    // =========================================================
-    // MOCK EMPLOYEES
-    // =========================================================
-
-    const employees = [
-        {
-            id: 101,
-            name: 'Rahul Sharma',
-            employeeId: 'EMP101',
-            phone: '9876543210',
-            email: 'rahul@runamarga.com',
-            teamId: 1,
-            teamName: 'Team A',
-        },
-        {
-            id: 102,
-            name: 'Anil Kumar',
-            employeeId: 'EMP102',
-            phone: '9845671234',
-            email: 'anil@runamarga.com',
-            teamId: 2,
-            teamName: 'Team B',
-        },
-        {
-            id: 103,
-            name: 'Priya Singh',
-            employeeId: 'EMP103',
-            phone: '9988776655',
-            email: 'priya@runamarga.com',
-            teamId: 1,
-            teamName: 'Team A',
-        },
-        {
-            id: 104,
-            name: 'Vikram Rao',
-            employeeId: 'EMP104',
-            phone: '9123456789',
-            email: 'vikram@runamarga.com',
-            teamId: 3,
-            teamName: 'Team C',
-        },
-        {
-            id: 105,
-            name: 'Sneha Reddy',
-            employeeId: 'EMP105',
-            phone: '9012345678',
-            email: 'sneha@runamarga.com',
-            teamId: 2,
-            teamName: 'Team B',
-        },
-    ]
-
 
     // =========================================================
-    // MOCK PHONE NUMBER DATA
+    // PHONE NUMBERS STATE
     // =========================================================
 
-    const [phoneNumbers, setPhoneNumbers] = useState([
-        {
-            id: 1,
-            number: '9876543210',
-            employeeId: 101,
-            employeeName: 'Rahul Sharma',
-            teamId: 1,
-            teamName: 'Team A',
-            status: 'Active',
-            trackable: true,
-            assignedAt: '12 Aug 2026',
-            createdAt: '12 Aug 2026',
-            updatedAt: '12 Aug 2026',
-            assignmentHistory: [
-                {
-                    id: 1,
-                    employeeId: 101,
-                    employeeName: 'Rahul Sharma',
-                    date: '12 Aug 2026',
-                    action: 'Assigned',
-                },
-            ],
-        },
+    const [
+        phoneNumbers,
+        setPhoneNumbers,
+    ] = useState([])
 
-        {
-            id: 2,
-            number: '9845671234',
-            employeeId: 102,
-            employeeName: 'Anil Kumar',
-            teamId: 2,
-            teamName: 'Team B',
-            status: 'Active',
-            trackable: false,
-            assignedAt: '13 Aug 2026',
-            createdAt: '13 Aug 2026',
-            updatedAt: '13 Aug 2026',
-            assignmentHistory: [
-                {
-                    id: 2,
-                    employeeId: 102,
-                    employeeName: 'Anil Kumar',
-                    date: '13 Aug 2026',
-                    action: 'Assigned',
-                },
-            ],
-        },
 
-        {
-            id: 3,
-            number: '9988776655',
-            employeeId: null,
-            employeeName: null,
-            teamId: null,
-            teamName: null,
-            status: 'Inactive',
-            trackable: true,
-            assignedAt: null,
-            createdAt: '14 Aug 2026',
-            updatedAt: '20 Aug 2026',
-            assignmentHistory: [],
-        },
+    const [
+        loading,
+        setLoading,
+    ] = useState(false)
 
-        {
-            id: 4,
-            number: '9123456789',
-            employeeId: 103,
-            employeeName: 'Priya Singh',
-            teamId: 1,
-            teamName: 'Team A',
-            status: 'Active',
-            trackable: true,
-            assignedAt: '15 Aug 2026',
-            createdAt: '15 Aug 2026',
-            updatedAt: '15 Aug 2026',
-            assignmentHistory: [
-                {
-                    id: 3,
-                    employeeId: 103,
-                    employeeName: 'Priya Singh',
-                    date: '15 Aug 2026',
-                    action: 'Assigned',
-                },
-            ],
-        },
 
-        {
-            id: 5,
-            number: '9012345678',
-            employeeId: 105,
-            employeeName: 'Sneha Reddy',
-            teamId: 2,
-            teamName: 'Team B',
-            status: 'Inactive',
-            trackable: false,
-            assignedAt: '16 Aug 2026',
-            createdAt: '16 Aug 2026',
-            updatedAt: '22 Aug 2026',
-            assignmentHistory: [
-                {
-                    id: 4,
-                    employeeId: 105,
-                    employeeName: 'Sneha Reddy',
-                    date: '16 Aug 2026',
-                    action: 'Assigned',
-                },
-            ],
-        },
-    ])
+    const [
+        error,
+        setError,
+    ] = useState('')
 
 
     // =========================================================
     // FILTER STATE
     // =========================================================
 
-    const [search, setSearch] = useState('')
+    const [
+        search,
+        setSearch,
+    ] = useState('')
 
-    const [employeeId, setEmployeeId] = useState('')
 
-    const [status, setStatus] = useState('')
+    const [
+        employeeId,
+        setEmployeeId,
+    ] = useState('')
 
-    const [trackable, setTrackable] = useState('')
+
+    const [
+        status,
+        setStatus,
+    ] = useState('')
+
+
+    const [
+        trackable,
+        setTrackable,
+    ] = useState('')
 
 
     // =========================================================
     // ADD / EDIT DRAWER STATE
     // =========================================================
 
-    const [showNumberDrawer, setShowNumberDrawer] =
-        useState(false)
+    const [
+        showNumberDrawer,
+        setShowNumberDrawer,
+    ] = useState(false)
 
-    const [editingPhoneNumber, setEditingPhoneNumber] =
-        useState(null)
+
+    const [
+        editingPhoneNumber,
+        setEditingPhoneNumber,
+    ] = useState(null)
 
 
     // =========================================================
     // DETAILS STATE
     // =========================================================
 
-    const [selectedPhoneNumber, setSelectedPhoneNumber] =
-        useState(null)
+    const [
+        selectedPhoneNumber,
+        setSelectedPhoneNumber,
+    ] = useState(null)
 
-    const [showDetails, setShowDetails] =
-        useState(false)
+
+    const [
+        showDetails,
+        setShowDetails,
+    ] = useState(false)
+
+
+    // =========================================================
+    // FEEDBACK MODAL STATE
+    // =========================================================
+
+    const [
+        feedback,
+        setFeedback,
+    ] = useState({
+
+        open: false,
+
+        type: 'success',
+
+        title: '',
+
+        message: '',
+
+    })
+
+
+    // =========================================================
+    // NORMALIZE STATUS
+    // =========================================================
+
+    const normalizeStatus = (value) => {
+
+        if (
+            value === 1 ||
+            value === '1' ||
+            value === 'active' ||
+            value === 'Active'
+        ) {
+
+            return 'Active'
+
+        }
+
+
+        if (
+            value === 0 ||
+            value === '0' ||
+            value === 'inactive' ||
+            value === 'Inactive'
+        ) {
+
+            return 'Inactive'
+
+        }
+
+
+        return value || 'Inactive'
+
+    }
+
+
+    // =========================================================
+    // NORMALIZE PHONE NUMBER
+    // =========================================================
+
+    const normalizePhoneNumber = (item) => {
+
+        if (!item) {
+            return item
+        }
+
+
+        return {
+
+            ...item,
+
+            // -------------------------------------------------
+            // ID
+            // -------------------------------------------------
+
+            id:
+                item.id,
+
+
+            // -------------------------------------------------
+            // PHONE NUMBER
+            // -------------------------------------------------
+
+            number:
+                item.number ??
+                item.phone ??
+                '',
+
+
+            // -------------------------------------------------
+            // EMPLOYEE
+            // -------------------------------------------------
+
+            employeeId:
+                item.employeeId ??
+                item.employee_id ??
+                null,
+
+
+            employeeName:
+                item.employeeName ??
+                item.employee_name ??
+                null,
+
+
+            // -------------------------------------------------
+            // TEAM
+            // -------------------------------------------------
+
+            teamId:
+                item.teamId ??
+                item.team_id ??
+                null,
+
+
+            teamName:
+                item.teamName ??
+                item.team_name ??
+                null,
+
+
+            // -------------------------------------------------
+            // STATUS
+            // -------------------------------------------------
+
+            status:
+                normalizeStatus(
+                    item.status
+                ),
+
+
+            // -------------------------------------------------
+            // TRACKABLE
+            // -------------------------------------------------
+
+            trackable:
+                item.trackable === true ||
+                item.trackable === 'true' ||
+                item.trackable === '1' ||
+                item.trackable === 1 ||
+                item.trackable === 'Yes',
+
+
+            // -------------------------------------------------
+            // DATES
+            // -------------------------------------------------
+
+            assignedAt:
+                item.assignedAt ??
+                item.assigned_at ??
+                null,
+
+
+            createdAt:
+                item.createdAt ??
+                item.created_at ??
+                null,
+
+
+            updatedAt:
+                item.updatedAt ??
+                item.updated_at ??
+                null,
+
+
+            // -------------------------------------------------
+            // HISTORY
+            // -------------------------------------------------
+
+            assignmentHistory:
+                item.assignmentHistory ??
+                item.assignment_history ??
+                [],
+
+        }
+
+    }
+
+
+    // =========================================================
+    // CLOSE FEEDBACK
+    // =========================================================
+
+    const closeFeedback = () => {
+
+        setFeedback((previous) => ({
+
+            ...previous,
+
+            open: false,
+
+        }))
+
+    }
+
+
+    // =========================================================
+    // SHOW SUCCESS
+    // =========================================================
+
+    const showSuccess = (
+        title,
+        message
+    ) => {
+
+        setFeedback({
+
+            open: true,
+
+            type: 'success',
+
+            title,
+
+            message,
+
+        })
+
+    }
+
+
+    // =========================================================
+    // SHOW ERROR
+    // =========================================================
+
+    const showError = (
+        title,
+        message
+    ) => {
+
+        setFeedback({
+
+            open: true,
+
+            type: 'error',
+
+            title,
+
+            message,
+
+        })
+
+    }
+
+
+    // =========================================================
+    // EXTRACT API ERROR
+    // =========================================================
+
+    const getErrorMessage = (error) => {
+
+        const detail =
+            error?.response?.data?.detail
+
+
+        if (typeof detail === 'string') {
+
+            return detail
+
+        }
+
+
+        if (Array.isArray(detail)) {
+
+            return detail
+                .map(
+                    (item) =>
+                        item?.msg ||
+                        String(item)
+                )
+                .join(', ')
+
+        }
+
+
+        if (
+            detail &&
+            typeof detail === 'object'
+        ) {
+
+            return (
+                detail.message ||
+                detail.error ||
+                JSON.stringify(detail)
+            )
+
+        }
+
+
+        return (
+            error?.response?.data?.message ||
+            error?.message ||
+            'The operation could not be completed. Please try again.'
+        )
+
+    }
+
+
+    // =========================================================
+    // LOAD PHONE NUMBERS
+    // =========================================================
+
+    const loadPhoneNumbers = async () => {
+
+        try {
+
+            setLoading(true)
+
+            setError('')
+
+
+            const data =
+                await getPhoneNumbers()
+
+
+            const records =
+                Array.isArray(data)
+                    ? data
+                    : Array.isArray(data?.data)
+                        ? data.data
+                        : []
+
+
+            setPhoneNumbers(
+                records.map(
+                    normalizePhoneNumber
+                )
+            )
+
+
+        } catch (error) {
+
+            console.error(
+                'Failed to load phone numbers:',
+                error
+            )
+
+
+            const message =
+                getErrorMessage(error)
+
+
+            setError(message)
+
+
+            showError(
+                'Unable to Load Phone Numbers',
+                message
+            )
+
+
+        } finally {
+
+            setLoading(false)
+
+        }
+
+    }
+
+
+    // =========================================================
+    // INITIAL LOAD
+    // =========================================================
+
+    useEffect(() => {
+
+        loadPhoneNumbers()
+
+    }, [])
 
 
     // =========================================================
     // FILTER PHONE NUMBERS
     // =========================================================
 
-    const filteredPhoneNumbers = useMemo(() => {
+    const filteredPhoneNumbers =
+        useMemo(() => {
 
-        const searchValue =
-            search.trim().toLowerCase()
-
-
-        return phoneNumbers.filter(
-            (phoneNumber) => {
-
-                // -------------------------------------------------
-                // SEARCH
-                // -------------------------------------------------
-
-                const matchesSearch =
-                    !searchValue ||
-                    phoneNumber.number
-                        ?.toLowerCase()
-                        .includes(searchValue) ||
-                    phoneNumber.employeeName
-                        ?.toLowerCase()
-                        .includes(searchValue)
+            const searchValue =
+                search
+                    .trim()
+                    .toLowerCase()
 
 
-                // -------------------------------------------------
-                // EMPLOYEE
-                // -------------------------------------------------
-
-                const matchesEmployee =
-                    !employeeId ||
-                    String(phoneNumber.employeeId) ===
-                        String(employeeId)
+            return phoneNumbers.filter(
+                (phoneNumber) => {
 
 
-                // -------------------------------------------------
-                // STATUS
-                // -------------------------------------------------
+                    // -------------------------------------------------
+                    // SEARCH
+                    // -------------------------------------------------
 
-                const matchesStatus =
-                    !status ||
-                    phoneNumber.status === status
+                    if (searchValue) {
 
+                        const searchableValues = [
 
-                // -------------------------------------------------
-                // TRACKABLE
-                // -------------------------------------------------
+                            phoneNumber.number,
 
-                const matchesTrackable =
-                    !trackable ||
-                    (
-                        trackable === 'Yes' &&
-                        phoneNumber.trackable === true
-                    ) ||
-                    (
-                        trackable === 'No' &&
-                        phoneNumber.trackable === false
-                    )
+                            phoneNumber.phone,
+
+                            phoneNumber.employeeName,
+
+                            phoneNumber.employee_name,
+
+                            phoneNumber.teamName,
+
+                            phoneNumber.team_name,
+
+                        ]
 
 
-                return (
-                    matchesSearch &&
-                    matchesEmployee &&
-                    matchesStatus &&
-                    matchesTrackable
-                )
+                        const matchesSearch =
+                            searchableValues.some(
+                                (value) =>
+                                    value !== null &&
+                                    value !== undefined &&
+                                    String(value)
+                                        .toLowerCase()
+                                        .includes(
+                                            searchValue
+                                        )
+                            )
 
-            }
-        )
 
-    }, [
-        phoneNumbers,
-        search,
-        employeeId,
-        status,
-        trackable,
-    ])
+                        if (!matchesSearch) {
+
+                            return false
+
+                        }
+
+                    }
+
+
+                    // -------------------------------------------------
+                    // EMPLOYEE
+                    // -------------------------------------------------
+
+                    if (employeeId) {
+
+                        if (
+                            String(
+                                phoneNumber.employeeId
+                            ) !==
+                            String(
+                                employeeId
+                            )
+                        ) {
+
+                            return false
+
+                        }
+
+                    }
+
+
+                    // -------------------------------------------------
+                    // STATUS
+                    // -------------------------------------------------
+
+                    if (status) {
+
+                        if (
+                            normalizeStatus(
+                                phoneNumber.status
+                            ) !==
+                            status
+                        ) {
+
+                            return false
+
+                        }
+
+                    }
+
+
+                    // -------------------------------------------------
+                    // TRACKABLE
+                    // -------------------------------------------------
+
+                    if (trackable) {
+
+                        const isTrackable =
+                            phoneNumber.trackable === true
+
+
+                        if (
+                            trackable === 'Yes' &&
+                            !isTrackable
+                        ) {
+
+                            return false
+
+                        }
+
+
+                        if (
+                            trackable === 'No' &&
+                            isTrackable
+                        ) {
+
+                            return false
+
+                        }
+
+                    }
+
+
+                    return true
+
+                }
+            )
+
+        }, [
+
+            phoneNumbers,
+
+            search,
+
+            employeeId,
+
+            status,
+
+            trackable,
+
+        ])
 
 
     // =========================================================
     // SUMMARY
     // =========================================================
 
-    const summary = useMemo(() => {
+    const summary =
+        useMemo(() => {
 
-        return {
+            return {
 
-            totalNumbers:
-                phoneNumbers.length,
+                totalNumbers:
+                    phoneNumbers.length,
 
-            activeNumbers:
-                phoneNumbers.filter(
-                    (item) =>
-                        item.status === 'Active'
-                ).length,
 
-            inactiveNumbers:
-                phoneNumbers.filter(
-                    (item) =>
-                        item.status === 'Inactive'
-                ).length,
+                activeNumbers:
+                    phoneNumbers.filter(
+                        (item) =>
+                            normalizeStatus(
+                                item.status
+                            ) === 'Active'
+                    ).length,
 
-            trackableNumbers:
-                phoneNumbers.filter(
-                    (item) =>
-                        item.trackable === true
-                ).length,
 
-        }
+                inactiveNumbers:
+                    phoneNumbers.filter(
+                        (item) =>
+                            normalizeStatus(
+                                item.status
+                            ) === 'Inactive'
+                    ).length,
 
-    }, [phoneNumbers])
+
+                trackableNumbers:
+                    phoneNumbers.filter(
+                        (item) =>
+                            item.trackable === true
+                    ).length,
+
+            }
+
+        }, [
+            phoneNumbers,
+        ])
 
 
     // =========================================================
@@ -362,9 +728,13 @@ function PhoneNumbers() {
     // OPEN EDIT DRAWER
     // =========================================================
 
-    const handleEditPhoneNumber = (phoneNumber) => {
+    const handleEditPhoneNumber = (
+        phoneNumber
+    ) => {
 
-        setEditingPhoneNumber(phoneNumber)
+        setEditingPhoneNumber(
+            phoneNumber
+        )
 
         setShowNumberDrawer(true)
 
@@ -387,270 +757,183 @@ function PhoneNumbers() {
     // =========================================================
     // SAVE PHONE NUMBER
     //
-    // Same handler is used for:
+    // Used for:
     //
-    // 1. Adding a new number
-    // 2. Updating an existing number
+    // 1. CREATE
+    // 2. UPDATE
     // =========================================================
 
-    const handleSavePhoneNumber = (data) => {
+    const handleSavePhoneNumber = async (
+        data
+    ) => {
 
-        // =====================================================
-        // EDIT EXISTING PHONE NUMBER
-        // =====================================================
+        try {
 
-        if (editingPhoneNumber) {
+            setError('')
 
-            const employee =
-                employees.find(
-                    (item) =>
-                        String(item.id) ===
-                        String(data.employeeId)
+
+            // =====================================================
+            // PREPARE DATA
+            // =====================================================
+
+            const payload = {
+
+                number:
+                    data.number?.trim() || '',
+
+                employeeId:
+                    data.employeeId
+                        ? Number(
+                            data.employeeId
+                        )
+                        : null,
+
+                trackable:
+                    Boolean(
+                        data.trackable
+                    ),
+
+                status:
+                    normalizeStatus(
+                        data.status
+                    ),
+
+            }
+
+
+            // =====================================================
+            // EDIT
+            // =====================================================
+
+            if (editingPhoneNumber) {
+
+                await updatePhoneNumber(
+
+                    editingPhoneNumber.id,
+
+                    payload
+
                 )
 
 
-            setPhoneNumbers((previous) => {
+                // -------------------------------------------------
+                // Reload from backend
+                // -------------------------------------------------
 
-                return previous.map(
-                    (phoneNumber) => {
-
-                        if (
-                            phoneNumber.id !==
-                            editingPhoneNumber.id
-                        ) {
-                            return phoneNumber
-                        }
+                await loadPhoneNumbers()
 
 
-                        const employeeChanged =
-                            String(
-                                phoneNumber.employeeId || ''
-                            ) !==
-                            String(
-                                data.employeeId || ''
-                            )
+                // -------------------------------------------------
+                // Close drawer
+                // -------------------------------------------------
+
+                handleCloseNumberDrawer()
 
 
-                        let assignmentHistory =
-                            phoneNumber.assignmentHistory ||
-                            []
+                // -------------------------------------------------
+                // Success
+                // -------------------------------------------------
 
+                showSuccess(
 
-                        // -----------------------------------------
-                        // ADD ASSIGNMENT HISTORY
-                        // -----------------------------------------
+                    'Phone Number Updated',
 
-                        if (
-                            employeeChanged &&
-                            employee
-                        ) {
+                    'The phone number was updated successfully.'
 
-                            assignmentHistory = [
-                                ...assignmentHistory,
-
-                                {
-                                    id:
-                                        Date.now(),
-
-                                    employeeId:
-                                        employee.id,
-
-                                    employeeName:
-                                        employee.name,
-
-                                    date:
-                                        new Date()
-                                            .toLocaleDateString(
-                                                'en-IN',
-                                                {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                    year: 'numeric',
-                                                }
-                                            ),
-
-                                    action:
-                                        phoneNumber.employeeId
-                                            ? 'Reassigned'
-                                            : 'Assigned',
-                                },
-                            ]
-
-                        }
-
-
-                        const now =
-                            new Date()
-                                .toLocaleString(
-                                    'en-IN',
-                                    {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric',
-                                        hour: 'numeric',
-                                        minute: '2-digit',
-                                        second: '2-digit',
-                                    }
-                                )
-
-
-                        return {
-
-                            ...phoneNumber,
-
-                            number:
-                                data.number,
-
-                            employeeId:
-                                employee?.id ||
-                                null,
-
-                            employeeName:
-                                employee?.name ||
-                                null,
-
-                            teamId:
-                                employee?.teamId ||
-                                null,
-
-                            teamName:
-                                employee?.teamName ||
-                                null,
-
-                            status:
-                                data.status,
-
-                            trackable:
-                                data.trackable,
-
-                            assignedAt:
-                                employee
-                                    ? (
-                                        phoneNumber.assignedAt ||
-                                        now
-                                    )
-                                    : null,
-
-                            updatedAt:
-                                now,
-
-                            assignmentHistory,
-
-                        }
-
-                    }
                 )
 
-            })
+            }
 
 
-            handleCloseNumberDrawer()
+            // =====================================================
+            // ADD
+            // =====================================================
 
-            return
+            else {
 
-        }
+                await createPhoneNumber(
+                    payload
+                )
 
 
-        // =====================================================
-        // ADD NEW PHONE NUMBER
-        // =====================================================
+                // -------------------------------------------------
+                // Reload from backend
+                // -------------------------------------------------
 
-        const employee =
-            employees.find(
-                (item) =>
-                    String(item.id) ===
-                    String(data.employeeId)
+                await loadPhoneNumbers()
+
+
+                // -------------------------------------------------
+                // Close drawer
+                // -------------------------------------------------
+
+                handleCloseNumberDrawer()
+
+
+                // -------------------------------------------------
+                // Success
+                // -------------------------------------------------
+
+                showSuccess(
+
+                    'Phone Number Added',
+
+                    'The phone number was added successfully.'
+
+                )
+
+            }
+
+
+        } catch (error) {
+
+            console.error(
+                'Failed to save phone number:',
+                error
             )
 
 
-        const now =
-            new Date()
-                .toLocaleString(
-                    'en-IN',
-                    {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        second: '2-digit',
-                    }
+            const message =
+                getErrorMessage(error)
+
+
+            setError(message)
+
+
+            // -------------------------------------------------
+            // ADD ERROR
+            // -------------------------------------------------
+
+            if (!editingPhoneNumber) {
+
+                showError(
+
+                    'Unable to Add Phone Number',
+
+                    message
+
                 )
 
+            }
 
-        const newPhoneNumber = {
 
-            id:
-                Date.now(),
+            // -------------------------------------------------
+            // UPDATE ERROR
+            // -------------------------------------------------
 
-            number:
-                data.number,
+            else {
 
-            employeeId:
-                employee?.id ||
-                null,
+                showError(
 
-            employeeName:
-                employee?.name ||
-                null,
+                    'Unable to Update Phone Number',
 
-            teamId:
-                employee?.teamId ||
-                null,
+                    message
 
-            teamName:
-                employee?.teamName ||
-                null,
+                )
 
-            status:
-                data.status,
-
-            trackable:
-                data.trackable,
-
-            assignedAt:
-                employee
-                    ? now
-                    : null,
-
-            createdAt:
-                now,
-
-            updatedAt:
-                now,
-
-            assignmentHistory:
-                employee
-                    ? [
-                        {
-                            id:
-                                Date.now(),
-
-                            employeeId:
-                                employee.id,
-
-                            employeeName:
-                                employee.name,
-
-                            date:
-                                now,
-
-                            action:
-                                'Assigned',
-                        },
-                    ]
-                    : [],
+            }
 
         }
-
-
-        setPhoneNumbers((previous) => [
-            ...previous,
-            newPhoneNumber,
-        ])
-
-
-        handleCloseNumberDrawer()
 
     }
 
@@ -659,7 +942,9 @@ function PhoneNumbers() {
     // VIEW DETAILS
     // =========================================================
 
-    const handleViewDetails = (phoneNumber) => {
+    const handleViewDetails = (
+        phoneNumber
+    ) => {
 
         setSelectedPhoneNumber(
             phoneNumber
@@ -687,13 +972,9 @@ function PhoneNumbers() {
     // REFRESH
     // =========================================================
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
 
-        // Replace with API call later.
-
-        console.log(
-            'Refresh phone numbers'
-        )
+        await loadPhoneNumbers()
 
     }
 
@@ -709,6 +990,7 @@ function PhoneNumbers() {
             p-4
             sm:p-6
         ">
+
 
             {/* =================================================
                 FILTERS + ADD BUTTON
@@ -733,6 +1015,7 @@ function PhoneNumbers() {
                         gap-3
                         lg:grid-cols-12
                     ">
+
 
                         {/* =====================================
                             SEARCH
@@ -785,9 +1068,12 @@ function PhoneNumbers() {
                         ">
 
                             <EmployeeDropdown
-                                value={employeeId}
-                                onChange={setEmployeeId}
-                                employees={employees}
+                                value={
+                                    employeeId
+                                }
+                                onChange={
+                                    setEmployeeId
+                                }
                             />
 
                         </div>
@@ -881,7 +1167,9 @@ function PhoneNumbers() {
 
                             <button
                                 type="button"
-                                onClick={handleReset}
+                                onClick={
+                                    handleReset
+                                }
                                 className="
                                     btn
                                     btn-ghost
@@ -939,49 +1227,115 @@ function PhoneNumbers() {
 
 
             {/* =================================================
+                ERROR STATE
+            ================================================= */}
+
+            {error && !loading && (
+
+                <div className="
+                    rounded-xl
+                    border
+                    border-error/20
+                    bg-error/5
+                    px-4
+                    py-3
+                    text-sm
+                    text-error
+                ">
+
+                    {error}
+
+                </div>
+
+            )}
+
+
+            {/* =================================================
+                LOADING
+            ================================================= */}
+
+            {loading && (
+
+                <div className="
+                    flex
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-base-300
+                    bg-base-100
+                    py-10
+                    text-sm
+                    text-base-content/50
+                ">
+
+                    Loading phone numbers...
+
+                </div>
+
+            )}
+
+
+            {/* =================================================
                 SUMMARY
             ================================================= */}
 
-            <PhoneNumberSummary
-                totalNumbers={
-                    summary.totalNumbers
-                }
-                activeNumbers={
-                    summary.activeNumbers
-                }
-                inactiveNumbers={
-                    summary.inactiveNumbers
-                }
-                trackableNumbers={
-                    summary.trackableNumbers
-                }
-            />
+            {!loading && (
+
+                <PhoneNumberSummary
+
+                    totalNumbers={
+                        summary.totalNumbers
+                    }
+
+                    activeNumbers={
+                        summary.activeNumbers
+                    }
+
+                    inactiveNumbers={
+                        summary.inactiveNumbers
+                    }
+
+                    trackableNumbers={
+                        summary.trackableNumbers
+                    }
+
+                />
+
+            )}
 
 
             {/* =================================================
                 TABLE
             ================================================= */}
 
-            <PhoneNumberTable
-                phoneNumbers={
-                    filteredPhoneNumbers
-                }
-                employees={
-                    employees
-                }
-                onEdit={
-                    handleEditPhoneNumber
-                }
-                onViewDetails={
-                    handleViewDetails
-                }
-                onRefresh={
-                    handleRefresh
-                }
-                EmployeeDropdown={
-                    EmployeeDropdown
-                }
-            />
+            {!loading && (
+
+                <PhoneNumberTable
+
+                    phoneNumbers={
+                        filteredPhoneNumbers
+                    }
+
+                    onEdit={
+                        handleEditPhoneNumber
+                    }
+
+                    onViewDetails={
+                        handleViewDetails
+                    }
+
+                    onRefresh={
+                        handleRefresh
+                    }
+
+                    EmployeeDropdown={
+                        EmployeeDropdown
+                    }
+
+                />
+
+            )}
 
 
             {/* =================================================
@@ -989,24 +1343,27 @@ function PhoneNumbers() {
             ================================================= */}
 
             <AddPhoneNumber
+
                 open={
                     showNumberDrawer
                 }
+
                 phoneNumber={
                     editingPhoneNumber
                 }
-                employees={
-                    employees
-                }
+
                 EmployeeDropdown={
                     EmployeeDropdown
                 }
+
                 onClose={
                     handleCloseNumberDrawer
                 }
+
                 onSubmit={
                     handleSavePhoneNumber
                 }
+
             />
 
 
@@ -1015,15 +1372,58 @@ function PhoneNumbers() {
             ================================================= */}
 
             <PhoneNumberDetails
+
                 open={
                     showDetails
                 }
+
                 phoneNumber={
                     selectedPhoneNumber
                 }
+
                 onClose={
                     handleCloseDetails
                 }
+
+            />
+
+
+            {/* =================================================
+                FEEDBACK MODAL
+            ================================================= */}
+
+            <FeedbackModal
+
+                open={
+                    feedback.open
+                }
+
+                type={
+                    feedback.type
+                }
+
+                title={
+                    feedback.title
+                }
+
+                message={
+                    feedback.message
+                }
+
+                autoClose={
+                    feedback.type === 'success'
+                }
+
+                autoCloseDuration={2500}
+
+                showCloseButton={
+                    feedback.type !== 'success'
+                }
+
+                onClose={
+                    closeFeedback
+                }
+
             />
 
         </div>

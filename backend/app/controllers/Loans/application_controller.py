@@ -356,19 +356,15 @@ def view_application(
         "bank_processing": [],
     }
 
-# =============================================================
-# Create Application
-# =============================================================
-
 def create_application(
     db: Session,
     employee: Employee,
     payload,
 ):
 
-    # ---------------------------------------------------------
-    # VALIDATE SELECTED RM ONLY IF PROVIDED
-    # ---------------------------------------------------------
+    # =========================================================
+    # VALIDATE RM IF PROVIDED
+    # =========================================================
 
     if payload.rm_id is not None:
 
@@ -388,35 +384,216 @@ def create_application(
                 detail="Relationship Manager not found",
             )
 
-    # ---------------------------------------------------------
-    # CREATE APPLICATION
-    # ---------------------------------------------------------
+    # =========================================================
+    # CHECK EXISTING APPLICATION BY PHONE
+    # =========================================================
+
+    existing_application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.phone == payload.phone,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .order_by(
+            LoanApplication.id.desc()
+        )
+        .first()
+    )
+
+    # ===========================================================
+    # EXISTING APPLICATION
+    # ===========================================================
+
+    existing_application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.phone == payload.phone,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .order_by(
+            LoanApplication.id.desc()
+        )
+        .first()
+    )
+
+    if existing_application:
+
+        # -------------------------------------------------------
+        # APPLIED BY
+        # -------------------------------------------------------
+
+        applied_by = None
+
+        if existing_application.applied_by_id:
+
+            applied_by = (
+                db.query(Employee)
+                .filter(
+                    Employee.id ==
+                    existing_application.applied_by_id
+                )
+                .first()
+            )
+
+
+        # -------------------------------------------------------
+        # RM
+        # -------------------------------------------------------
+
+        rm = None
+
+        if existing_application.rm_id:
+
+            rm = (
+                db.query(Employee)
+                .filter(
+                    Employee.id ==
+                    existing_application.rm_id
+                )
+                .first()
+            )
+
+
+        # -------------------------------------------------------
+        # AGENT
+        # -------------------------------------------------------
+
+        agent = None
+
+        agent_id = getattr(
+            existing_application,
+            "agent_id",
+            None,
+        )
+
+        if agent_id:
+
+            agent = (
+                db.query(Employee)
+                .filter(
+                    Employee.id == agent_id
+                )
+                .first()
+            )
+
+
+        # -------------------------------------------------------
+        # RETURN EXISTING APPLICATION
+        # -------------------------------------------------------
+
+        return {
+
+            "success": True,
+
+            "existing_loan": True,
+
+            "message":
+                "An existing application was found for this phone number.",
+
+            "data": {
+
+                "application_id":
+                    existing_application.id,
+
+                "name":
+                    existing_application.name,
+
+                "phone":
+                    existing_application.phone,
+
+                "loan_type_id":
+                    existing_application.loan_type_id,
+
+                "loan_amount":
+                    existing_application.loan_amt,
+
+                "credit_score":
+                    existing_application.credit_score,
+
+                "loan_purpose":
+                    existing_application.loan_purpose,
+
+                "reference_name":
+                    existing_application.referral,
+
+                "status":
+                    (
+                        existing_application.status.value
+                        if existing_application.status
+                        else None
+                    ),
+
+                "applied_date":
+                    (
+                        existing_application.applied_date
+                        or (
+                            existing_application.created_at.date()
+                            if existing_application.created_at
+                            else None
+                        )
+                    ),
+
+                # ------------------------------------------------
+                # APPLIED BY
+                # ------------------------------------------------
+
+                "applied_by_id":
+                    existing_application.applied_by_id,
+
+                "applied_by_name":
+                    (
+                        applied_by.name
+                        if applied_by
+                        else None
+                    ),
+
+                # ------------------------------------------------
+                # RM
+                # ------------------------------------------------
+
+                "rm_id":
+                    existing_application.rm_id,
+
+                "rm_name":
+                    (
+                        rm.name
+                        if rm
+                        else None
+                    ),
+
+                # ------------------------------------------------
+                # AGENT
+                # ------------------------------------------------
+
+                "agent_id":
+                    agent_id,
+
+                "agent_name":
+                    (
+                        agent.name
+                        if agent
+                        else None
+                    ),
+            },
+        }
+    # =========================================================
+    # CREATE NEW APPLICATION
+    # =========================================================
 
     application = LoanApplication(
         name=payload.name,
         phone=payload.phone,
         gender=payload.gender,
-
         loan_type_id=payload.loan_type_id,
-
         loan_amt=payload.loan_amount,
-
         credit_score=payload.credit_score,
-
         loan_purpose=payload.loan_purpose,
-
         referral=payload.reference_name,
-
-        # Can now be NULL
         rm_id=payload.rm_id,
-
         state_id=payload.state_id,
         city_id=payload.city_id,
-
         applied_by_id=employee.id,
-
         status=LoanStatus.inprocess,
-
         applied_date=date.today(),
     )
 

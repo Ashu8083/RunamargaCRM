@@ -1,4 +1,4 @@
-# backend/app/routes/edit_routes.py
+# backend/app/routes/edit_application_routes.py
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from app.dependency.get_access_control_dependency import check_permission
@@ -32,6 +32,8 @@ def update_application_loan_type_route(
         application_id=application_id,
         loan_type_id=payload.loan_type_id,
     )
+
+    
 @router.patch("/{application_id}/status")
 def update_application_status_route(
     application_id: int,

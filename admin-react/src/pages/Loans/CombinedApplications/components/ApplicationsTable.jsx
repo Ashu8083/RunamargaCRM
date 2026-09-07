@@ -36,57 +36,262 @@ const STATUS_OPTIONS = [
 // HELPERS
 // =============================================================
 
-const getAgentName = (application) =>
-    application.agentName ??
-    application.agent_name ??
-    application.processingAgentName ??
-    application.processing_agent_name ??
-    application.processingAgent ??
-    application.processing_agent ??
-    application.agent?.name ??
-    "N/A";
+const getAgentName = (application) => {
+
+    if (
+        application.agent &&
+        typeof application.agent === 'object'
+    ) {
+        return application.agent.name || 'N/A'
+    }
+
+    if (
+        application.processingAgent &&
+        typeof application.processingAgent === 'object'
+    ) {
+        return application.processingAgent.name || 'N/A'
+    }
+
+    if (
+        application.agentName &&
+        typeof application.agentName === 'string'
+    ) {
+        return application.agentName
+    }
+
+    if (
+        application.agent_name &&
+        typeof application.agent_name === 'string'
+    ) {
+        return application.agent_name
+    }
+
+    if (
+        typeof application.processingAgent === 'string'
+    ) {
+        return application.processingAgent
+    }
+
+    if (
+        typeof application.processing_agent === 'string'
+    ) {
+        return application.processing_agent
+    }
+
+    return 'N/A'
+}
 
 
-const getRMName = (application) =>
-    application.rmName ??
-    application.rm_name ??
-    application.rm?.name ??
-    application.rm ??
-    "N/A";
+const getRMName = (application) => {
+
+    if (
+        application.rm &&
+        typeof application.rm === 'object'
+    ) {
+        return application.rm.name || 'N/A'
+    }
+
+    if (
+        typeof application.rmName === 'string'
+    ) {
+        return application.rmName
+    }
+
+    if (
+        typeof application.rm_name === 'string'
+    ) {
+        return application.rm_name
+    }
+
+    if (
+        typeof application.rm === 'string'
+    ) {
+        return application.rm
+    }
+
+    return 'N/A'
+}
 
 
-const getTeamLeadName = (application) =>
-    application.teamLeadName ??
-    application.team_lead_name ??
-    application.teamLead?.name ??
-    application.team_lead?.name ??
-    "N/A";
+const getTeamLeadName = (application) => {
 
+    if (
+        application.teamLead &&
+        typeof application.teamLead === 'object'
+    ) {
+        return application.teamLead.name || 'N/A'
+    }
 
-const getAppliedBy = (application) =>
-    application.appliedByName ??
-    application.applied_by_name ??
-    application.appliedBy ??
-    application.applied_by ??
-    application.createdByName ??
-    application.created_by_name ??
-    application.createdBy ??
-    application.created_by ??
-    "N/A";
+    if (
+        application.team_lead &&
+        typeof application.team_lead === 'object'
+    ) {
+        return application.team_lead.name || 'N/A'
+    }
 
+    if (
+        typeof application.teamLeadName === 'string'
+    ) {
+        return application.teamLeadName
+    }
 
-const getReferral = (application) =>
-    application.referralName ??
-    application.referral_name ??
-    application.referral ??
-    application.referredBy ??
-    application.referred_by ??
-    application.referrerName ??
-    application.referrer_name ??
-    application.referrer ??
-    "N/A";
+    if (
+        typeof application.team_lead_name === 'string'
+    ) {
+        return application.team_lead_name
+    }
 
+    return 'N/A'
+}
+const getAppliedBy = (application) => {
 
+    if (
+        application.appliedBy &&
+        typeof application.appliedBy === 'object'
+    ) {
+        return application.appliedBy.name || 'N/A'
+    }
+
+    if (
+        application.applied_by &&
+        typeof application.applied_by === 'object'
+    ) {
+        return application.applied_by.name || 'N/A'
+    }
+
+    if (
+        application.createdBy &&
+        typeof application.createdBy === 'object'
+    ) {
+        return application.createdBy.name || 'N/A'
+    }
+
+    if (
+        application.created_by &&
+        typeof application.created_by === 'object'
+    ) {
+        return application.created_by.name || 'N/A'
+    }
+
+    if (
+        typeof application.appliedBy === 'string'
+    ) {
+        return application.appliedBy
+    }
+
+    if (
+        typeof application.applied_by === 'string'
+    ) {
+        return application.applied_by
+    }
+
+    if (
+        typeof application.createdBy === 'string'
+    ) {
+        return application.createdBy
+    }
+
+    if (
+        typeof application.created_by === 'string'
+    ) {
+        return application.created_by
+    }
+
+    if (
+        typeof application.appliedByName === 'string'
+    ) {
+        return application.appliedByName
+    }
+
+    if (
+        typeof application.applied_by_name === 'string'
+    ) {
+        return application.applied_by_name
+    }
+
+    return 'N/A'
+}
+
+const getReferral = (application) => {
+
+    if (
+        application.referral &&
+        typeof application.referral === 'object'
+    ) {
+        return application.referral.name || 'N/A'
+    }
+
+    if (
+        application.referredBy &&
+        typeof application.referredBy === 'object'
+    ) {
+        return application.referredBy.name || 'N/A'
+    }
+
+    if (
+        application.referred_by &&
+        typeof application.referred_by === 'object'
+    ) {
+        return application.referred_by.name || 'N/A'
+    }
+
+    if (
+        application.referrer &&
+        typeof application.referrer === 'object'
+    ) {
+        return application.referrer.name || 'N/A'
+    }
+
+    if (
+        typeof application.referral === 'string'
+    ) {
+        return application.referral
+    }
+
+    if (
+        typeof application.referralName === 'string'
+    ) {
+        return application.referralName
+    }
+
+    if (
+        typeof application.referral_name === 'string'
+    ) {
+        return application.referral_name
+    }
+
+    if (
+        typeof application.referredBy === 'string'
+    ) {
+        return application.referredBy
+    }
+
+    if (
+        typeof application.referred_by === 'string'
+    ) {
+        return application.referred_by
+    }
+
+    if (
+        typeof application.referrer === 'string'
+    ) {
+        return application.referrer
+    }
+
+    if (
+        typeof application.referrerName === 'string'
+    ) {
+        return application.referrerName
+    }
+
+    if (
+        typeof application.referrer_name === 'string'
+    ) {
+        return application.referrer_name
+    }
+
+    return 'N/A'
+}
 const getLoanId = (application) =>
     application.loanId ??
     application.loan_id ??
@@ -456,7 +661,9 @@ function ApplicationsTable({
     rms = [],
     teamLeads = [],
     agents = [],
-
+    showRM = false,
+    showAgent = false,
+    showTeamLead = false,
     statuses = STATUS_OPTIONS,
 
     selectedLoanType,
@@ -828,22 +1035,24 @@ function ApplicationsTable({
 
                     <div className="w-44 shrink-0">
 
-                        <RmDropdown
-                            label=""
-                            value={
-                                selectedRM
-                            }
-                            onChange={
-                                setSelectedRM
-                            }
-                            options={
-                                rms
-                            }
-                            allLabel="All RMs"
-                            placeholder="All RMs"
-                            searchPlaceholder="Search RM"
-                            emptyMessage="No RMs found"
-                        />
+                        {/* RM */}
+
+                        {showRM && (
+                            <div className="w-44 shrink-0">
+
+                                <RmDropdown
+                                    label=""
+                                    value={selectedRM}
+                                    onChange={setSelectedRM}
+                                    options={rms}
+                                    allLabel="All RMs"
+                                    placeholder="All RMs"
+                                    searchPlaceholder="Search RM"
+                                    emptyMessage="No RMs found"
+                                />
+
+                            </div>
+                        )}
 
                     </div>
 
@@ -852,30 +1061,22 @@ function ApplicationsTable({
 
                     <div className="w-44 shrink-0">
 
-                        <TeamLeadDropdown
-                            label=""
-                            value={
-                                selectedTeamLead
-                            }
-                            onChange={
-                                setSelectedTeamLead
-                            }
-                            options={
-                                teamLeads
-                            }
-                            allLabel="
-                                All Team Leads
-                            "
-                            placeholder="
-                                All Team Leads
-                            "
-                            searchPlaceholder="
-                                Search team lead
-                            "
-                            emptyMessage="
-                                No team leads found
-                            "
-                        />
+                        {showTeamLead && (
+    <div className="w-44 shrink-0">
+
+        <TeamLeadDropdown
+            label=""
+            value={selectedTeamLead}
+            onChange={setSelectedTeamLead}
+            options={teamLeads}
+            allLabel="All Team Leads"
+            placeholder="All Team Leads"
+            searchPlaceholder="Search Team Lead"
+            emptyMessage="No Team Leads found"
+        />
+
+    </div>
+)}
 
                     </div>
 
@@ -884,22 +1085,22 @@ function ApplicationsTable({
 
                     <div className="w-44 shrink-0">
 
-                        <AgentDropdown
-                            label=""
-                            value={
-                                selectedAgent
-                            }
-                            onChange={
-                                setSelectedAgent
-                            }
-                            options={
-                                agents
-                            }
-                            allLabel="All Agents"
-                            placeholder="All Agents"
-                            searchPlaceholder="Search agent"
-                            emptyMessage="No agents found"
-                        />
+                        {showAgent && (
+    <div className="w-44 shrink-0">
+
+        <AgentDropdown
+            label=""
+            value={selectedAgent}
+            onChange={setSelectedAgent}
+            options={agents}
+            allLabel="All Agents"
+            placeholder="All Agents"
+            searchPlaceholder="Search Agent"
+            emptyMessage="No Agents found"
+        />
+
+    </div>
+)}
 
                     </div>
 

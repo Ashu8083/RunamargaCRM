@@ -1,645 +1,348 @@
 // admin-react/src/pages/Roles&Teams/Agents/components/AgentTable.jsx
 
-import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
-import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
-import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
+import { useMemo, useState } from 'react'
+
+import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
 import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon'
+import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
+import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
+import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
 
-
-function AgentTable({
+const AgentTable = ({
     agents = [],
-    search,
-    setSearch,
-    onCreate,
+    loading = false,
+    onEdit,
     onDelete,
-    onRefresh,
-    onViewTeamLeads,
-    onManagePermissions,
     onStatusChange,
-}) {
+    onManageTeamLeads,
+    onManagePermissions,
+    onAdd,
+    onRefresh,
+}) => {
+    const [search, setSearch] = useState('')
 
-    // =========================================================
-    // STATUS STYLE
-    // =========================================================
+    // ============================================================
+    // FILTER
+    // ============================================================
 
-    const getStatusClass = (status) => {
+    const filteredAgents = useMemo(() => {
+        const query = search.trim().toLowerCase()
 
-        if (status === 'Active') {
-
-            return `
-                text-[#78B300]
-                border-[#8BCF00]/40
-                bg-[#8BCF00]/10
-            `
-
+        if (!query) {
+            return agents
         }
 
+        return agents.filter((agent) => {
+            const values = [
+                agent.name,
+                agent.email,
+                agent.phone,
+                agent.role,
+                agent.role_code,
+                agent.status,
+            ]
 
-        if (status === 'Absent') {
+            return values.some((value) =>
+                String(value || '')
+                    .toLowerCase()
+                    .includes(query)
+            )
+        })
+    }, [agents, search])
 
-            return `
-                text-warning
-                border-warning/30
-                bg-warning/10
-            `
+    // ============================================================
+    // STATUS
+    // ============================================================
 
-        }
-
-
-        return `
-            text-error
-            border-error/30
-            bg-error/10
-        `
-
+    const getStatusClass = (isActive) => {
+        return isActive
+            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
     }
 
+    // ============================================================
+    // ROLE
+    // ============================================================
+
+    const getRoleDisplay = (agent) => {
+        return (
+            agent?.role ||
+            agent?.context_name ||
+            agent?.role_code ||
+            'N/A'
+        )
+    }
+
+    // ============================================================
+    // RENDER
+    // ============================================================
 
     return (
+        <div className="w-full">
 
-        <div className="space-y-5">
+            {/* ================================================== */}
+            {/* SEARCH + ADD + REFRESH CARD */}
+            {/* ================================================== */}
 
-            {/* =====================================================
-                FILTER / ACTION SECTION
-            ===================================================== */}
+            <div className="mb-5 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center">
 
-            <div className="
-                card
-                border
-                border-base-300
-                bg-base-100
-                shadow-sm
-            ">
+                    {/* SEARCH */}
+                    <div className="relative min-w-0 flex-1">
+                        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
 
-                <div className="card-body p-4">
-
-                    <div className="
-                        flex
-                        flex-col
-                        gap-3
-                        xl:flex-row
-                        xl:items-center
-                    ">
-
-                        {/* =================================================
-                            SEARCH
-                        ================================================= */}
-
-                        <div className="min-w-0 flex-1">
-
-                            <label className="
-                                input
-                                input-bordered
-                                flex
-                                w-full
-                                items-center
-                                gap-3
-                            ">
-
-                                <SearchIcon className="
-                                    h-5
-                                    w-5
-                                    shrink-0
-                                    text-base-content/40
-                                " />
-
-
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(event) =>
-                                        setSearch(event.target.value)
-                                    }
-                                    placeholder="Search agents..."
-                                    className="grow"
-                                />
-
-                            </label>
-
-                        </div>
-
-
-                        {/* =================================================
-                            SEARCH BUTTON
-                        ================================================= */}
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                /*
-                                 * Search is already reactive.
-                                 * Button is kept for UI consistency.
-                                 */
-                                setSearch(search.trim())
-                            }}
-                            className="
-                                btn
-                                border-[#8BCF00]
-                                text-[#78B300]
-                                hover:bg-[#8BCF00]
-                                hover:text-white
-                            "
-                        >
-
-                            <SearchIcon className="
-                                h-5
-                                w-5
-                            " />
-
-                            Search
-
-                        </button>
-
-
-                        {/* =================================================
-                            CLEAR
-                        ================================================= */}
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setSearch('')
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(event) =>
+                                setSearch(event.target.value)
                             }
-                            className="
-                                btn
-                                btn-ghost
-                            "
-                        >
-                            Clear
-                        </button>
-
-
-                        {/* =================================================
-                            DIVIDER
-                        ================================================= */}
-
-                        <div className="
-                            hidden
-                            h-8
-                            border-l
-                            border-base-300
-                            xl:block
-                        " />
-
-
-                        {/* =================================================
-                            CREATE
-                        ================================================= */}
-
-                        <button
-                            type="button"
-                            onClick={onCreate}
-                            className="
-                                btn
-                                border-[#8BCF00]
-                                bg-[#8BCF00]
-                                text-white
-                                hover:border-[#6FA800]
-                                hover:bg-[#6FA800]
-                            "
-                        >
-
-                            <PlusIcon className="
-                                h-5
-                                w-5
-                            " />
-
-                            Add Agent
-
-                        </button>
-
-
-                        {/* =================================================
-                            REFRESH
-                        ================================================= */}
-
-                        <button
-                            type="button"
-                            onClick={onRefresh}
-                            className="
-                                btn
-                                border-[#8BCF00]
-                                text-[#78B300]
-                                hover:bg-[#8BCF00]
-                                hover:text-white
-                            "
-                        >
-
-                            <ArrowPathIcon className="
-                                h-5
-                                w-5
-                            " />
-
-                            Refresh
-
-                        </button>
-
+                            placeholder="Search agents..."
+                            className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-700 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:placeholder-gray-400"
+                        />
                     </div>
 
-                </div>
+                    {/* ADD AGENT */}
+                    <button
+                        type="button"
+                        onClick={onAdd}
+                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90 lg:w-auto"
+                    >
+                        <PlusIcon className="h-5 w-5" />
+                        <span>Add Agent</span>
+                    </button>
 
+                    {/* REFRESH */}
+                    <button
+                        type="button"
+                        onClick={onRefresh}
+                        disabled={loading}
+                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    >
+                        <ArrowPathIcon
+                            className={`h-5 w-5 ${
+                                loading ? 'animate-spin' : ''
+                            }`}
+                        />
+
+                        <span>Refresh</span>
+                    </button>
+                </div>
             </div>
 
+            {/* ================================================== */}
+            {/* TABLE */}
+            {/* ================================================== */}
 
-            {/* =====================================================
-                AGENT TABLE
-            ===================================================== */}
-
-            <div className="
-                card
-                border
-                border-base-300
-                bg-base-100
-                shadow-sm
-            ">
-
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
 
-                    <table className="table">
+                        {/* ================================================== */}
+                        {/* TABLE HEADER */}
+                        {/* ================================================== */}
 
-                        <thead>
-
+                        <thead className="bg-gray-50 dark:bg-gray-900/40">
                             <tr>
-
-                                <th className="w-16 text-center">
-                                    #
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    Employee
                                 </th>
 
-                                <th>
-                                    Name
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    Email
                                 </th>
 
-                                <th>
-                                    Contact Info
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    Phone
                                 </th>
 
-                                <th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    Role
+                                </th>
+
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                     Status
                                 </th>
 
-                                <th>
-                                    Created / Updated
-                                </th>
-
-                                <th className="text-right">
+                                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                     Actions
                                 </th>
-
                             </tr>
-
                         </thead>
 
+                        {/* ================================================== */}
+                        {/* TABLE BODY */}
+                        {/* ================================================== */}
 
-                        <tbody>
+                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
 
-                            {agents.length === 0 ? (
-
+                            {loading ? (
                                 <tr>
-
                                     <td
-                                        colSpan="6"
-                                        className="
-                                            py-12
-                                            text-center
-                                        "
+                                        colSpan={6}
+                                        className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
                                     >
-
-                                        <p className="
-                                            text-sm
-                                            font-medium
-                                        ">
-                                            No agents found
-                                        </p>
-
-
-                                        <p className="
-                                            mt-1
-                                            text-xs
-                                            text-base-content/50
-                                        ">
-                                            Try changing your search or add a new agent.
-                                        </p>
-
+                                        Loading agents...
                                     </td>
-
                                 </tr>
-
+                            ) : filteredAgents.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={6}
+                                        className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400"
+                                    >
+                                        {search
+                                            ? 'No agents found matching your search.'
+                                            : 'No agents found.'}
+                                    </td>
+                                </tr>
                             ) : (
+                                filteredAgents.map((agent) => {
+                                    const isActive = Boolean(
+                                        agent?.is_active
+                                    )
 
-                                agents.map(
-                                    (agent, index) => (
-
+                                    return (
                                         <tr
                                             key={agent.id}
+                                            className="transition hover:bg-gray-50 dark:hover:bg-gray-700/30"
                                         >
 
-                                            {/* =========================================
-                                                INDEX
-                                            ========================================= */}
+                                            {/* EMPLOYEE */}
+                                            <td className="whitespace-nowrap px-6 py-4">
+                                                <div className="font-medium text-gray-900 dark:text-gray-100">
+                                                    {agent.name || 'N/A'}
+                                                </div>
 
-                                            <td className="text-center">
+                                                {agent.employee_code && (
+                                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                        {agent.employee_code}
+                                                    </div>
+                                                )}
+                                            </td>
 
-                                                <span className="
-                                                    text-sm
-                                                    text-base-content/60
-                                                ">
-                                                    {index + 1}
+                                            {/* EMAIL */}
+                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                                {agent.email || 'N/A'}
+                                            </td>
+
+                                            {/* PHONE */}
+                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                                {agent.phone || 'N/A'}
+                                            </td>
+
+                                            {/* ROLE */}
+                                            <td className="whitespace-nowrap px-6 py-4">
+                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                    {getRoleDisplay(agent)}
                                                 </span>
-
                                             </td>
 
-
-                                            {/* =========================================
-                                                NAME
-                                            ========================================= */}
-
-                                            <td>
-
-                                                <div>
-
-                                                    <span className="
-                                                        font-semibold
-                                                    ">
-                                                        {agent.name}
-                                                    </span>
-
-
-                                                    {agent.employeeId && (
-
-                                                        <p className="
-                                                            mt-0.5
-                                                            text-xs
-                                                            text-base-content/45
-                                                        ">
-                                                            Employee ID:{' '}
-                                                            {agent.employeeId}
-                                                        </p>
-
-                                                    )}
-
-                                                </div>
-
-                                            </td>
-
-
-                                            {/* =========================================
-                                                CONTACT
-                                            ========================================= */}
-
-                                            <td>
-
-                                                <div className="space-y-0.5">
-
-                                                    <p className="text-sm">
-                                                        {agent.phone || 'N/A'}
-                                                    </p>
-
-
-                                                    <p className="
-                                                        text-xs
-                                                        text-base-content/50
-                                                    ">
-                                                        {agent.email || 'N/A'}
-                                                    </p>
-
-                                                </div>
-
-                                            </td>
-
-
-                                            {/* =========================================
-                                                STATUS
-                                            ========================================= */}
-
-                                            <td>
-
+                                            {/* STATUS */}
+                                            <td className="whitespace-nowrap px-6 py-4">
                                                 <select
                                                     value={
-                                                        agent.status ||
-                                                        'Active'
+                                                        isActive
+                                                            ? 'Active'
+                                                            : 'Inactive'
                                                     }
                                                     onChange={(event) =>
-                                                        onStatusChange?.(
+                                                        onStatusChange(
                                                             agent,
                                                             event.target.value
                                                         )
                                                     }
-                                                    className={`
-                                                        select
-                                                        select-sm
-                                                        border
-                                                        font-medium
-                                                        ${getStatusClass(
-                                                            agent.status
-                                                        )}
-                                                    `}
+                                                    className={`rounded-full border-0 px-3 py-1 text-xs font-semibold outline-none ${getStatusClass(
+                                                        isActive
+                                                    )}`}
                                                 >
-
                                                     <option value="Active">
                                                         Active
                                                     </option>
 
-                                                    <option value="Absent">
-                                                        Absent
+                                                    <option value="Inactive">
+                                                        Inactive
                                                     </option>
-
-                                                    <option value="Deactivated">
-                                                        Deactivated
-                                                    </option>
-
                                                 </select>
-
                                             </td>
 
+                                            {/* ACTIONS */}
+                                            <td className="whitespace-nowrap px-6 py-4">
+                                                <div className="flex items-center justify-end gap-2">
 
-                                            {/* =========================================
-                                                CREATED / UPDATED
-                                            ========================================= */}
-
-                                            <td>
-
-                                                <div className="
-                                                    space-y-1
-                                                ">
-
-                                                    <div>
-
-                                                        <span className="
-                                                            text-[10px]
-                                                            uppercase
-                                                            tracking-wide
-                                                            text-base-content/40
-                                                        ">
-                                                            Created
-                                                        </span>
-
-
-                                                        <p className="
-                                                            whitespace-nowrap
-                                                            text-xs
-                                                        ">
-                                                            {agent.createdAt ||
-                                                                'N/A'}
-                                                        </p>
-
-                                                    </div>
-
-
-                                                    <div>
-
-                                                        <span className="
-                                                            text-[10px]
-                                                            uppercase
-                                                            tracking-wide
-                                                            text-base-content/40
-                                                        ">
-                                                            Updated
-                                                        </span>
-
-
-                                                        <p className="
-                                                            whitespace-nowrap
-                                                            text-xs
-                                                        ">
-                                                            {agent.updatedAt ||
-                                                                'N/A'}
-                                                        </p>
-
-                                                    </div>
-
-                                                </div>
-
-                                            </td>
-
-
-                                            {/* =========================================
-                                                ACTIONS
-                                            ========================================= */}
-
-                                            <td>
-
-                                                <div className="
-                                                    flex
-                                                    items-center
-                                                    justify-end
-                                                    gap-1
-                                                ">
-
-                                                    {/* =====================================
-                                                        ASSIGNED TEAM LEADS
-                                                    ===================================== */}
-
+                                                    {/* EDIT */}
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            onViewTeamLeads?.(
-                                                                agent
-                                                            )
+                                                            onEdit(agent)
                                                         }
-                                                        className="
-                                                            btn
-                                                            btn-ghost
-                                                            btn-sm
-                                                            btn-square
-                                                            hover:bg-[#8BCF00]/10
-                                                            hover:text-[#78B300]
-                                                        "
-                                                        title="Assigned team leads"
+                                                        title="Edit Agent"
+                                                        className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
                                                     >
-
-                                                        <UserGroupIcon className="
-                                                            h-5
-                                                            w-5
-                                                        " />
-
+                                                        <PencilIcon className="h-5 w-5" />
                                                     </button>
 
-
-                                                    {/* =====================================
-                                                        PERMISSIONS
-                                                    ===================================== */}
-
+                                                    {/* TEAM LEAD */}
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            onManagePermissions?.(
+                                                            onManageTeamLeads(
                                                                 agent
                                                             )
                                                         }
-                                                        className="
-                                                            btn
-                                                            btn-ghost
-                                                            btn-sm
-                                                            btn-square
-                                                            hover:bg-[#8BCF00]/10
-                                                            hover:text-[#78B300]
-                                                        "
-                                                        title="Manage permissions"
+                                                        title="Manage Team Lead"
+                                                        className="rounded-lg p-2 text-purple-600 transition hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/20"
                                                     >
-
-                                                        <ShieldCheckIcon className="
-                                                            h-5
-                                                            w-5
-                                                        " />
-
+                                                        <UserGroupIcon className="h-5 w-5" />
                                                     </button>
 
-
-                                                    {/* =====================================
-                                                        DELETE
-                                                    ===================================== */}
-
+                                                    {/* PERMISSIONS */}
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            onDelete?.(
+                                                            onManagePermissions(
                                                                 agent
                                                             )
                                                         }
-                                                        className="
-                                                            btn
-                                                            btn-ghost
-                                                            btn-sm
-                                                            btn-square
-                                                            text-error
-                                                            hover:bg-error/10
-                                                        "
-                                                        title="Delete agent"
+                                                        title="Manage Permissions"
+                                                        disabled={!isActive}
+                                                        className={`rounded-lg p-2 transition ${
+                                                            isActive
+                                                                ? 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20'
+                                                                : 'cursor-not-allowed text-gray-400 dark:text-gray-600'
+                                                        }`}
                                                     >
+                                                        <ShieldCheckIcon className="h-5 w-5" />
+                                                    </button>
 
-                                                        <TrashIcon className="
-                                                            h-5
-                                                            w-5
-                                                        " />
-
+                                                    {/* DELETE */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            onDelete(agent)
+                                                        }
+                                                        title="Delete Agent"
+                                                        className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                                    >
+                                                        <TrashIcon className="h-5 w-5" />
                                                     </button>
 
                                                 </div>
-
                                             </td>
 
                                         </tr>
-
                                     )
-                                )
-
+                                })
                             )}
 
                         </tbody>
-
                     </table>
-
                 </div>
-
             </div>
-
         </div>
-
     )
-
 }
-
 
 export default AgentTable

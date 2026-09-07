@@ -1,595 +1,1073 @@
 // admin-react/src/pages/Role-management/TeamLead/index.jsx
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from "react";
 
-import TeamLeadTable from './components/TeamLeadTable'
-import TeamLeadModal from './components/TeamLeadModal'
-import AssignedAgentsModal from './components/AssignedAgentsModal'
+import TeamLeadTable from "./components/TeamLeadTable";
+import TeamLeadModal from "./components/TeamLeadModal";
+import AssignedAgentsModal from "./components/AssignedAgentsModal";
 
-import PermissionsModal from '../../../components/GlobalModels/PermissionsModal'
+import PermissionsModal from "../../../components/GlobalModels/PermissionsModal";
+import FeedbackModal from "../../../components/GlobalModels/FeedbackModal";
+
+import {
+  getTeamLeads,
+  createTeamLead,
+  updateTeamLead,
+  deleteTeamLead,
+  updateTeamLeadStatus,
+  getEmployees,
+} from "./API";
 
 
 function TeamLead() {
+  const [search, setSearch] = useState("");
 
-    // =========================================================
-    // SEARCH
-    // =========================================================
+  const [employees, setEmployees] = useState([]);
+  const [teamLeads, setTeamLeads] = useState([]);
 
-    const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
+  const [showModal, setShowModal] = useState(false);
+  const [showAgentsModal, setShowAgentsModal] = useState(false);
 
-    // =========================================================
-    // MOCK EMPLOYEES
-    //
-    // These are existing employees.
-    //
-    // Team Lead creation does NOT create an employee.
-    // We only select existing employees while assigning them.
-    // =========================================================
+  const [selectedTeamLead, setSelectedTeamLead] = useState(null);
 
-    const [employees] = useState([
-        {
-            id: 101,
-            employeeId: 'EMP001',
-            name: 'Agent One',
-            phone: '9876543210',
-            email: 'agent1@example.com',
-            status: 'Active',
-        },
+  const [showPermissionsModal, setShowPermissionsModal] =
+    useState(false);
 
-        {
-            id: 102,
-            employeeId: 'EMP002',
-            name: 'Agent Two',
-            phone: '9876543211',
-            email: 'agent2@example.com',
-            status: 'Active',
-        },
-
-        {
-            id: 103,
-            employeeId: 'EMP003',
-            name: 'Agent Three',
-            phone: '9876543212',
-            email: 'agent3@example.com',
-            status: 'Active',
-        },
-
-        {
-            id: 104,
-            employeeId: 'EMP004',
-            name: 'Agent Four',
-            phone: '9876543213',
-            email: 'agent4@example.com',
-            status: 'Absent',
-        },
-
-        {
-            id: 105,
-            employeeId: 'EMP005',
-            name: 'Agent Five',
-            phone: '9876543214',
-            email: 'agent5@example.com',
-            status: 'Active',
-        },
-    ])
+  const [feedback, setFeedback] = useState({
+    open: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
 
 
-    // =========================================================
-    // TEAM LEADS
-    //
-    // Team Lead data is managed here.
-    //
-    // assignedAgentIds contains IDs of existing employees.
-    // =========================================================
+  // ========================================================================
+  // FEEDBACK
+  // ========================================================================
 
-    const [teamLeads, setTeamLeads] = useState([
-
-        {
-            id: 1,
-
-            name: 'John Doe',
-
-            phone: '9876543200',
-
-            email: 'john@example.com',
-
-            status: 'Active',
-
-            createdAt: 'Apr 7, 2026, 3:13:50 PM',
-
-            updatedAt: 'N/A',
-
-            assignedAgentIds: [
-                101,
-            ],
-
-            permissions: [],
-        },
-
-        {
-            id: 2,
-
-            name: 'Rahul Kumar',
-
-            phone: '9876543201',
-
-            email: 'rahul@example.com',
-
-            status: 'Absent',
-
-            createdAt: 'Apr 8, 2026, 10:20:15 AM',
-
-            updatedAt: 'Apr 10, 2026, 2:30:10 PM',
-
-            assignedAgentIds: [
-                102,
-                103,
-            ],
-
-            permissions: [],
-        },
-
-    ])
+  const showFeedback = (type, title, message) => {
+    setFeedback({
+      open: true,
+      type,
+      title,
+      message,
+    });
+  };
 
 
-    // =========================================================
-    // ADD TEAM LEAD MODAL
-    //
-    // This modal is only for creating a Team Lead record.
-    //
-    // No editing is supported.
-    // Status is changed directly from the table.
-    // =========================================================
-
-    const [showModal, setShowModal] = useState(false)
+  const closeFeedback = () => {
+    setFeedback((previous) => ({
+      ...previous,
+      open: false,
+    }));
+  };
 
 
-    // =========================================================
-    // ASSIGNED AGENTS MODAL
-    // =========================================================
+  // ========================================================================
+  // FORMAT TEAM LEAD
+  // ========================================================================
 
-    const [showAgentsModal, setShowAgentsModal] = useState(false)
+  const formatTeamLead = useCallback((teamLead) => {
 
-    const [selectedTeamLead, setSelectedTeamLead] = useState(null)
-
-
-    // =========================================================
-    // PERMISSIONS MODAL
-    // =========================================================
-
-    const [showPermissionsModal, setShowPermissionsModal] =
-        useState(false)
-
-
-    // =========================================================
-    // CREATE TEAM LEAD
-    // =========================================================
-
-    const handleCreate = () => {
-
-        setShowModal(true)
-
+    if (!teamLead) {
+      return null;
     }
 
+    const employee = teamLead.employee || {};
+
 
-    // =========================================================
-    // CLOSE CREATE MODAL
-    // =========================================================
+    /*
+     * Backend is the source of truth.
+     *
+     * employee_id = employees.id
+     * context_id  = contexts.id
+     *
+     * id = EmployeeContext.id
+     *
+     * IMPORTANT:
+     * Permissions must NEVER use teamLead.id as employee ID.
+     */
 
-    const handleCloseModal = () => {
+    const rawEmployeeId =
+      teamLead.employee_id ??
+      teamLead.employeeId ??
+      employee.id ??
+      null;
 
-        setShowModal(false)
 
-    }
+    const rawContextId =
+      teamLead.context_id ??
+      teamLead.contextId ??
+      null;
 
 
-    // =========================================================
-    // CREATE TEAM LEAD
-    //
-    // Only the Team Lead record is created.
-    //
-    // No employee information is entered here.
-    // =========================================================
+    const employeeId =
+      rawEmployeeId !== null &&
+      rawEmployeeId !== undefined &&
+      rawEmployeeId !== ""
+        ? Number(rawEmployeeId)
+        : null;
 
-    const handleSubmit = (data) => {
 
-        const now = new Date().toLocaleString(
-            'en-IN',
-            {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                second: '2-digit',
-            }
-        )
+    const contextId =
+      rawContextId !== null &&
+      rawContextId !== undefined &&
+      rawContextId !== ""
+        ? Number(rawContextId)
+        : null;
 
 
-        const newTeamLead = {
+    const isActive =
+      teamLead.is_active !== undefined &&
+      teamLead.is_active !== null
+        ? Boolean(teamLead.is_active)
+        : String(
+            teamLead.status || "Active"
+          ).toLowerCase() === "active";
 
-            id: Date.now(),
 
-            name: data.name,
+    return {
+      ...teamLead,
 
-            phone: data.phone,
+      /*
+       * EmployeeContext primary key.
+       */
+      id:
+        teamLead.id !== undefined &&
+        teamLead.id !== null
+          ? Number(teamLead.id)
+          : null,
 
-            email: data.email,
 
-            status: data.status,
+      /*
+       * Actual employee ID.
+       *
+       * This is employees.id.
+       */
+      employeeId,
+      employee_id: employeeId,
 
-            createdAt: now,
 
-            updatedAt: 'N/A',
+      name:
+        teamLead.name ??
+        employee.name ??
+        "N/A",
 
-            assignedAgentIds: [],
 
-            permissions: [],
+      phone:
+        teamLead.phone ??
+        employee.phone ??
+        "N/A",
 
-        }
 
+      email:
+        teamLead.email ??
+        employee.email ??
+        "N/A",
 
-        setTeamLeads((previous) => [
 
-            ...previous,
+      /*
+       * Actual Context ID.
+       *
+       * This is contexts.id.
+       */
+      contextId,
+      context_id: contextId,
 
-            newTeamLead,
 
-        ])
+      contextName:
+        teamLead.contextName ??
+        teamLead.context_name ??
+        teamLead.role?.name ??
+        "Team Lead",
 
 
-        handleCloseModal()
+      /*
+       * roleId is only a frontend alias for context_id.
+       */
+      roleId: contextId,
 
-    }
 
-
-    // =========================================================
-    // DELETE TEAM LEAD
-    // =========================================================
-
-    const handleDelete = (teamLead) => {
-
-        const confirmed = window.confirm(
-            `Delete team lead "${teamLead.name}"?`
-        )
-
-
-        if (!confirmed) {
-            return
-        }
-
-
-        setTeamLeads((previous) =>
-            previous.filter(
-                (item) =>
-                    item.id !== teamLead.id
-            )
-        )
-
-    }
-
-
-    // =========================================================
-    // STATUS CHANGE
-    //
-    // Status is the only editable Team Lead field.
-    // =========================================================
-
-    const handleStatusChange = (
-        teamLead,
-        status
-    ) => {
-
-        setTeamLeads((previous) =>
-
-            previous.map((item) => {
-
-                if (item.id !== teamLead.id) {
-                    return item
-                }
-
-
-                return {
-
-                    ...item,
-
-                    status,
-
-                    updatedAt:
-                        new Date().toLocaleString(
-                            'en-IN',
-                            {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit',
-                                second: '2-digit',
-                            }
-                        ),
-
-                }
-
-            })
-
-        )
-
-    }
-
-
-    // =========================================================
-    // VIEW / ASSIGN AGENTS
-    // =========================================================
-
-    const handleViewAgents = (teamLead) => {
-
-        setSelectedTeamLead(teamLead)
-
-        setShowAgentsModal(true)
-
-    }
-
-
-    // =========================================================
-    // CLOSE AGENTS MODAL
-    // =========================================================
-
-    const handleCloseAgents = () => {
-
-        setShowAgentsModal(false)
-
-        setSelectedTeamLead(null)
-
-    }
-
-
-    // =========================================================
-    // SAVE AGENT ASSIGNMENTS
-    // =========================================================
-
-    const handleAssignmentChange = ({
-        teamLeadId,
-        employeeIds,
-    }) => {
-
-        setTeamLeads((previous) =>
-
-            previous.map((teamLead) => {
-
-                if (
-                    teamLead.id !== teamLeadId
-                ) {
-                    return teamLead
-                }
-
-
-                return {
-
-                    ...teamLead,
-
-                    assignedAgentIds:
-                        employeeIds,
-
-                }
-
-            })
-
-        )
-
-
-        /*
-         * Later replace with API call.
-         *
-         * PUT /team-leads/{teamLeadId}/agents
-         *
-         * Body:
-         *
-         * {
-         *     employee_ids: employeeIds
-         * }
-         */
-
-
-        console.log(
-            'Team Lead:',
-            teamLeadId
-        )
-
-        console.log(
-            'Assigned Employee IDs:',
-            employeeIds
-        )
-
-    }
-
-
-    // =========================================================
-    // MANAGE PERMISSIONS
-    // =========================================================
-
-    const handleManagePermissions = (
-        teamLead
-    ) => {
-
-        setSelectedTeamLead(teamLead)
-
-        setShowPermissionsModal(true)
-
-    }
-
-
-    // =========================================================
-    // CLOSE PERMISSIONS
-    // =========================================================
-
-    const handleClosePermissions = () => {
-
-        setShowPermissionsModal(false)
-
-        setSelectedTeamLead(null)
-
-    }
-
-
-    // =========================================================
-    // SAVE PERMISSIONS
-    //
-    // Global PermissionsModal currently closes itself after save.
-    // The actual backend integration can be added there later.
-    // =========================================================
-
-
-    // =========================================================
-    // REFRESH
-    // =========================================================
-
-    const handleRefresh = () => {
-
-        /*
-         * Later:
-         *
-         * GET /team-leads
-         *
-         * GET /employees
-         */
-
-        console.log(
-            'Refresh team leads'
-        )
-
-    }
-
-
-    // =========================================================
-    // RESOLVE ASSIGNED EMPLOYEES
-    //
-    // Convert assignedAgentIds into employee objects before
-    // sending them to AssignedAgentsModal.
-    // =========================================================
-
-    const selectedTeamLeadWithEmployees =
-        selectedTeamLead
+      role:
+        teamLead.role ??
+        (
+          teamLead.contextName ||
+          teamLead.context_name
             ? {
-                ...selectedTeamLead,
+                name:
+                  teamLead.contextName ??
+                  teamLead.context_name ??
+                  "Team Lead",
 
-                assignedAgents:
-                    employees.filter(
-                        (employee) =>
-                            selectedTeamLead
-                                .assignedAgentIds
-                                ?.some(
-                                    (id) =>
-                                        String(id) ===
-                                        String(employee.id)
-                                )
-                    ),
-
-            }
+                value: contextId,
+              }
             : null
+        ),
 
 
-    // =========================================================
-    // RENDER
-    // =========================================================
+      is_active: isActive,
 
-    return (
-
-        <div className="
-            space-y-5
-            p-4
-            sm:p-6
-        ">
-
-            {/* =================================================
-                PAGE HEADER
-            ================================================= */}
-
-            <div>
-
-                <h1 className="
-                    text-2xl
-                    font-semibold
-                    sm:text-3xl
-                ">
-                    Team Leads
-                </h1>
+      status:
+        isActive
+          ? "Active"
+          : "Inactive",
 
 
-                <p className="
-                    mt-1
-                    text-sm
-                    text-base-content/60
-                ">
-                    Manage team leads, assigned agents and permissions.
-                </p>
-
-            </div>
+      createdAt:
+        teamLead.createdAt ??
+        teamLead.created_at ??
+        "N/A",
 
 
-            {/* =================================================
-                TEAM LEAD TABLE
-            ================================================= */}
+      updatedAt:
+        teamLead.updatedAt ??
+        teamLead.updated_at ??
+        "N/A",
+    };
 
-            <TeamLeadTable
-                teamLeads={teamLeads}
-                search={search}
-                setSearch={setSearch}
-                onCreate={handleCreate}
-                onDelete={handleDelete}
-                onRefresh={handleRefresh}
-                onViewAgents={handleViewAgents}
-                onManagePermissions={
-                    handleManagePermissions
-                }
-                onStatusChange={handleStatusChange}
-            />
+  }, []);
 
 
-            {/* =================================================
-                CREATE TEAM LEAD MODAL
-            ================================================= */}
+  // ========================================================================
+  // LOAD TEAM LEADS
+  // ========================================================================
 
-            <TeamLeadModal
-                open={showModal}
-                teamLead={null}
-                onClose={handleCloseModal}
-                onSubmit={handleSubmit}
-            />
+  const loadTeamLeads = useCallback(async () => {
+
+    setLoading(true);
+    setError("");
+
+    try {
+
+      const data = await getTeamLeads();
+
+      const formattedTeamLeads =
+        Array.isArray(data)
+          ? data
+              .map(formatTeamLead)
+              .filter(Boolean)
+          : [];
+
+      setTeamLeads(formattedTeamLeads);
+
+    } catch (error) {
+
+      console.error(
+        "Failed to load team leads:",
+        error
+      );
+
+      setTeamLeads([]);
+
+      setError(
+        error?.response?.data?.detail ||
+        "Unable to load team leads."
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
+  }, [formatTeamLead]);
 
 
-            {/* =================================================
-                ASSIGNED AGENTS MODAL
-            ================================================= */}
+  // ========================================================================
+  // LOAD EMPLOYEES
+  // ========================================================================
 
-            <AssignedAgentsModal
-                open={showAgentsModal}
-                teamLead={
-                    selectedTeamLeadWithEmployees
-                }
-                employees={employees}
-                onClose={handleCloseAgents}
-                onAssignmentChange={
-                    handleAssignmentChange
-                }
-            />
+  const loadEmployees = useCallback(async () => {
+
+    try {
+
+      const data = await getEmployees();
+
+      const formattedEmployees =
+        Array.isArray(data)
+          ? data
+              .filter(
+                (employee) =>
+                  employee &&
+                  employee.id !== undefined &&
+                  employee.id !== null &&
+                  employee.name
+              )
+              .map((employee) => ({
+                ...employee,
+                id: Number(employee.id),
+                name: employee.name,
+              }))
+          : [];
+
+      setEmployees(formattedEmployees);
+
+    } catch (error) {
+
+      console.error(
+        "Failed to load employees:",
+        error
+      );
+
+      setEmployees([]);
+
+    }
+
+  }, []);
 
 
-            {/* =================================================
-                GLOBAL PERMISSIONS MODAL
-            ================================================= */}
+  // ========================================================================
+  // INITIAL LOAD
+  // ========================================================================
 
-            <PermissionsModal
-                open={showPermissionsModal}
-                admin={selectedTeamLead}
-                onClose={handleClosePermissions}
-            />
+  useEffect(() => {
+
+    loadTeamLeads();
+    loadEmployees();
+
+  }, [
+    loadTeamLeads,
+    loadEmployees,
+  ]);
+
+
+  // ========================================================================
+  // CREATE
+  // ========================================================================
+
+  const handleCreate = () => {
+
+    setError("");
+    setSelectedTeamLead(null);
+    setShowModal(true);
+
+  };
+
+
+  // ========================================================================
+  // EDIT
+  // ========================================================================
+
+  const handleEdit = (teamLead) => {
+
+    setError("");
+
+    /*
+     * Always normalize before opening edit.
+     *
+     * This guarantees the modal gets the actual
+     * employee/context IDs returned by backend.
+     */
+    const normalizedTeamLead =
+      formatTeamLead(teamLead);
+
+    setSelectedTeamLead(
+      normalizedTeamLead
+    );
+
+    setShowModal(true);
+
+  };
+
+
+  // ========================================================================
+  // CLOSE TEAM LEAD MODAL
+  // ========================================================================
+
+  const handleCloseModal = () => {
+
+    setShowModal(false);
+    setSelectedTeamLead(null);
+
+  };
+
+
+  // ========================================================================
+  // CREATE / UPDATE
+  // ========================================================================
+
+  const handleSubmit = async (data) => {
+
+    setError("");
+
+    try {
+
+      // --------------------------------------------------------------------
+      // EDIT
+      // --------------------------------------------------------------------
+
+      if (data.isEdit) {
+
+        /*
+         * IMPORTANT:
+         *
+         * Employee cannot change during edit.
+         * Status cannot change during edit.
+         *
+         * Only context_id is sent.
+         */
+        await updateTeamLead(
+          data.teamLeadId,
+          {
+            context_id: Number(data.roleId),
+          }
+        );
+
+
+        handleCloseModal();
+
+        await loadTeamLeads();
+
+
+        showFeedback(
+          "success",
+          "Team Lead Updated",
+          "The Team Lead role was updated successfully."
+        );
+
+        return;
+      }
+
+
+      // --------------------------------------------------------------------
+      // CREATE
+      // --------------------------------------------------------------------
+
+      await createTeamLead({
+        employee_id:
+          Number(data.employeeId),
+
+        context_id:
+          Number(data.roleId),
+
+        status:
+          data.status === "Inactive"
+            ? "Inactive"
+            : "Active",
+      });
+
+
+      handleCloseModal();
+
+      await loadTeamLeads();
+
+
+      showFeedback(
+        "success",
+        "Team Lead Created",
+        "The Team Lead was created successfully."
+      );
+
+    } catch (error) {
+
+      console.error(
+        data.isEdit
+          ? "Failed to update team lead:"
+          : "Failed to create team lead:",
+        error
+      );
+
+
+      showFeedback(
+        "error",
+
+        data.isEdit
+          ? "Unable to Update Team Lead"
+          : "Unable to Create Team Lead",
+
+        error?.response?.data?.detail ||
+          (
+            data.isEdit
+              ? "The Team Lead could not be updated. Please try again."
+              : "The Team Lead could not be created. Please try again."
+          )
+      );
+
+    }
+
+  };
+
+
+  // ========================================================================
+  // DELETE
+  // ========================================================================
+
+  const handleDelete = async (teamLead) => {
+
+    const confirmed =
+      window.confirm(
+        `Delete team lead "${teamLead.name}"?`
+      );
+
+
+    if (!confirmed) {
+      return;
+    }
+
+
+    setError("");
+
+
+    try {
+
+      await deleteTeamLead(
+        teamLead.id
+      );
+
+
+      setTeamLeads(
+        (previous) =>
+          previous.filter(
+            (item) =>
+              item.id !== teamLead.id
+          )
+      );
+
+
+      if (
+        selectedTeamLead?.id ===
+        teamLead.id
+      ) {
+
+        setSelectedTeamLead(null);
+
+      }
+
+
+      showFeedback(
+        "success",
+        "Team Lead Deleted",
+        "The Team Lead was deleted successfully."
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Failed to delete team lead:",
+        error
+      );
+
+
+      showFeedback(
+        "error",
+        "Unable to Delete Team Lead",
+        error?.response?.data?.detail ||
+          "The Team Lead could not be deleted. Please try again."
+      );
+
+    }
+
+  };
+
+
+  // ========================================================================
+  // STATUS CHANGE
+  // ========================================================================
+
+  const handleStatusChange = async (
+    teamLead,
+    status
+  ) => {
+
+    if (
+      status !== "Active" &&
+      status !== "Inactive"
+    ) {
+      return;
+    }
+
+
+    setError("");
+
+
+    try {
+
+      const response =
+        await updateTeamLeadStatus(
+          teamLead.id,
+          status
+        );
+
+
+      const updatedTeamLead =
+        response
+          ? formatTeamLead(response)
+          : null;
+
+
+      setTeamLeads(
+        (previous) =>
+          previous.map((item) => {
+
+            if (
+              item.id !==
+              teamLead.id
+            ) {
+              return item;
+            }
+
+
+            return (
+              updatedTeamLead || {
+                ...item,
+
+                is_active:
+                  status === "Active",
+
+                status,
+              }
+            );
+
+          })
+      );
+
+
+      setSelectedTeamLead(
+        (previous) => {
+
+          if (
+            !previous ||
+            previous.id !==
+              teamLead.id
+          ) {
+            return previous;
+          }
+
+
+          return (
+            updatedTeamLead || {
+              ...previous,
+
+              is_active:
+                status === "Active",
+
+              status,
+            }
+          );
+
+        }
+      );
+
+
+      showFeedback(
+        "success",
+        "Status Updated",
+        `Team Lead status changed to ${status}.`
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Failed to update team lead status:",
+        error
+      );
+
+
+      showFeedback(
+        "error",
+        "Unable to Update Status",
+        error?.response?.data?.detail ||
+          "The Team Lead status could not be updated. Please try again."
+      );
+
+    }
+
+  };
+
+
+  // ========================================================================
+  // VIEW ASSIGNED AGENTS
+  // ========================================================================
+
+  const handleViewAgents = (
+    teamLead
+  ) => {
+
+    const normalizedTeamLead =
+      formatTeamLead(teamLead);
+
+
+    setSelectedTeamLead(
+      normalizedTeamLead
+    );
+
+    setShowAgentsModal(true);
+
+  };
+
+
+  // ========================================================================
+  // CLOSE AGENTS MODAL
+  // ========================================================================
+
+  const handleCloseAgents = () => {
+
+    setShowAgentsModal(false);
+    setSelectedTeamLead(null);
+
+  };
+
+
+  // ========================================================================
+  // MANAGE PERMISSIONS
+  // ========================================================================
+
+  const handleManagePermissions = (
+    teamLead
+  ) => {
+
+    if (!teamLead) {
+      return;
+    }
+
+
+    /*
+     * IMPORTANT:
+     *
+     * teamLead.id
+     *     = EmployeeContext.id
+     *
+     * teamLead.employee_id
+     *     = employees.id
+     *
+     * teamLead.context_id
+     *     = contexts.id
+     *
+     * PermissionsModal MUST receive
+     * employee_id + context_id.
+     */
+
+
+    const normalizedTeamLead =
+      formatTeamLead(teamLead);
+
+
+    if (!normalizedTeamLead) {
+
+      showFeedback(
+        "error",
+        "Unable to Manage Permissions",
+        "Invalid Team Lead data."
+      );
+
+      return;
+
+    }
+
+
+    const employeeId =
+      normalizedTeamLead.employee_id;
+
+
+    const contextId =
+      normalizedTeamLead.context_id;
+
+
+    const employeeContextId =
+      normalizedTeamLead.id;
+
+
+    /*
+     * Validate IDs before opening modal.
+     */
+
+    if (
+      !Number.isInteger(employeeId) ||
+      employeeId <= 0
+    ) {
+
+      showFeedback(
+        "error",
+        "Invalid Employee",
+        "The Team Lead employee ID is invalid."
+      );
+
+      return;
+
+    }
+
+
+    if (
+      !Number.isInteger(contextId) ||
+      contextId <= 0
+    ) {
+
+      showFeedback(
+        "error",
+        "Invalid Context",
+        "The Team Lead context ID is invalid."
+      );
+
+      return;
+
+    }
+
+
+    if (
+      !Number.isInteger(employeeContextId) ||
+      employeeContextId <= 0
+    ) {
+
+      showFeedback(
+        "error",
+        "Invalid Team Lead",
+        "The Team Lead EmployeeContext ID is invalid."
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * The existing Permissions backend requires
+     * the EmployeeContext to be active when saving.
+     *
+     * Therefore do not open the permissions editor
+     * for an inactive Team Lead.
+     *
+     * User can change the Team Lead status to Active
+     * first and then manage permissions.
+     */
+
+    if (
+      normalizedTeamLead.is_active !== true
+    ) {
+
+      showFeedback(
+        "warning",
+        "Team Lead Is Inactive",
+        "Activate this Team Lead before managing permissions."
+      );
+
+      return;
+
+    }
+
+
+    /*
+     * Keep both naming formats so the existing
+     * global PermissionsModal receives the exact
+     * same IDs regardless of its fallback logic.
+     */
+
+    const permissionsTeamLead = {
+      ...normalizedTeamLead,
+
+      employee_id:
+        employeeId,
+
+      employeeId:
+        employeeId,
+
+      context_id:
+        contextId,
+
+      contextId:
+        contextId,
+    };
+
+
+    console.log(
+      "Team Lead Permissions Payload:",
+      {
+        employeeContextId,
+        employeeId,
+        contextId,
+      }
+    );
+
+
+    setSelectedTeamLead(
+      permissionsTeamLead
+    );
+
+    setShowPermissionsModal(true);
+
+  };
+
+
+  // ========================================================================
+  // CLOSE PERMISSIONS
+  // ========================================================================
+
+  const handleClosePermissions = () => {
+
+    setShowPermissionsModal(false);
+    setSelectedTeamLead(null);
+
+  };
+
+
+  // ========================================================================
+  // REFRESH
+  // ========================================================================
+
+  const handleRefresh = async () => {
+
+    setError("");
+
+    await loadTeamLeads();
+    await loadEmployees();
+
+  };
+
+
+  // ========================================================================
+  // RENDER
+  // ========================================================================
+
+  return (
+
+    <div
+      className="
+        space-y-5
+        p-4
+        sm:p-6
+      "
+    >
+
+
+      {error && (
+
+        <div
+          className="
+            rounded-lg
+            border
+            border-error/20
+            bg-error/5
+            px-4
+            py-3
+          "
+        >
+
+          <p
+            className="
+              text-sm
+              text-error
+            "
+          >
+            {error}
+          </p>
 
         </div>
 
-    )
+      )}
+
+
+      <TeamLeadTable
+        teamLeads={teamLeads}
+        search={search}
+        setSearch={setSearch}
+
+        onCreate={
+          handleCreate
+        }
+
+        onEdit={
+          handleEdit
+        }
+
+        onDelete={
+          handleDelete
+        }
+
+        onRefresh={
+          handleRefresh
+        }
+
+        onViewAgents={
+          handleViewAgents
+        }
+
+        onManagePermissions={
+          handleManagePermissions
+        }
+
+        onStatusChange={
+          handleStatusChange
+        }
+      />
+
+
+      <TeamLeadModal
+        open={showModal}
+        teamLead={selectedTeamLead}
+        employees={employees}
+
+        onClose={
+          handleCloseModal
+        }
+
+        onSubmit={
+          handleSubmit
+        }
+      />
+
+
+      <AssignedAgentsModal
+        open={showAgentsModal}
+        teamLead={selectedTeamLead}
+
+        onClose={
+          handleCloseAgents
+        }
+      />
+
+
+      <PermissionsModal
+        open={
+          showPermissionsModal
+        }
+
+        admin={
+          selectedTeamLead
+        }
+
+        employeeId={
+          selectedTeamLead?.employee_id
+        }
+
+        contextId={
+          selectedTeamLead?.context_id
+        }
+
+        onClose={
+          handleClosePermissions
+        }
+      />
+
+
+      <FeedbackModal
+        open={
+          feedback.open
+        }
+
+        type={
+          feedback.type
+        }
+
+        title={
+          feedback.title
+        }
+
+        message={
+          feedback.message
+        }
+
+        onClose={
+          closeFeedback
+        }
+      />
+
+    </div>
+
+  );
 
 }
 
 
-export default TeamLead
+export default TeamLead;

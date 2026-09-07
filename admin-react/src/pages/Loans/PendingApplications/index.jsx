@@ -10,7 +10,7 @@ import {
 
 import {
     getLoanTypes,
-    getEmployeesByContext,
+    getApplicationFilters,
 } from '../../../services/commonservice'
 
 import PendingApplicationsTable from './components/PendingApplicationsTable'
@@ -21,7 +21,7 @@ import ReminderModal from '../../../components/GlobalModels/Loans/ReminderModal'
 import { useToast } from '../../../components/Toast/ToastProvider'
 const STATUS_OPTIONS = [
     {
-        value: 'revert_rejected',
+        value: 'revert rejected',
         label: 'Revert Rejected',
     },
     {
@@ -267,7 +267,12 @@ const PendingApplications = () => {
     const [rms, setRms] = useState([])
     const [agents, setAgents] = useState([])
     const [teamLeads, setTeamLeads] = useState([])
-
+    const [filterVisibility, setFilterVisibility] =
+        useState({
+            show_rm: false,
+            show_agent: false,
+            show_team_lead: false,
+        })
     const [search, setSearch] = useState('')
 
     const [selectedLoanType, setSelectedLoanType] = useState('')
@@ -338,64 +343,74 @@ const PendingApplications = () => {
      */
 
     const fetchDropdownData = useCallback(async () => {
-        const context = getActiveContext()
-
-        if (!context?.id) {
-            setLoanTypes([])
-            setRms([])
-            setAgents([])
-            setTeamLeads([])
-            return
-        }
-
         try {
+            const activeContext = getActiveContext()
+
+            if (!activeContext?.id) {
+                setLoanTypes([])
+                setRms([])
+                setAgents([])
+                setTeamLeads([])
+
+                setFilterVisibility({
+                    show_rm: false,
+                    show_agent: false,
+                    show_team_lead: false,
+                })
+
+                return
+            }
+
             const [
-                loanTypesResponse,
-                rmResponse,
-                agentResponse,
+                loanTypesData,
+                filterData,
             ] = await Promise.all([
                 getLoanTypes(),
-
-                // Relationship Manager context
-                getEmployeesByContext(3),
-
-                // Agent context
-                getEmployeesByContext(2),
+                getApplicationFilters(activeContext.id),
             ])
 
             setLoanTypes(
-                Array.isArray(loanTypesResponse)
-                    ? loanTypesResponse
-                    : loanTypesResponse?.data ?? []
+                loanTypesData || []
             )
 
             setRms(
-                Array.isArray(rmResponse)
-                    ? rmResponse
-                    : rmResponse?.data ?? []
+                filterData?.rms || []
             )
 
             setAgents(
-                Array.isArray(agentResponse)
-                    ? agentResponse
-                    : agentResponse?.data ?? []
+                filterData?.agents || []
             )
 
-            // There is currently no Team Lead context.
-            setTeamLeads([])
+            setTeamLeads(
+                filterData?.team_leads || []
+            )
+
+            setFilterVisibility(
+                filterData?.visibility || {
+                    show_rm: false,
+                    show_agent: false,
+                    show_team_lead: false,
+                }
+            )
+
         } catch (error) {
             console.error(
                 'Failed to fetch application dropdown data:',
                 error
             )
 
-            showError(
-                error?.response?.data?.detail ||
-                'Failed to load dropdown data',
-                'error'
-            )
+            setLoanTypes([])
+            setRms([])
+            setAgents([])
+            setTeamLeads([])
+
+            setFilterVisibility({
+                show_rm: false,
+                show_agent: false,
+                show_team_lead: false,
+            })
         }
-    }, [showError])
+    },[])
 
 
     /*
@@ -803,7 +818,17 @@ const PendingApplications = () => {
                 setSelectedLoanType={
                     setSelectedLoanType
                 }
+                showRM={
+                    filterVisibility.show_rm
+                }
 
+                showAgent={
+                    filterVisibility.show_agent
+                }
+
+                showTeamLead={
+                    filterVisibility.show_team_lead
+                }
                 selectedRM={selectedRM}
                 setSelectedRM={setSelectedRM}
 
