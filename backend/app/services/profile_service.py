@@ -6,18 +6,16 @@ from sqlalchemy.orm import Session
 
 
 def get_self_profile( employee_id : int , db : Session  ):
-
-        employee = (db.query(Employee)
+    result = (
+        db.query(Employee, EmployeeDetails)
         .join(
             EmployeeDetails,
             EmployeeDetails.employee_id == Employee.id
         )
         .filter(Employee.id == employee_id)
         .first()
-        )
-
-        if not employee:
-            return RuntimeError("Employee not found")
-
-        return employee
-
+    )
+    if not result:
+        raise RuntimeError("Employee not found")
+    employee, employee_details = result
+    return employee, employee_details

@@ -14,9 +14,11 @@ from .phone_number_routes import router as phone_num_router
 from app.routes.admin.bank_routes import router as bank_router
 from app.routes.admin.dsa_routes import router as dsa_router
 from app.routes.admin.banker_directory_routes import router as banker_directory_router
+from app.routes.admin.profile_routes import profile_router
 
 from .team_leads_routes import router as team_leads_router
 from .agents_routes import router as agents_router
+
 
 
 router = APIRouter()
@@ -35,3 +37,4 @@ router.include_router(dsa_router)
 router.include_router(banker_directory_router)
 router.include_router(team_leads_router)
 router.include_router(agents_router)
+router.include_router(profile_router)
