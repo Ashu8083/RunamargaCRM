@@ -1,11 +1,16 @@
 // admin-react/src/pages/Banks&DSA/BankersDirectory/index.jsx
 
 import {
+    useCallback,
     useEffect,
     useMemo,
     useRef,
     useState,
 } from 'react'
+
+import {
+    searchBankerDirectory,
+} from './API'
 
 import BankersDirectoryTable from './components/BankersDirectoryTable'
 import BankerModal from './components/BankerModal'
@@ -14,146 +19,7 @@ import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeD
 
 
 // =============================================================
-// INITIAL DATA
-// =============================================================
-
-const INITIAL_ENTRIES = [
-    {
-        id: 1,
-        state: 'Andhra Pradesh',
-        city: 'Vijayawada',
-        bank: 'IDFC',
-        loanType: 'Education Loan',
-        status: 'active',
-
-        asms: [
-            {
-                id: 101,
-                name: 'Ramesh Kumar',
-                phone: '9876543210',
-                email: 'ramesh@example.com',
-            },
-            {
-                id: 102,
-                name: 'Priya Sharma',
-                phone: '9876543211',
-                email: 'priya@example.com',
-            },
-        ],
-
-        sms: [
-            {
-                id: 201,
-                name: 'Suresh Kumar',
-                phone: '9876543220',
-                email: 'suresh@example.com',
-            },
-            {
-                id: 202,
-                name: 'Manoj Rao',
-                phone: '9876543221',
-                email: 'manoj@example.com',
-            },
-        ],
-    },
-
-    {
-        id: 2,
-        state: 'Andhra Pradesh',
-        city: 'Vijayawada',
-        bank: 'Incred',
-        loanType: 'Education Loan',
-        status: 'active',
-
-        asms: [
-            {
-                id: 103,
-                name: 'Nayana',
-                phone: '9876543230',
-                email: 'nayana@example.com',
-            },
-            {
-                id: 104,
-                name: 'Kasturi',
-                phone: '9876543231',
-                email: 'kasturi@example.com',
-            },
-        ],
-
-        sms: [
-            {
-                id: 203,
-                name: 'Prashanth',
-                phone: '9876543240',
-                email: 'prashanth@example.com',
-            },
-        ],
-    },
-
-    {
-        id: 3,
-        state: 'Karnataka',
-        city: 'Bengaluru',
-        bank: 'Propelld Finance',
-        loanType: 'Personal Loan',
-        status: 'active',
-
-        asms: [
-            {
-                id: 105,
-                name: 'Asma Banu',
-                phone: '9876543250',
-                email: 'asma@example.com',
-            },
-        ],
-
-        sms: [
-            {
-                id: 204,
-                name: 'Lokesh A',
-                phone: '9876543260',
-                email: 'lokesh@example.com',
-            },
-            {
-                id: 205,
-                name: 'Nayana',
-                phone: '9876543261',
-                email: 'nayana.sm@example.com',
-            },
-        ],
-    },
-
-    {
-        id: 4,
-        state: 'Karnataka',
-        city: 'Mysuru',
-        bank: 'Poonawalla',
-        loanType: 'Home Loan',
-        status: 'inactive',
-
-        asms: [
-            {
-                id: 106,
-                name: 'Arun Kumar',
-                phone: '9876543270',
-                email: 'arun@example.com',
-            },
-        ],
-
-        sms: [
-            {
-                id: 206,
-                name: 'Prasanna Y R',
-                phone: '9876543280',
-                email: 'prasanna@example.com',
-            },
-        ],
-    },
-]
-
-
-// =============================================================
-// FILTER OPTIONS
+// LOAN TYPES
 // =============================================================
 
 const LOAN_TYPES = [
@@ -171,12 +37,6 @@ const LOAN_TYPES = [
 
 // =============================================================
 // SEARCHABLE FILTER DROPDOWN
-//
-// Used for:
-// State
-// City
-// Bank
-//
 // =============================================================
 
 function SearchableFilterDropdown({
@@ -188,14 +48,9 @@ function SearchableFilterDropdown({
     disabled = false,
 }) {
 
-    const [open, setOpen] =
-        useState(false)
-
-    const [searchValue, setSearchValue] =
-        useState('')
-
-    const dropdownRef =
-        useRef(null)
+    const [open, setOpen] = useState(false)
+    const [searchValue, setSearchValue] = useState('')
+    const dropdownRef = useRef(null)
 
 
     // =========================================================
@@ -208,14 +63,11 @@ function SearchableFilterDropdown({
 
             if (
                 dropdownRef.current &&
-                !dropdownRef.current.contains(
-                    event.target
-                )
+                !dropdownRef.current.contains(event.target)
             ) {
                 setOpen(false)
                 setSearchValue('')
             }
-
         }
 
 
@@ -238,31 +90,18 @@ function SearchableFilterDropdown({
 
 
     // =========================================================
-    // RESET SEARCH WHEN CLOSED
-    // =========================================================
-
-    useEffect(() => {
-
-        if (!open) {
-            setSearchValue('')
-        }
-
-    }, [open])
-
-
-    // =========================================================
     // FILTER OPTIONS
     // =========================================================
 
     const filteredOptions = useMemo(() => {
 
-        const search =
+        const normalizedSearch =
             searchValue
                 .trim()
                 .toLowerCase()
 
 
-        if (!search) {
+        if (!normalizedSearch) {
             return options
         }
 
@@ -271,7 +110,7 @@ function SearchableFilterDropdown({
             (option) =>
                 String(option)
                     .toLowerCase()
-                    .includes(search)
+                    .includes(normalizedSearch)
         )
 
     }, [
@@ -281,7 +120,7 @@ function SearchableFilterDropdown({
 
 
     // =========================================================
-    // SELECT OPTION
+    // SELECT
     // =========================================================
 
     const handleSelect = (option) => {
@@ -295,7 +134,7 @@ function SearchableFilterDropdown({
 
 
     // =========================================================
-    // CLEAR SELECTION
+    // CLEAR
     // =========================================================
 
     const handleClear = (event) => {
@@ -317,10 +156,7 @@ function SearchableFilterDropdown({
     if (disabled) {
 
         return (
-            <div className="
-                relative
-                w-full
-            ">
+            <div className="relative w-full">
 
                 <button
                     type="button"
@@ -342,14 +178,11 @@ function SearchableFilterDropdown({
                         text-base-content/35
                     "
                 >
-
                     <span>
                         {placeholder}
                     </span>
 
-                    <span className="
-                        text-base-content/30
-                    ">
+                    <span className="text-base-content/30">
                         ▾
                     </span>
 
@@ -367,22 +200,14 @@ function SearchableFilterDropdown({
     return (
         <div
             ref={dropdownRef}
-            className="
-                relative
-                w-full
-            "
+            className="relative w-full"
         >
-
-            {/* =================================================
-                TRIGGER
-            ================================================= */}
 
             <button
                 type="button"
                 onClick={() =>
                     setOpen(
-                        (previous) =>
-                            !previous
+                        (previous) => !previous
                     )
                 }
                 className={[
@@ -428,10 +253,6 @@ function SearchableFilterDropdown({
             </button>
 
 
-            {/* =================================================
-                DROPDOWN
-            ================================================= */}
-
             {open && (
 
                 <div className="
@@ -447,10 +268,6 @@ function SearchableFilterDropdown({
                     bg-base-100
                     shadow-xl
                 ">
-
-                    {/* =========================================
-                        SEARCH
-                    ========================================= */}
 
                     <div className="
                         border-b
@@ -470,9 +287,7 @@ function SearchableFilterDropdown({
                             onClick={(event) =>
                                 event.stopPropagation()
                             }
-                            placeholder={
-                                searchPlaceholder
-                            }
+                            placeholder={searchPlaceholder}
                             className="
                                 h-9
                                 w-full
@@ -494,17 +309,11 @@ function SearchableFilterDropdown({
                     </div>
 
 
-                    {/* =========================================
-                        OPTIONS
-                    ========================================= */}
-
                     <div className="
                         max-h-56
                         overflow-y-auto
                         p-1
                     ">
-
-                        {/* ALL OPTION */}
 
                         <button
                             type="button"
@@ -531,8 +340,6 @@ function SearchableFilterDropdown({
                         </button>
 
 
-                        {/* OPTIONS */}
-
                         {filteredOptions.map(
                             (option) => (
 
@@ -540,9 +347,7 @@ function SearchableFilterDropdown({
                                     type="button"
                                     key={option}
                                     onClick={() =>
-                                        handleSelect(
-                                            option
-                                        )
+                                        handleSelect(option)
                                     }
                                     className={[
                                         'flex',
@@ -567,8 +372,6 @@ function SearchableFilterDropdown({
                         )}
 
 
-                        {/* NO RESULTS */}
-
                         {!filteredOptions.length && (
 
                             <div className="
@@ -576,24 +379,18 @@ function SearchableFilterDropdown({
                                 py-5
                                 text-center
                             ">
-
                                 <p className="
                                     text-xs
                                     text-base-content/45
                                 ">
                                     No options found
                                 </p>
-
                             </div>
 
                         )}
 
                     </div>
 
-
-                    {/* =========================================
-                        CLEAR SELECTED VALUE
-                    ========================================= */}
 
                     {value && (
 
@@ -605,9 +402,7 @@ function SearchableFilterDropdown({
 
                             <button
                                 type="button"
-                                onClick={
-                                    handleClear
-                                }
+                                onClick={handleClear}
                                 className="
                                     w-full
                                     rounded-lg
@@ -648,16 +443,21 @@ function BankersDirectory() {
     // DATA
     // =========================================================
 
-    const [entries, setEntries] =
-        useState(INITIAL_ENTRIES)
+    const [entries, setEntries] = useState([])
+    const [loading, setLoading] = useState(false)
+
+    const [page, setPage] = useState(1)
+    const [limit] = useState(15)
+    const [total, setTotal] = useState(0)
 
 
     // =========================================================
-    // FILTER STATE
+    // FILTER VALUES
+    //
+    // These are the values displayed in the UI.
     // =========================================================
 
-    const [search, setSearch] =
-        useState('')
+    const [search, setSearch] = useState('')
 
     const [selectedState, setSelectedState] =
         useState('')
@@ -673,7 +473,26 @@ function BankersDirectory() {
 
 
     // =========================================================
-    // MODAL STATE
+    // FILTER IDS
+    //
+    // These are the IDs sent to the backend.
+    // =========================================================
+
+    const [selectedStateId, setSelectedStateId] =
+        useState(null)
+
+    const [selectedCityId, setSelectedCityId] =
+        useState(null)
+
+    const [selectedBankId, setSelectedBankId] =
+        useState(null)
+
+    const [selectedLoanTypeId, setSelectedLoanTypeId] =
+        useState(null)
+
+
+    // =========================================================
+    // MODALS
     // =========================================================
 
     const [showBankerModal, setShowBankerModal] =
@@ -687,7 +506,70 @@ function BankersDirectory() {
 
 
     // =========================================================
-    // GET UNIQUE STATES
+    // GET FIELD VALUE
+    //
+    // Supports both:
+    // state / state_name
+    // city / city_name
+    // bank / bank_name
+    // loanType / loan_type
+    // =========================================================
+
+    const getStateName = (entry) =>
+        entry?.state ??
+        entry?.state_name ??
+        ''
+
+    const getCityName = (entry) =>
+        entry?.city ??
+        entry?.city_name ??
+        ''
+
+    const getBankName = (entry) =>
+        entry?.bank ??
+        entry?.bank_name ??
+        ''
+
+    const getLoanTypeName = (entry) =>
+        entry?.loanType ??
+        entry?.loan_type ??
+        entry?.loan_type_name ??
+        ''
+
+
+    // =========================================================
+    // GET IDS
+    //
+    // Supports common backend naming conventions.
+    // =========================================================
+
+    const getStateId = (entry) =>
+        entry?.state_id ??
+        entry?.stateId ??
+        entry?.state?.id ??
+        null
+
+    const getCityId = (entry) =>
+        entry?.city_id ??
+        entry?.cityId ??
+        entry?.city?.id ??
+        null
+
+    const getBankId = (entry) =>
+        entry?.bank_id ??
+        entry?.bankId ??
+        entry?.bank?.id ??
+        null
+
+    const getLoanTypeId = (entry) =>
+        entry?.loan_type_id ??
+        entry?.loanTypeId ??
+        entry?.loan_type?.id ??
+        null
+
+
+    // =========================================================
+    // UNIQUE STATES
     // =========================================================
 
     const states = useMemo(() => {
@@ -695,10 +577,7 @@ function BankersDirectory() {
         return [
             ...new Set(
                 entries
-                    .map(
-                        (entry) =>
-                            entry.state
-                    )
+                    .map(getStateName)
                     .filter(Boolean)
             ),
         ].sort()
@@ -707,30 +586,24 @@ function BankersDirectory() {
 
 
     // =========================================================
-    // GET CITIES
-    //
-    // City options depend on selected state.
+    // CITIES
     // =========================================================
 
     const cities = useMemo(() => {
 
-        const source =
-            selectedState
-                ? entries.filter(
-                    (entry) =>
-                        entry.state ===
-                        selectedState
-                )
-                : entries
+        const source = selectedState
+            ? entries.filter(
+                (entry) =>
+                    getStateName(entry) ===
+                    selectedState
+            )
+            : entries
 
 
         return [
             ...new Set(
                 source
-                    .map(
-                        (entry) =>
-                            entry.city
-                    )
+                    .map(getCityName)
                     .filter(Boolean)
             ),
         ].sort()
@@ -742,9 +615,7 @@ function BankersDirectory() {
 
 
     // =========================================================
-    // GET ALL CITIES FOR MODAL
-    //
-    // The add/edit modal needs access to city options.
+    // ALL CITIES
     // =========================================================
 
     const allCities = useMemo(() => {
@@ -752,10 +623,7 @@ function BankersDirectory() {
         return [
             ...new Set(
                 entries
-                    .map(
-                        (entry) =>
-                            entry.city
-                    )
+                    .map(getCityName)
                     .filter(Boolean)
             ),
         ].sort()
@@ -764,48 +632,41 @@ function BankersDirectory() {
 
 
     // =========================================================
-    // GET BANKS
-    //
-    // Bank options depend on selected state and city.
+    // BANKS
     // =========================================================
 
     const banks = useMemo(() => {
 
-        const source =
-            entries.filter(
-                (entry) => {
+        const source = entries.filter(
+            (entry) => {
 
-                    if (
-                        selectedState &&
-                        entry.state !==
-                            selectedState
-                    ) {
-                        return false
-                    }
-
-
-                    if (
-                        selectedCity &&
-                        entry.city !==
-                            selectedCity
-                    ) {
-                        return false
-                    }
-
-
-                    return true
-
+                if (
+                    selectedState &&
+                    getStateName(entry) !==
+                        selectedState
+                ) {
+                    return false
                 }
-            )
+
+
+                if (
+                    selectedCity &&
+                    getCityName(entry) !==
+                        selectedCity
+                ) {
+                    return false
+                }
+
+
+                return true
+            }
+        )
 
 
         return [
             ...new Set(
                 source
-                    .map(
-                        (entry) =>
-                            entry.bank
-                    )
+                    .map(getBankName)
                     .filter(Boolean)
             ),
         ].sort()
@@ -818,7 +679,7 @@ function BankersDirectory() {
 
 
     // =========================================================
-    // ALL BANKS FOR MODAL
+    // ALL BANKS
     // =========================================================
 
     const allBanks = useMemo(() => {
@@ -826,10 +687,7 @@ function BankersDirectory() {
         return [
             ...new Set(
                 entries
-                    .map(
-                        (entry) =>
-                            entry.bank
-                    )
+                    .map(getBankName)
                     .filter(Boolean)
             ),
         ].sort()
@@ -838,147 +696,359 @@ function BankersDirectory() {
 
 
     // =========================================================
-    // FILTER ENTRIES
+    // LOAD DATA FROM SERVER
     // =========================================================
 
-    const filteredEntries = useMemo(() => {
+    const loadBankerDirectory = useCallback(
 
-        const searchValue =
-            search
-                .trim()
-                .toLowerCase()
+    async (pageNumber = 1) => {
+
+        try {
+
+            setLoading(true)
+
+            const response =
+
+                await searchBankerDirectory({
+
+                    search:
+
+                        search.trim() ||
+
+                        null,
+
+                    state_id:
+
+                        selectedStateId ||
+
+                        null,
+
+                    city_id:
+
+                        selectedCityId ||
+
+                        null,
+
+                    bank_id:
+
+                        selectedBankId ||
+
+                        null,
+
+                    loan_type_id:
+
+                        selectedLoanTypeId ||
+
+                        null,
+
+                    page:
+
+                        pageNumber,
+
+                    limit,
+
+                })
+
+            const responseData =
+
+                response?.data
+
+            // -------------------------------------------------
+
+            // Backend response:
+
+            //
+
+            // {
+
+            //     data: [...],
+
+            //     total: 100
+
+            // }
+
+            //
+
+            // OR
+
+            //
+
+            // {
+
+            //     data: {
+
+            //         data: [...],
+
+            //         total: 100
+
+            //     }
+
+            // }
+
+            // -------------------------------------------------
+
+            if (Array.isArray(responseData)) {
+
+                setEntries(responseData)
+
+                setTotal(
+
+                    response?.total ??
+
+                    response?.count ??
+
+                    responseData.length
+
+                )
+
+            } else {
+
+                setEntries(
+
+                    responseData?.data ??
+
+                    []
+
+                )
+
+                setTotal(
+
+                    responseData?.total ??
+
+                    response?.total ??
+
+                    responseData?.count ??
+
+                    response?.count ??
+
+                    0
+
+                )
+
+            }
+
+            setPage(pageNumber)
+
+        } catch (error) {
+
+            console.error(
+
+                'Failed to load banker directory:',
+
+                error
+
+            )
+
+            setEntries([])
+
+            setTotal(0)
+
+        } finally {
+
+            setLoading(false)
+
+        }
+
+    },
+
+    [
+
+        search,
+
+        selectedStateId,
+
+        selectedCityId,
+
+        selectedBankId,
+
+        selectedLoanTypeId,
+
+        limit,
+
+    ]
+
+)
+    // =============================================================
+// LOAD / FILTER DATA
+//
+// Initial load + whenever server filter values change.
+// =============================================================
+
+useEffect(() => {
+
+    const timer = setTimeout(() => {
+
+        loadBankerDirectory(1)
+
+    }, 300)
+
+    return () => {
+        clearTimeout(timer)
+    }
+
+}, [
+    loadBankerDirectory,
+])
 
 
-        return entries.filter(
-            (entry) => {
+    // =========================================================
+    // STATE CHANGE
+    // =========================================================
 
-                // ---------------------------------------------
-                // STATE
-                // ---------------------------------------------
+    const handleStateChange = (value) => {
 
-                if (
-                    selectedState &&
-                    entry.state !==
-                        selectedState
-                ) {
-                    return false
-                }
+        setSelectedState(value)
 
-
-                // ---------------------------------------------
-                // CITY
-                // ---------------------------------------------
-
-                if (
-                    selectedCity &&
-                    entry.city !==
-                        selectedCity
-                ) {
-                    return false
-                }
+        const selectedEntry =
+            entries.find(
+                (entry) =>
+                    getStateName(entry) ===
+                    value
+            )
 
 
-                // ---------------------------------------------
-                // BANK
-                // ---------------------------------------------
-
-                if (
-                    selectedBank &&
-                    entry.bank !==
-                        selectedBank
-                ) {
-                    return false
-                }
+        setSelectedStateId(
+            value
+                ? getStateId(selectedEntry)
+                : null
+        )
 
 
-                // ---------------------------------------------
-                // LOAN TYPE
-                // ---------------------------------------------
+        // State changes invalidate city and bank.
 
-                if (
-                    selectedLoanType &&
-                    entry.loanType !==
-                        selectedLoanType
-                ) {
-                    return false
-                }
+        setSelectedCity('')
+        setSelectedCityId(null)
+
+        setSelectedBank('')
+        setSelectedBankId(null)
+
+    }
 
 
-                // ---------------------------------------------
-                // GENERAL SEARCH
-                //
-                // Searches:
-                // Bank
-                // SM name
-                // SM phone
-                // SM email
-                // ASM name
-                // ASM phone
-                // ASM email
-                // ---------------------------------------------
+    // =========================================================
+    // CITY CHANGE
+    // =========================================================
 
-                if (searchValue) {
+    const handleCityChange = (value) => {
 
-                    const values = [
+        setSelectedCity(value)
 
-                        entry.bank,
+        const selectedEntry =
+            entries.find(
+                (entry) => {
 
-                        ...(entry.sms || [])
-                            .flatMap(
-                                (sm) => [
-                                    sm.name,
-                                    sm.phone,
-                                    sm.email,
-                                ]
-                            ),
-
-                        ...(entry.asms || [])
-                            .flatMap(
-                                (asm) => [
-                                    asm.name,
-                                    asm.phone,
-                                    asm.email,
-                                ]
-                            ),
-
-                    ]
-
-
-                    const matchesSearch =
-                        values.some(
-                            (value) =>
-                                value !==
-                                    null &&
-                                value !==
-                                    undefined &&
-                                String(value)
-                                    .toLowerCase()
-                                    .includes(
-                                        searchValue
-                                    )
-                        )
-
-
-                    if (!matchesSearch) {
+                    if (
+                        getCityName(entry) !==
+                        value
+                    ) {
                         return false
                     }
 
+
+                    if (
+                        selectedState &&
+                        getStateName(entry) !==
+                        selectedState
+                    ) {
+                        return false
+                    }
+
+
+                    return true
                 }
+            )
 
 
-                return true
-
-            }
+        setSelectedCityId(
+            value
+                ? getCityId(selectedEntry)
+                : null
         )
 
-    }, [
-        entries,
-        search,
-        selectedState,
-        selectedCity,
-        selectedBank,
-        selectedLoanType,
-    ])
+
+        // City changes invalidate bank.
+
+        setSelectedBank('')
+        setSelectedBankId(null)
+
+    }
+
+
+    // =========================================================
+    // BANK CHANGE
+    // =========================================================
+
+    const handleBankChange = (value) => {
+
+        setSelectedBank(value)
+
+        const selectedEntry =
+            entries.find(
+                (entry) => {
+
+                    if (
+                        getBankName(entry) !==
+                        value
+                    ) {
+                        return false
+                    }
+
+
+                    if (
+                        selectedState &&
+                        getStateName(entry) !==
+                        selectedState
+                    ) {
+                        return false
+                    }
+
+
+                    if (
+                        selectedCity &&
+                        getCityName(entry) !==
+                        selectedCity
+                    ) {
+                        return false
+                    }
+
+
+                    return true
+                }
+            )
+
+
+        setSelectedBankId(
+            value
+                ? getBankId(selectedEntry)
+                : null
+        )
+
+    }
+
+
+    // =========================================================
+    // LOAN TYPE CHANGE
+    // =========================================================
+
+    const handleLoanTypeChange = (value) => {
+
+        setSelectedLoanType(value)
+
+        const selectedEntry =
+            entries.find(
+                (entry) =>
+                    getLoanTypeName(entry) ===
+                    value
+            )
+
+
+        setSelectedLoanTypeId(
+            value
+                ? getLoanTypeId(selectedEntry)
+                : null
+        )
+
+    }
 
 
     // =========================================================
@@ -988,45 +1058,20 @@ function BankersDirectory() {
     const handleClearFilters = () => {
 
         setSearch('')
+
         setSelectedState('')
+        setSelectedStateId(null)
+
         setSelectedCity('')
+        setSelectedCityId(null)
+
         setSelectedBank('')
+        setSelectedBankId(null)
+
         setSelectedLoanType('')
+        setSelectedLoanTypeId(null)
 
-    }
-
-
-    // =========================================================
-    // STATE CHANGE
-    // =========================================================
-
-    const handleStateChange = (
-        value
-    ) => {
-
-        setSelectedState(value)
-
-        // State changes invalidate city and bank.
-
-        setSelectedCity('')
-        setSelectedBank('')
-
-    }
-
-
-    // =========================================================
-    // CITY CHANGE
-    // =========================================================
-
-    const handleCityChange = (
-        value
-    ) => {
-
-        setSelectedCity(value)
-
-        // City changes invalidate bank.
-
-        setSelectedBank('')
+        setPage(1)
 
     }
 
@@ -1049,9 +1094,7 @@ function BankersDirectory() {
     // EDIT ENTRY
     // =========================================================
 
-    const handleEditEntry = (
-        entry
-    ) => {
+    const handleEditEntry = (entry) => {
 
         setSelectedEntry(entry)
 
@@ -1065,9 +1108,7 @@ function BankersDirectory() {
     // VIEW ENTRY
     // =========================================================
 
-    const handleViewEntry = (
-        entry
-    ) => {
+    const handleViewEntry = (entry) => {
 
         setSelectedEntry(entry)
 
@@ -1078,13 +1119,12 @@ function BankersDirectory() {
 
 
     // =========================================================
-    // CLOSE ADD / EDIT MODAL
+    // CLOSE BANKER MODAL
     // =========================================================
 
     const handleCloseBankerModal = () => {
 
         setShowBankerModal(false)
-
         setSelectedEntry(null)
 
     }
@@ -1097,7 +1137,6 @@ function BankersDirectory() {
     const handleCloseViewModal = () => {
 
         setShowViewModal(false)
-
         setSelectedEntry(null)
 
     }
@@ -1105,58 +1144,17 @@ function BankersDirectory() {
 
     // =========================================================
     // SAVE ENTRY
-    // ADD / EDIT
+    //
+    // IMPORTANT:
+    // This reloads the server instead of pretending that
+    // the local array is the database.
     // =========================================================
 
-    const handleSaveEntry = (
-        entryData
-    ) => {
-
-        // ---------------------------------------------
-        // EDIT
-        // ---------------------------------------------
-
-        if (entryData.id) {
-
-            setEntries(
-                (previous) =>
-                    previous.map(
-                        (entry) =>
-                            entry.id ===
-                            entryData.id
-                                ? {
-                                    ...entry,
-                                    ...entryData,
-                                }
-                                : entry
-                    )
-            )
-
-        }
-
-        // ---------------------------------------------
-        // ADD
-        // ---------------------------------------------
-
-        else {
-
-            const newEntry = {
-                ...entryData,
-                id: Date.now(),
-            }
-
-
-            setEntries(
-                (previous) => [
-                    ...previous,
-                    newEntry,
-                ]
-            )
-
-        }
-
+    const handleSaveEntry = async () => {
 
         handleCloseBankerModal()
+
+        await loadBankerDirectory(page)
 
     }
 
@@ -1165,26 +1163,49 @@ function BankersDirectory() {
     // REFRESH
     // =========================================================
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
 
-        /*
-         * API refresh will be connected later.
-         */
+        await loadBankerDirectory(page)
 
-        console.log(
-            'Refresh Bankers Directory'
+    }
+
+
+    // =========================================================
+    // PAGE CHANGE
+    // =========================================================
+
+    const handlePageChange = async (
+        nextPage
+    ) => {
+
+        if (
+            nextPage < 1 ||
+            (
+                total > 0 &&
+                nextPage >
+                    Math.ceil(
+                        total / limit
+                    )
+            )
+        ) {
+            return
+        }
+
+
+        await loadBankerDirectory(
+            nextPage
         )
 
     }
 
 
     // =========================================================
-    // ACTIVE FILTER CHECK
+    // ACTIVE FILTER
     // =========================================================
 
     const hasActiveFilters =
         Boolean(
-            search ||
+            search.trim() ||
             selectedState ||
             selectedCity ||
             selectedBank ||
@@ -1222,7 +1243,7 @@ function BankersDirectory() {
                 ">
 
                     {/* =================================================
-                        FIRST FILTER ROW
+                        FIRST ROW
                     ================================================= */}
 
                     <div className="
@@ -1232,7 +1253,7 @@ function BankersDirectory() {
                         lg:grid-cols-[minmax(260px,1.7fr)_minmax(170px,1fr)_minmax(170px,1fr)_auto]
                     ">
 
-                        {/* GENERAL SEARCH */}
+                        {/* SEARCH */}
 
                         <div>
 
@@ -1255,7 +1276,10 @@ function BankersDirectory() {
                                         event.target.value
                                     )
                                 }
-                                placeholder="Search bank, SM, ASM, phone or email..."
+                                placeholder="
+                                    Search bank, SM, ASM,
+                                    phone or email...
+                                "
                                 className="
                                     input
                                     input-bordered
@@ -1284,9 +1308,7 @@ function BankersDirectory() {
 
 
                             <SearchableFilterDropdown
-                                value={
-                                    selectedState
-                                }
+                                value={selectedState}
                                 options={states}
                                 placeholder="All States"
                                 searchPlaceholder="Search state..."
@@ -1314,9 +1336,7 @@ function BankersDirectory() {
 
 
                             <SearchableFilterDropdown
-                                value={
-                                    selectedCity
-                                }
+                                value={selectedCity}
                                 options={cities}
                                 placeholder="All Cities"
                                 searchPlaceholder="Search city..."
@@ -1373,7 +1393,7 @@ function BankersDirectory() {
 
 
                     {/* =================================================
-                        SECOND FILTER ROW
+                        SECOND ROW
                     ================================================= */}
 
                     <div className="
@@ -1400,14 +1420,12 @@ function BankersDirectory() {
 
 
                             <SearchableFilterDropdown
-                                value={
-                                    selectedBank
-                                }
+                                value={selectedBank}
                                 options={banks}
                                 placeholder="All Banks"
                                 searchPlaceholder="Search bank..."
                                 onChange={
-                                    setSelectedBank
+                                    handleBankChange
                                 }
                             />
 
@@ -1421,7 +1439,7 @@ function BankersDirectory() {
                                 selectedLoanType
                             }
                             onChange={
-                                setSelectedLoanType
+                                handleLoanTypeChange
                             }
                             options={LOAN_TYPES}
                             className="min-w-0"
@@ -1431,7 +1449,7 @@ function BankersDirectory() {
 
 
                     {/* =================================================
-                        FILTER FOOTER
+                        FOOTER
                     ================================================= */}
 
                     <div className="
@@ -1447,8 +1465,6 @@ function BankersDirectory() {
                         sm:justify-between
                     ">
 
-                        {/* RESULT COUNT */}
-
                         <p className="
                             text-xs
                             font-medium
@@ -1461,19 +1477,26 @@ function BankersDirectory() {
                                 font-semibold
                                 text-base-content/75
                             ">
-                                {filteredEntries.length}
+                                {entries.length}
+                            </span>
+
+                            {' '}of{' '}
+
+                            <span className="
+                                font-semibold
+                                text-base-content/75
+                            ">
+                                {total}
                             </span>
 
                             {' '}
 
-                            {filteredEntries.length === 1
+                            {total === 1
                                 ? 'entry'
                                 : 'entries'}
 
                         </p>
 
-
-                        {/* ADD BUTTON */}
 
                         <button
                             type="button"
@@ -1510,18 +1533,15 @@ function BankersDirectory() {
             ===================================================== */}
 
             <BankersDirectoryTable
-                entries={
-                    filteredEntries
-                }
-                onView={
-                    handleViewEntry
-                }
-                onEdit={
-                    handleEditEntry
-                }
-                onRefresh={
-                    handleRefresh
-                }
+                entries={entries}
+                loading={loading}
+                onView={handleViewEntry}
+                onEdit={handleEditEntry}
+                onRefresh={handleRefresh}
+                page={page}
+                limit={limit}
+                total={total}
+                onPageChange={handlePageChange}
             />
 
 
@@ -1530,30 +1550,14 @@ function BankersDirectory() {
             ===================================================== */}
 
             <BankerModal
-                open={
-                    showBankerModal
-                }
-                entry={
-                    selectedEntry
-                }
-                states={
-                    states
-                }
-                cities={
-                    allCities
-                }
-                banks={
-                    allBanks
-                }
-                loanTypes={
-                    LOAN_TYPES
-                }
-                onClose={
-                    handleCloseBankerModal
-                }
-                onSubmit={
-                    handleSaveEntry
-                }
+                open={showBankerModal}
+                entry={selectedEntry}
+                states={states}
+                cities={allCities}
+                banks={allBanks}
+                loanTypes={LOAN_TYPES}
+                onClose={handleCloseBankerModal}
+                onSubmit={handleSaveEntry}
             />
 
 
@@ -1562,22 +1566,13 @@ function BankersDirectory() {
             ===================================================== */}
 
             <BankerViewModal
-                open={
-                    showViewModal
-                }
-                entry={
-                    selectedEntry
-                }
-                onClose={
-                    handleCloseViewModal
-                }
-                onEdit={
-                    handleEditEntry
-                }
+                open={showViewModal}
+                entry={selectedEntry}
+                onClose={handleCloseViewModal}
+                onEdit={handleEditEntry}
             />
 
         </div>
-
     )
 }
 

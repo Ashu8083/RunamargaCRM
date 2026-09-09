@@ -184,8 +184,7 @@ function BanksTable({
 
                         {banks.map((bank, index) => {
 
-                            const isActive =
-                                bank.status === 'active'
+                           const isActive = bank.is_active
 
 
                             return (

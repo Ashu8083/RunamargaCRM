@@ -8,7 +8,7 @@ import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
 import BriefcaseIcon from '@heroicons/react/24/outline/BriefcaseIcon'
 import IdentificationIcon from '@heroicons/react/24/outline/IdentificationIcon'
 import UserIcon from '@heroicons/react/24/outline/UserIcon'
-
+import { getMyProfile } from './ProfileApi'
 
 // =============================================================
 // DEFAULT PROFILE IMAGES
@@ -56,60 +56,60 @@ const getProfileImage = (user) => {
 // MOCK API
 // =============================================================
 
-const fetchProfile = async () => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                user: {
-                    id: 'RM-1024',
-                    name: 'Aravind Kumar',
-                    email: 'aravind@runamarga.com',
-                    phone: '+91 98765 43210',
-                    gender: 'male',
-                    profileImage: '',
-                    role: 'Relationship Manager',
-                    department: 'Loan Operations',
-                    joinedDate: '15/06/2024',
-                },
-
-                documents: [
-                    {
-                        id: 1,
-                        name: 'Aadhaar Card',
-                        type: 'Identity Proof',
-                        submittedDate: '18/06/2024',
-                        status: 'verified',
-                        path: '/documents/aadhaar.pdf',
-                    },
-                    {
-                        id: 2,
-                        name: 'PAN Card',
-                        type: 'Identity Proof',
-                        submittedDate: '18/06/2024',
-                        status: 'verified',
-                        path: '/documents/pan.pdf',
-                    },
-                    {
-                        id: 3,
-                        name: 'Address Proof',
-                        type: 'Address Proof',
-                        submittedDate: '19/06/2024',
-                        status: 'pending',
-                        path: '/documents/address-proof.pdf',
-                    },
-                    {
-                        id: 4,
-                        name: 'Employment Certificate',
-                        type: 'Employment Document',
-                        submittedDate: '20/06/2024',
-                        status: 'verified',
-                        path: '/documents/employment-certificate.pdf',
-                    },
-                ],
-            })
-        }, 500)
-    })
-}
+// const fetchProfile = async () => {
+//     return new Promise((resolve) => {
+//         setTimeout(() => {
+//             resolve({
+//                 user: {
+//                     id: 'RM-1024',
+//                     name: 'Aravind Kumar',
+//                     email: 'aravind@runamarga.com',
+//                     phone: '+91 98765 43210',
+//                     gender: 'male',
+//                     profileImage: '',
+//                     role: 'Relationship Manager',
+//                     department: 'Loan Operations',
+//                     joinedDate: '15/06/2024',
+//                 },
+//
+//                 documents: [
+//                     {
+//                         id: 1,
+//                         name: 'Aadhaar Card',
+//                         type: 'Identity Proof',
+//                         submittedDate: '18/06/2024',
+//                         status: 'verified',
+//                         path: '/documents/aadhaar.pdf',
+//                     },
+//                     {
+//                         id: 2,
+//                         name: 'PAN Card',
+//                         type: 'Identity Proof',
+//                         submittedDate: '18/06/2024',
+//                         status: 'verified',
+//                         path: '/documents/pan.pdf',
+//                     },
+//                     {
+//                         id: 3,
+//                         name: 'Address Proof',
+//                         type: 'Address Proof',
+//                         submittedDate: '19/06/2024',
+//                         status: 'pending',
+//                         path: '/documents/address-proof.pdf',
+//                     },
+//                     {
+//                         id: 4,
+//                         name: 'Employment Certificate',
+//                         type: 'Employment Document',
+//                         submittedDate: '20/06/2024',
+//                         status: 'verified',
+//                         path: '/documents/employment-certificate.pdf',
+//                     },
+//                 ],
+//             })
+//         }, 500)
+//     })
+// }
 
 
 // =============================================================
@@ -203,7 +203,7 @@ function Profile() {
                 setLoading(true)
                 setError('')
 
-                const response = await fetchProfile()
+                const response = await getMyProfile()
 
                 if (!mounted) {
                     return
@@ -301,19 +301,29 @@ function Profile() {
     // PROFILE DATA
     // =========================================================
 
-    const user = profile.user || {}
+const user = profile || {}
 
-    const documents = Array.isArray(profile.documents)
-        ? profile.documents
-        : []
+const defaultProfileImage = getDefaultProfileImage(
+    user.gender
+)
 
-    const defaultProfileImage = getDefaultProfileImage(
-        user.gender
-    )
+const profileImage = getProfileImage({
+    ...user,
+    gender: user.gender,
+})
 
-    const profileImage = getProfileImage(user)
-
-
+const documents = [
+    {
+        id: 'aadhar',
+        name: 'Aadhaar Card',
+        path: user.aadhar_card,
+    },
+    {
+        id: 'pan',
+        name: 'PAN Card',
+        path: user.pan_card,
+    },
+].filter((document) => document.path)
     // =========================================================
     // RENDER
     // =========================================================
@@ -367,7 +377,7 @@ function Profile() {
 
 
                             <span className="mt-3 rounded-full bg-base-200 px-3 py-1 font-mono text-[11px] font-medium text-base-content/60">
-                                {user.id || 'N/A'}
+                                {user.employee_code || 'N/A'}
                             </span>
 
                         </div>
@@ -466,7 +476,7 @@ function Profile() {
                                 </p>
 
                                 <p className="mt-0.5 font-mono text-sm text-base-content">
-                                    {user.id || 'N/A'}
+                                    {user.employee_code || 'N/A'}
                                 </p>
 
                             </div>
@@ -506,7 +516,9 @@ function Profile() {
                             </p>
 
                             <p className="mt-0.5 text-sm text-base-content">
-                                {user.joinedDate || 'N/A'}
+                                {user.joining_date
+    ? new Date(user.joining_date).toLocaleDateString('en-IN')
+    : 'N/A'}
                             </p>
 
                         </div>
