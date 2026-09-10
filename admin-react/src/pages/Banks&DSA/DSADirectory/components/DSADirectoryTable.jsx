@@ -7,15 +7,16 @@ import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 
 function DSADirectoryTable({
     entries = [],
+    loading = false,
     onEdit,
     onDelete,
 }) {
 
     // =========================================================
-    // EMPTY STATE
+    // EMPTY / LOADING STATE
     // =========================================================
 
-    if (!entries.length) {
+    if (!entries.length || loading) {
 
         return (
 

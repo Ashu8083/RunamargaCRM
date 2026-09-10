@@ -204,7 +204,7 @@ const LoanTypeDropdown = ({
       {label && (
 
         <label
-          className="mb-1.5 block text-sm font-medium text-base-content"
+          className="mb-1.5 block text-xs font-medium text-base-content/60"
         >
 
           {label}

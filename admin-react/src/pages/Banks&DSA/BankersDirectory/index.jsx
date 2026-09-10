@@ -10,29 +10,20 @@ import {
 
 import {
     searchBankerDirectory,
+    createBankerDirectory,
+    updateBankerDirectory,
+    deleteBankerDirectory,
 } from './API'
+
+import {
+    getBanks,
+} from '../Banks/Api'
 
 import BankersDirectoryTable from './components/BankersDirectoryTable'
 import BankerModal from './components/BankerModal'
 import BankerViewModal from './components/BankerViewModal'
 import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeDropdown'
-
-
-// =============================================================
-// LOAN TYPES
-// =============================================================
-
-const LOAN_TYPES = [
-    'Personal Loan',
-    'Business Loan',
-    'Home Loan',
-    'Loan Against Property',
-    'Car Loan',
-    'Education Loan',
-    'Gold Loan',
-    'Agricultural Loan',
-    'Credit Card',
-]
+import StateCityDropdown  from '../../../components/GlobalModels/Filters/StateCityDropdown'
 
 
 // =============================================================
@@ -47,7 +38,6 @@ function SearchableFilterDropdown({
     onChange,
     disabled = false,
 }) {
-
     const [open, setOpen] = useState(false)
     const [searchValue, setSearchValue] = useState('')
     const dropdownRef = useRef(null)
@@ -58,9 +48,7 @@ function SearchableFilterDropdown({
     // =========================================================
 
     useEffect(() => {
-
         const handleOutsideClick = (event) => {
-
             if (
                 dropdownRef.current &&
                 !dropdownRef.current.contains(event.target)
@@ -70,22 +58,11 @@ function SearchableFilterDropdown({
             }
         }
 
-
-        document.addEventListener(
-            'mousedown',
-            handleOutsideClick
-        )
-
+        document.addEventListener('mousedown', handleOutsideClick)
 
         return () => {
-
-            document.removeEventListener(
-                'mousedown',
-                handleOutsideClick
-            )
-
+            document.removeEventListener('mousedown', handleOutsideClick)
         }
-
     }, [])
 
 
@@ -94,29 +71,20 @@ function SearchableFilterDropdown({
     // =========================================================
 
     const filteredOptions = useMemo(() => {
-
-        const normalizedSearch =
-            searchValue
-                .trim()
-                .toLowerCase()
-
+        const normalizedSearch = searchValue.trim().toLowerCase()
 
         if (!normalizedSearch) {
             return options
         }
 
+        return options.filter((option) => {
+            const label = typeof option === 'object' ? option.name : option
 
-        return options.filter(
-            (option) =>
-                String(option)
-                    .toLowerCase()
-                    .includes(normalizedSearch)
-        )
-
-    }, [
-        options,
-        searchValue,
-    ])
+            return String(label)
+                .toLowerCase()
+                .includes(normalizedSearch)
+        })
+    }, [options, searchValue])
 
 
     // =========================================================
@@ -124,12 +92,9 @@ function SearchableFilterDropdown({
     // =========================================================
 
     const handleSelect = (option) => {
-
         onChange?.(option)
-
         setOpen(false)
         setSearchValue('')
-
     }
 
 
@@ -138,14 +103,10 @@ function SearchableFilterDropdown({
     // =========================================================
 
     const handleClear = (event) => {
-
         event.stopPropagation()
-
         onChange?.('')
-
         setOpen(false)
         setSearchValue('')
-
     }
 
 
@@ -154,10 +115,8 @@ function SearchableFilterDropdown({
     // =========================================================
 
     if (disabled) {
-
         return (
             <div className="relative w-full">
-
                 <button
                     type="button"
                     disabled
@@ -178,16 +137,9 @@ function SearchableFilterDropdown({
                         text-base-content/35
                     "
                 >
-                    <span>
-                        {placeholder}
-                    </span>
-
-                    <span className="text-base-content/30">
-                        ▾
-                    </span>
-
+                    <span>{placeholder}</span>
+                    <span className="text-base-content/30">▾</span>
                 </button>
-
             </div>
         )
     }
@@ -198,18 +150,10 @@ function SearchableFilterDropdown({
     // =========================================================
 
     return (
-        <div
-            ref={dropdownRef}
-            className="relative w-full"
-        >
-
+        <div ref={dropdownRef} className="relative w-full">
             <button
                 type="button"
-                onClick={() =>
-                    setOpen(
-                        (previous) => !previous
-                    )
-                }
+                onClick={() => setOpen((previous) => !previous)}
                 className={[
                     'flex',
                     'h-10',
@@ -223,13 +167,11 @@ function SearchableFilterDropdown({
                     'text-left',
                     'text-sm',
                     'transition',
-
                     open
                         ? 'border-[#8BCF00] ring-2 ring-[#8BCF00]/15'
                         : 'border-base-300 hover:border-base-content/25',
                 ].join(' ')}
             >
-
                 <span
                     className={
                         value
@@ -237,56 +179,39 @@ function SearchableFilterDropdown({
                             : 'truncate text-base-content/45'
                     }
                 >
-                    {value || placeholder}
+                    {value
+                        ? options.find((option) => option.id === Number(value))?.name ?? placeholder
+                        : placeholder}
                 </span>
 
-
-                <span className="
-                    ml-2
-                    shrink-0
-                    text-xs
-                    text-base-content/45
-                ">
+                <span className="ml-2 shrink-0 text-xs text-base-content/45">
                     ▾
                 </span>
-
             </button>
 
-
             {open && (
-
-                <div className="
-                    absolute
-                    left-0
-                    right-0
-                    z-[80]
-                    mt-1.5
-                    overflow-hidden
-                    rounded-xl
-                    border
-                    border-base-300
-                    bg-base-100
-                    shadow-xl
-                ">
-
-                    <div className="
-                        border-b
+                <div
+                    className="
+                        absolute
+                        left-0
+                        right-0
+                        z-[80]
+                        mt-1.5
+                        overflow-hidden
+                        rounded-xl
+                        border
                         border-base-300
-                        p-2
-                    ">
-
+                        bg-base-100
+                        shadow-xl
+                    "
+                >
+                    <div className="border-b border-base-300 p-2">
                         <input
                             type="text"
                             autoFocus
                             value={searchValue}
-                            onChange={(event) =>
-                                setSearchValue(
-                                    event.target.value
-                                )
-                            }
-                            onClick={(event) =>
-                                event.stopPropagation()
-                            }
+                            onChange={(event) => setSearchValue(event.target.value)}
+                            onClick={(event) => event.stopPropagation()}
                             placeholder={searchPlaceholder}
                             className="
                                 h-9
@@ -305,21 +230,12 @@ function SearchableFilterDropdown({
                                 focus:ring-[#8BCF00]/10
                             "
                         />
-
                     </div>
 
-
-                    <div className="
-                        max-h-56
-                        overflow-y-auto
-                        p-1
-                    ">
-
+                    <div className="max-h-56 overflow-y-auto p-1">
                         <button
                             type="button"
-                            onClick={() =>
-                                handleSelect('')
-                            }
+                            onClick={() => handleSelect('')}
                             className={[
                                 'flex',
                                 'w-full',
@@ -330,7 +246,6 @@ function SearchableFilterDropdown({
                                 'text-left',
                                 'text-sm',
                                 'transition',
-
                                 !value
                                     ? 'bg-[#8BCF00]/10 font-medium text-[#6FA800]'
                                     : 'text-base-content/70 hover:bg-base-200',
@@ -339,16 +254,15 @@ function SearchableFilterDropdown({
                             {placeholder}
                         </button>
 
+                        {filteredOptions.map((option) => {
+                            const optionId = option.id
+                            const optionName = option.name
 
-                        {filteredOptions.map(
-                            (option) => (
-
+                            return (
                                 <button
                                     type="button"
-                                    key={option}
-                                    onClick={() =>
-                                        handleSelect(option)
-                                    }
+                                    key={optionId}
+                                    onClick={() => handleSelect(option)}
                                     className={[
                                         'flex',
                                         'w-full',
@@ -359,47 +273,27 @@ function SearchableFilterDropdown({
                                         'text-left',
                                         'text-sm',
                                         'transition',
-
-                                        value === option
+                                        Number(value) === optionId
                                             ? 'bg-[#8BCF00]/10 font-medium text-[#6FA800]'
                                             : 'text-base-content hover:bg-base-200',
                                     ].join(' ')}
                                 >
-                                    {option}
+                                    {optionName}
                                 </button>
-
                             )
-                        )}
-
+                        })}
 
                         {!filteredOptions.length && (
-
-                            <div className="
-                                px-3
-                                py-5
-                                text-center
-                            ">
-                                <p className="
-                                    text-xs
-                                    text-base-content/45
-                                ">
+                            <div className="px-3 py-5 text-center">
+                                <p className="text-xs text-base-content/45">
                                     No options found
                                 </p>
                             </div>
-
                         )}
-
                     </div>
 
-
                     {value && (
-
-                        <div className="
-                            border-t
-                            border-base-300
-                            p-1
-                        ">
-
+                        <div className="border-t border-base-300 p-1">
                             <button
                                 type="button"
                                 onClick={handleClear}
@@ -419,15 +313,10 @@ function SearchableFilterDropdown({
                             >
                                 Clear selection
                             </button>
-
                         </div>
-
                     )}
-
                 </div>
-
             )}
-
         </div>
     )
 }
@@ -438,1020 +327,489 @@ function SearchableFilterDropdown({
 // =============================================================
 
 function BankersDirectory() {
-
     // =========================================================
     // DATA
     // =========================================================
-
     const [entries, setEntries] = useState([])
     const [loading, setLoading] = useState(false)
+    const [search, setSearch] = useState('')
+
+    const [banks, setBanks] = useState([])
+    const [, setBanksLoading] = useState(false)
 
     const [page, setPage] = useState(1)
     const [limit] = useState(15)
     const [total, setTotal] = useState(0)
 
-
     // =========================================================
     // FILTER VALUES
-    //
-    // These are the values displayed in the UI.
     // =========================================================
-
-    const [search, setSearch] = useState('')
-
-    const [selectedState, setSelectedState] =
-        useState('')
-
-    const [selectedCity, setSelectedCity] =
-        useState('')
-
-    const [selectedBank, setSelectedBank] =
-        useState('')
-
-    const [selectedLoanType, setSelectedLoanType] =
-        useState('')
-
-
-    // =========================================================
-    // FILTER IDS
-    //
-    // These are the IDs sent to the backend.
-    // =========================================================
-
-    const [selectedStateId, setSelectedStateId] =
-        useState(null)
-
-    const [selectedCityId, setSelectedCityId] =
-        useState(null)
-
-    const [selectedBankId, setSelectedBankId] =
-        useState(null)
-
-    const [selectedLoanTypeId, setSelectedLoanTypeId] =
-        useState(null)
-
+    const [selectedStateId, setSelectedStateId] = useState(null)
+    const [selectedCityId, setSelectedCityId] = useState(null)
+    const [selectedBankId, setSelectedBankId] = useState(null)
+    const [selectedLoanTypeId, setSelectedLoanTypeId] = useState(null)
 
     // =========================================================
     // MODALS
     // =========================================================
-
-    const [showBankerModal, setShowBankerModal] =
-        useState(false)
-
-    const [showViewModal, setShowViewModal] =
-        useState(false)
-
-    const [selectedEntry, setSelectedEntry] =
-        useState(null)
+    const [showBankerModal, setShowBankerModal] = useState(false)
+    const [showViewModal, setShowViewModal] = useState(false)
+    const [selectedEntry, setSelectedEntry] = useState(null)
 
 
     // =========================================================
     // GET FIELD VALUE
-    //
-    // Supports both:
-    // state / state_name
-    // city / city_name
-    // bank / bank_name
-    // loanType / loan_type
     // =========================================================
-
-    const getStateName = (entry) =>
-        entry?.state ??
-        entry?.state_name ??
-        ''
-
-    const getCityName = (entry) =>
-        entry?.city ??
-        entry?.city_name ??
-        ''
-
-    const getBankName = (entry) =>
-        entry?.bank ??
-        entry?.bank_name ??
-        ''
-
-    const getLoanTypeName = (entry) =>
-        entry?.loanType ??
-        entry?.loan_type ??
-        entry?.loan_type_name ??
-        ''
-
-
-    // =========================================================
-    // GET IDS
-    //
-    // Supports common backend naming conventions.
-    // =========================================================
-
-    const getStateId = (entry) =>
-        entry?.state_id ??
-        entry?.stateId ??
-        entry?.state?.id ??
-        null
-
-    const getCityId = (entry) =>
-        entry?.city_id ??
-        entry?.cityId ??
-        entry?.city?.id ??
-        null
-
-    const getBankId = (entry) =>
-        entry?.bank_id ??
-        entry?.bankId ??
-        entry?.bank?.id ??
-        null
-
-    const getLoanTypeId = (entry) =>
-        entry?.loan_type_id ??
-        entry?.loanTypeId ??
-        entry?.loan_type?.id ??
-        null
+    const getStateName = (entry) => entry?.state ?? entry?.state_name ?? ''
+    const getCityName = (entry) => entry?.city ?? entry?.city_name ?? ''
 
 
     // =========================================================
     // UNIQUE STATES
     // =========================================================
-
     const states = useMemo(() => {
-
-        return [
-            ...new Set(
-                entries
-                    .map(getStateName)
-                    .filter(Boolean)
-            ),
-        ].sort()
-
+        return [...new Set(entries.map(getStateName).filter(Boolean))].sort()
     }, [entries])
 
 
     // =========================================================
     // CITIES
     // =========================================================
-
-    const cities = useMemo(() => {
-
-        const source = selectedState
-            ? entries.filter(
-                (entry) =>
-                    getStateName(entry) ===
-                    selectedState
-            )
-            : entries
-
-
-        return [
-            ...new Set(
-                source
-                    .map(getCityName)
-                    .filter(Boolean)
-            ),
-        ].sort()
-
-    }, [
-        entries,
-        selectedState,
-    ])
-
-
-    // =========================================================
-    // ALL CITIES
-    // =========================================================
-
     const allCities = useMemo(() => {
-
-        return [
-            ...new Set(
-                entries
-                    .map(getCityName)
-                    .filter(Boolean)
-            ),
-        ].sort()
-
+        return [...new Set(entries.map(getCityName).filter(Boolean))].sort()
     }, [entries])
 
 
     // =========================================================
     // BANKS
     // =========================================================
+    const loadBanks = useCallback(async () => {
+        try {
+            setBanksLoading(true)
+            const response = await getBanks({ is_active: true })
+            const responseData = response?.data
 
-    const banks = useMemo(() => {
+            const bankData = Array.isArray(responseData)
+                ? responseData
+                : responseData?.data ?? (Array.isArray(response) ? response : [])
 
-        const source = entries.filter(
-            (entry) => {
+            const formattedBanks = bankData
+                .map((bank) => ({
+                    id: bank.id,
+                    name: bank.name,
+                }))
+                .filter(
+                    (bank) =>
+                        bank.id !== null &&
+                        bank.id !== undefined &&
+                        bank.name
+                )
+                .sort((a, b) => a.name.localeCompare(b.name))
 
-                if (
-                    selectedState &&
-                    getStateName(entry) !==
-                        selectedState
-                ) {
-                    return false
-                }
-
-
-                if (
-                    selectedCity &&
-                    getCityName(entry) !==
-                        selectedCity
-                ) {
-                    return false
-                }
-
-
-                return true
-            }
-        )
-
-
-        return [
-            ...new Set(
-                source
-                    .map(getBankName)
-                    .filter(Boolean)
-            ),
-        ].sort()
-
-    }, [
-        entries,
-        selectedState,
-        selectedCity,
-    ])
-
-
-    // =========================================================
-    // ALL BANKS
-    // =========================================================
-
-    const allBanks = useMemo(() => {
-
-        return [
-            ...new Set(
-                entries
-                    .map(getBankName)
-                    .filter(Boolean)
-            ),
-        ].sort()
-
-    }, [entries])
+            setBanks(formattedBanks)
+        } catch (error) {
+            console.error('Failed to load banks:', error)
+            setBanks([])
+        } finally {
+            setBanksLoading(false)
+        }
+    }, [])
 
 
     // =========================================================
     // LOAD DATA FROM SERVER
     // =========================================================
-
     const loadBankerDirectory = useCallback(
+        async (pageNumber = 1) => {
+            try {
+                setLoading(true)
 
-    async (pageNumber = 1) => {
-
-        try {
-
-            setLoading(true)
-
-            const response =
-
-                await searchBankerDirectory({
-
-                    search:
-
-                        search.trim() ||
-
-                        null,
-
-                    state_id:
-
-                        selectedStateId ||
-
-                        null,
-
-                    city_id:
-
-                        selectedCityId ||
-
-                        null,
-
-                    bank_id:
-
-                        selectedBankId ||
-
-                        null,
-
-                    loan_type_id:
-
-                        selectedLoanTypeId ||
-
-                        null,
-
-                    page:
-
-                        pageNumber,
-
+                const response = await searchBankerDirectory({
+                    search: search.trim() || null,
+                    state_id: selectedStateId || null,
+                    city_id: selectedCityId || null,
+                    bank_id: selectedBankId || null,
+                    loan_type_id: selectedLoanTypeId || null,
+                    page: pageNumber,
                     limit,
-
                 })
 
-            const responseData =
+                const resData = response?.data || response
 
-                response?.data
+                const rawItems = resData?.items || resData?.data || (Array.isArray(resData) ? resData : [])
+                const totalCount = resData?.total ?? resData?.count ?? (Array.isArray(rawItems) ? rawItems.length : 0)
 
-            // -------------------------------------------------
+                const formattedEntries = rawItems.map((entry) => ({
+                    id: entry.banker_directory_id || entry.id,
+                    banker_directory_id: entry.banker_directory_id || entry.id,
+                    bank_id: entry.bank_id,
+                    bank: entry.bank_name || entry.bank || '',
+                    bank_name: entry.bank_name || entry.bank || '',
+                    loan_type_id: entry.loan_type_id,
+                    loanType: entry.loan_type_name || entry.loanType || '',
+                    loan_type_name: entry.loan_type_name || entry.loanType || '',
+                    state_id: entry.state_id,
+                    state: entry.state_name || entry.state || '',
+                    state_name: entry.state_name || entry.state || '',
+                    city_id: entry.city_id,
+                    city: entry.city_name || entry.city || '',
+                    city_name: entry.city_name || entry.city || '',
+                    status: entry.status === '1' || entry.status === 'active' ? 'active' : 'inactive',
+                    asms: (entry.asms || []).map((asm) => ({
+                        id: asm.id || Math.random(),
+                        name: asm.name || '',
+                        contact: asm.contact || asm.phone || '',
+                        phone: asm.contact || asm.phone || '',
+                        email: asm.email || '',
+                    })),
+                    sms: (entry.sms || []).map((sm) => ({
+                        id: sm.id || Math.random(),
+                        name: sm.name || '',
+                        contact: sm.contact || sm.phone || '',
+                        phone: sm.contact || sm.phone || '',
+                        email: sm.email || '',
+                    })),
+                }))
 
-            // Backend response:
-
-            //
-
-            // {
-
-            //     data: [...],
-
-            //     total: 100
-
-            // }
-
-            //
-
-            // OR
-
-            //
-
-            // {
-
-            //     data: {
-
-            //         data: [...],
-
-            //         total: 100
-
-            //     }
-
-            // }
-
-            // -------------------------------------------------
-
-            if (Array.isArray(responseData)) {
-
-                setEntries(responseData)
-
-                setTotal(
-
-                    response?.total ??
-
-                    response?.count ??
-
-                    responseData.length
-
-                )
-
-            } else {
-
-                setEntries(
-
-                    responseData?.data ??
-
-                    []
-
-                )
-
-                setTotal(
-
-                    responseData?.total ??
-
-                    response?.total ??
-
-                    responseData?.count ??
-
-                    response?.count ??
-
-                    0
-
-                )
-
+                setEntries(formattedEntries)
+                setTotal(totalCount)
+                setPage(pageNumber)
+            } catch (error) {
+                console.error('Failed to load banker directory:', error)
+                setEntries([])
+                setTotal(0)
+            } finally {
+                setLoading(false)
             }
+        },
+        [
+            search,
+            selectedStateId,
+            selectedCityId,
+            selectedBankId,
+            selectedLoanTypeId,
+            limit,
+        ]
+    )
 
-            setPage(pageNumber)
 
-        } catch (error) {
+    // =========================================================
+    // LOAD / FILTER DATA
+    // =========================================================
+    useEffect(() => {
+        loadBanks()
+    }, [loadBanks])
 
-            console.error(
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            loadBankerDirectory(1)
+        }, 300)
 
-                'Failed to load banker directory:',
-
-                error
-
-            )
-
-            setEntries([])
-
-            setTotal(0)
-
-        } finally {
-
-            setLoading(false)
-
+        return () => {
+            clearTimeout(timer)
         }
-
-    },
-
-    [
-
-        search,
-
-        selectedStateId,
-
-        selectedCityId,
-
-        selectedBankId,
-
-        selectedLoanTypeId,
-
-        limit,
-
-    ]
-
-)
-    // =============================================================
-// LOAD / FILTER DATA
-//
-// Initial load + whenever server filter values change.
-// =============================================================
-
-useEffect(() => {
-
-    const timer = setTimeout(() => {
-
-        loadBankerDirectory(1)
-
-    }, 300)
-
-    return () => {
-        clearTimeout(timer)
-    }
-
-}, [
-    loadBankerDirectory,
-])
+    }, [loadBankerDirectory])
 
 
     // =========================================================
     // STATE CHANGE
     // =========================================================
-
     const handleStateChange = (value) => {
-
-        setSelectedState(value)
-
-        const selectedEntry =
-            entries.find(
-                (entry) =>
-                    getStateName(entry) ===
-                    value
-            )
-
-
-        setSelectedStateId(
-            value
-                ? getStateId(selectedEntry)
-                : null
-        )
-
-
-        // State changes invalidate city and bank.
-
-        setSelectedCity('')
+        setSelectedStateId(value ? Number(value) : null)
         setSelectedCityId(null)
-
-        setSelectedBank('')
-        setSelectedBankId(null)
-
     }
 
 
     // =========================================================
     // CITY CHANGE
     // =========================================================
-
     const handleCityChange = (value) => {
-
-        setSelectedCity(value)
-
-        const selectedEntry =
-            entries.find(
-                (entry) => {
-
-                    if (
-                        getCityName(entry) !==
-                        value
-                    ) {
-                        return false
-                    }
-
-
-                    if (
-                        selectedState &&
-                        getStateName(entry) !==
-                        selectedState
-                    ) {
-                        return false
-                    }
-
-
-                    return true
-                }
-            )
-
-
-        setSelectedCityId(
-            value
-                ? getCityId(selectedEntry)
-                : null
-        )
-
-
-        // City changes invalidate bank.
-
-        setSelectedBank('')
-        setSelectedBankId(null)
-
+        setSelectedCityId(value ? Number(value) : null)
     }
 
 
     // =========================================================
     // BANK CHANGE
     // =========================================================
-
-    const handleBankChange = (value) => {
-
-        setSelectedBank(value)
-
-        const selectedEntry =
-            entries.find(
-                (entry) => {
-
-                    if (
-                        getBankName(entry) !==
-                        value
-                    ) {
-                        return false
-                    }
-
-
-                    if (
-                        selectedState &&
-                        getStateName(entry) !==
-                        selectedState
-                    ) {
-                        return false
-                    }
-
-
-                    if (
-                        selectedCity &&
-                        getCityName(entry) !==
-                        selectedCity
-                    ) {
-                        return false
-                    }
-
-
-                    return true
-                }
-            )
-
-
-        setSelectedBankId(
-            value
-                ? getBankId(selectedEntry)
-                : null
-        )
-
+    const handleBankChange = (bank) => {
+        if (typeof bank === 'object' && bank !== null) {
+            setSelectedBankId(bank.id ? Number(bank.id) : null)
+        } else if (bank) {
+            setSelectedBankId(Number(bank))
+        } else {
+            setSelectedBankId(null)
+        }
     }
 
 
     // =========================================================
     // LOAN TYPE CHANGE
     // =========================================================
-
     const handleLoanTypeChange = (value) => {
-
-        setSelectedLoanType(value)
-
-        const selectedEntry =
-            entries.find(
-                (entry) =>
-                    getLoanTypeName(entry) ===
-                    value
-            )
-
-
-        setSelectedLoanTypeId(
-            value
-                ? getLoanTypeId(selectedEntry)
-                : null
-        )
-
+        setSelectedLoanTypeId(value ? Number(value) : null)
     }
 
 
     // =========================================================
     // CLEAR FILTERS
     // =========================================================
-
     const handleClearFilters = () => {
-
         setSearch('')
-
-        setSelectedState('')
         setSelectedStateId(null)
-
-        setSelectedCity('')
         setSelectedCityId(null)
-
-        setSelectedBank('')
         setSelectedBankId(null)
-
-        setSelectedLoanType('')
         setSelectedLoanTypeId(null)
-
         setPage(1)
-
     }
 
 
     // =========================================================
     // ADD ENTRY
     // =========================================================
-
     const handleAddEntry = () => {
-
         setSelectedEntry(null)
-
         setShowViewModal(false)
         setShowBankerModal(true)
-
     }
 
 
     // =========================================================
     // EDIT ENTRY
     // =========================================================
-
     const handleEditEntry = (entry) => {
-
         setSelectedEntry(entry)
-
         setShowViewModal(false)
         setShowBankerModal(true)
-
     }
 
 
     // =========================================================
     // VIEW ENTRY
     // =========================================================
-
     const handleViewEntry = (entry) => {
-
         setSelectedEntry(entry)
-
         setShowBankerModal(false)
         setShowViewModal(true)
+    }
 
+
+    // =========================================================
+    // DELETE ENTRY
+    // =========================================================
+    const handleDeleteEntry = async (entry) => {
+        const bankerId = entry?.id || entry?.banker_directory_id
+        if (!bankerId) return
+
+        if (!window.confirm('Are you sure you want to delete this banker directory entry?')) {
+            return
+        }
+
+        try {
+            setLoading(true)
+            await deleteBankerDirectory(bankerId)
+            await loadBankerDirectory(page)
+        } catch (error) {
+            console.error('Failed to delete banker entry:', error)
+            alert(error?.response?.data?.detail || 'Failed to delete banker entry.')
+        } finally {
+            setLoading(false)
+        }
     }
 
 
     // =========================================================
     // CLOSE BANKER MODAL
     // =========================================================
-
     const handleCloseBankerModal = () => {
-
         setShowBankerModal(false)
         setSelectedEntry(null)
-
     }
 
 
     // =========================================================
     // CLOSE VIEW MODAL
     // =========================================================
-
     const handleCloseViewModal = () => {
-
         setShowViewModal(false)
         setSelectedEntry(null)
-
     }
 
 
     // =========================================================
-    // SAVE ENTRY
-    //
-    // IMPORTANT:
-    // This reloads the server instead of pretending that
-    // the local array is the database.
+    // SAVE ENTRY (CREATE / UPDATE)
     // =========================================================
+    const handleSaveEntry = async (payload) => {
+        try {
+            setLoading(true)
 
-    const handleSaveEntry = async () => {
+            const bankerId = payload.banker_directory_id || payload.id
 
-        handleCloseBankerModal()
+            const apiData = {
+                bank_id: Number(payload.bank_id),
+                loan_type_id: Number(payload.loan_type_id),
+                state_id: Number(payload.state_id),
+                city_id: Number(payload.city_id),
+                status: payload.status === 'active' || payload.status === '1' ? '1' : '0',
+                asms: (payload.asms || []).map((asm) => ({
+                    name: asm.name?.trim() || '',
+                    contact: (asm.contact || asm.phone || '').trim() || null,
+                    email: (asm.email || '').trim() || null,
+                })),
+                sms: (payload.sms || []).map((sm) => ({
+                    name: sm.name?.trim() || '',
+                    contact: (sm.contact || sm.phone || '').trim() || null,
+                    email: (sm.email || '').trim() || null,
+                })),
+            }
 
-        await loadBankerDirectory(page)
+            if (bankerId) {
+                await updateBankerDirectory(bankerId, apiData)
+            } else {
+                await createBankerDirectory(apiData)
+            }
 
+            handleCloseBankerModal()
+            await loadBankerDirectory(page)
+        } catch (error) {
+            console.error('Failed to save banker entry:', error)
+            alert(error?.response?.data?.detail || 'Failed to save banker directory entry.')
+        } finally {
+            setLoading(false)
+        }
     }
 
 
     // =========================================================
     // REFRESH
     // =========================================================
-
     const handleRefresh = async () => {
-
         await loadBankerDirectory(page)
-
     }
 
 
     // =========================================================
     // PAGE CHANGE
     // =========================================================
-
-    const handlePageChange = async (
-        nextPage
-    ) => {
-
+    const handlePageChange = async (nextPage) => {
         if (
             nextPage < 1 ||
-            (
-                total > 0 &&
-                nextPage >
-                    Math.ceil(
-                        total / limit
-                    )
-            )
+            (total > 0 && nextPage > Math.ceil(total / limit))
         ) {
             return
         }
 
-
-        await loadBankerDirectory(
-            nextPage
-        )
-
+        await loadBankerDirectory(nextPage)
     }
 
 
     // =========================================================
     // ACTIVE FILTER
     // =========================================================
-
-    const hasActiveFilters =
-        Boolean(
-            search.trim() ||
-            selectedState ||
-            selectedCity ||
-            selectedBank ||
-            selectedLoanType
-        )
+    const hasActiveFilters = Boolean(
+        search.trim() ||
+        selectedStateId ||
+        selectedCityId ||
+        selectedBankId ||
+        selectedLoanTypeId
+    )
 
 
     // =========================================================
     // RENDER
     // =========================================================
-
     return (
-
-        <div className="
-            space-y-5
-            p-4
-            sm:p-6
-        ">
-
+        <div className="space-y-5 p-4 sm:p-6">
             {/* =====================================================
                 FILTER CARD
             ===================================================== */}
+            <div className="rounded-xl border border-base-300 bg-base-100 shadow-sm">
+                <div className="p-4 sm:p-5">
+                    {/* =================================================
+                        FILTER HEADER
+                    ================================================= */}
+                    <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-base-content/60">
+                            Filter Banker Directory
+                        </h3>
 
-            <div className="
-                rounded-xl
-                border
-                border-base-300
-                bg-base-100
-                shadow-sm
-            ">
-
-                <div className="
-                    p-4
-                    sm:p-5
-                ">
+                        {hasActiveFilters && (
+                            <button
+                                type="button"
+                                onClick={handleClearFilters}
+                                className="text-xs font-medium text-error hover:underline transition"
+                            >
+                                Clear Filters
+                            </button>
+                        )}
+                    </div>
 
                     {/* =================================================
-                        FIRST ROW
+                        FILTERS GRID (5 COLUMNS)
                     ================================================= */}
-
-                    <div className="
-                        grid
-                        grid-cols-1
-                        gap-3
-                        lg:grid-cols-[minmax(260px,1.7fr)_minmax(170px,1fr)_minmax(170px,1fr)_auto]
-                    ">
-
+                    <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-5">
                         {/* SEARCH */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
+                        <div className="lg:col-span-1">
+                            <label className="mb-1.5 block text-xs font-medium text-base-content/60">
                                 Search
                             </label>
-
 
                             <input
                                 type="text"
                                 value={search}
-                                onChange={(event) =>
-                                    setSearch(
-                                        event.target.value
-                                    )
-                                }
-                                placeholder="
-                                    Search bank, SM, ASM,
-                                    phone or email...
-                                "
-                                className="
-                                    input
-                                    input-bordered
-                                    h-10
-                                    min-h-10
-                                    w-full
-                                "
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Search bank, SM, ASM..."
+                                className="input input-bordered h-10 min-h-10 w-full text-sm"
                             />
-
                         </div>
 
-
-                        {/* STATE */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                State
-                            </label>
-
-
-                            <SearchableFilterDropdown
-                                value={selectedState}
-                                options={states}
-                                placeholder="All States"
-                                searchPlaceholder="Search state..."
-                                onChange={
-                                    handleStateChange
-                                }
+                        {/* STATE & CITY */}
+                        <div className="lg:col-span-2">
+                            <StateCityDropdown
+                                stateValue={selectedStateId}
+                                cityValue={selectedCityId}
+                                onStateChange={handleStateChange}
+                                onCityChange={handleCityChange}
+                                stateLabel="State"
+                                cityLabel="City"
+                                allStatesLabel="All States"
+                                allCitiesLabel="All Cities"
+                                statePlaceholder="Select State"
+                                cityPlaceholder="Select City"
+                                stateSearchPlaceholder="Search State"
+                                citySearchPlaceholder="Search City"
                             />
-
                         </div>
-
-
-                        {/* CITY */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                City
-                            </label>
-
-
-                            <SearchableFilterDropdown
-                                value={selectedCity}
-                                options={cities}
-                                placeholder="All Cities"
-                                searchPlaceholder="Search city..."
-                                onChange={
-                                    handleCityChange
-                                }
-                                disabled={
-                                    !selectedState &&
-                                    !cities.length
-                                }
-                            />
-
-                        </div>
-
-
-                        {/* CLEAR */}
-
-                        <div className="
-                            flex
-                            items-end
-                        ">
-
-                            {hasActiveFilters && (
-
-                                <button
-                                    type="button"
-                                    onClick={
-                                        handleClearFilters
-                                    }
-                                    className="
-                                        h-10
-                                        w-full
-                                        rounded-lg
-                                        border
-                                        border-base-300
-                                        bg-base-100
-                                        px-4
-                                        text-sm
-                                        font-medium
-                                        text-base-content/60
-                                        transition
-                                        hover:bg-base-200
-                                        hover:text-base-content
-                                    "
-                                >
-                                    Clear Filters
-                                </button>
-
-                            )}
-
-                        </div>
-
-                    </div>
-
-
-                    {/* =================================================
-                        SECOND ROW
-                    ================================================= */}
-
-                    <div className="
-                        mt-3
-                        grid
-                        grid-cols-1
-                        gap-3
-                        lg:grid-cols-2
-                    ">
 
                         {/* BANK */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
+                        <div className="lg:col-span-1">
+                            <label className="mb-1.5 block text-xs font-medium text-base-content/60">
                                 Bank
                             </label>
 
-
                             <SearchableFilterDropdown
-                                value={selectedBank}
+                                value={selectedBankId}
                                 options={banks}
                                 placeholder="All Banks"
                                 searchPlaceholder="Search bank..."
-                                onChange={
-                                    handleBankChange
-                                }
+                                onChange={handleBankChange}
                             />
-
                         </div>
 
-
                         {/* LOAN TYPE */}
-
-                        <LoanTypeDropdown
-                            value={
-                                selectedLoanType
-                            }
-                            onChange={
-                                handleLoanTypeChange
-                            }
-                            options={LOAN_TYPES}
-                            className="min-w-0"
-                        />
-
+                        <div className="lg:col-span-1">
+                            <LoanTypeDropdown
+                                label="Loan Type"
+                                value={selectedLoanTypeId}
+                                onChange={handleLoanTypeChange}
+                                className="min-w-0"
+                            />
+                        </div>
                     </div>
 
 
                     {/* =================================================
                         FOOTER
                     ================================================= */}
-
                     <div className="
                         mt-4
                         flex
@@ -1464,45 +822,22 @@ useEffect(() => {
                         sm:items-center
                         sm:justify-between
                     ">
-
-                        <p className="
-                            text-xs
-                            font-medium
-                            text-base-content/55
-                        ">
-
+                        <p className="text-xs font-medium text-base-content/55">
                             Showing{' '}
-
-                            <span className="
-                                font-semibold
-                                text-base-content/75
-                            ">
+                            <span className="font-semibold text-base-content/75">
                                 {entries.length}
                             </span>
-
                             {' '}of{' '}
-
-                            <span className="
-                                font-semibold
-                                text-base-content/75
-                            ">
+                            <span className="font-semibold text-base-content/75">
                                 {total}
                             </span>
-
                             {' '}
-
-                            {total === 1
-                                ? 'entry'
-                                : 'entries'}
-
+                            {total === 1 ? 'entry' : 'entries'}
                         </p>
-
 
                         <button
                             type="button"
-                            onClick={
-                                handleAddEntry
-                            }
+                            onClick={handleAddEntry}
                             className="
                                 h-10
                                 rounded-lg
@@ -1520,23 +855,20 @@ useEffect(() => {
                         >
                             Add Banker Entry
                         </button>
-
                     </div>
-
                 </div>
-
             </div>
 
 
             {/* =====================================================
                 TABLE
             ===================================================== */}
-
             <BankersDirectoryTable
                 entries={entries}
                 loading={loading}
                 onView={handleViewEntry}
                 onEdit={handleEditEntry}
+                onDelete={handleDeleteEntry}
                 onRefresh={handleRefresh}
                 page={page}
                 limit={limit}
@@ -1548,14 +880,12 @@ useEffect(() => {
             {/* =====================================================
                 ADD / EDIT MODAL
             ===================================================== */}
-
             <BankerModal
                 open={showBankerModal}
                 entry={selectedEntry}
                 states={states}
                 cities={allCities}
-                banks={allBanks}
-                loanTypes={LOAN_TYPES}
+                banks={banks}
                 onClose={handleCloseBankerModal}
                 onSubmit={handleSaveEntry}
             />
@@ -1564,17 +894,14 @@ useEffect(() => {
             {/* =====================================================
                 VIEW MODAL
             ===================================================== */}
-
             <BankerViewModal
                 open={showViewModal}
                 entry={selectedEntry}
                 onClose={handleCloseViewModal}
                 onEdit={handleEditEntry}
             />
-
         </div>
     )
 }
-
 
 export default BankersDirectory

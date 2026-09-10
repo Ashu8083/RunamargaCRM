@@ -13,6 +13,8 @@ from app.schemas.DSA_schema import (
 )
 from app.controllers.dsa_details_controller import (
     create_dsa_details,
+    update_dsa_details,
+    delete_dsa_details,
     filter_dsa_details,
 )
 
@@ -35,6 +37,37 @@ async def create_dsa(
     return create_dsa_details(
         db_session=db,
         create_dsa_details_request=create_dsa_request,
+    )
+
+
+@router.put(
+    "/{dsa_id}",
+    response_model=DSAResponse
+)
+async def update_dsa(
+    dsa_id: int,
+    update_dsa_request: DSACreateRequest,
+    employee=Depends(check_permission("dsa:update")),
+    db: Session = Depends(get_db),
+):
+    return update_dsa_details(
+        db_session=db,
+        dsa_id=dsa_id,
+        update_dsa_request=update_dsa_request,
+    )
+
+
+@router.delete(
+    "/{dsa_id}"
+)
+async def delete_dsa(
+    dsa_id: int,
+    employee=Depends(check_permission("dsa:delete")),
+    db: Session = Depends(get_db),
+):
+    return delete_dsa_details(
+        db_session=db,
+        dsa_id=dsa_id,
     )
 
 

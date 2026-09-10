@@ -98,30 +98,14 @@ def delete_banker_directory(
 
 @router.post(
     "/search",
-    response_model=list[BankerDirectoryPaginatedResponse],
+    response_model=BankerDirectoryPaginatedResponse
 )
 def filter_search_banker_directory_route(
-    search: str | None = None,
-    state_id: int | None = None,
-    city_id: int | None = None,
-    bank_id: int | None = None,
-    loan_type_id: int | None = None,
-    page: int = Query(1, ge=1),
-    limit: int = Query(15, ge=1),
+    filter_data: BankerFilterSearchRequest,
+    employee=Depends(check_permission("bankers:view")),
     db: Session = Depends(get_db),
 ):
-
-    filter_data = BankerFilterSearchRequest(
-        search=search,
-        state_id=state_id,
-        city_id=city_id,
-        bank_id=bank_id,
-        loan_type_id=loan_type_id,
-        page=page,
-        limit=limit,
-    )
     return filter_search_banker_directory_controller(
         db=db,
         filter_data=filter_data,
-
     )

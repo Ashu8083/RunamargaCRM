@@ -204,9 +204,72 @@ def filter_search_banker_directory_controller(
         filter_data=filter_data,
     )
 
+    items = [
+        BankerDirectoryResponse(
+            banker_directory_id=banker_directory.id,
+
+            bank_id=banker_directory.bank_id,
+            bank_name=(
+                banker_directory.bank.name
+                if banker_directory.bank
+                else ""
+            ),
+
+            loan_type_id=banker_directory.loan_type_id,
+            loan_type_name=(
+                banker_directory.loan_type.name
+                if banker_directory.loan_type
+                else ""
+            ),
+
+            city_id=banker_directory.city_id,
+            city_name=(
+                banker_directory.city.name
+                if banker_directory.city
+                else ""
+            ),
+
+            state_id=banker_directory.state_id,
+            state_name=(
+                banker_directory.state.name
+                if banker_directory.state
+                else ""
+            ),
+
+            status=BankerStatusEnum(
+                banker_directory.status
+            ),
+
+            asms=[
+                CreateBankerDirectoryASM(
+                    name=asm.name,
+                    contact=asm.contact,
+                    email=asm.email,
+                )
+                for asm in banker_directory.asms
+            ],
+
+            sms=[
+                CreateBankerDirectorySM(
+                    name=sm.name,
+                    contact=sm.contact,
+                    email=sm.email,
+                )
+                for sm in banker_directory.sms
+            ],
+        )
+        for banker_directory in data
+    ]
+
+    total_pages = (
+        (total + filter_data.limit - 1)
+        // filter_data.limit
+    )
+
     return {
-        "items": data,
+        "items": items,
         "total": total,
         "page": filter_data.page,
         "limit": filter_data.limit,
+        "total_pages": total_pages,
     }

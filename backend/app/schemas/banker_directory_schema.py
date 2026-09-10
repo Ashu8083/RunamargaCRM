@@ -66,10 +66,10 @@ class BankerFilterSearchRequest(BaseModel):
     page: int = Field(default=1, ge=1)
 
     limit: int = Field(default=15, ge=1, le=100)
-
 class BankerDirectoryPaginatedResponse(BaseModel):
-        data: list[BankerDirectoryResponse]
-        total: int
-        page: int
-        limit: int
-        total_pages: int
+
+    items: list[BankerDirectoryResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
