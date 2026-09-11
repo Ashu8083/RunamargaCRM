@@ -1,54 +1,5 @@
 import apiClient from '../../../../../app/apiClient'
 
-
-// =============================================================
-// GET APPLICATION FILTERS
-// =============================================================
-
-export const getApplicationFilters = async (
-    contextId = null
-) => {
-
-    try {
-
-        const response =
-            await apiClient.get(
-                '/common/application-filters',
-                {
-                    params: {
-                        context_id: contextId,
-                    },
-                }
-            )
-
-        return response.data
-
-    } catch (error) {
-
-        console.error(
-            'Failed to fetch application filters:',
-            error
-        )
-
-        const detail =
-            error.response?.data?.detail
-
-        throw new Error(
-            Array.isArray(detail)
-                ? detail
-                    .map(
-                        (item) =>
-                            item?.msg ||
-                            'Validation error'
-                    )
-                    .join(', ')
-                : detail ||
-                  error.response?.data?.message ||
-                  'Failed to load application filters.'
-        )
-    }
-}
-
 export const createLoanApplication = async (data) => {
   if (!data) {
     throw new Error('Application data is required.')

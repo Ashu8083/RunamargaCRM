@@ -1,10 +1,10 @@
-
+// admin-react/src/pages/Loans/ViewApplication/components/AddressSection/index.jsx
 
 import React, { useState } from 'react'
-import { COLORS } from '../../../../constants/colors'
-import AddAddressModal from '../modals/AddAddressModal'
-
-function AddressSection({ application }) {
+import { COLORS } from '../../../../../constants/colors'
+import AddAddressModal from '../../modals/AddAddressModal'
+import { addApplicationAddress } from './Api'
+function AddressSection({ application, onRefresh }) {
 
     const addresses = application?.addresses || []
     const [showAddAddress, setShowAddAddress] =
@@ -12,7 +12,7 @@ function AddressSection({ application }) {
 
     return (
 
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
+        <div className="card bg-base-100 border border-base-300 shadow-sm m-5">
 
             <div className="card-body">
 
@@ -99,7 +99,7 @@ function AddressSection({ application }) {
                                         </p>
 
                                         <p className="text-sm font-semibold mt-1">
-                                            {address.type || 'Address'}
+                                            {address.address_type}
                                         </p>
 
                                     </div>
@@ -132,23 +132,22 @@ function AddressSection({ application }) {
                 isOpen={showAddAddress}
                 onClose={() => setShowAddAddress(false)}
                 onSubmit={async (addressData) => {
+                    try {
+                        const response = await addApplicationAddress(
+                            application?.unique_id,
+                            addressData
+                        )
 
-                    console.log(
-                        'Address to save:',
-                        addressData
-                    )
+                        console.log('Address added:', response)
 
-                    /*
-                        Backend connection will go here.
-            
-                        application.id
-                        +
-                        addressData
-            
-                        Then refresh application addresses.
-                    */
+                        setShowAddAddress(false)
 
-                    setShowAddAddress(false)
+                        if (onRefresh) {
+                            await onRefresh()
+                        }
+                    } catch (error) {
+                        console.error('Failed to add address:', error)
+                    }
                 }}
             />
         </div>

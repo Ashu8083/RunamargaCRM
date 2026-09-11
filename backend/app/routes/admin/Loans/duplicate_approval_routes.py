@@ -1,16 +1,24 @@
-# backend/app/routes/duplicate_approval_routes.py
-from fastapi import APIRouter, Depends
+from fastapi import (
+    APIRouter,
+    Depends,
+    Query,
+)
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+
 from app.dependency.get_access_control_dependency import (
     check_permission,
 )
-from app.controllers.duplicate_approval_controller import (
-    create_duplicate_approval,
-)
+
 from app.schemas.duplicate_approval_schema import (
     DuplicateApprovalCreateRequest,
+)
+
+from app.controllers.Loans.duplicate_approval_controller import (
+    create_duplicate_approval,
+    get_duplicate_approvals,
+    approve_duplicate_application,
 )
 
 
@@ -20,10 +28,59 @@ router = APIRouter(
 )
 
 
+# =============================================================
+# GET DUPLICATE APPROVALS
+# =============================================================
+
+@router.get("")
+def get_duplicate_approvals_route(
+    status: str | None = Query(
+        default=None
+    ),
+
+    search: str | None = Query(
+        default=None
+    ),
+
+    loan_type_id: int | None = Query(
+        default=None
+    ),
+
+    applied_by_id: int | None = Query(
+        default=None
+    ),
+
+    db: Session = Depends(get_db),
+
+    employee=Depends(
+        check_permission("loans:view")
+    ),
+):
+    applications = get_duplicate_approvals(
+        db=db,
+        employee=employee,
+        status=status,
+        search=search,
+        loan_type_id=loan_type_id,
+        applied_by_id=applied_by_id,
+    )
+
+    return {
+        "success": True,
+        "data": applications,
+    }
+
+
+# =============================================================
+# CREATE DUPLICATE APPROVAL
+# =============================================================
+
 @router.post("")
 def create_duplicate_approval_route(
     payload: DuplicateApprovalCreateRequest,
+
     db: Session = Depends(get_db),
+
     employee=Depends(
         check_permission("loans:create")
     ),
@@ -32,4 +89,17 @@ def create_duplicate_approval_route(
         db=db,
         employee=employee,
         payload=payload,
+    )
+@router.patch("/{duplicate_approval_id}/approve")
+def approve_duplicate_application_route(
+    duplicate_approval_id: int,
+    db: Session = Depends(get_db),
+    employee=Depends(
+        check_permission("loans:create")
+    ),
+):
+    return approve_duplicate_application(
+        db=db,
+        employee=employee,
+        duplicate_approval_id=duplicate_approval_id,
     )

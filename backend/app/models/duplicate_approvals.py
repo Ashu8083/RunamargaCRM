@@ -24,6 +24,7 @@ import enum
 # =========================================================
 
 class DuplicateApprovalStatus(str, enum.Enum):
+    pending = "pending"
     approved = "approved"
     rejected = "rejected"
 
@@ -110,7 +111,7 @@ class DuplicateApproval(Base):
             name="duplicate_approval_status",
         ),
         nullable=False,
-        default=DuplicateApprovalStatus.approved,
+        default=DuplicateApprovalStatus.pending,
     )
 
     approved_by_id = Column(
@@ -144,6 +145,40 @@ class DuplicateApproval(Base):
     )
 
     # =====================================================
+    # LOAN APPLICATION
+    # =====================================================
+
+    # NULL while approval is pending.
+    # Populated with the newly created loan application ID
+    # after the duplicate request is approved.
+    loan_id = Column(
+        Integer,
+        ForeignKey("loan_applications.id"),
+        nullable=True,
+    )
+
+    loan_application = relationship(
+        "LoanApplication",
+        foreign_keys=[loan_id],
+    )
+
+    # =====================================================
+    # RELATIONSHIP MANAGER
+    # =====================================================
+
+    # RM is optional.
+    rm_id = Column(
+        Integer,
+        ForeignKey("employees.id"),
+        nullable=True,
+    )
+
+    rm = relationship(
+        "Employee",
+        foreign_keys=[rm_id],
+    )
+
+    # =====================================================
     # TIMESTAMPS
     # =====================================================
 
@@ -171,6 +206,11 @@ class DuplicateApproval(Base):
         Index(
             "idx_duplicate_approval_type_id",
             "loan_type_id",
+        ),
+
+        Index(
+            "idx_duplicate_approval_rm_id",
+            "rm_id",
         ),
 
         Index(

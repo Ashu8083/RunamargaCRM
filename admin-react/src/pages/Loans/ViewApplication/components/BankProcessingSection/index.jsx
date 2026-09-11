@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 
-import AssignBankModal from '../modals/AssignBankModal'
+import AssignBankModal from '../../modals/AssignBankModal'
 /* -------------------------------------------------
    HELPERS
 -------------------------------------------------- */
-import { COLORS } from '../../../../constants/colors'
+import { COLORS } from '../../../../../constants/colors'
 
 
 

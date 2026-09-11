@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
@@ -657,13 +657,7 @@ function ApplicationsTable({
     search,
     setSearch,
 
-    loanTypes = [],
-    rms = [],
-    teamLeads = [],
-    agents = [],
-    showRM = false,
-    showAgent = false,
-    showTeamLead = false,
+
     statuses = STATUS_OPTIONS,
 
     selectedLoanType,
@@ -689,7 +683,7 @@ function ApplicationsTable({
     onViewApplication,
     onRefresh,
 }) {
-
+    const [loanTypes, setLoanTypes] = useState([]);
     // =========================================================
     // STATE
     // =========================================================
@@ -718,7 +712,12 @@ function ApplicationsTable({
         expandedPhoneId,
         setExpandedPhoneId,
     ] = useState(null);
-
+    const handleLoanTypesLoaded = useCallback(
+        (options) => {
+            setLoanTypes(options || []);
+        },
+        []
+    );
 
     // =========================================================
     // INFO POPUP
@@ -1005,27 +1004,13 @@ function ApplicationsTable({
 
                         <LoanTypeDropdown
                             label=""
-                            value={
-                                selectedLoanType
-                            }
-                            onChange={
-                                setSelectedLoanType
-                            }
-                            options={
-                                loanTypes
-                            }
-                            allLabel="
-                                All Loan Types
-                            "
-                            placeholder="
-                                All Loan Types
-                            "
-                            searchPlaceholder="
-                                Search loan type
-                            "
-                            emptyMessage="
-                                No loan types found
-                            "
+                            value={selectedLoanType}
+                            onChange={setSelectedLoanType}
+                            onOptionsLoaded={handleLoanTypesLoaded}
+                            allLabel="All Loan Types"
+                            placeholder="All Loan Types"
+                            searchPlaceholder="Search loan type"
+                            emptyMessage="No loan types found"
                         />
 
                     </div>

@@ -1,13 +1,15 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from fastapi import HTTPException
-from datetime import datetime
+from datetime import datetime,date
 
 from app.core.access_control import AccessControl
 from app.models.employees import Employee
+from app.models.loan_coapplicant import LoanCoApplicant
+from app.models.loan_addresses import LoanAddress
 from app.models.loan_applications import LoanApplication, LoanStatus
 from app.models.reverted_loans import RevertedLoan
-
+from app.models.loan_reference import LoanReference
 
 # =============================================================
 # GET APPLICATIONS
@@ -194,7 +196,30 @@ def view_application(
         )
         .first()
     )
-
+    addresses = (
+        db.query(LoanAddress)
+        .filter(
+            LoanAddress.loan_id == application.id,
+            LoanAddress.deleted_at.is_(None),
+        )
+        .all()
+    )
+    references = (
+        db.query(LoanReference)
+        .filter(
+            LoanReference.loan_id == application.id,
+            LoanReference.deleted_at.is_(None),
+        )
+        .all()
+    )
+    co_applicants = (
+        db.query(LoanCoApplicant)
+        .filter(
+            LoanCoApplicant.loan_id == application.id,
+            LoanCoApplicant.deleted_at.is_(None),
+        )
+        .all()
+    )
     if not application:
         return None
 
@@ -211,7 +236,7 @@ def view_application(
     allowed_application = (
         scoped_query
         .filter(
-            LoanApplication.id == application_id
+            LoanApplication.id == application.id
         )
         .first()
     )
@@ -255,6 +280,27 @@ def view_application(
         "ifsc_code": application.ifsc_code,
 
         "loan_type_id": application.loan_type_id,
+
+        "loan_type": (
+            {
+                "id": application.loan_type.id,
+                "name": application.loan_type.name,
+            }
+            if application.loan_type
+            else None
+        ),
+        "common_fields": {
+            "email": application.email,
+            "gender": application.gender,
+            "marital_status": application.marital_status,
+            "date_of_birth": application.dob,
+            "pan_number": application.pancard_no,
+            "aadhaar_number": application.aadhar_no,
+            "loan_amount": application.loan_amt,
+            "loan_tenure": application.loan_tenure,
+            "bank_account_number": application.bank_acc_no,
+            "ifsc_code": application.ifsc_code,
+        },
         "loan_amt": application.loan_amt,
         "loan_tenure": application.loan_tenure,
         "loan_purpose": application.loan_purpose,
@@ -349,10 +395,41 @@ def view_application(
         ),
 
         # These models don't exist yet.
-        "addresses": [],
-        "references": [],
+        "addresses": [
+            {
+                "id": address.id,
+                "loan_id": address.loan_id,
+                "address": address.address,
+                "address_type": address.address_type,
+                "created_at": address.created_at,
+            }
+            for address in addresses
+        ],
+        "references": [
+            {
+                "id": reference.id,
+                "loan_id": reference.loan_id,
+                "name": reference.name,
+                "phone": reference.phone,
+                "relation": reference.relation,
+                "address": reference.address,
+                "created_at": reference.created_at,
+            }
+            for reference in references
+        ],
         "documents": [],
-        "co_applicants": [],
+        "co_applicants": [
+            {
+                "id": co_applicant.id,
+                "loan_id": co_applicant.loan_id,
+                "name": co_applicant.name,
+                "phone": co_applicant.phone,
+                "pan_number": co_applicant.pancard_no,
+                "aadhaar_number": co_applicant.adharr_no,
+                "created_at": co_applicant.created_at,
+            }
+            for co_applicant in co_applicants
+        ],
         "bank_processing": [],
     }
 
@@ -400,21 +477,9 @@ def create_application(
         .first()
     )
 
-    # ===========================================================
+    # =========================================================
     # EXISTING APPLICATION
-    # ===========================================================
-
-    existing_application = (
-        db.query(LoanApplication)
-        .filter(
-            LoanApplication.phone == payload.phone,
-            LoanApplication.deleted_at.is_(None),
-        )
-        .order_by(
-            LoanApplication.id.desc()
-        )
-        .first()
-    )
+    # =========================================================
 
     if existing_application:
 
@@ -429,12 +494,10 @@ def create_application(
             applied_by = (
                 db.query(Employee)
                 .filter(
-                    Employee.id ==
-                    existing_application.applied_by_id
+                    Employee.id == existing_application.applied_by_id
                 )
                 .first()
             )
-
 
         # -------------------------------------------------------
         # RM
@@ -447,12 +510,10 @@ def create_application(
             rm = (
                 db.query(Employee)
                 .filter(
-                    Employee.id ==
-                    existing_application.rm_id
+                    Employee.id == existing_application.rm_id
                 )
                 .first()
             )
-
 
         # -------------------------------------------------------
         # AGENT
@@ -476,20 +537,17 @@ def create_application(
                 .first()
             )
 
-
         # -------------------------------------------------------
         # RETURN EXISTING APPLICATION
         # -------------------------------------------------------
 
         return {
-
             "success": True,
-
             "existing_loan": True,
-
-            "message":
-                "An existing application was found for this phone number.",
-
+            "message": (
+                "An existing application was found "
+                "for this phone number."
+            ),
             "data": {
 
                 "application_id":
@@ -516,22 +574,20 @@ def create_application(
                 "reference_name":
                     existing_application.referral,
 
-                "status":
-                    (
-                        existing_application.status.value
-                        if existing_application.status
-                        else None
-                    ),
+                "status": (
+                    existing_application.status.value
+                    if existing_application.status
+                    else None
+                ),
 
-                "applied_date":
-                    (
-                        existing_application.applied_date
-                        or (
-                            existing_application.created_at.date()
-                            if existing_application.created_at
-                            else None
-                        )
-                    ),
+                "applied_date": (
+                    existing_application.applied_date
+                    or (
+                        existing_application.created_at.date()
+                        if existing_application.created_at
+                        else None
+                    )
+                ),
 
                 # ------------------------------------------------
                 # APPLIED BY
@@ -540,12 +596,11 @@ def create_application(
                 "applied_by_id":
                     existing_application.applied_by_id,
 
-                "applied_by_name":
-                    (
-                        applied_by.name
-                        if applied_by
-                        else None
-                    ),
+                "applied_by_name": (
+                    applied_by.name
+                    if applied_by
+                    else None
+                ),
 
                 # ------------------------------------------------
                 # RM
@@ -554,12 +609,11 @@ def create_application(
                 "rm_id":
                     existing_application.rm_id,
 
-                "rm_name":
-                    (
-                        rm.name
-                        if rm
-                        else None
-                    ),
+                "rm_name": (
+                    rm.name
+                    if rm
+                    else None
+                ),
 
                 # ------------------------------------------------
                 # AGENT
@@ -568,14 +622,14 @@ def create_application(
                 "agent_id":
                     agent_id,
 
-                "agent_name":
-                    (
-                        agent.name
-                        if agent
-                        else None
-                    ),
+                "agent_name": (
+                    agent.name
+                    if agent
+                    else None
+                ),
             },
         }
+
     # =========================================================
     # CREATE NEW APPLICATION
     # =========================================================
@@ -598,6 +652,10 @@ def create_application(
     )
 
     db.add(application)
+    db.flush()
+
+    application.unique_id = f"LN{application.id}"
+
     db.commit()
     db.refresh(application)
 

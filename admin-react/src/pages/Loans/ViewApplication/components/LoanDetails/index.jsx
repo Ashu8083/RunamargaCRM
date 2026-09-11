@@ -1,6 +1,7 @@
+// admin-react/src/pages/Loans/ViewApplication/components/LoanDetails/index.jsx
 import React, { useEffect, useState } from 'react'
-import { COLORS } from '../../../../constants/colors'
-
+import { COLORS } from '../../../../../constants/colors'
+import { updateApplicationLoanDetails } from '../LoanDetails/Api'
 function Field({ label, value }) {
 
     return (
@@ -50,7 +51,10 @@ function EditField({
 }
 
 
-function LoanDetails({ application }) {
+function LoanDetails({
+    application,
+    onSave,
+}) {
 
     const commonFields =
         application?.common_fields || {}
@@ -130,24 +134,57 @@ function LoanDetails({ application }) {
         SAVE
     -------------------------------------------------- */
 
-    const handleSave = () => {
+    const handleSave = async () => {
 
-        /*
-            For now we only update the local UI.
+        try {
 
-            Later this will call FastAPI:
+            const data = {
+                email: editCommonFields.email,
+                gender: editCommonFields.gender,
+                marital_status:
+                    editCommonFields.marital_status,
+                date_of_birth:
+                    editCommonFields.date_of_birth,
+                pan_number:
+                    editCommonFields.pan_number,
+                aadhaar_number:
+                    editCommonFields.aadhaar_number,
+                loan_amount:
+                    editCommonFields.loan_amount,
+                loan_tenure:
+                    editCommonFields.loan_tenure,
+                bank_account_number:
+                    editCommonFields.bank_account_number,
+                ifsc_code:
+                    editCommonFields.ifsc_code,
+            }
 
-            PATCH /api/v1/applications/{id}/loan-details
+            const response =
+                await updateApplicationLoanDetails(
+                    application?.unique_id,
+                    data
+                )
 
-        */
+            console.log(
+                'Loan details updated:',
+                response
+            )
 
-        console.log('Updated common fields:', editCommonFields)
+            if (onSave) {
+                onSave(response?.data)
+            }
 
-        console.log('Updated loan fields:', editLoanFields)
+            setIsEditing(false)
 
-        setIsEditing(false)
+        } catch (error) {
+
+            console.error(
+                'Failed to update loan details:',
+                error
+            )
+
+        }
     }
-
 
     /* -------------------------------------------------
         COMMON FIELD CHANGE
@@ -185,7 +222,7 @@ function LoanDetails({ application }) {
 
     return (
 
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
+        <div className="card bg-base-100 border border-base-300 shadow-sm m-5">
 
             <div className="card-body">
 
@@ -198,7 +235,7 @@ function LoanDetails({ application }) {
 
                     <h2 className="text-lg font-semibold">
                         {application?.loan_type_label ||
-                            application?.loan_type ||
+                            application?.loan_type?.name ||
                             'Loan'} Details
                     </h2>
 
@@ -523,6 +560,7 @@ function LoanDetails({ application }) {
 
                             <h3 className="text-sm font-semibold">
                                 {application?.loan_type_label ||
+                                    application?.loan_type?.name ||
                                     'Loan'} Specific Fields
                             </h3>
 

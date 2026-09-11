@@ -1,1023 +1,520 @@
-// admin-react/src/pages/Loans/DuplicateApproval/index.jsx
-
-import { useMemo, useState } from 'react'
-
-import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
-import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
-import CheckIcon from '@heroicons/react/24/outline/CheckIcon'
-import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
-
-import AgentDropdown from '../../../components/GlobalModels/Filters/AgentDropdown'
-import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeDropdown'
-
-import DuplicateApprovalTable from './components/DuplicateApprovalTable'
-import DuplicateApprovalModal from './components/DuplicateApprovalModal'
-
-
-function DuplicateApproval() {
-
-    // =========================================================
-    // APPLICATION DATA
-    // =========================================================
-
-    const [applications, setApplications] = useState([
-        {
-            id: 1,
-
-            applicantName: 'Rajesh Kumar',
-
-            phone: '9876543210',
-
-            loanType: 'Personal Loan',
-
-            loanAmount: 500000,
-
-            appliedDate: '2026-08-20T10:30:00',
-
-            appliedBy: 'Premalatha N',
-
-            status: 'active',
-
-            approvedDate: null,
-
-            rejectedDate: null,
-
-            loanId: null,
-        },
-
-        {
-            id: 2,
-
-            applicantName: 'Priya Sharma',
-
-            phone: '9876543211',
-
-            loanType: 'Business Loan',
-
-            loanAmount: 1000000,
-
-            appliedDate: '2026-08-20T11:15:00',
-
-            appliedBy: 'Premalatha N',
-
-            status: 'active',
-
-            approvedDate: null,
-
-            rejectedDate: null,
-
-            loanId: null,
-        },
-
-        {
-            id: 3,
-
-            applicantName: 'Arun Kumar',
-
-            phone: '9876543212',
-
-            loanType: 'Home Loan',
-
-            loanAmount: 2500000,
-
-            appliedDate: '2026-08-19T09:45:00',
-
-            appliedBy: 'Shubha',
-
-            status: 'approved',
-
-            approvedDate: '2026-08-20T14:20:00',
-
-            rejectedDate: null,
-
-            loanId: 'LN20260820001',
-        },
-
-        {
-            id: 4,
-
-            applicantName: 'Sneha Reddy',
-
-            phone: '9876543213',
-
-            loanType: 'Personal Loan',
-
-            loanAmount: 300000,
-
-            appliedDate: '2026-08-18T16:10:00',
-
-            appliedBy: 'Prasanna Y R',
-
-            status: 'rejected',
-
-            approvedDate: null,
-
-            rejectedDate: '2026-08-19T10:15:00',
-
-            loanId: null,
-        },
-
-        {
-            id: 5,
-
-            applicantName: 'Kiran Kumar',
-
-            phone: '9876543214',
-
-            loanType: 'Loan Against Property',
-
-            loanAmount: 1500000,
-
-            appliedDate: '2026-08-21T09:20:00',
-
-            appliedBy: 'Nayana',
-
-            status: 'active',
-
-            approvedDate: null,
-
-            rejectedDate: null,
-
-            loanId: null,
-        },
-
-        {
-            id: 6,
-
-            applicantName: 'Manoj Kumar',
-
-            phone: '9876543215',
-
-            loanType: 'Vehicle Loan',
-
-            loanAmount: 750000,
-
-            appliedDate: '2026-08-21T12:40:00',
-
-            appliedBy: 'Kasturi',
-
-            status: 'active',
-
-            approvedDate: null,
-
-            rejectedDate: null,
-
-            loanId: null,
-        },
-
-        {
-            id: 7,
-
-            applicantName: 'Deepa',
-
-            phone: '9876543216',
-
-            loanType: 'Education Loan',
-
-            loanAmount: 400000,
-
-            appliedDate: '2026-08-22T10:05:00',
-
-            appliedBy: 'Prashanth',
-
-            status: 'approved',
-
-            approvedDate: '2026-08-22T15:30:00',
-
-            rejectedDate: null,
-
-            loanId: 'LN20260822002',
-        },
-    ])
-
-
-    // =========================================================
-    // FILTER STATE
-    // =========================================================
-
-    const [search, setSearch] =
-        useState('')
-
-    const [selectedLoanType, setSelectedLoanType] =
-        useState('')
-
-    const [selectedAgent, setSelectedAgent] =
-        useState('')
-
-    const [selectedStatus, setSelectedStatus] =
-        useState('')
-
-
-    // =========================================================
-    // SELECTION STATE
-    // =========================================================
-
-    const [selectedIds, setSelectedIds] =
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
+import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
+import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
+import DuplicateApprovalTable from '../DuplicateApproval/components/DuplicateApprovalTable'
+import LoanTypeDropdown from "../../../components/GlobalModels/Filters/LoanTypeDropdown";
+import DuplicateApprovalModal from '../DuplicateApproval/components/DuplicateApprovalModal'
+import {
+    getDuplicateApprovals,
+    approveDuplicateApproval,
+} from '../DuplicateApproval/Api';
+
+
+const DuplicateApproval = () => {
+
+    const [applications, setApplications] =
         useState([])
 
+    const [selectedApplications, setSelectedApplications] =
+        useState([])
 
-    // =========================================================
-    // MODAL STATE
-    // =========================================================
+    const [searchTerm, setSearchTerm] =
+        useState('')
 
-    const [showApprovalModal, setShowApprovalModal] =
+    const [statusFilter, setStatusFilter] =
+        useState('all')
+
+    const [loanTypeFilter, setLoanTypeFilter] =
+        useState('all')
+
+    const [showModal, setShowModal] =
         useState(false)
 
+    const [loading, setLoading] =
+        useState(false)
 
-    // =========================================================
-    // LOAN TYPES
-    // =========================================================
-
-    const loanTypes = useMemo(() => {
-
-        return [
-            ...new Set(
-                applications
-                    .map(
-                        (application) =>
-                            application.loanType ??
-                            application.loan_type
-                    )
-                    .filter(Boolean)
-            ),
-        ]
-
-    }, [applications])
+    const [error, setError] =
+        useState('')
 
 
-    // =========================================================
-    // AGENTS
-    // =========================================================
+    // --------------------------------------------------
+    // Load data
+    // --------------------------------------------------
 
-    const agents = useMemo(() => {
+    const loadApplications = async () => {
 
-        return [
-            ...new Set(
-                applications
-                    .map(
-                        (application) =>
-                            application.appliedBy ??
-                            application.applied_by
-                    )
-                    .filter(Boolean)
-            ),
-        ]
+        setLoading(true)
+        setError('')
 
-    }, [applications])
+        try {
+
+            const response =
+                await getDuplicateApprovals()
+
+            if (response?.success === false) {
+                throw new Error(
+                    response?.message ||
+                    'Unable to load duplicate approvals.'
+                )
+            }
+
+            setApplications(
+                response?.data || []
+            )
+
+        } catch (error) {
+
+            console.error(
+                'Failed to load duplicate approvals:',
+                error
+            )
+
+            setError(
+                error?.message ||
+                'Unable to load duplicate approvals.'
+            )
+
+        } finally {
+
+            setLoading(false)
+
+        }
+    }
 
 
-    // =========================================================
-    // FILTER APPLICATIONS
-    // =========================================================
+    useEffect(() => {
+        loadApplications()
+    }, [])
+
+
+    // --------------------------------------------------
+    // Filter data
+    // --------------------------------------------------
 
     const filteredApplications = useMemo(() => {
 
-        const value =
-            search
-                .trim()
-                .toLowerCase()
+        let filtered = [...applications]
 
 
-        return applications.filter(
-            (application) => {
+        if (searchTerm.trim()) {
 
-                // -------------------------------------------------
-                // SEARCH
-                // -------------------------------------------------
+            const search =
+                searchTerm
+                    .trim()
+                    .toLowerCase()
 
-                if (value) {
+            filtered =
+                filtered.filter(
+                    (application) => {
 
-                    const searchableFields = [
+                        const name =
+                            (
+                                application.applicantName ||
+                                application.name ||
+                                ''
+                            ).toLowerCase()
 
-                        application.applicantName,
+                        const phone =
+                            String(
+                                application.phone || ''
+                            ).toLowerCase()
 
-                        application.phone,
-
-                        application.loanType,
-
-                        application.appliedBy,
-
-                        application.loanId,
-
-                        application.id,
-
-                    ]
-
-
-                    const matchesSearch =
-                        searchableFields.some(
-                            (field) =>
-                                field !== null &&
-                                field !== undefined &&
-                                String(field)
-                                    .toLowerCase()
-                                    .includes(value)
+                        return (
+                            name.includes(search) ||
+                            phone.includes(search)
                         )
-
-
-                    if (!matchesSearch) {
-                        return false
                     }
-
-                }
-
-
-                // -------------------------------------------------
-                // LOAN TYPE
-                // -------------------------------------------------
-
-                if (
-                    selectedLoanType &&
-                    application.loanType !==
-                        selectedLoanType
-                ) {
-
-                    return false
-
-                }
+                )
+        }
 
 
-                // -------------------------------------------------
-                // AGENT
-                // -------------------------------------------------
+        if (statusFilter !== 'all') {
 
-                if (
-                    selectedAgent &&
-                    application.appliedBy !==
-                        selectedAgent
-                ) {
-
-                    return false
-
-                }
+            filtered =
+                filtered.filter(
+                    (application) =>
+                        application.status ===
+                        statusFilter
+                )
+        }
 
 
-                // -------------------------------------------------
-                // STATUS
-                // -------------------------------------------------
+        if (loanTypeFilter !== 'all') {
 
-                if (
-                    selectedStatus &&
-                    application.status !==
-                        selectedStatus
-                ) {
+            filtered =
+                filtered.filter(
+                    (application) =>
+                        String(
+                            application.loan_type_id
+                        ) ===
+                        String(
+                            loanTypeFilter
+                        )
+                )
+        }
 
-                    return false
 
-                }
-
-
-                return true
-
-            }
-        )
+        return filtered
 
     }, [
         applications,
-        search,
-        selectedLoanType,
-        selectedAgent,
-        selectedStatus,
+        searchTerm,
+        statusFilter,
+        loanTypeFilter,
     ])
 
 
-    // =========================================================
-    // ACTIVE FILTERED APPLICATIONS
-    // =========================================================
+    // --------------------------------------------------
+    // Pending applications
+    // --------------------------------------------------
 
-    const activeFilteredApplications =
+    const pendingApplications =
         useMemo(() => {
 
             return filteredApplications.filter(
                 (application) =>
-                    application.status ===
-                    'active'
+                    application.status === 'pending'
             )
 
-        }, [
-            filteredApplications,
-        ])
+        }, [filteredApplications])
 
 
-    // =========================================================
-    // SELECTED APPLICATIONS
-    // =========================================================
+    // --------------------------------------------------
+    // Loan types
+    // --------------------------------------------------
 
-    const selectedApplications =
+    const loanTypes =
         useMemo(() => {
 
-            return applications.filter(
-                (application) =>
-                    selectedIds.includes(
-                        application.id
-                    ) &&
-                    application.status ===
-                        'active'
+            const map = new Map()
+
+            applications.forEach(
+                (application) => {
+
+                    if (
+                        application.loan_type_id &&
+                        application.loanType
+                    ) {
+
+                        map.set(
+                            application.loan_type_id,
+                            application.loanType
+                        )
+                    }
+
+                }
             )
 
-        }, [
-            applications,
-            selectedIds,
-        ])
+            return Array.from(
+                map.entries()
+            )
+
+        }, [applications])
 
 
-    // =========================================================
-    // SELECTION COUNT
-    // =========================================================
-
-    const selectedCount =
-        selectedApplications.length
-
-
-    // =========================================================
-    // ALL FILTERED ACTIVE SELECTED
-    // =========================================================
-
-    const allFilteredActiveSelected =
-        activeFilteredApplications.length > 0 &&
-        activeFilteredApplications.every(
-            (application) =>
-                selectedIds.includes(
-                    application.id
-                )
-        )
-
-
-    // =========================================================
-    // HANDLE INDIVIDUAL SELECTION
-    // =========================================================
+    // --------------------------------------------------
+    // Selection
+    // --------------------------------------------------
 
     const handleSelectApplication = (
-        applicationId
+        application
     ) => {
 
-        const application =
-            applications.find(
-                (item) =>
-                    item.id ===
-                    applicationId
-            )
-
-
         if (
-            !application ||
-            application.status !==
-                'active'
+            application.status !== 'pending'
         ) {
-
             return
-
         }
 
+        setSelectedApplications(
+            (previous) => {
 
-        setSelectedIds((previous) => {
+                const exists =
+                    previous.some(
+                        (item) =>
+                            item.id ===
+                            application.id
+                    )
 
-            if (
-                previous.includes(
-                    applicationId
-                )
-            ) {
+                if (exists) {
 
-                return previous.filter(
-                    (id) =>
-                        id !==
-                        applicationId
-                )
+                    return previous.filter(
+                        (item) =>
+                            item.id !==
+                            application.id
+                    )
 
+                }
+
+                return [
+                    ...previous,
+                    application,
+                ]
             }
-
-
-            return [
-                ...previous,
-                applicationId,
-            ]
-
-        })
-
+        )
     }
 
-
-    // =========================================================
-    // HANDLE SELECT ALL
-    // =========================================================
 
     const handleSelectAll = () => {
 
         if (
-            allFilteredActiveSelected
+            selectedApplications.length ===
+            pendingApplications.length
         ) {
 
-            const visibleActiveIds =
-                activeFilteredApplications.map(
-                    (application) =>
-                        application.id
-                )
-
-
-            setSelectedIds(
-                (previous) =>
-                    previous.filter(
-                        (id) =>
-                            !visibleActiveIds.includes(
-                                id
-                            )
-                    )
-            )
+            setSelectedApplications([])
 
             return
-
         }
 
-
-        const visibleActiveIds =
-            activeFilteredApplications.map(
-                (application) =>
-                    application.id
-            )
+        setSelectedApplications(
+            pendingApplications
+        )
+    }
 
 
-        setSelectedIds(
-            (previous) => {
+    // --------------------------------------------------
+    // Modal
+    // --------------------------------------------------
 
-                return [
-                    ...new Set([
-                        ...previous,
-                        ...visibleActiveIds,
-                    ]),
-                ]
+    const handleOpenModal = () => {
 
+        if (
+            selectedApplications.length === 0
+        ) {
+            return
+        }
+
+        setShowModal(true)
+    }
+
+
+    const handleCloseModal = () => {
+        setShowModal(false)
+    }
+
+
+    const handleApprovalSubmit = async (action, remarks) => {
+        try {
+            setLoading(true);
+
+            if (action === 'approve') {
+                for (const application of selectedApplications) {
+                    await approveDuplicateApproval(application.id);
+                }
             }
-        )
 
-    }
+            setShowModal(false);
+            setSelectedApplications([]);
 
+            await loadApplications();
 
-    // =========================================================
-    // CLEAR FILTERS
-    // =========================================================
-
-    const handleClearFilters = () => {
-
-        setSearch('')
-
-        setSelectedLoanType('')
-
-        setSelectedAgent('')
-
-        setSelectedStatus('')
-
-    }
-
-
-    // =========================================================
-    // OPEN APPROVAL MODAL
-    // =========================================================
-
-    const handleOpenApprovalModal = () => {
-
-        if (!selectedCount) {
-            return
+        } catch (error) {
+            console.error('Duplicate approval action failed:', error);
+            setError(error.message || 'Unable to process approval.');
+        } finally {
+            setLoading(false);
         }
-
-
-        setShowApprovalModal(true)
-
-    }
-
-
-    // =========================================================
-    // CLOSE APPROVAL MODAL
-    // =========================================================
-
-    const handleCloseApprovalModal = () => {
-
-        setShowApprovalModal(false)
-
-    }
-
-
-    // =========================================================
-    // APPROVE / REJECT
-    // =========================================================
-    //
-    // The actual modal will call this function.
-    //
-    // action:
-    //     'approve'
-    //     'reject'
-    //
-    // selected IDs are processed together.
-    // =========================================================
-
-    const handleApprovalSubmit = (
-        action
-    ) => {
-
-        const changedAt =
-            new Date().toISOString()
-
-
-        setApplications(
-            (previous) =>
-                previous.map(
-                    (application) => {
-
-                        if (
-                            !selectedIds.includes(
-                                application.id
-                            ) ||
-                            application.status !==
-                                'active'
-                        ) {
-
-                            return application
-
-                        }
-
-
-                        if (
-                            action ===
-                            'approve'
-                        ) {
-
-                            return {
-                                ...application,
-
-                                status:
-                                    'approved',
-
-                                approvedDate:
-                                    changedAt,
-
-                                rejectedDate:
-                                    null,
-
-                                loanId:
-                                    `LN${Date.now()}${application.id}`,
-                            }
-
-                        }
-
-
-                        if (
-                            action ===
-                            'reject'
-                        ) {
-
-                            return {
-                                ...application,
-
-                                status:
-                                    'rejected',
-
-                                approvedDate:
-                                    null,
-
-                                rejectedDate:
-                                    changedAt,
-
-                                loanId:
-                                    null,
-                            }
-
-                        }
-
-
-                        return application
-
-                    }
-                )
-        )
-
-
-        // ---------------------------------------------------------
-        // Remove processed applications from selection
-        // ---------------------------------------------------------
-
-        setSelectedIds([])
-
-        setShowApprovalModal(false)
-
-    }
-
-
-    // =========================================================
-    // REFRESH
-    // =========================================================
-
-    const handleRefresh = () => {
-
-        /*
-         * API refresh will be connected later.
-         */
-
-        console.log(
-            'Refresh Duplicate Approval'
-        )
-
-    }
-
-
-    // =========================================================
-    // RENDER
-    // =========================================================
+    };
 
     return (
+        <div className="w-full p-4">
 
-        <div className="
-            space-y-4
+            {/* ========================================= */}
+            {/* HEADER */}
+            {/* ========================================= */}
+
+            <div className="mb-4 flex items-center justify-between">
+
+                <div>
+
+                    <h1 className="text-xl font-semibold">
+                        Duplicate Approvals
+                    </h1>
+
+                    <p className="mt-1 text-sm text-base-content/60">
+                        Review duplicate application requests
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    className="btn btn-ghost btn-sm h-10 min-h-10"
+                    onClick={loadApplications}
+                    disabled={loading}
+                >
+
+                    {loading ? (
+
+                        <>
+                            <span className="loading loading-spinner loading-xs" />
+                            Loading
+                        </>
+
+                    ) : (
+
+                        <>
+                            ↻
+                            Refresh
+                        </>
+
+                    )}
+
+                </button>
+
+            </div>
+
+
+            {/* ========================================= */}
+            {/* ERROR */}
+            {/* ========================================= */}
+
+            {error && (
+
+                <div className="mb-4 flex items-center justify-between rounded-lg border border-error/20 bg-error/5 px-4 py-3">
+
+                    <span className="text-sm text-error">
+                        {error}
+                    </span>
+
+                    <button
+                        type="button"
+                        className="btn btn-ghost btn-xs text-error"
+                        onClick={loadApplications}
+                    >
+                        Retry
+                    </button>
+
+                </div>
+
+            )}
+
+
+            {/* =================================================
+    FILTERS
+================================================= */}
+
+            <div
+                className="
+        card
+        bg-base-100
+        border
+        border-base-300
+        shadow-sm
+    "
+            >
+
+                <div
+                    className="
             p-3
-            sm:p-5
-        ">
+            flex
+            items-center
+            gap-2
+            w-full
+        "
+                >
 
-            {/* =====================================================
-                FILTER SECTION
-            ===================================================== */}
+                    {/* SEARCH */}
 
-            <div className="
-                rounded-xl
-                border
-                border-base-300
-                bg-base-100
-                shadow-sm
-            ">
+                    <div className="flex-1 min-w-0">
 
-                <div className="
-                    px-4
-                    py-4
-                    sm:px-5
-                ">
+                        <div className="relative">
 
-                    {/* =================================================
-                        FILTER HEADER
-                    ================================================= */}
-
-                    <div className="
-                        flex
-                        flex-col
-                        gap-3
-                        lg:flex-row
-                        lg:items-center
-                        lg:justify-between
-                    ">
-
-                        <p className="
-                            text-sm
-                            font-medium
-                            text-base-content/70
-                        ">
-                            Filter Options
-                        </p>
-
-
-                        <div className="
-                            flex
-                            flex-wrap
-                            items-center
-                            gap-2
-                        ">
-
-                            {/* SELECTED COUNT */}
-
-                            {selectedCount > 0 && (
-
-                                <span className="
-                                    rounded-full
-                                    bg-[#8BCF00]/10
-                                    px-3
-                                    py-1.5
-                                    text-xs
-                                    font-semibold
-                                    text-[#78B300]
-                                ">
-                                    {selectedCount}{' '}
-                                    Selected
-                                </span>
-
-                            )}
-
-
-                            {/* APPROVE SELECTED */}
-
-                            <button
-                                type="button"
-                                onClick={
-                                    handleOpenApprovalModal
-                                }
-                                disabled={
-                                    selectedCount ===
-                                    0
-                                }
+                            <SearchIcon
                                 className="
-                                    flex
-                                    items-center
-                                    gap-1.5
-                                    rounded-lg
-                                    bg-[#8BCF00]
-                                    px-3
-                                    py-2
-                                    text-xs
-                                    font-semibold
-                                    text-white
-                                    transition
-                                    hover:bg-[#78B300]
-                                    disabled:cursor-not-allowed
-                                    disabled:bg-base-300
-                                    disabled:text-base-content/40
-                                "
-                            >
+                        pointer-events-none
+                        absolute
+                        left-3
+                        top-1/2
+                        h-4
+                        w-4
+                        -translate-y-1/2
+                        text-base-content/35
+                    "
+                            />
 
-                                <CheckIcon className="
-                                    h-4
-                                    w-4
-                                " />
-
-                                Review Selected
-
-                            </button>
-
-
-                            {/* CLEAR */}
-
-                            {(search ||
-                                selectedLoanType ||
-                                selectedAgent ||
-                                selectedStatus) && (
-
-                                <button
-                                    type="button"
-                                    onClick={
-                                        handleClearFilters
-                                    }
-                                    className="
-                                        flex
-                                        items-center
-                                        gap-1
-                                        text-xs
-                                        font-medium
-                                        text-base-content/60
-                                        hover:text-base-content
-                                    "
-                                >
-
-                                    <XMarkIcon className="
-                                        h-4
-                                        w-4
-                                    " />
-
-                                    Clear
-
-                                </button>
-
-                            )}
-
-
-                            {/* REFRESH */}
-
-                            <button
-                                type="button"
-                                onClick={
-                                    handleRefresh
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(event) =>
+                                    setSearchTerm(
+                                        event.target.value
+                                    )
                                 }
-                                title="Refresh"
-                                aria-label="Refresh duplicate approval"
+                                placeholder="
+                        Search name or phone...
+                    "
                                 className="
-                                    flex
-                                    h-9
-                                    w-9
-                                    items-center
-                                    justify-center
-                                    rounded-lg
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    transition
-                                    hover:bg-base-200
-                                "
-                            >
-
-                                <ArrowPathIcon className="
-                                    h-4.5
-                                    w-4.5
-                                    text-base-content/60
-                                " />
-
-                            </button>
+                        input
+                        input-bordered
+                        h-10
+                        min-h-10
+                        w-full
+                        pl-9
+                    "
+                            />
 
                         </div>
 
                     </div>
 
 
-                    {/* =================================================
-                        FILTERS
-                    ================================================= */}
+                    {/* LOAN TYPE */}
 
-                    <div className="
-                        mt-4
-                        grid
-                        grid-cols-1
-                        gap-3
-                        md:grid-cols-2
-                        xl:grid-cols-4
-                    ">
-
-                        {/* SEARCH */}
-
-                        <div className="
-                            relative
-                        ">
-
-                            <MagnifyingGlassIcon className="
-                                pointer-events-none
-                                absolute
-                                left-3
-                                top-1/2
-                                h-5
-                                w-5
-                                -translate-y-1/2
-                                text-base-content/40
-                            " />
-
-
-                            <input
-                                type="text"
-                                value={
-                                    search
-                                }
-                                onChange={(event) =>
-                                    setSearch(
-                                        event.target.value
-                                    )
-                                }
-                                placeholder="
-                                    Search name, phone, loan ID...
-                                "
-                                className="
-                                    input
-                                    input-bordered
-                                    w-full
-                                    pl-10
-                                "
-                            />
-
-                        </div>
-
-
-                        {/* LOAN TYPE */}
+                    <div className="w-44 shrink-0">
+                        <label className="mb-1 block text-xs font-medium text-base-content/70">
+                            Loan Type
+                        </label>
 
                         <LoanTypeDropdown
-                            value={
-                                selectedLoanType
-                            }
-                            onChange={
-                                setSelectedLoanType
-                            }
-                            options={loanTypes}
-                            showLabel={false}
-                            className="min-w-0"
-                            buttonClassName="h-12 min-h-12 px-4"
+                            label=""
+                            value={loanTypeFilter}
+                            onChange={setLoanTypeFilter}
+                            allLabel="All Loan Types"
+                            placeholder="All Loan Types"
+                            searchPlaceholder="Search loan type"
+                            emptyMessage="No loan types found"
                         />
 
-
-                        {/* =================================================
-                            AGENT DROPDOWN
-                        ================================================= */}
-
-                        <AgentDropdown
-                            value={selectedAgent}
-                            onChange={setSelectedAgent}
-                            options={agents}
-                            showLabel={false}
-                            className="min-w-0"
-                            buttonClassName="h-12 min-h-12 px-4"
-                        />
+                    </div>
 
 
-                        {/* STATUS */}
+                    {/* STATUS */}
+
+                    <div className="w-40 shrink-0">
+
+                        <label className="mb-1 block text-xs font-medium text-base-content/70">
+                            Status
+                        </label>
 
                         <select
-                            value={
-                                selectedStatus
-                            }
+                            className="
+                    select
+                    select-bordered
+                    h-10
+                    min-h-10
+                    w-full
+                "
+                            value={statusFilter}
                             onChange={(event) =>
-                                setSelectedStatus(
+                                setStatusFilter(
                                     event.target.value
                                 )
                             }
-                            className="
-                                select
-                                select-bordered
-                                w-full
-                            "
                         >
 
-                            <option value="">
-                                All Status
+                            <option value="all">
+                                All
                             </option>
 
-                            <option value="active">
-                                Active
+                            <option value="pending">
+                                Pending
                             </option>
 
                             <option value="approved">
@@ -1033,107 +530,161 @@ function DuplicateApproval() {
                     </div>
 
 
-                    {/* =================================================
-                        RESULT INFORMATION
-                    ================================================= */}
+                    {/* CLEAR */}
 
-                    <div className="
-                        mt-4
-                        flex
-                        flex-wrap
-                        items-center
-                        justify-between
-                        gap-2
-                    ">
-
-                        <p className="
-                            text-xs
-                            font-medium
-                            text-base-content/55
-                        ">
-                            {filteredApplications.length}{' '}
-                            {filteredApplications.length === 1
-                                ? 'application'
-                                : 'applications'}{' '}
-                            found
-                        </p>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSearchTerm('')
+                            setLoanTypeFilter('all')
+                            setStatusFilter('all')
+                        }}
+                        className="
+                btn
+                btn-ghost
+                btn-sm
+                h-10
+                min-h-10
+                shrink-0
+            "
+                    >
+                        Clear
+                    </button>
 
 
-                        {activeFilteredApplications.length >
-                            0 && (
+                    {/* REFRESH */}
 
-                            <button
-                                type="button"
-                                onClick={
-                                    handleSelectAll
-                                }
-                                className="
-                                    text-xs
-                                    font-medium
-                                    text-[#78B300]
-                                    hover:text-[#5f9000]
-                                "
-                            >
-                                {allFilteredActiveSelected
-                                    ? 'Unselect All'
-                                    : 'Select All Active'}
-                            </button>
+                    <button
+                        type="button"
+                        onClick={loadApplications}
+                        title="Refresh duplicate approvals"
+                        disabled={loading}
+                        className="
+                btn
+                btn-sm
+                btn-square
+                h-10
+                min-h-10
+                shrink-0
+                border-[#8BCF00]
+                text-[#78B300]
+                hover:bg-[#8BCF00]
+                hover:text-white
+            "
+                    >
+
+                        {loading ? (
+
+                            <span className="loading loading-spinner loading-xs" />
+
+                        ) : (
+
+                            <ArrowPathIcon
+                                className="w-4 h-4"
+                            />
 
                         )}
+
+                    </button>
+
+                </div>
+
+            </div>
+            {/* ========================================= */}
+            {/* SELECTED ACTION BAR */}
+            {/* ========================================= */}
+
+            {selectedApplications.length > 0 && (
+
+                <div className="mb-4 flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+
+                    <span className="text-sm">
+
+                        <span className="font-semibold">
+                            {selectedApplications.length}
+                        </span>
+
+                        {' '}
+                        application
+                        {selectedApplications.length !== 1
+                            ? 's'
+                            : ''}{' '}
+                        selected
+
+                    </span>
+
+
+                    <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={handleOpenModal}
+                    >
+                        Review Selected
+                    </button>
+
+                </div>
+
+            )}
+
+
+            {/* ========================================= */}
+            {/* TABLE */}
+            {/* ========================================= */}
+
+            {loading &&
+                applications.length === 0 ? (
+
+                <div className="flex min-h-48 items-center justify-center rounded-xl border border-base-200 bg-base-100">
+
+                    <div className="flex items-center gap-2 text-sm text-base-content/60">
+
+                        <span className="loading loading-spinner loading-sm" />
+
+                        Loading duplicate approvals...
 
                     </div>
 
                 </div>
 
-            </div>
+            ) : (
+
+                <DuplicateApprovalTable
+                    applications={
+                        filteredApplications
+                    }
+                    selectedApplications={
+                        selectedApplications
+                    }
+                    onSelectApplication={
+                        handleSelectApplication
+                    }
+                />
+
+            )}
 
 
-            {/* =====================================================
-                TABLE
-            ===================================================== */}
+            {/* ========================================= */}
+            {/* MODAL */}
+            {/* ========================================= */}
 
-            <DuplicateApprovalTable
-                applications={
-                    filteredApplications
-                }
-                selectedIds={
-                    selectedIds
-                }
-                onSelect={
-                    handleSelectApplication
-                }
-                onSelectAll={
-                    handleSelectAll
-                }
-                allSelected={
-                    allFilteredActiveSelected
-                }
-            />
+            {showModal && (
 
+                <DuplicateApprovalModal
+                    applications={
+                        selectedApplications
+                    }
+                    onClose={
+                        handleCloseModal
+                    }
+                    onSubmit={
+                        handleApprovalSubmit
+                    }
+                />
 
-            {/* =====================================================
-                APPROVAL MODAL
-            ===================================================== */}
-
-            <DuplicateApprovalModal
-                open={
-                    showApprovalModal
-                }
-                applications={
-                    selectedApplications
-                }
-                onClose={
-                    handleCloseApprovalModal
-                }
-                onSubmit={
-                    handleApprovalSubmit
-                }
-            />
+            )}
 
         </div>
-
     )
-
 }
 
 

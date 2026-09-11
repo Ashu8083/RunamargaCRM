@@ -18,6 +18,10 @@ from app.models.banker_directory_asms import BankerDirectoryASM
 from app.models.banker_directory_sms import BankerDirectorySM
 from app.models.dsa_details import DSADetail
 from app.models.loan_applications import LoanApplication
+from app.models.loan_addresses import LoanAddress
+from app.models.loan_reference import LoanReference
+from app.models.loan_coapplicant import LoanCoApplicant
+from app.models.loan_document import LoanDocument
 from app.models.employee_roles import EmployeeRole
 from app.models.reverted_loans import RevertedLoan
 from app.models.attendance import Attendance

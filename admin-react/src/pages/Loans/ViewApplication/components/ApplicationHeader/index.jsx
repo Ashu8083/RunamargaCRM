@@ -1,12 +1,14 @@
+// admin-react/src/pages/Loans/ViewApplication/components/ApplicationHeader/index.jsx
 import React, {
     useEffect,
     useRef,
     useState,
 } from 'react'
 
-import { COLORS } from '../../../../constants/colors'
+import { COLORS } from '../../../../../constants/colors'
 
-
+import AgentDropdown from '../../../../../components/GlobalModels/Filters/AgentDropdown'
+import { updateApplicationHeader } from '../ApplicationHeader/Api'
 /* -------------------------------------------------
    STATUS CONFIG
 -------------------------------------------------- */
@@ -112,7 +114,7 @@ function InfoField({
 
 
                 <p className="
-                    text-sm
+                    text-[15px]
                     font-semibold
                     mt-0.5
                     truncate
@@ -246,29 +248,7 @@ function ApplicationHeader({
     const agentRef = useRef(null)
 
 
-    /* -------------------------------------------------
-       AGENTS
-
-       Temporary local list for UI.
-
-       Later this should come from your existing
-       agents API / Redux state.
-    -------------------------------------------------- */
-
-    const agents = [
-        {
-            id: 1,
-            name: 'Prashanth',
-        },
-        {
-            id: 2,
-            name: 'Rahul',
-        },
-        {
-            id: 3,
-            name: 'Suresh',
-        },
-    ]
+    
 
 
     /* -------------------------------------------------
@@ -292,19 +272,19 @@ function ApplicationHeader({
         setEditData({
             loan_type:
                 application?.loan_type_label ||
-                application?.loan_type ||
+                application?.loan_type?.name ||
                 '',
 
             customer_name:
-                application?.customer?.name ||
+                application?.name ||
                 '',
 
             phone:
-                application?.customer?.phone ||
+                application?.phone ||
                 '',
 
-            rm_name:
-                application?.rm?.name ||
+            referral:
+                application?.referral ||
                 '',
 
             agent_name:
@@ -367,59 +347,7 @@ function ApplicationHeader({
     }, [])
 
 
-    /* -------------------------------------------------
-       STATUS CHANGE
-    -------------------------------------------------- */
-
-    const handleStatusSelect = (status) => {
-
-        setSelectedStatus(status)
-
-        setStatusOpen(false)
-
-
-        if (onStatusChange) {
-
-            onStatusChange({
-                applicationId:
-                    application?.id,
-
-                status,
-            })
-
-        }
-
-    }
-
-
-    /* -------------------------------------------------
-       AGENT CHANGE
-    -------------------------------------------------- */
-
-    const handleAgentSelect = (agent) => {
-
-        setSelectedAgent(agent)
-
-        setAgentOpen(false)
-
-
-        if (onAgentChange) {
-
-            onAgentChange({
-                applicationId:
-                    application?.id,
-
-                agentId:
-                    agent?.id,
-
-                agent,
-            })
-
-        }
-
-    }
-
-
+   
     /* -------------------------------------------------
        EDIT
     -------------------------------------------------- */
@@ -430,19 +358,19 @@ function ApplicationHeader({
 
             loan_type:
                 application?.loan_type_label ||
-                application?.loan_type ||
+                application?.loan_type?.name ||
                 '',
 
             customer_name:
-                application?.customer?.name ||
+                application?.name ||
                 '',
 
             phone:
-                application?.customer?.phone ||
+                application?.phone ||
                 '',
 
-            rm_name:
-                application?.rm?.name ||
+            referral:
+                application?.referral ||
                 '',
 
             agent_name:
@@ -487,58 +415,39 @@ function ApplicationHeader({
        SAVE
     -------------------------------------------------- */
 
-    const handleSave = () => {
+    const handleSave = async () => {
 
-        const updatedData = {
+        try {
 
-            ...editData,
+            const data = {
+                name: editData.customer_name,
+                phone: editData.phone,
+                referral: editData.referral,
+            }
 
-            status:
-                selectedStatus,
+            const response = await updateApplicationHeader(
+                application?.unique_id,
+                data
+            )
 
-            agent_id:
-                selectedAgent?.id ||
-                null,
+            console.log('Header updated:', response)
 
-        }
+            // response.data contains the actual updated fields
+            if (onSave) {
+                onSave(response?.data)
+            }
 
+            setIsEditing(false)
 
-        console.log(
-            'Updated application:',
-            updatedData
-        )
+        } catch (error) {
 
-
-        /*
-            Parent can connect this to backend.
-
-            Example:
-
-            onSave({
-                applicationId: application.id,
-                data: updatedData
-            })
-        */
-
-        if (onSave) {
-
-            onSave({
-
-                applicationId:
-                    application?.id,
-
-                data:
-                    updatedData,
-
-            })
+            console.error(
+                'Failed to update application header:',
+                error
+            )
 
         }
-
-
-        setIsEditing(false)
-
     }
-
 
     /* -------------------------------------------------
        CANCEL
@@ -576,7 +485,7 @@ function ApplicationHeader({
             bg-base-100
             border
             border-base-300
-            shadow-sm
+            shadow-sm m-5   
         ">
 
             <div className="card-body">
@@ -645,7 +554,7 @@ function ApplicationHeader({
 
                             <span>
                                 {formatAppliedDate(
-                                    application?.applied_at
+                                    application?.applied_date
                                 )}
                             </span>
 
@@ -808,27 +717,6 @@ function ApplicationHeader({
                         </div>
 
 
-                        {/* CHANGE */}
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setAgentOpen(
-                                    !agentOpen
-                                )
-                            }
-                            className="
-                                text-xs
-                                font-semibold
-                                hover:underline
-                                shrink-0
-                            "
-                            style={{
-                                color: '#0369a1',
-                            }}
-                        >
-                            CHANGE
-                        </button>
 
                     </div>
 
@@ -856,7 +744,7 @@ function ApplicationHeader({
                             label="Loan Type"
                             value={
                                 application?.loan_type_label ||
-                                application?.loan_type ||
+                                application?.loan_type?.name ||
                                 '-'
                             }
                         />
@@ -866,7 +754,7 @@ function ApplicationHeader({
                             icon="●"
                             label="Customer"
                             value={
-                                application?.customer?.name ||
+                                application?.name ||
                                 '-'
                             }
                         />
@@ -876,7 +764,7 @@ function ApplicationHeader({
                             icon="☎"
                             label="Phone"
                             value={
-                                application?.customer?.phone ||
+                                application?.phone ||
                                 '-'
                             }
                         />
@@ -884,9 +772,9 @@ function ApplicationHeader({
 
                         <InfoField
                             icon="♙"
-                            label="RM"
+                            label="Reference Name"
                             value={
-                                application?.rm?.name ||
+                                application?.referral ||
                                 'N/A'
                             }
                         />
@@ -905,18 +793,7 @@ function ApplicationHeader({
                     ">
 
 
-                        <EditField
-                            label="Loan Type"
-                            value={
-                                editData.loan_type
-                            }
-                            onChange={(value) =>
-                                handleEditChange(
-                                    'loan_type',
-                                    value
-                                )
-                            }
-                        />
+
 
 
                         <EditField
@@ -948,31 +825,20 @@ function ApplicationHeader({
 
 
                         <EditField
-                            label="RM"
+                            label="Reference Name"
                             value={
-                                editData.rm_name
+                                editData.referral
                             }
                             onChange={(value) =>
                                 handleEditChange(
-                                    'rm_name',
+                                    'referral',
                                     value
                                 )
                             }
                         />
 
 
-                        <EditField
-                            label="Agent"
-                            value={
-                                editData.agent_name
-                            }
-                            onChange={(value) =>
-                                handleEditChange(
-                                    'agent_name',
-                                    value
-                                )
-                            }
-                        />
+
 
                     </div>
 
@@ -1126,430 +992,14 @@ function ApplicationHeader({
                     ">
 
 
-                        {/* =================================================
-                            STATUS DROPDOWN
-                        ================================================== */}
 
-                        <div
-                            ref={statusRef}
-                            className="
-                                relative
-                            "
-                        >
-
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setStatusOpen(
-                                        !statusOpen
-                                    )
-
-                                    setAgentOpen(
-                                        false
-                                    )
-
-                                }}
-                                className="
-                                    h-12
-                                    min-w-[170px]
-                                    px-4
-                                    rounded-xl
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    flex
-                                    items-center
-                                    justify-between
-                                    gap-5
-                                    text-sm
-                                    font-medium
-                                    hover:bg-base-200
-                                    transition-colors
-                                "
-                            >
-
-                                <span>
-                                    {status}
-                                </span>
-
-
-                                <span className="
-                                    text-base-content/50
-                                ">
-                                    ▾
-                                </span>
-
-                            </button>
-
-
-                            {statusOpen && (
-
-                                <div className="
-                                    absolute
-                                    right-0
-                                    bottom-full
-                                    mb-2
-                                    w-[190px]
-                                    bg-base-100
-                                    border
-                                    border-base-300
-                                    rounded-xl
-                                    shadow-xl
-                                    z-50
-                                    p-1.5
-                                ">
-
-
-                                    <p className="
-                                        px-3
-                                        py-2
-                                        text-[11px]
-                                        uppercase
-                                        tracking-wide
-                                        text-base-content/40
-                                        font-semibold
-                                    ">
-                                        Application Status
-                                    </p>
-
-
-                                    {STATUS_OPTIONS.map(
-                                        (statusOption) => (
-
-                                            <button
-                                                key={
-                                                    statusOption
-                                                }
-                                                type="button"
-                                                onClick={() =>
-                                                    handleStatusSelect(
-                                                        statusOption
-                                                    )
-                                                }
-                                                className={`
-                                                    w-full
-                                                    text-left
-                                                    px-3
-                                                    py-2.5
-                                                    rounded-lg
-                                                    text-sm
-                                                    flex
-                                                    items-center
-                                                    justify-between
-                                                    hover:bg-base-200
-                                                    ${
-                                                        selectedStatus ===
-                                                        statusOption
-                                                            ? 'font-semibold'
-                                                            : ''
-                                                    }
-                                                `}
-                                            >
-
-                                                <span>
-                                                    {statusOption}
-                                                </span>
-
-
-                                                {selectedStatus ===
-                                                    statusOption && (
-
-                                                    <span
-                                                        style={{
-                                                            color:
-                                                                COLORS.GREEN,
-                                                        }}
-                                                    >
-                                                        ✓
-                                                    </span>
-
-                                                )}
-
-                                            </button>
-
-                                        )
-                                    )}
-
-                                </div>
-
-                            )}
-
-                        </div>
 
 
                         {/* =================================================
                             AGENT DROPDOWN
                         ================================================== */}
 
-                        <div
-                            ref={agentRef}
-                            className="
-                                relative
-                            "
-                        >
 
-                            <button
-                                type="button"
-                                onClick={() => {
-
-                                    setAgentOpen(
-                                        !agentOpen
-                                    )
-
-                                    setStatusOpen(
-                                        false
-                                    )
-
-                                }}
-                                className="
-                                    h-12
-                                    min-w-[220px]
-                                    px-3
-                                    rounded-xl
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    flex
-                                    items-center
-                                    gap-3
-                                    hover:bg-base-200
-                                    transition-colors
-                                "
-                            >
-
-
-                                {/* AGENT ICON */}
-
-                                <span
-                                    className="
-                                        w-8
-                                        h-8
-                                        rounded-full
-                                        flex
-                                        items-center
-                                        justify-center
-                                        text-white
-                                        text-xs
-                                        font-semibold
-                                        shrink-0
-                                    "
-                                    style={{
-                                        backgroundColor:
-                                            COLORS.GREEN,
-                                    }}
-                                >
-
-                                    {agentName
-                                        .charAt(0)
-                                        .toUpperCase()}
-
-                                </span>
-
-
-                                {/* AGENT INFO */}
-
-                                <div className="
-                                    flex-1
-                                    text-left
-                                    min-w-0
-                                ">
-
-                                    <p className="
-                                        text-sm
-                                        font-medium
-                                        truncate
-                                    ">
-                                        {agentName}
-                                    </p>
-
-
-                                    {selectedAgent && (
-
-                                        <p className="
-                                            text-[10px]
-                                            text-base-content/50
-                                        ">
-                                            Assigned
-                                        </p>
-
-                                    )}
-
-                                </div>
-
-
-                                <span className="
-                                    text-base-content/50
-                                ">
-                                    ▾
-                                </span>
-
-                            </button>
-
-
-                            {agentOpen && (
-
-                                <div className="
-                                    absolute
-                                    right-0
-                                    bottom-full
-                                    mb-2
-                                    w-[240px]
-                                    bg-base-100
-                                    border
-                                    border-base-300
-                                    rounded-xl
-                                    shadow-xl
-                                    z-50
-                                    p-1.5
-                                ">
-
-
-                                    <p className="
-                                        px-3
-                                        py-2
-                                        text-[11px]
-                                        uppercase
-                                        tracking-wide
-                                        text-base-content/40
-                                        font-semibold
-                                    ">
-                                        Assign Agent
-                                    </p>
-
-
-                                    {/* UNASSIGN */}
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handleAgentSelect(
-                                                null
-                                            )
-                                        }
-                                        className="
-                                            w-full
-                                            flex
-                                            items-center
-                                            gap-3
-                                            px-3
-                                            py-2.5
-                                            rounded-lg
-                                            hover:bg-base-200
-                                            text-left
-                                        "
-                                    >
-
-                                        <span className="
-                                            w-8
-                                            h-8
-                                            rounded-full
-                                            bg-base-300
-                                            flex
-                                            items-center
-                                            justify-center
-                                            text-xs
-                                        ">
-                                            —
-                                        </span>
-
-
-                                        <span className="
-                                            text-sm
-                                        ">
-                                            Unassigned
-                                        </span>
-
-                                    </button>
-
-
-                                    {/* AGENTS */}
-
-                                    {agents.map(
-                                        (agent) => (
-
-                                            <button
-                                                key={
-                                                    agent.id
-                                                }
-                                                type="button"
-                                                onClick={() =>
-                                                    handleAgentSelect(
-                                                        agent
-                                                    )
-                                                }
-                                                className="
-                                                    w-full
-                                                    flex
-                                                    items-center
-                                                    gap-3
-                                                    px-3
-                                                    py-2.5
-                                                    rounded-lg
-                                                    hover:bg-base-200
-                                                    text-left
-                                                "
-                                            >
-
-                                                <span
-                                                    className="
-                                                        w-8
-                                                        h-8
-                                                        rounded-full
-                                                        flex
-                                                        items-center
-                                                        justify-center
-                                                        text-white
-                                                        text-xs
-                                                        font-semibold
-                                                    "
-                                                    style={{
-                                                        backgroundColor:
-                                                            COLORS.GREEN,
-                                                    }}
-                                                >
-
-                                                    {agent.name
-                                                        .charAt(
-                                                            0
-                                                        )
-                                                        .toUpperCase()}
-
-                                                </span>
-
-
-                                                <span className="
-                                                    flex-1
-                                                    text-sm
-                                                ">
-                                                    {agent.name}
-                                                </span>
-
-
-                                                {selectedAgent?.id ===
-                                                    agent.id && (
-
-                                                    <span
-                                                        style={{
-                                                            color:
-                                                                COLORS.GREEN,
-                                                        }}
-                                                    >
-                                                        ✓
-                                                    </span>
-
-                                                )}
-
-                                            </button>
-
-                                        )
-                                    )}
-
-                                </div>
-
-                            )}
-
-                        </div>
 
                     </div>
 

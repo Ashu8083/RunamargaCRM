@@ -1,215 +1,54 @@
-// admin-react/src/pages/Loans/DuplicateApproval/components/DuplicateApprovalModal.jsx
-
-import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
-import CheckCircleIcon from '@heroicons/react/24/outline/CheckCircleIcon'
-import XCircleIcon from '@heroicons/react/24/outline/XCircleIcon'
-import ExclamationTriangleIcon from '@heroicons/react/24/outline/ExclamationTriangleIcon'
+import { useState } from 'react'
 
 
-function DuplicateApprovalModal({
-    open,
+const DuplicateApprovalModal = ({
     applications = [],
     onClose,
     onSubmit,
-}) {
+}) => {
 
-    // =========================================================
-    // CLOSE
-    // =========================================================
+    const [action, setAction] =
+        useState('approve')
 
-    if (
-        !open ||
-        !applications.length
-    ) {
-        return null
-    }
+    const [remarks, setRemarks] =
+        useState('')
 
 
-    // =========================================================
-    // APPLICATION COUNT
-    // =========================================================
-
-    const applicationCount =
-        applications.length
-
-
-    // =========================================================
-    // SINGLE APPLICATION
-    // =========================================================
-
-    const isSingle =
-        applicationCount === 1
-
-
-    const singleApplication =
-        isSingle
-            ? applications[0]
-            : null
-
-
-    // =========================================================
-    // APPLICANT NAME
-    // =========================================================
-
-    const getApplicantName = (
-        application
-    ) => {
-
-        return (
-            application?.applicantName ??
-            application?.applicant_name ??
-            application?.name ??
-            'Application'
-        )
-
-    }
-
-
-    // =========================================================
-    // LOAN TYPE
-    // =========================================================
-
-    const getLoanType = (
-        application
-    ) => {
-
-        return (
-            application?.loanType ??
-            application?.loan_type ??
-            'N/A'
-        )
-
-    }
-
-
-    // =========================================================
-    // FORMAT AMOUNT
-    // =========================================================
-
-    const formatAmount = (
-        amount
-    ) => {
+    const handleSubmit = () => {
 
         if (
-            amount === null ||
-            amount === undefined ||
-            amount === ''
+            action === 'reject' &&
+            !remarks.trim()
         ) {
-            return '₹0'
+            return
         }
 
-
-        const numericAmount =
-            Number(
-                String(amount)
-                    .replace(/,/g, '')
-                    .replace(/₹/g, '')
-            )
-
-
-        if (
-            Number.isNaN(
-                numericAmount
-            )
-        ) {
-            return `₹${amount}`
-        }
-
-
-        return new Intl.NumberFormat(
-            'en-IN',
-            {
-                style: 'currency',
-                currency: 'INR',
-                maximumFractionDigits: 0,
-            }
-        ).format(
-            numericAmount
+        onSubmit(
+            action,
+            remarks.trim()
         )
-
     }
 
-
-    // =========================================================
-    // HANDLE ACTION
-    // =========================================================
-
-    const handleAction = (
-        action
-    ) => {
-
-        onSubmit?.(action)
-
-    }
-
-
-    // =========================================================
-    // MODAL
-    // =========================================================
 
     return (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 p-4">
 
-        <dialog
-            open
-            className="
-                modal
-                modal-bottom
-                sm:modal-middle
-            "
-        >
+            <div className="w-full max-w-3xl rounded-xl bg-base-100 shadow-xl">
 
-            <div className="
-                modal-box
-                w-11/12
-                max-w-lg
-                overflow-hidden
-                rounded-2xl
-                border
-                border-base-300
-                bg-base-100
-                p-0
-            ">
+                {/* ================================= */}
+                {/* HEADER */}
+                {/* ================================= */}
 
-                {/* =================================================
-                    HEADER
-                ================================================= */}
+                <div className="flex items-center justify-between border-b border-base-200 px-5 py-4">
 
-                <div className="
-                    flex
-                    items-center
-                    justify-between
-                    border-b
-                    border-base-300
-                    px-5
-                    py-4
-                ">
+                    <div>
 
-                    <div className="
-                        min-w-0
-                    ">
-
-                        <h3 className="
-                            text-base
-                            font-semibold
-                            text-base-content
-                        ">
-                            Review Application
-                            {applicationCount > 1
-                                ? 's'
-                                : ''}
+                        <h3 className="text-lg font-semibold">
+                            Duplicate Application Approval
                         </h3>
 
-
-                        <p className="
-                            mt-0.5
-                            text-xs
-                            text-base-content/50
-                        ">
-                            {applicationCount}{' '}
-                            {applicationCount === 1
-                                ? 'application'
-                                : 'applications'}{' '}
-                            selected
+                        <p className="mt-1 text-xs text-base-content/60">
+                            Review the selected duplicate applications
                         </p>
 
                     </div>
@@ -217,394 +56,228 @@ function DuplicateApprovalModal({
 
                     <button
                         type="button"
+                        className="btn btn-ghost btn-sm btn-circle"
                         onClick={onClose}
-                        aria-label="Close"
-                        className="
-                            flex
-                            h-9
-                            w-9
-                            shrink-0
-                            items-center
-                            justify-center
-                            rounded-full
-                            transition
-                            hover:bg-base-200
-                        "
                     >
-
-                        <XMarkIcon className="
-                            h-5
-                            w-5
-                            text-base-content/60
-                        " />
-
+                        ✕
                     </button>
 
                 </div>
 
 
-                {/* =================================================
-                    CONTENT
-                ================================================= */}
+                {/* ================================= */}
+                {/* BODY */}
+                {/* ================================= */}
 
-                <div className="
-                    max-h-[55vh]
-                    overflow-y-auto
-                    px-5
-                    py-5
-                ">
+                <div className="max-h-[70vh] overflow-y-auto px-5 py-4">
 
-                    {/* =================================================
-                        WARNING
-                    ================================================= */}
+                    {/* Selected count */}
 
-                    <div className="
-                        flex
-                        items-start
-                        gap-3
-                        rounded-xl
-                        border
-                        border-yellow-200
-                        bg-yellow-50
-                        px-4
-                        py-3
-                    ">
+                    <div className="mb-3">
 
-                        <ExclamationTriangleIcon className="
-                            mt-0.5
-                            h-5
-                            w-5
-                            shrink-0
-                            text-yellow-600
-                        " />
+                        <span className="text-sm font-semibold">
+                            Selected Applications
+                        </span>
 
-
-                        <p className="
-                            text-xs
-                            leading-5
-                            text-yellow-700
-                        ">
-                            Please review the selected
-                            application
-                            {applicationCount > 1
-                                ? 's'
-                                : ''}.
-                            Once approved or rejected,
-                            the decision cannot be changed.
-                        </p>
+                        <span className="ml-2 text-sm text-base-content/50">
+                            ({applications.length})
+                        </span>
 
                     </div>
 
 
-                    {/* =================================================
-                        SINGLE APPLICATION
-                    ================================================= */}
+                    {/* Applications */}
 
-                    {isSingle ? (
+                    <div className="mb-5 overflow-x-auto rounded-lg border border-base-200">
 
-                        <div className="
-                            mt-4
-                            rounded-xl
-                            border
-                            border-base-300
-                            bg-base-200/30
-                            p-4
-                        ">
+                        <table className="table table-sm">
 
-                            <div className="
-                                flex
-                                items-start
-                                justify-between
-                                gap-4
-                            ">
+                            <thead>
 
-                                <div className="
-                                    min-w-0
-                                ">
+                                <tr>
 
-                                    <p className="
-                                        truncate
-                                        text-sm
-                                        font-semibold
-                                        text-base-content
-                                    "
-                                        title={
-                                            getApplicantName(
-                                                singleApplication
-                                            )
-                                        }
-                                    >
-                                        {
-                                            getApplicantName(
-                                                singleApplication
-                                            )
-                                        }
-                                    </p>
+                                    <th>
+                                        Name
+                                    </th>
+
+                                    <th>
+                                        Phone
+                                    </th>
+
+                                    <th>
+                                        Loan Type
+                                    </th>
+
+                                    <th>
+                                        Amount
+                                    </th>
+
+                                    <th>
+                                        Applied By
+                                    </th>
+
+                                </tr>
+
+                            </thead>
 
 
-                                    <p className="
-                                        mt-1
-                                        text-xs
-                                        text-base-content/55
-                                    ">
-                                        {
-                                            getLoanType(
-                                                singleApplication
-                                            )
-                                        }
-                                    </p>
+                            <tbody>
 
-                                </div>
+                                {applications.map(
+                                    (application) => {
+
+                                        const amount =
+                                            application.loanAmount ??
+                                            application.loan_amount
+
+                                        return (
+                                            <tr
+                                                key={
+                                                    application.id
+                                                }
+                                            >
+
+                                                <td>
+                                                    {application.applicantName ||
+                                                        application.name ||
+                                                        '-'}
+                                                </td>
+
+                                                <td>
+                                                    {application.phone ||
+                                                        '-'}
+                                                </td>
+
+                                                <td>
+                                                    {application.loanType ||
+                                                        application.loan_type ||
+                                                        '-'}
+                                                </td>
+
+                                                <td>
+                                                    {amount !==
+                                                    null &&
+                                                    amount !==
+                                                    undefined
+                                                        ? `₹${Number(
+                                                              amount
+                                                          ).toLocaleString(
+                                                              'en-IN'
+                                                          )}`
+                                                        : '-'}
+                                                </td>
+
+                                                <td>
+                                                    {application.appliedBy ||
+                                                        application.applied_by ||
+                                                        '-'}
+                                                </td>
+
+                                            </tr>
+                                        )
+                                    }
+                                )}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
 
 
-                                <span className="
-                                    shrink-0
-                                    rounded-full
-                                    border
-                                    border-orange-300
-                                    bg-orange-50
-                                    px-2.5
-                                    py-1
-                                    text-[10px]
-                                    font-medium
-                                    text-orange-600
-                                ">
-                                    Active
+                    {/* Action */}
+
+                    <div className="mb-4">
+
+                        <label className="mb-2 block text-sm font-medium">
+                            Action
+                        </label>
+
+
+                        <div className="flex gap-5">
+
+                            <label className="flex cursor-pointer items-center gap-2">
+
+                                <input
+                                    type="radio"
+                                    name="duplicateApprovalAction"
+                                    className="radio radio-success radio-sm"
+                                    value="approve"
+                                    checked={
+                                        action ===
+                                        'approve'
+                                    }
+                                    onChange={() =>
+                                        setAction(
+                                            'approve'
+                                        )
+                                    }
+                                />
+
+                                <span className="text-sm">
+                                    Approve
                                 </span>
 
-                            </div>
+                            </label>
 
 
-                            <div className="
-                                mt-4
-                                grid
-                                grid-cols-2
-                                gap-3
-                            ">
+                            <label className="flex cursor-pointer items-center gap-2">
 
-                                {/* AMOUNT */}
+                                <input
+                                    type="radio"
+                                    name="duplicateApprovalAction"
+                                    className="radio radio-error radio-sm"
+                                    value="reject"
+                                    checked={
+                                        action ===
+                                        'reject'
+                                    }
+                                    onChange={() =>
+                                        setAction(
+                                            'reject'
+                                        )
+                                    }
+                                />
 
-                                <div>
+                                <span className="text-sm">
+                                    Reject
+                                </span>
 
-                                    <p className="
-                                        text-[10px]
-                                        font-medium
-                                        uppercase
-                                        tracking-wide
-                                        text-base-content/40
-                                    ">
-                                        Loan Amount
-                                    </p>
-
-
-                                    <p className="
-                                        mt-1
-                                        text-sm
-                                        font-semibold
-                                        text-base-content
-                                    ">
-                                        {
-                                            formatAmount(
-                                                singleApplication.loanAmount ??
-                                                singleApplication.loan_amount ??
-                                                singleApplication.amount
-                                            )
-                                        }
-                                    </p>
-
-                                </div>
-
-
-                                {/* PHONE */}
-
-                                <div>
-
-                                    <p className="
-                                        text-[10px]
-                                        font-medium
-                                        uppercase
-                                        tracking-wide
-                                        text-base-content/40
-                                    ">
-                                        Phone
-                                    </p>
-
-
-                                    <p className="
-                                        mt-1
-                                        truncate
-                                        text-sm
-                                        font-semibold
-                                        text-base-content
-                                    ">
-                                        {
-                                            singleApplication.phone ??
-                                            singleApplication.mobile ??
-                                            'N/A'
-                                        }
-                                    </p>
-
-                                </div>
-
-                            </div>
+                            </label>
 
                         </div>
 
-                    ) : (
-
-                        /* =================================================
-                           MULTIPLE APPLICATIONS
-                        ================================================= */
-
-                        <div className="
-                            mt-4
-                            overflow-hidden
-                            rounded-xl
-                            border
-                            border-base-300
-                        ">
-
-                            <div className="
-                                border-b
-                                border-base-300
-                                bg-base-200/40
-                                px-4
-                                py-2.5
-                            ">
-
-                                <p className="
-                                    text-xs
-                                    font-semibold
-                                    text-base-content/70
-                                ">
-                                    Selected Applications
-                                </p>
-
-                            </div>
+                    </div>
 
 
-                            <div className="
-                                max-h-64
-                                overflow-y-auto
-                            ">
+                    {/* Rejection remarks */}
 
-                                {applications.map(
-                                    (
-                                        application,
-                                        index
-                                    ) => (
+                    {action === 'reject' && (
 
-                                        <div
-                                            key={
-                                                application.id ??
-                                                index
-                                            }
-                                            className={[
-                                                'flex',
-                                                'items-center',
-                                                'justify-between',
-                                                'gap-3',
-                                                'px-4',
-                                                'py-3',
-                                                index !== 0
-                                                    ? 'border-t border-base-300'
-                                                    : '',
-                                            ].join(' ')}
-                                        >
+                        <div className="mb-2">
 
-                                            <div className="
-                                                flex
-                                                min-w-0
-                                                items-center
-                                                gap-3
-                                            ">
+                            <label
+                                htmlFor="rejectedRemarks"
+                                className="mb-2 block text-sm font-medium"
+                            >
+                                Rejection Remarks
+                                <span className="ml-1 text-error">
+                                    *
+                                </span>
+                            </label>
 
-                                                <span className="
-                                                    flex
-                                                    h-8
-                                                    w-8
-                                                    shrink-0
-                                                    items-center
-                                                    justify-center
-                                                    rounded-full
-                                                    bg-base-200
-                                                    text-xs
-                                                    font-semibold
-                                                    text-base-content/60
-                                                ">
-                                                    {String(
-                                                        getApplicantName(
-                                                            application
-                                                        )
-                                                    )
-                                                        .charAt(0)
-                                                        .toUpperCase()}
-                                                </span>
-
-
-                                                <div className="
-                                                    min-w-0
-                                                ">
-
-                                                    <p className="
-                                                        truncate
-                                                        text-sm
-                                                        font-medium
-                                                        text-base-content
-                                                    "
-                                                        title={
-                                                            getApplicantName(
-                                                                application
-                                                            )
-                                                        }
-                                                    >
-                                                        {
-                                                            getApplicantName(
-                                                                application
-                                                            )
-                                                        }
-                                                    </p>
-
-
-                                                    <p className="
-                                                        mt-0.5
-                                                        truncate
-                                                        text-[11px]
-                                                        text-base-content/45
-                                                    ">
-                                                        {
-                                                            getLoanType(
-                                                                application
-                                                            )
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-
-
-                                            <span className="
-                                                shrink-0
-                                                text-xs
-                                                font-medium
-                                                text-base-content/70
-                                            ">
-                                                {
-                                                    formatAmount(
-                                                        application.loanAmount ??
-                                                        application.loan_amount ??
-                                                        application.amount
-                                                    )
-                                                }
-                                            </span>
-
-                                        </div>
-
+                            <textarea
+                                id="rejectedRemarks"
+                                className="textarea textarea-bordered min-h-24 w-full"
+                                rows="3"
+                                placeholder="Enter reason for rejection"
+                                value={remarks}
+                                onChange={(event) =>
+                                    setRemarks(
+                                        event.target.value
                                     )
-                                )}
-
-                            </div>
+                                }
+                            />
 
                         </div>
 
@@ -613,141 +286,47 @@ function DuplicateApprovalModal({
                 </div>
 
 
-                {/* =================================================
-                    FOOTER
-                ================================================= */}
+                {/* ================================= */}
+                {/* FOOTER */}
+                {/* ================================= */}
 
-                <div className="
-                    border-t
-                    border-base-300
-                    px-5
-                    py-4
-                ">
+                <div className="flex justify-end gap-2 border-t border-base-200 px-5 py-4">
 
-                    <div className="
-                        flex
-                        flex-col-reverse
-                        gap-2
-                        sm:flex-row
-                        sm:justify-end
-                    ">
-
-                        {/* CANCEL */}
-
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="
-                                btn
-                                btn-sm
-                                btn-ghost
-                            "
-                        >
-                            Cancel
-                        </button>
+                    <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={onClose}
+                    >
+                        Cancel
+                    </button>
 
 
-                        {/* REJECT */}
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handleAction(
-                                    'reject'
-                                )
-                            }
-                            className="
-                                flex
-                                h-9
-                                items-center
-                                justify-center
-                                gap-1.5
-                                rounded-lg
-                                border
-                                border-error/30
-                                bg-error/5
-                                px-4
-                                text-xs
-                                font-semibold
-                                text-error
-                                transition
-                                hover:bg-error/10
-                            "
-                        >
-
-                            <XCircleIcon className="
-                                h-4
-                                w-4
-                            " />
-
-                            Reject
-                        </button>
-
-
-                        {/* APPROVE */}
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handleAction(
-                                    'approve'
-                                )
-                            }
-                            className="
-                                flex
-                                h-9
-                                items-center
-                                justify-center
-                                gap-1.5
-                                rounded-lg
-                                bg-[#8BCF00]
-                                px-4
-                                text-xs
-                                font-semibold
-                                text-white
-                                transition
-                                hover:bg-[#78B300]
-                            "
-                        >
-
-                            <CheckCircleIcon className="
-                                h-4
-                                w-4
-                            " />
-
-                            Approve
-                        </button>
-
-                    </div>
+                    <button
+                        type="button"
+                        className={
+                            action === 'approve'
+                                ? 'btn btn-success btn-sm'
+                                : 'btn btn-error btn-sm'
+                        }
+                        disabled={
+                            action === 'reject' &&
+                            !remarks.trim()
+                        }
+                        onClick={
+                            handleSubmit
+                        }
+                    >
+                        {action === 'approve'
+                            ? 'Approve'
+                            : 'Reject'}
+                    </button>
 
                 </div>
 
             </div>
 
-
-            {/* =================================================
-                BACKDROP
-            ================================================= */}
-
-            <form
-                method="dialog"
-                className="modal-backdrop"
-                onClick={onClose}
-            >
-
-                <button
-                    type="button"
-                    aria-label="Close modal"
-                >
-                    close
-                </button>
-
-            </form>
-
-        </dialog>
-
+        </div>
     )
-
 }
 
 

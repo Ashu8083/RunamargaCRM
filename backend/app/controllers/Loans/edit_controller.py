@@ -6,8 +6,13 @@ from datetime import datetime
 from app.core.access_control import AccessControl
 from app.models.employees import Employee
 from app.models.loan_applications import LoanApplication, LoanStatus
+from app.models.loan_coapplicant import LoanCoApplicant
 from app.models.reverted_loans import RevertedLoan
-
+from app.models.loan_reference import LoanReference
+from app.schemas.application_schema import (
+   ApplicationHeaderUpdate,ApplicationLoanDetailsUpdate,AddApplicationAddressRequest,AddApplicationReferenceRequest,AddApplicationCoApplicantRequest
+)
+from app.models.loan_addresses import LoanAddress
 
 # =============================================================
 # GET APPLICATIONS
@@ -748,5 +753,339 @@ def update_application_status(
 
             "updated_at":
                 application.updated_at,
+        },
+    }
+
+
+def update_application_header(
+    db: Session,
+    employee: Employee,
+    application_id: str,
+    payload: ApplicationHeaderUpdate,
+):
+
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    if payload.name is not None:
+        application.name = payload.name
+
+    if payload.phone is not None:
+        application.phone = payload.phone
+
+    if payload.referral is not None:
+        application.referral = payload.referral
+
+    db.commit()
+    db.refresh(application)
+
+    return {
+        "success": True,
+        "message": "Application header updated successfully",
+        "data": {
+            "id": application.id,
+            "unique_id": application.unique_id,
+            "name": application.name,
+            "phone": application.phone,
+            "referral": application.referral,
+        },
+    }
+
+
+def update_application_loan_details(
+    db: Session,
+    employee: Employee,
+    application_id: str,
+    payload: ApplicationLoanDetailsUpdate,
+):
+
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    if payload.email is not None:
+        application.email = payload.email
+
+    if payload.gender is not None:
+        application.gender = payload.gender
+
+    if payload.marital_status is not None:
+        application.marital_status = payload.marital_status
+
+    if payload.date_of_birth is not None:
+        application.dob = payload.date_of_birth
+
+    if payload.pan_number is not None:
+        application.pancard_no = payload.pan_number
+
+    if payload.aadhaar_number is not None:
+        application.aadhar_no = payload.aadhaar_number
+
+    if payload.loan_amount is not None:
+        application.loan_amt = payload.loan_amount
+
+    if payload.loan_tenure is not None:
+        application.loan_tenure = payload.loan_tenure
+
+    if payload.bank_account_number is not None:
+        application.bank_acc_no = payload.bank_account_number
+
+    if payload.ifsc_code is not None:
+        application.ifsc_code = payload.ifsc_code
+
+    db.commit()
+    db.refresh(application)
+
+    return {
+        "success": True,
+        "message": "Loan details updated successfully",
+        "data": {
+            "id": application.id,
+            "unique_id": application.unique_id,
+            "email": application.email,
+            "gender": application.gender,
+            "marital_status": application.marital_status,
+            "dob": application.dob,
+            "pancard_no": application.pancard_no,
+            "aadhar_no": application.aadhar_no,
+            "loan_amt": application.loan_amt,
+            "loan_tenure": application.loan_tenure,
+            "bank_acc_no": application.bank_acc_no,
+            "ifsc_code": application.ifsc_code,
+        },
+    }
+
+
+def add_application_address(
+    db: Session,
+    employee: Employee,
+    application_id: str,
+    payload: AddApplicationAddressRequest,
+):
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    # =========================================================
+    # RBAC
+    # =========================================================
+
+    scoped_query = AccessControl.apply_application_scope(
+        query=db.query(LoanApplication),
+        db=db,
+        employee=employee,
+    )
+
+    allowed_application = (
+        scoped_query
+        .filter(
+            LoanApplication.id == application.id
+        )
+        .first()
+    )
+
+    if not allowed_application:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this application",
+        )
+
+    # =========================================================
+    # CREATE ADDRESS
+    # =========================================================
+
+    address = LoanAddress(
+        loan_id=application.id,
+        address=payload.address,
+        address_type=payload.address_type,
+    )
+
+    db.add(address)
+    db.commit()
+    db.refresh(address)
+
+    return {
+        "success": True,
+        "message": "Address added successfully",
+        "data": {
+            "id": address.id,
+            "loan_id": address.loan_id,
+            "address": address.address,
+            "address_type": address.address_type,
+            "created_at": address.created_at,
+        },
+    }
+
+
+def add_application_reference(
+    db: Session,
+    employee: Employee,
+    application_id: str,
+    payload: AddApplicationReferenceRequest,
+):
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    # RBAC
+    scoped_query = AccessControl.apply_application_scope(
+        query=db.query(LoanApplication),
+        db=db,
+        employee=employee,
+    )
+
+    allowed_application = (
+        scoped_query
+        .filter(
+            LoanApplication.id == application.id
+        )
+        .first()
+    )
+
+    if not allowed_application:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this application",
+        )
+
+    # CREATE REFERENCE
+    reference = LoanReference(
+        loan_id=application.id,
+        name=payload.name,
+        phone=payload.phone,
+        relation=payload.relation,
+        address=payload.address,
+    )
+
+    db.add(reference)
+    db.commit()
+    db.refresh(reference)
+
+    return {
+        "success": True,
+        "message": "Reference added successfully",
+        "data": {
+            "id": reference.id,
+            "loan_id": reference.loan_id,
+            "name": reference.name,
+            "phone": reference.phone,
+            "relation": reference.relation,
+            "address": reference.address,
+            "created_at": reference.created_at,
+        },
+    }
+
+
+def add_application_co_applicant(
+    db: Session,
+    employee: Employee,
+    application_id: str,
+    payload: AddApplicationCoApplicantRequest,
+):
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    # RBAC
+    scoped_query = AccessControl.apply_application_scope(
+        query=db.query(LoanApplication),
+        db=db,
+        employee=employee,
+    )
+
+    allowed_application = (
+        scoped_query
+        .filter(
+            LoanApplication.id == application.id
+        )
+        .first()
+    )
+
+    if not allowed_application:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this application",
+        )
+
+    # CREATE CO-APPLICANT
+    co_applicant = LoanCoApplicant(
+        loan_id=application.id,
+        name=payload.name,
+        phone=payload.phone,
+        pancard_no=payload.pan_number,
+        adharr_no=payload.aadhaar_number,
+    )
+
+    db.add(co_applicant)
+    db.commit()
+    db.refresh(co_applicant)
+
+    return {
+        "success": True,
+        "message": "Co-applicant added successfully",
+        "data": {
+            "id": co_applicant.id,
+            "loan_id": co_applicant.loan_id,
+            "name": co_applicant.name,
+            "phone": co_applicant.phone,
+            "pan_number": co_applicant.pancard_no,
+            "aadhaar_number": co_applicant.adharr_no,
+            "created_at": co_applicant.created_at,
         },
     }

@@ -526,29 +526,99 @@ def delete_employee_context_permission(
         "context_id": context_id,
         "permission_id": permission_id,
     }
+# ============================================================================
+# GET /common/rms
+# ============================================================================
 
-@router.get("/application-filters")
-def get_application_filters(
+@router.get("/rms")
+def get_rms(
     context_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
-    """
-    Return Agent, RM and Team Lead filter options
-    available to the currently authenticated employee.
-    """
-
     try:
-        return AccessControl.get_application_filter_options(
+        rms = AccessControl.get_visible_rms(
             db=db,
             employee=employee,
             context_id=context_id,
         )
 
+        return [
+            {
+                "id": rm.id,
+                "name": rm.name,
+            }
+            for rm in rms
+        ]
+
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail="Failed to load application filter options.",
+            detail="Failed to load RMs.",
+        ) from exc
+
+
+# ============================================================================
+# GET /common/agents
+# ============================================================================
+
+@router.get("/agents")
+def get_agents(
+    context_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
+):
+    try:
+        agents = AccessControl.get_visible_agents(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        return [
+            {
+                "id": agent.id,
+                "name": agent.name,
+            }
+            for agent in agents
+        ]
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to load agents.",
+        ) from exc
+
+
+# ============================================================================
+# GET /common/team-leads
+# ============================================================================
+
+@router.get("/team-leads")
+def get_team_leads(
+    context_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
+):
+    try:
+        team_leads = AccessControl.get_visible_team_leads(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        return [
+            {
+                "id": team_lead.id,
+                "name": team_lead.name,
+            }
+            for team_lead in team_leads
+        ]
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to load team leads.",
         ) from exc
 # ============================================================================
 # GET /common/states

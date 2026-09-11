@@ -3,6 +3,7 @@ from fastapi import APIRouter
 
 from .auth_routes import router as auth_router
 from .Loans.application_routes import router as application_router
+from .Loans.edit_application_routes import router as edit_application_router
 from .employee_routes import router as employee_router
 from .common_routes import router as common_router
 from .state_routes import router as state_router
@@ -10,19 +11,20 @@ from .city_routes import router as city_router
 from .context_routes import router as context_router
 from .attendance_routes import router as attendance_router
 from .phone_number_routes import router as phone_num_router
-
 from app.routes.admin.bank_routes import router as bank_router
 from app.routes.admin.dsa_routes import router as dsa_router
 from app.routes.admin.banker_directory_routes import router as banker_directory_router
-
 from .team_leads_routes import router as team_leads_router
 from .agents_routes import router as agents_router
+from .Loans.duplicate_approval_routes import router as duplicate_approval_router
+
 
 
 router = APIRouter()
 
 router.include_router(auth_router)
 router.include_router(application_router)
+router.include_router(edit_application_router)
 router.include_router(employee_router)
 router.include_router(common_router)
 router.include_router(state_router)
@@ -35,3 +37,5 @@ router.include_router(dsa_router)
 router.include_router(banker_directory_router)
 router.include_router(team_leads_router)
 router.include_router(agents_router)
+router.include_router(duplicate_approval_router)
+

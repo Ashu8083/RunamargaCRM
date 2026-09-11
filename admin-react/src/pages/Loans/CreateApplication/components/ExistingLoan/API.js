@@ -1,9 +1,9 @@
 import apiClient from '../../../../../app/apiClient'
 
 export const submitExistingLoan = async (data) => {
-    if (!data?.loan_application_id) {
+    if (!data) {
         throw new Error(
-            'Existing application ID is required.'
+            'Approval request data is required.'
         )
     }
 

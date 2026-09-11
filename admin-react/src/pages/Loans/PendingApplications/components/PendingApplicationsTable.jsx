@@ -1,6 +1,6 @@
 // admin-react/src/pages/Loans/PendingApplications/components/PendingApplicationsTable.jsx
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from 'react-dom'
 
 import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
@@ -51,6 +51,7 @@ function PendingApplicationsTable({
     onViewApplication,
     onRefresh,
 }) {
+    const [loanTypes, setLoanTypes] = useState([]);
     // =============================================================
     // CONSTANTS
     // =============================================================
@@ -93,36 +94,57 @@ function PendingApplicationsTable({
     // =========================================================
     // HELPERS
     // =========================================================
+    const handleLoanTypesLoaded = useCallback(
+        (options) => {
+            setLoanTypes(options || []);
+        },
+        []
+    );
+    // =============================================================
+    // LOAN TYPE
+    // =============================================================
 
-    const getLoanTypeName = (application) => {
+    const getLoanTypeName = (
+        application,
+        loanTypes = []
+    ) => {
+
         if (
             application.loanType &&
-            typeof application.loanType === 'object'
+            typeof application.loanType === "string"
         ) {
-            return application.loanType.name || 'N/A'
+            return application.loanType;
         }
 
         if (
             application.loan_type &&
-            typeof application.loan_type === 'object'
+            typeof application.loan_type === "string"
         ) {
-            return application.loan_type.name || 'N/A'
+            return application.loan_type;
         }
+
+        const loanTypeId =
+            application.loanTypeId ??
+            application.loan_type_id ??
+            application.loanType?.id ??
+            application.loan_type?.id;
 
         if (
-            typeof application.loanType === 'string'
+            loanTypeId === null ||
+            loanTypeId === undefined ||
+            loanTypeId === ""
         ) {
-            return application.loanType
+            return "Not Assigned";
         }
 
-        if (
-            typeof application.loan_type === 'string'
-        ) {
-            return application.loan_type
-        }
+        const loanType = loanTypes.find(
+            (item) =>
+                String(item.id) ===
+                String(loanTypeId)
+        );
 
-        return 'Not Assigned'
-    }
+        return loanType?.name || "Not Assigned";
+    };
 
     const getAgentName = (application) => {
         if (application.agent?.name) {
@@ -836,25 +858,13 @@ function PendingApplicationsTable({
 
                         <LoanTypeDropdown
                             label=""
-                            value={
-                                selectedLoanType
-                            }
-                            onChange={
-                                setSelectedLoanType
-                            }
-
-                            allLabel="
-                                All Loan Types
-                            "
-                            placeholder="
-                                All Loan Types
-                            "
-                            searchPlaceholder="
-                                Search loan type
-                            "
-                            emptyMessage="
-                                No loan types found
-                            "
+                            value={selectedLoanType}
+                            onChange={setSelectedLoanType}
+                            onOptionsLoaded={handleLoanTypesLoaded}
+                            allLabel="All Loan Types"
+                            placeholder="All Loan Types"
+                            searchPlaceholder="Search loan type"
+                            emptyMessage="No loan types found"
                         />
 
                     </div>
@@ -1140,7 +1150,8 @@ function PendingApplicationsTable({
 
                                         const loanTypeName =
                                             getLoanTypeName(
-                                                application
+                                                application,
+                                                loanTypes
                                             )
 
                                         const agentName =

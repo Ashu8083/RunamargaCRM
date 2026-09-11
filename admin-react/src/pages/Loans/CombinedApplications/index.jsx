@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams} from 'react-router-dom'
 import { getActiveContext, getStoredUser } from '../../../app/auth'
 
 import ApplicationsTable from './components/ApplicationsTable'
@@ -16,6 +16,7 @@ import { useToast } from '../../../components/Toast/ToastProvider'
 
 function Applications() {
     const navigate = useNavigate()
+    
     const {
         showSuccess,
         showError,
@@ -48,7 +49,7 @@ function Applications() {
     // =========================================================
 
 
-    
+
     // =========================================================
     // FILTER STATE
     // =========================================================
@@ -183,6 +184,8 @@ function Applications() {
             const mappedApplications =
                 data.map((application) => ({
                     id: application.id,
+
+                    unique_id: application.unique_id,
 
                     loanId:
                         application.unique_id ||
@@ -872,13 +875,10 @@ function Applications() {
     // =========================================================
 
     const handleViewApplication = (application) => {
-
         navigate(
-            `/crm/view-application/${application.id}`
+            `/crm/view-application/${application.unique_id}`
         )
-
     }
-
 
     // =========================================================
     // CHAT

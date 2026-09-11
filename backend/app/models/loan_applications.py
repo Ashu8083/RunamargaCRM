@@ -145,6 +145,7 @@ class LoanApplication(Base):
         nullable=True,
     )
 
+    
     # =====================================================
     # LOAN TYPE
     # =====================================================
@@ -153,6 +154,11 @@ class LoanApplication(Base):
         Integer,
         ForeignKey("loan_types.id"),
         nullable=True,
+    )
+
+    loan_type = relationship(
+        "LoanType",
+        foreign_keys=[loan_type_id],
     )
 
     # =====================================================
