@@ -372,8 +372,8 @@ function Applications() {
 
             const activeContext = getActiveContext(user)
 
-            console.log('STORED USER:', user)
-            console.log('ACTIVE CONTEXT:', activeContext)
+            // console.log('STORED USER:', user)
+            // console.log('ACTIVE CONTEXT:', activeContext)
 
             if (!activeContext?.id) {
                 setLoanTypes([])
@@ -398,10 +398,10 @@ function Applications() {
                 getApplicationFilters(activeContext.id),
             ])
 
-            console.log(
-                'APPLICATION FILTER RESPONSE:',
-                filterResponse
-            )
+            // console.log(
+            //     'APPLICATION FILTER RESPONSE:',
+            //     filterResponse
+            // )
 
             setLoanTypes(
                 loanTypesData || []

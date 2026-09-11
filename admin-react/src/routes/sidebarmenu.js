@@ -406,6 +406,14 @@ const sidebarmenu = [
         parent: "Employee Management",
         permission: PERMISSIONS.EMPLOYEE_ATTENDANCE_VIEW,
       },
+
+       {
+        path: "/crm/face-enrollment",
+        icon: <CalendarIcon className={submenuIconClasses} />,
+        name: "Face Enrollment",
+        parent: "Employee Management",
+        permission: PERMISSIONS.FACE_ENROLLMENT_VIEW,
+      },
     ],
   },
 

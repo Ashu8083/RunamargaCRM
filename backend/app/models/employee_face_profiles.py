@@ -1,11 +1,11 @@
 # app/models/employee_face_profiles.py
-
 from sqlalchemy import (
     Column,
     Integer,
     ForeignKey,
     TIMESTAMP,
     Float,
+    String,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -29,14 +29,26 @@ class EmployeeFaceProfile(Base):
             "employees.id",
             ondelete="CASCADE",
         ),
-        unique=True,
         nullable=False,
         index=True,
     )
 
-    # Face embedding
+    # One face embedding per row
     face_embedding = Column(
         ARRAY(Float),
+        nullable=False,
+    )
+
+    # Type of face sample
+    # Examples: FRONT, LEFT, RIGHT, OTHER
+    capture_type = Column(
+        String(30),
+        nullable=False,
+    )
+
+    # Path of the captured face image
+    image_path = Column(
+        String,
         nullable=False,
     )
 

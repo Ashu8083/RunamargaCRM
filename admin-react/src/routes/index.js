@@ -161,6 +161,13 @@ const EmployeeAttendance = lazy(
     () => import('../pages/EmployeeManagement/Attendance/index')
 )
 
+// =========================================================
+// Face Enrollment
+// =========================================================
+const FaceEnrollment = lazy(
+    () => import('../pages/EmployeeManagement/FaceEnrollment/index')
+)
+
 
 // =========================================================
 // Logs
@@ -453,6 +460,15 @@ const routes = [
         path: '/employee-attendance',
         component: EmployeeAttendance,
         permission: PERMISSIONS.EMPLOYEE_ATTENDANCE_VIEW,
+    },
+
+    // =====================================================
+    // Face Enrollment
+    // =====================================================
+    {
+        path: '/face-enrollment',
+        component: FaceEnrollment,
+        permission: PERMISSIONS.FACE_ENROLLMENT_VIEW,
     },
 
 

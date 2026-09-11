@@ -1,6 +1,7 @@
 # app/main.py
 from fastapi import FastAPI
 from app.routes.admin import router as admin_router
+from app.routes.api import router as api_router
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -29,5 +30,6 @@ app.add_middleware(
 # ROUTES
 # --------------------------------------------------------
 app.include_router(admin_router,prefix="/api")
+app.include_router(api_router,prefix="/android")
 
 

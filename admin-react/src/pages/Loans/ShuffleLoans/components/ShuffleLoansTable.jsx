@@ -9,24 +9,21 @@ function ShuffleLoansTable({
     onSelectApplication,
     onSelectAll,
     onRefresh,
-    onAssign,
 }) {
 
     // =========================================================
-    // SELECTION STATE
+    // SELECTION
     // =========================================================
 
     const filteredIds = applications.map(
         (application) => application.id
     )
 
-
     const allSelected =
         filteredIds.length > 0 &&
         filteredIds.every((id) =>
             selectedApplicationIds.includes(id)
         )
-
 
     const someSelected =
         filteredIds.some((id) =>
@@ -48,18 +45,15 @@ function ShuffleLoansTable({
             return '₹0'
         }
 
-
         const numericAmount = Number(
             String(amount)
                 .replace(/,/g, '')
                 .replace(/₹/g, '')
         )
 
-
         if (Number.isNaN(numericAmount)) {
             return `₹${amount}`
         }
-
 
         return new Intl.NumberFormat(
             'en-IN',
@@ -69,65 +63,55 @@ function ShuffleLoansTable({
                 maximumFractionDigits: 0,
             }
         ).format(numericAmount)
-
     }
 
 
     // =========================================================
-    // STATUS CLASS
+    // STATUS
     // =========================================================
 
     const getStatusClass = (status) => {
 
-        switch (status) {
+        switch (String(status || '').toLowerCase()) {
 
-            case 'In Process':
-            case 'Inprocess':
-
+            case 'inprocess':
+            case 'in process':
                 return [
                     'border-orange-300',
                     'bg-orange-50',
                     'text-orange-600',
                 ].join(' ')
 
-
-            case 'Docs Pending':
-
+            case 'docspending':
+            case 'docs pending':
                 return [
                     'border-yellow-300',
                     'bg-yellow-50',
                     'text-yellow-600',
                 ].join(' ')
 
-
-            case 'Rejected':
-
+            case 'rejected':
                 return [
                     'border-red-300',
                     'bg-red-50',
                     'text-red-600',
                 ].join(' ')
 
-
-            case 'Approved':
-
+            case 'sanctioned':
+            case 'approved':
                 return [
                     'border-green-300',
                     'bg-green-50',
                     'text-green-600',
                 ].join(' ')
 
-
             default:
-
                 return [
                     'border-base-300',
                     'bg-base-100',
                     'text-base-content/60',
                 ].join(' ')
-
         }
-
     }
 
 
@@ -136,9 +120,7 @@ function ShuffleLoansTable({
     // =========================================================
 
     const handleRowSelection = (application) => {
-
         onSelectApplication?.(application.id)
-
     }
 
 
@@ -184,7 +166,6 @@ function ShuffleLoansTable({
                             bg-base-200
                         "
                     >
-
                         <ArrowPathIcon
                             className="
                                 h-6
@@ -192,7 +173,6 @@ function ShuffleLoansTable({
                                 text-base-content/30
                             "
                         />
-
                     </div>
 
 
@@ -222,7 +202,6 @@ function ShuffleLoansTable({
 
             </div>
         )
-
     }
 
 
@@ -303,10 +282,8 @@ function ShuffleLoansTable({
                         transition
                         hover:bg-base-200
                     "
-                    title="Refresh"
                     aria-label="Refresh applications"
                 >
-
                     <ArrowPathIcon
                         className="
                             h-5
@@ -314,32 +291,18 @@ function ShuffleLoansTable({
                             text-base-content/60
                         "
                     />
-
                 </button>
 
             </div>
 
 
             {/* =================================================
-                TABLE CONTAINER
+                TABLE
             ================================================= */}
 
-            <div
-                className="
-                    overflow-x-auto
-                "
-            >
+            <div className="overflow-x-auto">
 
-                <table
-                    className="
-                        table
-                        w-full
-                    "
-                >
-
-                    {/* =================================================
-                        TABLE HEAD
-                    ================================================= */}
+                <table className="table w-full">
 
                     <thead>
 
@@ -351,14 +314,9 @@ function ShuffleLoansTable({
                             "
                         >
 
-                            {/* SELECT ALL */}
+                            {/* SELECT */}
 
-                            <th
-                                className="
-                                    w-12
-                                    px-4
-                                "
-                            >
+                            <th className="w-12 px-4">
 
                                 <input
                                     type="checkbox"
@@ -366,11 +324,9 @@ function ShuffleLoansTable({
                                     ref={(element) => {
 
                                         if (element) {
-
                                             element.indeterminate =
                                                 someSelected &&
                                                 !allSelected
-
                                         }
 
                                     }}
@@ -389,105 +345,84 @@ function ShuffleLoansTable({
                             </th>
 
 
-                            {/* NAME */}
-
                             <th
                                 className="
                                     whitespace-nowrap
                                     px-4
                                     text-xs
                                     font-semibold
-                                    text-base-content
                                 "
                             >
                                 Name
                             </th>
 
 
-                            {/* PHONE */}
-
                             <th
                                 className="
                                     whitespace-nowrap
                                     px-4
                                     text-xs
                                     font-semibold
-                                    text-base-content
                                 "
                             >
                                 Phone
                             </th>
 
 
-                            {/* LOAN TYPE */}
-
                             <th
                                 className="
                                     whitespace-nowrap
                                     px-4
                                     text-xs
                                     font-semibold
-                                    text-base-content
                                 "
                             >
                                 Loan Type
                             </th>
 
 
-                            {/* AMOUNT */}
-
                             <th
                                 className="
                                     whitespace-nowrap
                                     px-4
                                     text-xs
                                     font-semibold
-                                    text-base-content
                                 "
                             >
                                 Amount
                             </th>
 
 
-                            {/* AGENT */}
-
                             <th
                                 className="
                                     whitespace-nowrap
                                     px-4
                                     text-xs
                                     font-semibold
-                                    text-base-content
                                 "
                             >
                                 Agent Name
                             </th>
 
 
-                            {/* RM */}
-
                             <th
                                 className="
                                     whitespace-nowrap
                                     px-4
                                     text-xs
                                     font-semibold
-                                    text-base-content
                                 "
                             >
                                 RM Name
                             </th>
 
 
-                            {/* STATUS */}
-
                             <th
                                 className="
                                     whitespace-nowrap
                                     px-4
                                     text-xs
                                     font-semibold
-                                    text-base-content
                                 "
                             >
                                 Status
@@ -497,10 +432,6 @@ function ShuffleLoansTable({
 
                     </thead>
 
-
-                    {/* =================================================
-                        TABLE BODY
-                    ================================================= */}
 
                     <tbody>
 
@@ -515,17 +446,12 @@ function ShuffleLoansTable({
                             const agentName =
                                 application.agentName ||
                                 application.agent_name ||
-                                application.agent?.name ||
-                                application.processingAgent ||
-                                application.processing_agent ||
-                                application.processingAgent?.name ||
                                 'Unassigned'
 
 
                             const rmName =
                                 application.rmName ||
                                 application.rm_name ||
-                                application.rm?.name ||
                                 'Unassigned'
 
 
@@ -555,16 +481,9 @@ function ShuffleLoansTable({
                                     ].join(' ')}
                                 >
 
-                                    {/* =================================================
-                                        SELECT
-                                    ================================================= */}
+                                    {/* SELECT */}
 
-                                    <td
-                                        className="
-                                            w-12
-                                            px-4
-                                        "
-                                    >
+                                    <td className="w-12 px-4">
 
                                         <input
                                             type="checkbox"
@@ -596,21 +515,11 @@ function ShuffleLoansTable({
                                     </td>
 
 
-                                    {/* =================================================
-                                        NAME
-                                    ================================================= */}
+                                    {/* NAME */}
 
-                                    <td
-                                        className="
-                                            px-4
-                                        "
-                                    >
+                                    <td className="px-4">
 
-                                        <div
-                                            className="
-                                                min-w-[140px]
-                                            "
-                                        >
+                                        <div className="min-w-[140px]">
 
                                             <p
                                                 className="
@@ -642,9 +551,7 @@ function ShuffleLoansTable({
                                     </td>
 
 
-                                    {/* =================================================
-                                        PHONE
-                                    ================================================= */}
+                                    {/* PHONE */}
 
                                     <td
                                         className="
@@ -658,9 +565,7 @@ function ShuffleLoansTable({
                                     </td>
 
 
-                                    {/* =================================================
-                                        LOAN TYPE
-                                    ================================================= */}
+                                    {/* LOAN TYPE */}
 
                                     <td
                                         className="
@@ -674,9 +579,7 @@ function ShuffleLoansTable({
                                     </td>
 
 
-                                    {/* =================================================
-                                        AMOUNT
-                                    ================================================= */}
+                                    {/* AMOUNT */}
 
                                     <td
                                         className="
@@ -693,15 +596,9 @@ function ShuffleLoansTable({
                                     </td>
 
 
-                                    {/* =================================================
-                                        AGENT
-                                    ================================================= */}
+                                    {/* AGENT */}
 
-                                    <td
-                                        className="
-                                            px-4
-                                        "
-                                    >
+                                    <td className="px-4">
 
                                         <span
                                             className="
@@ -722,15 +619,9 @@ function ShuffleLoansTable({
                                     </td>
 
 
-                                    {/* =================================================
-                                        RM
-                                    ================================================= */}
+                                    {/* RM */}
 
-                                    <td
-                                        className="
-                                            px-4
-                                        "
-                                    >
+                                    <td className="px-4">
 
                                         <span
                                             className="
@@ -751,15 +642,9 @@ function ShuffleLoansTable({
                                     </td>
 
 
-                                    {/* =================================================
-                                        STATUS
-                                    ================================================= */}
+                                    {/* STATUS */}
 
-                                    <td
-                                        className="
-                                            px-4
-                                        "
-                                    >
+                                    <td className="px-4">
 
                                         <span
                                             className={[
@@ -781,7 +666,6 @@ function ShuffleLoansTable({
 
                                 </tr>
                             )
-
                         })}
 
                     </tbody>
@@ -792,7 +676,6 @@ function ShuffleLoansTable({
 
         </div>
     )
-
 }
 
 
