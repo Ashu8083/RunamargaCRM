@@ -1,11 +1,14 @@
 // admin-react/src/pages/Roles&Teams/Admins/components/AdminTable.jsx
 
-import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
-import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
+import { useMemo } from 'react'
+
+import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
-import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
+import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
+import PencilSquareIcon from '@heroicons/react/24/outline/PencilSquareIcon'
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon'
+import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 
 
 function AdminTable({
@@ -20,274 +23,167 @@ function AdminTable({
     onStatusChange,
 }) {
 
-    // =========================================================
-    // FILTER ADMINS
-    // =========================================================
+    const filteredAdmins = useMemo(() => {
 
-    const filteredAdmins =
-        admins.filter((admin) => {
+        const value = search?.trim().toLowerCase()
 
-            const searchValue =
-                search.trim().toLowerCase()
+        if (!value) {
+            return admins
+        }
 
+        return admins.filter((admin) => {
 
-            if (!searchValue) {
-                return true
-            }
+            const fields = [
+                admin.name,
+                admin.email,
+                admin.phone,
+                admin.role,
+                admin.role_code,
+                admin.status,
+            ]
 
-
-            return (
-                admin.name
-                    ?.toLowerCase()
-                    .includes(searchValue) ||
-
-                admin.phone
-                    ?.toLowerCase()
-                    .includes(searchValue) ||
-
-                admin.email
-                    ?.toLowerCase()
-                    .includes(searchValue) ||
-
-                admin.status
-                    ?.toLowerCase()
-                    .includes(searchValue)
+            return fields.some((field) =>
+                String(field || '')
+                    .toLowerCase()
+                    .includes(value)
             )
-
         })
 
-
-    // =========================================================
-    // STATUS CLASS
-    // =========================================================
-
-    const getStatusClass = (status) => {
-
-        if (status === 'Active') {
-
-            return `
-                text-[#78B300]
-                border-[#8BCF00]/50
-                bg-[#8BCF00]/10
-            `
-
-        }
+    }, [admins, search])
 
 
-        if (status === 'Absent') {
+    const getDateTime = (admin) => ({
+        created:
+            admin.createdAt ||
+            admin.created_at ||
+            'N/A',
 
-            return `
-                text-warning
-                border-warning/30
-                bg-warning/10
-            `
-
-        }
-
-
-        if (status === 'Deactivated') {
-
-            return `
-                text-error
-                border-error/30
-                bg-error/10
-            `
-
-        }
-
-
-        return `
-            text-base-content/60
-            border-base-300
-            bg-base-200
-        `
-
-    }
+        updated:
+            admin.updatedAt ||
+            admin.updated_at ||
+            'N/A',
+    })
 
 
     return (
-
         <div className="
-            space-y-5
+            card
+            border
+            border-base-300
+            bg-base-100
+            shadow-sm
         ">
 
             {/* =====================================================
-                FILTER / ACTION SECTION
+                HEADER
             ===================================================== */}
 
             <div className="
-                card
-                border
+                flex
+                flex-col
+                gap-3
+                border-b
                 border-base-300
-                bg-base-100
-                shadow-sm
+                p-4
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
             ">
 
+                {/* SEARCH */}
+
                 <div className="
-                    card-body
-                    p-4
+                    relative
+                    w-full
+                    sm:w-64
                 ">
 
-                    <div className="
-                        flex
-                        flex-col
-                        gap-3
-                        xl:flex-row
-                        xl:items-center
-                    ">
+                    <MagnifyingGlassIcon
+                        className="
+                            absolute
+                            left-3
+                            top-1/2
+                            h-4
+                            w-4
+                            -translate-y-1/2
+                            text-base-content/50
+                        "
+                    />
 
-                        {/* =================================================
-                            SEARCH
-                        ================================================= */}
+                    <input
+                        type="text"
+                        value={search || ''}
+                        onChange={(e) =>
+                            setSearch(e.target.value)
+                        }
+                        placeholder="Search admins..."
+                        className="
+                            input
+                            input-bordered
+                            w-full
+                            pl-9
+                            pr-9
+                        "
+                    />
 
-                        <div className="
+                    {search && (
+                        <button
+                            type="button"
+                            onClick={() => setSearch('')}
+                            className="
+                                absolute
+                                right-2
+                                top-1/2
+                                -translate-y-1/2
+                                rounded
+                                p-1
+                                hover:bg-base-200
+                            "
+                        >
+                            <XMarkIcon className="h-4 w-4" />
+                        </button>
+                    )}
+
+                </div>
+
+
+                {/* ACTIONS */}
+
+                <div className="
+                    flex
+                    w-full
+                    gap-2
+                    sm:w-auto
+                ">
+
+                    <button
+                        type="button"
+                        onClick={onRefresh}
+                        className="
+                            btn
+                            btn-outline
                             flex-1
-                        ">
-
-                            <label className="
-                                input
-                                input-bordered
-                                flex
-                                w-full
-                                items-center
-                                gap-3
-                            ">
-
-                                <SearchIcon className="
-                                    h-5
-                                    w-5
-                                    text-base-content/40
-                                " />
+                            sm:flex-none
+                        "
+                    >
+                        <ArrowPathIcon className="h-4 w-4" />
+                        Refresh
+                    </button>
 
 
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(event) =>
-                                        setSearch(
-                                            event.target.value
-                                        )
-                                    }
-                                    placeholder="Search admins..."
-                                    className="
-                                        grow
-                                    "
-                                />
-
-                            </label>
-
-                        </div>
-
-
-                        {/* =================================================
-                            SEARCH BUTTON
-                        ================================================= */}
-
-                        <button
-                            type="button"
-                            className="
-                                btn
-                                border-[#8BCF00]
-                                text-[#78B300]
-                                hover:bg-[#8BCF00]
-                                hover:text-white
-                            "
-                        >
-
-                            <SearchIcon className="
-                                h-5
-                                w-5
-                            " />
-
-                            Search
-
-                        </button>
-
-
-                        {/* =================================================
-                            CLEAR
-                        ================================================= */}
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                setSearch('')
-                            }
-                            className="
-                                btn
-                                btn-ghost
-                            "
-                        >
-                            Clear
-                        </button>
-
-
-                        <div className="
-                            hidden
-                            h-8
-                            border-l
-                            border-base-300
-                            xl:block
-                        " />
-
-
-                        {/* =================================================
-                            ADD ADMIN
-                            
-                            This does NOT create an arbitrary admin.
-                            It opens the modal where an existing employee
-                            must be selected.
-                        ================================================= */}
-
-                        <button
-                            type="button"
-                            onClick={onCreate}
-                            className="
-                                btn
-                                border-[#8BCF00]
-                                bg-[#8BCF00]
-                                text-white
-                                hover:border-[#6FA800]
-                                hover:bg-[#6FA800]
-                            "
-                        >
-
-                            <PlusIcon className="
-                                h-5
-                                w-5
-                            " />
-
-                            Add Admin
-
-                        </button>
-
-
-                        {/* =================================================
-                            REFRESH
-                        ================================================= */}
-
-                        <button
-                            type="button"
-                            onClick={onRefresh}
-                            className="
-                                btn
-                                border-[#8BCF00]
-                                text-[#78B300]
-                                hover:bg-[#8BCF00]
-                                hover:text-white
-                            "
-                        >
-
-                            <ArrowPathIcon className="
-                                h-5
-                                w-5
-                            " />
-
-                            Refresh
-
-                        </button>
-
-                    </div>
+                    <button
+                        type="button"
+                        onClick={onCreate}
+                        className="
+                            btn
+                            btn-primary
+                            flex-1
+                            sm:flex-none
+                        "
+                    >
+                        <PlusIcon className="h-4 w-4" />
+                        Add Admin
+                    </button>
 
                 </div>
 
@@ -295,213 +191,206 @@ function AdminTable({
 
 
             {/* =====================================================
-                ADMIN TABLE
+                TABLE
             ===================================================== */}
 
-            <div className="
-                card
-                border
-                border-base-300
-                bg-base-100
-                shadow-sm
-            ">
+            <div className="overflow-x-auto">
 
-                <div className="
-                    overflow-x-auto
-                ">
+                <table className="table">
 
-                    <table className="
-                        table
-                    ">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Admin</th>
+                            <th>Contact Info</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Date & Time</th>
+                            <th className="text-right">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
 
-                        <thead>
+
+                    <tbody>
+
+                        {filteredAdmins.length === 0 ? (
 
                             <tr>
 
-                                <th className="
-                                    w-14
-                                    text-center
-                                ">
-                                    #
-                                </th>
-
-
-                                <th>
-                                    Name
-                                </th>
-
-
-                                <th>
-                                    Contact Info
-                                </th>
-
-
-                                <th>
-                                    Status
-                                </th>
-
-
-                                <th>
-                                    Created At
-                                </th>
-
-
-                                <th>
-                                    Updated At
-                                </th>
-
-
-                                <th className="
-                                    text-right
-                                ">
-                                    Actions
-                                </th>
+                                <td
+                                    colSpan={7}
+                                    className="
+                                        py-12
+                                        text-center
+                                        text-base-content/60
+                                    "
+                                >
+                                    {search
+                                        ? 'No admins found matching your search.'
+                                        : 'No admins found.'
+                                    }
+                                </td>
 
                             </tr>
 
-                        </thead>
+                        ) : (
 
+                            filteredAdmins.map(
+                                (admin, index) => {
 
-                        <tbody>
+                                    const dateTime =
+                                        getDateTime(admin)
 
-                            {/* =================================================
-                                EMPTY STATE
-                            ================================================= */}
+                                    const isActive =
+                                        admin.status === 'Active' ||
+                                        admin.is_active === true
 
-                            {filteredAdmins.length === 0 ? (
-
-                                <tr>
-
-                                    <td
-                                        colSpan="7"
-                                        className="
-                                            py-12
-                                            text-center
-                                        "
-                                    >
-
-                                        <p className="
-                                            text-sm
-                                            font-medium
-                                        ">
-                                            No admins found
-                                        </p>
-
-
-                                        <p className="
-                                            mt-1
-                                            text-xs
-                                            text-base-content/50
-                                        ">
-                                            Try changing your search or add an
-                                            existing employee as an admin.
-                                        </p>
-
-                                    </td>
-
-                                </tr>
-
-                            ) : (
-
-                                filteredAdmins.map(
-                                    (admin, index) => (
-
+                                    return (
                                         <tr
-                                            key={admin.id}
+                                            key={
+                                                admin.id ??
+                                                admin.employee_id ??
+                                                index
+                                            }
+                                            className="
+                                                hover:bg-base-200/50
+                                            "
                                         >
 
-                                            {/* =================================================
-                                                INDEX
-                                            ================================================= */}
+                                            {/* # */}
 
-                                            <td className="
-                                                text-center
-                                            ">
-
-                                                <span className="
-                                                    text-sm
-                                                    text-base-content/60
-                                                ">
-                                                    {index + 1}
-                                                </span>
-
+                                            <td className="font-medium">
+                                                {index + 1}
                                             </td>
 
 
-                                            {/* =================================================
-                                                NAME
-                                            ================================================= */}
-
-                                            <td>
-
-                                                <span className="
-                                                    font-semibold
-                                                ">
-                                                    {admin.name}
-                                                </span>
-
-                                            </td>
-
-
-                                            {/* =================================================
-                                                CONTACT
-                                            ================================================= */}
+                                            {/* ADMIN */}
 
                                             <td>
 
                                                 <div className="
-                                                    space-y-0.5
+                                                    flex
+                                                    items-center
+                                                    gap-3
                                                 ">
 
-                                                    <p className="
-                                                        text-sm
+                                                    <div className="
+                                                        flex
+                                                        h-10
+                                                        w-10
+                                                        shrink-0
+                                                        items-center
+                                                        justify-center
+                                                        rounded-full
+                                                        bg-primary/10
+                                                        font-semibold
+                                                        text-primary
                                                     ">
-                                                        {admin.phone ||
-                                                            'N/A'
-                                                        }
-                                                    </p>
+                                                        {admin.name
+                                                            ?.charAt(0)
+                                                            ?.toUpperCase() || 'A'}
+                                                    </div>
 
+                                                    <div>
 
-                                                    <p className="
-                                                        text-xs
-                                                        text-base-content/50
-                                                    ">
-                                                        {admin.email ||
-                                                            'N/A'
-                                                        }
-                                                    </p>
+                                                        <div className="
+                                                            font-semibold
+                                                        ">
+                                                            {admin.name || 'N/A'}
+                                                        </div>
+
+                                                        <div className="
+                                                            text-xs
+                                                            text-base-content/50
+                                                        ">
+                                                            Employee ID:{' '}
+                                                            {admin.employee_id ||
+                                                                admin.employeeId ||
+                                                                'N/A'}
+                                                        </div>
+
+                                                    </div>
 
                                                 </div>
 
                                             </td>
 
 
-                                            {/* =================================================
-                                                STATUS
-                                            ================================================= */}
+                                            {/* CONTACT */}
+
+                                            <td>
+
+                                                <div className="text-sm">
+                                                    {admin.email || 'N/A'}
+                                                </div>
+
+                                                <div className="
+                                                    text-xs
+                                                    text-base-content/60
+                                                ">
+                                                    {admin.phone || 'N/A'}
+                                                </div>
+
+                                            </td>
+
+
+                                            {/* ROLE */}
+
+                                            <td>
+
+                                                <div className="
+                                                    inline-flex
+                                                    items-center
+                                                    gap-2
+                                                    rounded-lg
+                                                    bg-primary/10
+                                                    px-3
+                                                    py-1.5
+                                                    text-sm
+                                                    font-medium
+                                                    text-primary
+                                                ">
+
+                                                    <ShieldCheckIcon
+                                                        className="h-4 w-4"
+                                                    />
+
+                                                    {admin.role ||
+                                                        admin.role_code ||
+                                                        'Admin'}
+
+                                                </div>
+
+                                            </td>
+
+
+                                            {/* STATUS */}
 
                                             <td>
 
                                                 <select
                                                     value={
-                                                        admin.status ||
-                                                        'Active'
+                                                        isActive
+                                                            ? 'Active'
+                                                            : 'Inactive'
                                                     }
-                                                    onChange={(event) =>
+                                                    onChange={(e) =>
                                                         onStatusChange?.(
                                                             admin,
-                                                            event.target.value
+                                                            e.target.value
                                                         )
                                                     }
                                                     className={`
                                                         select
                                                         select-sm
-                                                        min-w-[125px]
-                                                        border
-                                                        font-medium
-                                                        ${getStatusClass(
-                                                            admin.status
-                                                        )}
+                                                        select-bordered
+                                                        ${
+                                                            isActive
+                                                                ? 'text-success'
+                                                                : 'text-error'
+                                                        }
                                                     `}
                                                 >
 
@@ -509,12 +398,8 @@ function AdminTable({
                                                         Active
                                                     </option>
 
-                                                    <option value="Absent">
-                                                        Absent
-                                                    </option>
-
-                                                    <option value="Deactivated">
-                                                        Deactivated
+                                                    <option value="Inactive">
+                                                        Inactive
                                                     </option>
 
                                                 </select>
@@ -522,61 +407,55 @@ function AdminTable({
                                             </td>
 
 
-                                            {/* =================================================
-                                                CREATED
-                                            ================================================= */}
+                                            {/* DATE & TIME */}
 
                                             <td>
 
-                                                <span className="
-                                                    whitespace-nowrap
-                                                    text-sm
+                                                <div className="
+                                                    space-y-1
+                                                    text-xs
                                                 ">
-                                                    {admin.createdAt ||
-                                                        'N/A'
-                                                    }
-                                                </span>
+
+                                                    <div>
+                                                        <span className="
+                                                            font-medium
+                                                            text-base-content/70
+                                                        ">
+                                                            Created:
+                                                        </span>{' '}
+                                                        {dateTime.created}
+                                                    </div>
+
+                                                    <div>
+                                                        <span className="
+                                                            font-medium
+                                                            text-base-content/70
+                                                        ">
+                                                            Updated:
+                                                        </span>{' '}
+                                                        {dateTime.updated}
+                                                    </div>
+
+                                                </div>
 
                                             </td>
 
 
-                                            {/* =================================================
-                                                UPDATED
-                                            ================================================= */}
-
-                                            <td>
-
-                                                <span className="
-                                                    whitespace-nowrap
-                                                    text-sm
-                                                ">
-                                                    {admin.updatedAt ||
-                                                        'N/A'
-                                                    }
-                                                </span>
-
-                                            </td>
-
-
-                                            {/* =================================================
-                                                ACTIONS
-                                            ================================================= */}
+                                            {/* ACTIONS */}
 
                                             <td>
 
                                                 <div className="
                                                     flex
-                                                    items-center
                                                     justify-end
                                                     gap-1
                                                 ">
 
-                                                    {/* =============================================
-                                                        MANAGE PERMISSIONS
-                                                    ============================================= */}
+                                                    {/* PERMISSIONS */}
 
                                                     <button
                                                         type="button"
+                                                        disabled={!isActive}
                                                         onClick={() =>
                                                             onManagePermissions?.(
                                                                 admin
@@ -584,83 +463,55 @@ function AdminTable({
                                                         }
                                                         className="
                                                             btn
+                                                            btn-ghost
                                                             btn-sm
                                                             btn-square
-                                                            btn-ghost
-                                                            hover:bg-[#8BCF00]/10
-                                                            hover:text-[#78B300]
                                                         "
-                                                        title="Manage permissions"
                                                     >
-
-                                                        <ShieldCheckIcon className="
-                                                            h-5
-                                                            w-5
-                                                        " />
-
+                                                        <ShieldCheckIcon
+                                                            className="h-5 w-5"
+                                                        />
                                                     </button>
 
 
-                                                    {/* =============================================
-                                                        EDIT
-                                                        
-                                                        Edit modal only allows
-                                                        status modification.
-                                                    ============================================= */}
+                                                    {/* EDIT */}
 
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            onEdit?.(
-                                                                admin
-                                                            )
+                                                            onEdit?.(admin)
                                                         }
                                                         className="
                                                             btn
+                                                            btn-ghost
                                                             btn-sm
                                                             btn-square
-                                                            btn-ghost
-                                                            hover:bg-[#8BCF00]/10
-                                                            hover:text-[#78B300]
                                                         "
-                                                        title="Edit admin status"
                                                     >
-
-                                                        <PencilIcon className="
-                                                            h-5
-                                                            w-5
-                                                        " />
-
+                                                        <PencilSquareIcon
+                                                            className="h-5 w-5"
+                                                        />
                                                     </button>
 
 
-                                                    {/* =============================================
-                                                        DELETE
-                                                    ============================================= */}
+                                                    {/* DELETE */}
 
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            onDelete?.(
-                                                                admin
-                                                            )
+                                                            onDelete?.(admin)
                                                         }
                                                         className="
                                                             btn
+                                                            btn-ghost
                                                             btn-sm
                                                             btn-square
-                                                            btn-ghost
                                                             text-error
-                                                            hover:bg-error/10
                                                         "
-                                                        title="Delete admin"
                                                     >
-
-                                                        <TrashIcon className="
-                                                            h-5
-                                                            w-5
-                                                        " />
-
+                                                        <TrashIcon
+                                                            className="h-5 w-5"
+                                                        />
                                                     </button>
 
                                                 </div>
@@ -668,24 +519,36 @@ function AdminTable({
                                             </td>
 
                                         </tr>
-
                                     )
-                                )
+                                }
+                            )
 
-                            )}
+                        )}
 
-                        </tbody>
+                    </tbody>
 
-                    </table>
-
-                </div>
+                </table>
 
             </div>
 
+
+            {/* =====================================================
+                FOOTER
+            ===================================================== */}
+
+            <div className="
+                border-t
+                border-base-300
+                px-4
+                py-3
+                text-sm
+                text-base-content/60
+            ">
+                Showing {filteredAdmins.length} of {admins.length} admins
+            </div>
+
         </div>
-
     )
-
 }
 
 

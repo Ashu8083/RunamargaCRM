@@ -14,211 +14,11 @@ import CallHistoryModal from './components/CallHistoryModal'
 import CreateLeadModal from './components/CreateLeadModal'
 import LoanApplicationModal from './components/LoanApplicationModal'
 import ExchangeNumberModal from './components/ExchangeNumberModal'
-
-
-// =============================================================
-// MOCK RM DATA
-// =============================================================
-
-const RM_OPTIONS = [
-    {
-        id: 'RM001',
-        name: 'Aravind Kumar',
-    },
-    {
-        id: 'RM002',
-        name: 'Priya Sharma',
-    },
-    {
-        id: 'RM003',
-        name: 'Suresh Kumar',
-    },
-    {
-        id: 'RM004',
-        name: 'Nayana Rao',
-    },
-    {
-        id: 'RM005',
-        name: 'Manoj Rao',
-    },
-]
-
-
-// =============================================================
-// MOCK ASSIGNMENT DATA
-// =============================================================
-
-const INITIAL_ENTRIES = [
-    {
-        id: 1,
-        phone: '+91 98765 43210',
-        contact: '+91 98765 43210',
-        name: 'Rahul Sharma',
-
-        assignedBy: 'Admin',
-        assignedTo: 'RM001',
-        assignedToName: 'Aravind Kumar',
-
-        assignedDate: '2026-08-25',
-
-        status: 'pending',
-
-        attempts: 3,
-
-        lastCalled: '2026-08-26 04:35 PM',
-
-        callStatus: 'Missed',
-
-        hasApplication: true,
-
-        application: {
-            name: 'Rahul Sharma',
-            rm: 'Aravind Kumar',
-            agent: 'Priya Agent',
-            appliedDate: '2026-08-26',
-            assignedDate: '2026-08-25',
-            callStatus: 'Missed',
-            attempts: 3,
-            lastCalled: '2026-08-26 04:35 PM',
-        },
-    },
-
-    {
-        id: 2,
-        phone: '+91 99887 66554',
-        contact: '+91 99887 66554',
-        name: 'Sneha Reddy',
-
-        assignedBy: 'Admin',
-        assignedTo: 'RM002',
-        assignedToName: 'Priya Sharma',
-
-        assignedDate: '2026-08-24',
-
-        status: 'assigned',
-
-        attempts: 2,
-
-        lastCalled: '2026-08-26 11:20 AM',
-
-        callStatus: 'Missed',
-
-        hasApplication: false,
-
-        application: null,
-    },
-
-    {
-        id: 3,
-        phone: '+91 91234 56789',
-        contact: '+91 91234 56789',
-        name: 'Kiran Kumar',
-
-        assignedBy: 'Admin',
-        assignedTo: 'RM003',
-        assignedToName: 'Suresh Kumar',
-
-        assignedDate: '2026-08-22',
-
-        status: 'pending',
-
-        attempts: 5,
-
-        lastCalled: '2026-08-27 10:05 AM',
-
-        callStatus: 'Missed',
-
-        hasApplication: true,
-
-        application: {
-            name: 'Kiran Kumar',
-            rm: 'Suresh Kumar',
-            agent: 'Arun Agent',
-            appliedDate: '2026-08-27',
-            assignedDate: '2026-08-22',
-            callStatus: 'Missed',
-            attempts: 5,
-            lastCalled: '2026-08-27 10:05 AM',
-        },
-    },
-
-    {
-        id: 4,
-        phone: '+91 93456 78901',
-        contact: '+91 93456 78901',
-        name: 'Meena Joshi',
-
-        assignedBy: 'Admin',
-        assignedTo: 'RM004',
-        assignedToName: 'Nayana Rao',
-
-        assignedDate: '2026-08-20',
-
-        status: 'contacted',
-
-        attempts: 4,
-
-        lastCalled: '2026-08-27 02:10 PM',
-
-        callStatus: 'Missed',
-
-        hasApplication: false,
-
-        application: null,
-    },
-
-    {
-        id: 5,
-        phone: '+91 87654 32109',
-        contact: '+91 87654 32109',
-        name: 'Vikram Singh',
-
-        assignedBy: 'Admin',
-        assignedTo: 'RM005',
-        assignedToName: 'Manoj Rao',
-
-        assignedDate: '2026-08-18',
-
-        status: 'pending',
-
-        attempts: 1,
-
-        lastCalled: '2026-08-25 09:45 AM',
-
-        callStatus: 'Missed',
-
-        hasApplication: false,
-
-        application: null,
-    },
-
-    {
-        id: 6,
-        phone: '+91 90909 80808',
-        contact: '+91 90909 80808',
-        name: 'Anjali Rao',
-
-        assignedBy: 'Admin',
-        assignedTo: '',
-
-        assignedToName: '',
-
-        assignedDate: '',
-
-        status: 'unassigned',
-
-        attempts: 0,
-
-        lastCalled: '',
-
-        callStatus: 'Missed',
-
-        hasApplication: false,
-
-        application: null,
-    },
-]
-
+import {
+    getCallAssignments,
+    getAvailableCallNumbers,
+    createCallAssignment,
+} from './Api'
 
 // =============================================================
 // MOCK CALL HISTORY
@@ -511,28 +311,13 @@ const getDateRange = (value) => {
 }
 
 
-// =============================================================
-// MOCK API
-// =============================================================
-
 const fetchAssignments = async () => {
+    const response = await getCallAssignments()
 
-    return new Promise(
-        (resolve) => {
-
-            setTimeout(
-                () =>
-                    resolve(
-                        INITIAL_ENTRIES
-                    ),
-                400
-            )
-
-        }
-    )
-
+    return response?.success && Array.isArray(response.data)
+        ? response.data
+        : []
 }
-
 
 // =============================================================
 // COMPONENT
@@ -547,7 +332,8 @@ function CallAssignment() {
     const [entries, setEntries] =
         useState([])
 
-
+    const [availableNumbers, setAvailableNumbers] = useState([])
+    const [showAssignModal, setShowAssignModal] = useState(false)
     const [loading, setLoading] =
         useState(true)
 
@@ -592,10 +378,6 @@ function CallAssignment() {
         useState(null)
 
 
-    const [showAssignModal, setShowAssignModal] =
-        useState(false)
-
-
     const [showHistoryModal, setShowHistoryModal] =
         useState(false)
 
@@ -616,6 +398,31 @@ function CallAssignment() {
         useState([])
 
 
+    const openAssignModal = async () => {
+        try {
+            setLoading(true)
+            setError('')
+
+            const response = await getAvailableCallNumbers()
+
+            const numbers =
+                response?.success &&
+                    Array.isArray(response.data)
+                    ? response.data
+                    : []
+
+            setAvailableNumbers(numbers)
+            setShowAssignModal(true)
+        } catch (err) {
+            setError(
+                err?.response?.data?.detail ||
+                err?.message ||
+                'Unable to load available call numbers.'
+            )
+        } finally {
+            setLoading(false)
+        }
+    }
     // =========================================================
     // LOAD DATA
     // =========================================================
@@ -629,15 +436,41 @@ function CallAssignment() {
             setError('')
 
 
-            const response =
-                await fetchAssignments()
+            const response = await fetchAssignments()
 
+            const assignments = Array.isArray(response)
+                ? response
+                : []
 
-            setEntries(
-                Array.isArray(response)
-                    ? response
-                    : []
-            )
+            const normalizedAssignments = assignments.map((assignment) => ({
+                ...assignment,
+
+                phone: assignment.phone_number,
+                contact: assignment.phone_number,
+
+                assignedBy:
+                    assignment.assigned_by_name || '—',
+
+                assignedTo:
+                    assignment.assigned_to_id,
+
+                assignedToName:
+                    assignment.assigned_to_name || '—',
+
+                assignedDate:
+                    assignment.created_at,
+
+                attempts:
+                    assignment.attempts ?? 0,
+
+                lastCalled:
+                    assignment.last_called ?? null,
+
+                callStatus:
+                    assignment.call_status ?? null,
+            }))
+
+            setEntries(normalizedAssignments)
 
         } catch (err) {
 
@@ -782,9 +615,9 @@ function CallAssignment() {
 
                                 return (
                                     date >=
-                                        range.from &&
+                                    range.from &&
                                     date <=
-                                        range.to
+                                    range.to
                                 )
 
                             }
@@ -892,63 +725,51 @@ function CallAssignment() {
     // ASSIGN
     // =========================================================
 
-    const handleAssign = (selectedNumbers, selectedRM) => {
-
-        if (!selectedRM) {
+    const handleAssign = async (
+        selectedNumbers,
+        selectedRM,
+    ) => {
+        if (!selectedRM || !selectedNumbers?.length) {
             return
         }
 
+        try {
+            setLoading(true)
+            setError('')
 
-        setEntries(
-            (previous) =>
-                previous.map(
-                    (entry) => {
-
-                        if (
-                            !selectedNumbers.includes(
-                                entry.id
-                            )
-                        ) {
-                            return entry
-                        }
-
-
-                        const rmData =
-                            RM_OPTIONS.find(
-                                (item) =>
-                                    item.id ===
-                                    selectedRM
-                            )
-
-
-                        return {
-                            ...entry,
-
-                            assignedTo:
-                                selectedRM,
-
-                            assignedToName:
-                                rmData?.name ||
-                                '',
-
-                            assignedDate:
-                                new Date()
-                                    .toISOString()
-                                    .slice(0, 10),
-
-                            status:
-                                'assigned',
-                        }
-
-                    }
+            for (const entryId of selectedNumbers) {
+                const entry = entries.find(
+                    (item) => item.id === entryId
                 )
-        )
 
+                if (!entry) {
+                    continue
+                }
 
-        setShowAssignModal(false)
+                await createCallAssignment({
+                    phoneNumber:
+                        entry.phone_number ||
+                        entry.phone,
 
+                    assignedToId:
+                        Number(selectedRM),
+                })
+            }
+
+            await loadAssignments()
+
+            setShowAssignModal(false)
+
+        } catch (err) {
+            setError(
+                err?.response?.data?.detail ||
+                err?.message ||
+                'Unable to assign call numbers.'
+            )
+        } finally {
+            setLoading(false)
+        }
     }
-
 
     // =========================================================
     // VIEW CALL HISTORY
@@ -1030,7 +851,7 @@ function CallAssignment() {
                 previous.map(
                     (entry) =>
                         entry.id ===
-                        updatedEntry.id
+                            updatedEntry.id
                             ? {
                                 ...entry,
                                 ...updatedEntry,
@@ -1148,7 +969,6 @@ function CallAssignment() {
     return (
 
         <div className="
-            space-y-5
             p-4
             sm:p-6
         ">
@@ -1363,7 +1183,6 @@ function CallAssignment() {
                     <RmDropdown
                         value={rm}
                         onChange={setRM}
-                        options={RM_OPTIONS}
                         className="w-full xl:w-48"
                     />
 
@@ -1409,9 +1228,7 @@ function CallAssignment() {
 
                     <button
                         type="button"
-                        onClick={() =>
-                            setShowAssignModal(true)
-                        }
+                        onClick={openAssignModal}
                         className="
                             inline-flex
                             h-10
@@ -1590,15 +1407,9 @@ function CallAssignment() {
                 open={
                     showAssignModal
                 }
-                entries={
-                    entries.filter(
-                        (entry) =>
-                            !entry.assignedTo
-                    )
-                }
-                rms={
-                    RM_OPTIONS
-                }
+
+                entries={availableNumbers}
+
                 onClose={() =>
                     setShowAssignModal(
                         false

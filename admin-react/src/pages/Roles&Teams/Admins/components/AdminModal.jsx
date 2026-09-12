@@ -16,41 +16,18 @@ function AdminModal({
     onSubmit,
 }) {
 
-    // =========================================================
-    // FORM STATE
-    // =========================================================
+    const isEditMode = Boolean(admin)
 
     const [formData, setFormData] = useState({
         employeeId: '',
         status: 'Active',
     })
 
-
     const [error, setError] = useState('')
 
 
     // =========================================================
-    // MODE
-    // =========================================================
-
-    const isEditMode =
-        Boolean(admin)
-
-
-    // =========================================================
-    // SELECTED EMPLOYEE
-    // =========================================================
-
-    const selectedEmployee =
-        employees.find(
-            (employee) =>
-                String(employee.id) ===
-                String(formData.employeeId)
-        )
-
-
-    // =========================================================
-    // INITIALIZE FORM
+    // INITIALIZE
     // =========================================================
 
     useEffect(() => {
@@ -59,49 +36,31 @@ function AdminModal({
             return
         }
 
-
-        // -----------------------------------------------------
-        // EDIT EXISTING ADMIN
-        // -----------------------------------------------------
-
-        if (admin) {
-
-            setFormData({
-
-                employeeId:
-                    admin.employeeId !== null &&
-                    admin.employeeId !== undefined
-                        ? String(admin.employeeId)
-                        : '',
-
-                status:
-                    admin.status ||
-                    'Active',
-
-            })
-
-        }
-
-        // -----------------------------------------------------
-        // CREATE ADMIN
-        // -----------------------------------------------------
-
-        else {
-
-            setFormData({
-
-                employeeId: '',
-
-                status: 'Active',
-
-            })
-
-        }
-
+        setFormData({
+            employeeId:
+                admin?.employee_id ??
+                admin?.employeeId ??
+                '',
+            status:
+                admin?.status === 'Inactive'
+                    ? 'Inactive'
+                    : 'Active',
+        })
 
         setError('')
 
     }, [open, admin])
+
+
+    // =========================================================
+    // SELECTED EMPLOYEE
+    // =========================================================
+
+    const selectedEmployee = employees.find(
+        (employee) =>
+            String(employee.id) ===
+            String(formData.employeeId)
+    )
 
 
     // =========================================================
@@ -111,17 +70,11 @@ function AdminModal({
     const handleEmployeeChange = (value) => {
 
         setFormData((previous) => ({
-
             ...previous,
-
-            employeeId:
-                value,
-
+            employeeId: value,
         }))
 
-
         setError('')
-
     }
 
 
@@ -132,17 +85,11 @@ function AdminModal({
     const handleStatusChange = (event) => {
 
         setFormData((previous) => ({
-
             ...previous,
-
-            status:
-                event.target.value,
-
+            status: event.target.value,
         }))
 
-
         setError('')
-
     }
 
 
@@ -154,36 +101,15 @@ function AdminModal({
 
         event.preventDefault()
 
-
-        // -----------------------------------------------------
-        // CREATE VALIDATION
-        // -----------------------------------------------------
-
         if (!isEditMode && !formData.employeeId) {
-
-            setError(
-                'Please select an employee.'
-            )
-
+            setError('Please select an employee.')
             return
-
         }
 
-
-        // -----------------------------------------------------
-        // EDIT VALIDATION
-        // -----------------------------------------------------
-
-        if (isEditMode && !admin) {
-
-            setError(
-                'Unable to update admin.'
-            )
-
+        if (isEditMode && !admin?.id) {
+            setError('Unable to update admin.')
             return
-
         }
-
 
         // -----------------------------------------------------
         // CREATE
@@ -192,63 +118,33 @@ function AdminModal({
         if (!isEditMode) {
 
             if (!selectedEmployee) {
-
                 setError(
                     'Selected employee could not be found.'
                 )
-
                 return
-
             }
 
-
             onSubmit?.({
-
-                employeeId:
-                    selectedEmployee.id,
-
-                name:
-                    selectedEmployee.name ||
-                    '',
-
-                phone:
-                    selectedEmployee.phone ||
-                    '',
-
-                email:
-                    selectedEmployee.email ||
-                    '',
-
-                status:
-                    formData.status,
-
+                employeeId: selectedEmployee.id,
+                employee_id: selectedEmployee.id,
+                status: formData.status,
             })
 
             return
-
         }
-
 
         // -----------------------------------------------------
         // EDIT
         //
-        // Only status is submitted.
-        // Employee details cannot be changed.
+        // Employee and GLOBAL role are fixed.
+        // Status is the only value submitted.
         // -----------------------------------------------------
 
         onSubmit?.({
-
-            status:
-                formData.status,
-
+            status: formData.status,
         })
-
     }
 
-
-    // =========================================================
-    // CLOSED
-    // =========================================================
 
     if (!open) {
         return null
@@ -256,25 +152,20 @@ function AdminModal({
 
 
     // =========================================================
-    // DISPLAY EMPLOYEE DATA
+    // DISPLAY DATA
     // =========================================================
 
-    const displayName =
-        isEditMode
-            ? admin?.name || 'N/A'
-            : selectedEmployee?.name || 'Select an employee'
+    const displayName = isEditMode
+        ? admin?.name || 'N/A'
+        : selectedEmployee?.name || 'Select an employee'
 
+    const displayPhone = isEditMode
+        ? admin?.phone || 'N/A'
+        : selectedEmployee?.phone || 'N/A'
 
-    const displayPhone =
-        isEditMode
-            ? admin?.phone || 'N/A'
-            : selectedEmployee?.phone || 'N/A'
-
-
-    const displayEmail =
-        isEditMode
-            ? admin?.email || 'N/A'
-            : selectedEmployee?.email || 'N/A'
+    const displayEmail = isEditMode
+        ? admin?.email || 'N/A'
+        : selectedEmployee?.email || 'N/A'
 
 
     // =========================================================
@@ -282,12 +173,7 @@ function AdminModal({
     // =========================================================
 
     return (
-
-        <div className="
-            fixed
-            inset-0
-            z-[999]
-        ">
+        <div className="fixed inset-0 z-[999]">
 
             {/* =================================================
                 BACKDROP
@@ -353,8 +239,6 @@ function AdminModal({
                         gap-3
                     ">
 
-                        {/* Icon */}
-
                         <div className="
                             flex
                             h-9
@@ -375,11 +259,7 @@ function AdminModal({
                         </div>
 
 
-                        {/* Title */}
-
-                        <div className="
-                            min-w-0
-                        ">
+                        <div className="min-w-0">
 
                             <h3 className="
                                 text-lg
@@ -391,7 +271,6 @@ function AdminModal({
                                     : 'Create Admin'
                                 }
                             </h3>
-
 
                             <p className="
                                 mt-1
@@ -409,8 +288,6 @@ function AdminModal({
                     </div>
 
 
-                    {/* Close */}
-
                     <button
                         type="button"
                         onClick={onClose}
@@ -424,12 +301,7 @@ function AdminModal({
                         "
                         aria-label="Close"
                     >
-
-                        <XMarkIcon className="
-                            h-5
-                            w-5
-                        " />
-
+                        <XMarkIcon className="h-5 w-5" />
                     </button>
 
                 </div>
@@ -449,10 +321,6 @@ function AdminModal({
                     "
                 >
 
-                    {/* =================================================
-                        CONTENT
-                    ================================================= */}
-
                     <div className="
                         min-h-0
                         flex-1
@@ -467,7 +335,6 @@ function AdminModal({
                         ================================================= */}
 
                         {!isEditMode && (
-
                             <div>
 
                                 <label className="
@@ -475,7 +342,6 @@ function AdminModal({
                                     px-0
                                     pb-2
                                 ">
-
                                     <span className="
                                         label-text
                                         text-sm
@@ -483,28 +349,144 @@ function AdminModal({
                                     ">
                                         Employee
                                     </span>
-
                                 </label>
 
 
                                 <EmployeeDropdown
-                                    value={
-                                        formData.employeeId
-                                    }
+                                    value={formData.employeeId}
                                     onChange={
                                         handleEmployeeChange
                                     }
-                                    employees={
-                                        employees
-                                    }
+                                    employees={employees}
                                     allLabel="Select Employee"
                                     placeholder="Select Employee"
                                     searchPlaceholder="Search employee"
                                 />
 
                             </div>
-
                         )}
+
+
+                        {/* =================================================
+                            EDIT EMPLOYEE
+                        ================================================= */}
+
+                        {isEditMode && (
+                            <div>
+
+                                <label className="
+                                    label
+                                    px-0
+                                    pb-2
+                                ">
+                                    <span className="
+                                        label-text
+                                        text-sm
+                                        font-medium
+                                    ">
+                                        Employee
+                                    </span>
+                                </label>
+
+
+                                <div className="
+                                    rounded-lg
+                                    border
+                                    border-base-300
+                                    bg-base-200/40
+                                    px-4
+                                    py-3
+                                ">
+
+                                    <p className="
+                                        text-sm
+                                        font-medium
+                                    ">
+                                        {displayName}
+                                    </p>
+
+                                    <p className="
+                                        mt-1
+                                        text-xs
+                                        text-base-content/50
+                                    ">
+                                        Employee cannot be changed.
+                                    </p>
+
+                                </div>
+
+                            </div>
+                        )}
+
+
+                        {/* =================================================
+                            ROLE
+                        ================================================= */}
+
+                        <div>
+
+                            <label className="
+                                label
+                                px-0
+                                pb-2
+                            ">
+                                <span className="
+                                    label-text
+                                    text-sm
+                                    font-medium
+                                ">
+                                    Role
+                                </span>
+                            </label>
+
+
+                            <div className="
+                                flex
+                                items-center
+                                justify-between
+                                rounded-lg
+                                border
+                                border-base-300
+                                bg-base-200/40
+                                px-4
+                                py-3
+                            ">
+
+                                <div>
+
+                                    <p className="
+                                        text-sm
+                                        font-medium
+                                    ">
+                                        Admin
+                                    </p>
+
+                                    <p className="
+                                        mt-0.5
+                                        text-xs
+                                        text-base-content/50
+                                    ">
+                                        GLOBAL
+                                    </p>
+
+                                </div>
+
+
+                                <span className="
+                                    rounded-full
+                                    bg-[#8BCF00]/10
+                                    px-2.5
+                                    py-1
+                                    text-xs
+                                    font-medium
+                                    text-[#78B300]
+                                ">
+                                    Fixed
+                                </span>
+
+                            </div>
+
+                        </div>
 
 
                         {/* =================================================
@@ -529,7 +511,6 @@ function AdminModal({
 
 
                                 {!isEditMode && selectedEmployee && (
-
                                     <span className="
                                         rounded-full
                                         bg-[#8BCF00]/10
@@ -541,7 +522,6 @@ function AdminModal({
                                     ">
                                         Selected
                                     </span>
-
                                 )}
 
                             </div>
@@ -554,9 +534,7 @@ function AdminModal({
                                 border-base-300
                             ">
 
-                                {/* =================================================
-                                    NAME
-                                ================================================= */}
+                                {/* NAME */}
 
                                 <div className="
                                     border-b
@@ -572,7 +550,6 @@ function AdminModal({
                                         Name
                                     </p>
 
-
                                     <p className="
                                         mt-1
                                         text-sm
@@ -584,9 +561,7 @@ function AdminModal({
                                 </div>
 
 
-                                {/* =================================================
-                                    PHONE
-                                ================================================= */}
+                                {/* PHONE */}
 
                                 <div className="
                                     border-b
@@ -602,7 +577,6 @@ function AdminModal({
                                         Phone
                                     </p>
 
-
                                     <p className="
                                         mt-1
                                         text-sm
@@ -614,14 +588,9 @@ function AdminModal({
                                 </div>
 
 
-                                {/* =================================================
-                                    EMAIL
-                                ================================================= */}
+                                {/* EMAIL */}
 
-                                <div className="
-                                    px-4
-                                    py-3
-                                ">
+                                <div className="px-4 py-3">
 
                                     <p className="
                                         text-xs
@@ -629,7 +598,6 @@ function AdminModal({
                                     ">
                                         Email
                                     </p>
-
 
                                     <p className="
                                         mt-1
@@ -658,7 +626,6 @@ function AdminModal({
                                 px-0
                                 pb-2
                             ">
-
                                 <span className="
                                     label-text
                                     text-sm
@@ -666,18 +633,13 @@ function AdminModal({
                                 ">
                                     Status
                                 </span>
-
                             </label>
 
 
                             <select
                                 name="status"
-                                value={
-                                    formData.status
-                                }
-                                onChange={
-                                    handleStatusChange
-                                }
+                                value={formData.status}
+                                onChange={handleStatusChange}
                                 className="
                                     select
                                     select-bordered
@@ -691,12 +653,8 @@ function AdminModal({
                                     Active
                                 </option>
 
-                                <option value="Absent">
-                                    Absent
-                                </option>
-
-                                <option value="Deactivated">
-                                    Deactivated
+                                <option value="Inactive">
+                                    Inactive
                                 </option>
 
                             </select>
@@ -705,11 +663,10 @@ function AdminModal({
 
 
                         {/* =================================================
-                            EDIT MODE INFORMATION
+                            EDIT INFORMATION
                         ================================================= */}
 
                         {isEditMode && (
-
                             <div className="
                                 rounded-lg
                                 border
@@ -723,13 +680,11 @@ function AdminModal({
                                     text-xs
                                     text-base-content/60
                                 ">
-                                    Employee details cannot be changed from
-                                    the admin screen. Only the account status
-                                    can be updated.
+                                    Employee and Admin role cannot be changed.
+                                    Only the account status can be updated.
                                 </p>
 
                             </div>
-
                         )}
 
 
@@ -738,7 +693,6 @@ function AdminModal({
                         ================================================= */}
 
                         {error && (
-
                             <div className="
                                 rounded-lg
                                 border
@@ -756,7 +710,6 @@ function AdminModal({
                                 </p>
 
                             </div>
-
                         )}
 
                     </div>
@@ -804,7 +757,7 @@ function AdminModal({
                             "
                         >
                             {isEditMode
-                                ? 'Update Status'
+                                ? 'Update Admin'
                                 : 'Create Admin'
                             }
                         </button>
@@ -816,9 +769,7 @@ function AdminModal({
             </div>
 
         </div>
-
     )
-
 }
 
 

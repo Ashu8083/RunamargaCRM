@@ -1,601 +1,727 @@
-// admin-react/src/pages/EmployeeManagement/Attendance/components/TodayAttendance.jsx
+import React, {
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 
-import { useMemo, useState } from 'react'
+import {
+    createPortal,
+} from 'react-dom'
 
-import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
-import ArrowDownTrayIcon from '@heroicons/react/24/outline/ArrowDownTrayIcon'
 import PrinterIcon from '@heroicons/react/24/outline/PrinterIcon'
+import ArrowDownTrayIcon from '@heroicons/react/24/outline/ArrowDownTrayIcon'
+import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 
+
+// ============================================================================
+// DATE HELPERS
+// ============================================================================
+
+const getTodayDate = () => {
+
+    const today =
+        new Date()
+
+
+    const year =
+        today.getFullYear()
+
+
+    const month =
+        String(
+            today.getMonth() + 1
+        ).padStart(
+            2,
+            '0'
+        )
+
+
+    const day =
+        String(
+            today.getDate()
+        ).padStart(
+            2,
+            '0'
+        )
+
+
+    return `${year}-${month}-${day}`
+
+}
+
+
+// ============================================================================
+// FORMAT DISPLAY DATE
+// ============================================================================
+
+const formatDisplayDate = (
+    value
+) => {
+
+    if (!value) {
+        return '—'
+    }
+
+
+    const date =
+        new Date(
+            `${value}T00:00:00`
+        )
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return value
+    }
+
+
+    return date.toLocaleDateString(
+        'en-IN',
+        {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        }
+    )
+
+}
+
+
+// ============================================================================
+// FORMAT TIME
+// ============================================================================
+
+const formatTime = (
+    value
+) => {
+
+    if (!value) {
+        return '—'
+    }
+
+
+    // ------------------------------------------------------------
+    // Already formatted value such as:
+    //
+    // 09:30 AM
+    // 06:15 PM
+    // ------------------------------------------------------------
+
+    if (
+        typeof value === 'string' &&
+        /am|pm/i.test(
+            value
+        )
+    ) {
+        return value
+    }
+
+
+    // ------------------------------------------------------------
+    // PostgreSQL / API timestamp:
+    //
+    // 2026-09-11T09:30:00
+    // ------------------------------------------------------------
+
+    const date =
+        new Date(
+            value
+        )
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return value
+    }
+
+
+    return date.toLocaleTimeString(
+        'en-IN',
+        {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+        }
+    )
+
+}
+
+
+// ============================================================================
+// NORMALIZE STATUS
+// ============================================================================
+
+const normalizeStatus = (
+    entry
+) => {
+
+    const rawStatus =
+        String(
+            entry?.status || ''
+        )
+            .trim()
+            .toLowerCase()
+
+
+    if (
+        entry?.punchIn ||
+        entry?.checkIn?.time ||
+        rawStatus === 'present'
+    ) {
+        return 'Present'
+    }
+
+
+    return 'Absent'
+
+}
+
+
+// ============================================================================
+// STATUS CLASS
+// ============================================================================
+
+const getStatusClass = (
+    status
+) => {
+
+    if (
+        status === 'Present'
+    ) {
+
+        return [
+            'border',
+            'border-[#8BCF00]/40',
+            'bg-[#8BCF00]/10',
+            'text-[#6FA800]',
+        ].join(' ')
+
+    }
+
+
+    return [
+        'border',
+        'border-red-300',
+        'bg-red-50',
+        'text-red-600',
+    ].join(' ')
+
+}
+
+
+// ============================================================================
+// TIME CELL
+// ============================================================================
+
+const TimeCell = ({
+    value,
+}) => {
+
+    return (
+
+        <span className="
+            whitespace-nowrap
+            text-sm
+            font-medium
+            text-base-content
+        ">
+            {
+                formatTime(
+                    value
+                )
+            }
+        </span>
+
+    )
+
+}
+
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 function TodayAttendance({
     open = false,
     entries = [],
+    loading = false,
+    error = null,
     onClose,
+    onDateChange,
 }) {
 
-    // =========================================================
+    // ========================================================================
     // SELECTED DATE
-    // =========================================================
+    // ========================================================================
 
-    const getDefaultDate = () => {
-
-        if (!Array.isArray(entries) || !entries.length) {
-            return new Date()
-                .toISOString()
-                .slice(0, 10)
-        }
-
-        const dates = entries
-            .map((entry) => entry?.date)
-            .filter(Boolean)
-            .sort()
-
-        return dates[dates.length - 1] ||
-            new Date()
-                .toISOString()
-                .slice(0, 10)
-
-    }
-
-
-    const [selectedDate, setSelectedDate] =
-        useState(getDefaultDate)
-
-
-    // =========================================================
-    // LATE EMPLOYEES
-    // =========================================================
-
-    const [lateEmployees, setLateEmployees] =
-        useState([])
-
-
-    // =========================================================
-    // TOGGLE LATE
-    // =========================================================
-
-    const handleToggleLate = (rowId) => {
-
-        setLateEmployees((previous) => {
-
-            if (previous.includes(rowId)) {
-
-                return previous.filter(
-                    (id) => id !== rowId
-                )
-
-            }
-
-            return [
-                ...previous,
-                rowId,
-            ]
-
-        })
-
-    }
-
-
-    // =========================================================
-    // ATTENDANCE ROWS
-    // =========================================================
-
-    const attendanceRows = useMemo(() => {
-
-        if (!Array.isArray(entries)) {
-            return []
-        }
-
-        return entries
-            .filter(
-                (entry) =>
-                    !selectedDate ||
-                    entry?.date === selectedDate
-            )
-            .map((entry, index) => ({
-                ...entry,
-
-                rowId:
-                    entry.id ??
-                    `${entry.employeeId}-${index}`,
-
-                punchIn:
-                    entry.checkIn?.time ||
-                    entry.punchIn ||
-                    '—',
-            }))
-
-    }, [
-        entries,
+    const [
         selectedDate,
-    ])
+        setSelectedDate,
+    ] = useState(
+        getTodayDate()
+    )
 
 
-    // =========================================================
-    // DISPLAY DATE
-    // =========================================================
+    // ========================================================================
+    // SELECTED IMAGE
+    // ========================================================================
 
-    const displayDate = useMemo(() => {
-
-        if (!selectedDate) {
-            return '—'
-        }
-
-        const date =
-            new Date(
-                `${selectedDate}T00:00:00`
-            )
-
-        if (Number.isNaN(date.getTime())) {
-            return selectedDate
-        }
-
-        return date.toLocaleDateString(
-            'en-IN',
-            {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-            }
-        )
-
-    }, [
-        selectedDate,
-    ])
+    const [
+        selectedImage,
+        setSelectedImage,
+    ] = useState(null)
 
 
-    // =========================================================
-    // DOWNLOAD IMAGE
-    // =========================================================
+    // ========================================================================
+    // RESET TO TODAY WHEN MODAL OPENS
+    // ========================================================================
 
-    const handleDownloadImage = () => {
+    useEffect(() => {
 
-        const width = 1000
-
-        const rowHeight = 60
-
-        const headerHeight = 115
-
-        const tableHeaderHeight = 48
-
-        const footerHeight = 55
-
-        const rowsHeight =
-            Math.max(
-                attendanceRows.length,
-                1
-            ) *
-            rowHeight
-
-        const height =
-            headerHeight +
-            tableHeaderHeight +
-            rowsHeight +
-            footerHeight
-
-        const scale = 2
-
-
-        const canvas =
-            document.createElement(
-                'canvas'
-            )
-
-        canvas.width =
-            width * scale
-
-        canvas.height =
-            height * scale
-
-
-        const context =
-            canvas.getContext('2d')
-
-        if (!context) {
+        if (!open) {
             return
         }
 
 
-        context.scale(
-            scale,
-            scale
+        const today =
+            getTodayDate()
+
+
+        setSelectedDate(
+            today
         )
 
+    }, [
+        open,
+    ])
 
-        // -------------------------------------------------------
-        // BACKGROUND
-        // -------------------------------------------------------
 
-        context.fillStyle =
-            '#ffffff'
+    // ========================================================================
+    // CLOSE IMAGE
+    // ========================================================================
 
-        context.fillRect(
-            0,
-            0,
-            width,
-            height
+    const closeImage = () => {
+
+        setSelectedImage(
+            null
         )
-
-
-        // -------------------------------------------------------
-        // HEADER
-        // -------------------------------------------------------
-
-        context.fillStyle =
-            '#222222'
-
-        context.font =
-            '600 22px Arial'
-
-        context.fillText(
-            "Today's Attendance",
-            35,
-            35
-        )
-
-
-        context.fillStyle =
-            '#666666'
-
-        context.font =
-            '13px Arial'
-
-        context.fillText(
-            displayDate,
-            35,
-            60
-        )
-
-
-        context.fillStyle =
-            '#888888'
-
-        context.font =
-            '11px Arial'
-
-        context.fillText(
-            'Runamarga Employee Management',
-            35,
-            82
-        )
-
-
-        // -------------------------------------------------------
-        // TABLE HEADER
-        // -------------------------------------------------------
-
-        const tableTop =
-            headerHeight
-
-
-        context.fillStyle =
-            '#f3f3f3'
-
-        context.fillRect(
-            25,
-            tableTop,
-            width - 50,
-            tableHeaderHeight
-        )
-
-
-        context.fillStyle =
-            '#555555'
-
-        context.font =
-            '600 11px Arial'
-
-
-        context.fillText(
-            'Employee',
-            45,
-            tableTop + 30
-        )
-
-
-        context.fillText(
-            'Employee ID',
-            350,
-            tableTop + 30
-        )
-
-
-        context.fillText(
-            'Punch In',
-            520,
-            tableTop + 30
-        )
-
-
-        context.fillText(
-            'Status',
-            670,
-            tableTop + 30
-        )
-
-
-        context.fillText(
-            'Late',
-            850,
-            tableTop + 30
-        )
-
-
-        // -------------------------------------------------------
-        // EMPTY STATE
-        // -------------------------------------------------------
-
-        if (!attendanceRows.length) {
-
-            const y =
-                tableTop +
-                tableHeaderHeight
-
-
-            context.strokeStyle =
-                '#e5e5e5'
-
-            context.strokeRect(
-                25,
-                y,
-                width - 50,
-                rowHeight
-            )
-
-
-            context.fillStyle =
-                '#888888'
-
-            context.font =
-                '12px Arial'
-
-            context.fillText(
-                'No attendance records available for this date.',
-                45,
-                y + 36
-            )
-
-        }
-
-
-        // -------------------------------------------------------
-        // ROWS
-        // -------------------------------------------------------
-
-        attendanceRows.forEach(
-            (entry, index) => {
-
-                const y =
-                    tableTop +
-                    tableHeaderHeight +
-                    index *
-                    rowHeight
-
-
-                const isLate =
-                    lateEmployees.includes(
-                        entry.rowId
-                    )
-
-
-                // Row background
-
-                if (isLate) {
-
-                    context.fillStyle =
-                        '#fff7ed'
-
-                    context.fillRect(
-                        25,
-                        y,
-                        width - 50,
-                        rowHeight
-                    )
-
-                }
-
-
-                // Row border
-
-                context.strokeStyle =
-                    '#e5e5e5'
-
-                context.beginPath()
-
-                context.moveTo(
-                    25,
-                    y
-                )
-
-                context.lineTo(
-                    width - 25,
-                    y
-                )
-
-                context.stroke()
-
-
-                // Employee
-
-                context.fillStyle =
-                    '#333333'
-
-                context.font =
-                    '600 11px Arial'
-
-                context.fillText(
-                    entry.name ||
-                    'Unknown',
-                    45,
-                    y + 25
-                )
-
-
-                if (entry.email) {
-
-                    context.fillStyle =
-                        '#888888'
-
-                    context.font =
-                        '9px Arial'
-
-                    context.fillText(
-                        entry.email,
-                        45,
-                        y + 42
-                    )
-
-                }
-
-
-                // Employee ID
-
-                context.fillStyle =
-                    '#555555'
-
-                context.font =
-                    '11px Arial'
-
-                context.fillText(
-                    entry.employeeId ||
-                    '—',
-                    350,
-                    y + 32
-                )
-
-
-                // Punch In
-
-                context.fillStyle =
-                    '#333333'
-
-                context.fillText(
-                    entry.punchIn,
-                    520,
-                    y + 32
-                )
-
-
-                // Status
-
-                const status =
-                    String(
-                        entry.status ||
-                        ''
-                    ).toLowerCase()
-
-
-                const statusText =
-                    status === 'wfh'
-                        ? 'WFH'
-                        : status === 'late'
-                            ? 'Late'
-                            : status === 'absent'
-                                ? 'Absent'
-                                : 'Present'
-
-
-                context.fillStyle =
-                    status === 'absent'
-                        ? '#dc2626'
-                        : status === 'wfh'
-                            ? '#2563eb'
-                            : status === 'late'
-                                ? '#d97706'
-                                : '#6FA800'
-
-
-                context.font =
-                    '600 11px Arial'
-
-                context.fillText(
-                    statusText,
-                    670,
-                    y + 32
-                )
-
-
-                // Late
-
-                context.fillStyle =
-                    isLate
-                        ? '#d97706'
-                        : '#777777'
-
-                context.fillText(
-                    isLate
-                        ? 'YES'
-                        : 'NO',
-                    850,
-                    y + 32
-                )
-
-            }
-        )
-
-
-        // -------------------------------------------------------
-        // FOOTER
-        // -------------------------------------------------------
-
-        const footerY =
-            tableTop +
-            tableHeaderHeight +
-            Math.max(
-                attendanceRows.length,
-                1
-            ) *
-            rowHeight +
-            30
-
-
-        context.fillStyle =
-            '#777777'
-
-        context.font =
-            '10px Arial'
-
-        context.fillText(
-            `Generated: ${displayDate}`,
-            35,
-            footerY
-        )
-
-
-        context.fillText(
-            'Runamarga',
-            width - 100,
-            footerY
-        )
-
-
-        // -------------------------------------------------------
-        // DOWNLOAD
-        // -------------------------------------------------------
-
-        const link =
-            document.createElement('a')
-
-
-        link.download =
-            `attendance-${selectedDate}.png`
-
-
-        link.href =
-            canvas.toDataURL(
-                'image/png'
-            )
-
-
-        link.click()
 
     }
 
 
-    // =========================================================
-    // PRINT / PDF
-    // =========================================================
+    // ========================================================================
+    // ESCAPE KEY
+    // ========================================================================
+
+    useEffect(() => {
+
+        if (!open) {
+            return undefined
+        }
+
+
+        const handleKeyDown = (
+            event
+        ) => {
+
+            if (
+                event.key ===
+                'Escape'
+            ) {
+
+                if (
+                    selectedImage
+                ) {
+
+                    closeImage()
+
+                    return
+
+                }
+
+
+                if (
+                    typeof onClose ===
+                    'function'
+                ) {
+
+                    onClose()
+
+                }
+
+            }
+
+        }
+
+
+        document.addEventListener(
+            'keydown',
+            handleKeyDown
+        )
+
+
+        return () => {
+
+            document.removeEventListener(
+                'keydown',
+                handleKeyDown
+            )
+
+        }
+
+    }, [
+        open,
+        selectedImage,
+        onClose,
+    ])
+
+
+    // ========================================================================
+    // NORMALIZE ENTRIES
+    // ========================================================================
+
+    const normalizedEntries =
+        useMemo(() => {
+
+            if (
+                !Array.isArray(
+                    entries
+                )
+            ) {
+
+                return []
+
+            }
+
+
+            return entries.map(
+                (
+                    entry
+                ) => {
+
+                    const punchIn =
+                        entry?.punchIn ??
+                        entry?.punch_in ??
+                        entry?.checkIn?.time ??
+                        null
+
+
+                    const lunchOut =
+                        entry?.lunchOut ??
+                        entry?.lunch_out ??
+                        null
+
+
+                    const lunchIn =
+                        entry?.lunchIn ??
+                        entry?.lunch_in ??
+                        null
+
+
+                    const punchOut =
+                        entry?.punchOut ??
+                        entry?.punch_out ??
+                        entry?.checkOut?.time ??
+                        null
+
+
+                    return {
+
+                        ...entry,
+
+                        id:
+                            entry?.id ??
+                            null,
+
+                        employeeId:
+                            entry?.employeeId ??
+                            entry?.employee_id ??
+                            null,
+
+                        name:
+                            entry?.name ||
+                            'N/A',
+
+                        email:
+                            entry?.email ||
+                            null,
+
+                        date:
+                            entry?.date ||
+                            '',
+
+                        punchIn,
+
+                        lunchOut,
+
+                        lunchIn,
+
+                        punchOut,
+
+                        displayStatus:
+                            normalizeStatus(
+                                {
+                                    ...entry,
+                                    punchIn,
+                                }
+                            ),
+
+                    }
+
+                }
+            )
+
+        }, [
+            entries,
+        ])
+
+
+    // ========================================================================
+    // DISPLAYED ENTRIES
+    // ========================================================================
+    //
+    // The parent already requests the selected date from the backend.
+    //
+    // We still keep this date check as a safety guard so that stale data from
+    // a previous request is never displayed under the new date.
+    //
+    // ========================================================================
+
+    const displayedEntries =
+        useMemo(() => {
+
+            if (
+                !selectedDate
+            ) {
+
+                return normalizedEntries
+
+            }
+
+
+            return normalizedEntries.filter(
+                (
+                    entry
+                ) =>
+                    !entry.date ||
+                    entry.date ===
+                    selectedDate
+            )
+
+        }, [
+            normalizedEntries,
+            selectedDate,
+        ])
+
+
+    // ========================================================================
+    // SUMMARY
+    // ========================================================================
+
+    const summary =
+        useMemo(() => {
+
+            let present = 0
+
+            let absent = 0
+
+
+            displayedEntries.forEach(
+                (
+                    entry
+                ) => {
+
+                    if (
+                        entry.displayStatus ===
+                        'Present'
+                    ) {
+
+                        present += 1
+
+                    } else {
+
+                        absent += 1
+
+                    }
+
+                }
+            )
+
+
+            return {
+
+                present,
+
+                absent,
+
+                total:
+                    displayedEntries.length,
+
+            }
+
+        }, [
+            displayedEntries,
+        ])
+
+
+    // ========================================================================
+    // TITLE
+    // ========================================================================
+
+    const today =
+        getTodayDate()
+
+
+    const isToday =
+        selectedDate ===
+        today
+
+
+    const modalTitle =
+        isToday
+            ? "Today's Attendance"
+            : `Attendance — ${formatDisplayDate(
+                selectedDate
+            )}`
+
+
+    // ========================================================================
+    // DATE CHANGE
+    // ========================================================================
+
+    const handleDateChange = (
+        event
+    ) => {
+
+        const value =
+            event.target.value
+
+
+        if (!value) {
+            return
+        }
+
+
+        setSelectedDate(
+            value
+        )
+
+
+        if (
+            typeof onDateChange ===
+            'function'
+        ) {
+
+            onDateChange(
+                value
+            )
+
+        }
+
+    }
+
+
+    // ========================================================================
+    // DOWNLOAD IMAGE
+    // ========================================================================
+
+    const downloadImage = async (
+        imageUrl,
+        employeeName
+    ) => {
+
+        if (!imageUrl) {
+            return
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    imageUrl
+                )
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    'Unable to download image.'
+                )
+
+            }
+
+
+            const blob =
+                await response.blob()
+
+
+            const objectUrl =
+                window.URL.createObjectURL(
+                    blob
+                )
+
+
+            const link =
+                document.createElement(
+                    'a'
+                )
+
+
+            link.href =
+                objectUrl
+
+
+            link.download =
+                `${employeeName || 'employee'}-profile.jpg`
+
+
+            document.body.appendChild(
+                link
+            )
+
+
+            link.click()
+
+
+            link.remove()
+
+
+            window.URL.revokeObjectURL(
+                objectUrl
+            )
+
+        } catch (
+            downloadError
+        ) {
+
+            console.error(
+                'Image download failed:',
+                downloadError
+            )
+
+
+            window.open(
+                imageUrl,
+                '_blank',
+                'noopener,noreferrer'
+            )
+
+        }
+
+    }
+
+
+    // ========================================================================
+    // PRINT
+    // ========================================================================
 
     const handlePrint = () => {
 
@@ -603,95 +729,66 @@ function TodayAttendance({
             window.open(
                 '',
                 '_blank',
-                'width=1000,height=800'
+                'width=1200,height=900'
             )
 
 
         if (!printWindow) {
 
-            window.print()
+            window.alert(
+                'Please allow pop-ups for printing attendance.'
+            )
 
             return
 
         }
 
 
-        const rowsHtml =
-            attendanceRows
+        const tableRows =
+            displayedEntries
                 .map(
-                    (entry) => {
-
-                        const isLate =
-                            lateEmployees.includes(
-                                entry.rowId
-                            )
-
+                    (
+                        entry
+                    ) => {
 
                         const status =
-                            String(
-                                entry.status ||
-                                ''
-                            ).toLowerCase()
-
-
-                        const statusText =
-                            status === 'wfh'
-                                ? 'WFH'
-                                : status === 'late'
-                                    ? 'Late'
-                                    : status === 'absent'
-                                        ? 'Absent'
-                                        : 'Present'
+                            entry.displayStatus
 
 
                         return `
-                            <tr
-                                class="${isLate ? 'late-row' : ''}"
-                            >
+
+                            <tr>
 
                                 <td>
-                                    <strong>
-                                        ${entry.name || 'Unknown'}
-                                    </strong>
-
-                                    ${
-                                        entry.email
-                                            ? `
-                                                <div class="secondary">
-                                                    ${entry.email}
-                                                </div>
-                                            `
-                                            : ''
-                                    }
+                                    ${entry.name || 'N/A'}
                                 </td>
 
                                 <td>
-                                    ${entry.employeeId || '—'}
+                                    ${entry.employeeId ?? '—'}
                                 </td>
 
                                 <td>
-                                    ${entry.punchIn}
+                                    ${formatTime(entry.punchIn)}
                                 </td>
 
                                 <td>
-                                    ${statusText}
+                                    ${formatTime(entry.lunchOut)}
                                 </td>
 
-                                <td
-                                    class="${
-                                        isLate
-                                            ? 'late'
-                                            : ''
-                                    }"
-                                >
-                                    ${
-                                        isLate
-                                            ? 'YES'
-                                            : 'NO'
-                                    }
+                                <td>
+                                    ${formatTime(entry.lunchIn)}
+                                </td>
+
+                                <td>
+                                    ${formatTime(entry.punchOut)}
+                                </td>
+
+                                <td>
+                                    ${status}
                                 </td>
 
                             </tr>
+
                         `
 
                     }
@@ -703,277 +800,301 @@ function TodayAttendance({
 
 
         printWindow.document.write(`
+
             <!DOCTYPE html>
 
             <html>
 
-            <head>
+                <head>
 
-                <title>
-                    Attendance - ${displayDate}
-                </title>
+                    <title>
+                        ${modalTitle}
+                    </title>
 
-                <meta
-                    charset="UTF-8"
-                />
+                    <meta
+                        charset="UTF-8"
+                    />
 
-                <style>
+                    <style>
 
-                    * {
-                        box-sizing: border-box;
-                    }
-
-                    body {
-                        margin: 0;
-                        padding: 35px;
-                        font-family: Arial, sans-serif;
-                        color: #222;
-                        background: #fff;
-                    }
-
-                    h1 {
-                        margin: 0;
-                        font-size: 22px;
-                    }
-
-                    .date {
-                        margin-top: 6px;
-                        color: #666;
-                        font-size: 13px;
-                    }
-
-                    .subtitle {
-                        margin-top: 4px;
-                        color: #888;
-                        font-size: 11px;
-                    }
-
-                    .table {
-                        width: 100%;
-                        margin-top: 25px;
-                        border-collapse: collapse;
-                        border: 1px solid #ddd;
-                    }
-
-                    th {
-                        padding: 12px;
-                        text-align: left;
-                        background: #f3f3f3;
-                        border-bottom: 1px solid #ddd;
-                        font-size: 11px;
-                    }
-
-                    td {
-                        padding: 12px;
-                        border-bottom: 1px solid #eee;
-                        font-size: 11px;
-                    }
-
-                    tr:last-child td {
-                        border-bottom: none;
-                    }
-
-                    .secondary {
-                        margin-top: 3px;
-                        color: #888;
-                        font-size: 9px;
-                    }
-
-                    .late-row {
-                        background: #fff7ed;
-                    }
-
-                    .late {
-                        color: #d97706;
-                        font-weight: 700;
-                    }
-
-                    .empty {
-                        padding: 30px;
-                        text-align: center;
-                        color: #888;
-                    }
-
-                    .footer {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-top: 20px;
-                        color: #777;
-                        font-size: 10px;
-                    }
-
-                    @media print {
+                        * {
+                            box-sizing: border-box;
+                        }
 
                         body {
-                            padding: 20px;
+                            margin: 0;
+                            padding: 32px;
+                            font-family:
+                                Arial,
+                                Helvetica,
+                                sans-serif;
+                            color: #222;
+                            background: #fff;
                         }
 
-                        @page {
-                            size: A4 landscape;
-                            margin: 12mm;
+                        h1 {
+                            margin: 0 0 6px 0;
+                            font-size: 22px;
                         }
 
-                    }
-
-                </style>
-
-            </head>
-
-
-            <body>
-
-                <h1>
-                    Today's Attendance
-                </h1>
-
-                <div class="date">
-                    ${displayDate}
-                </div>
-
-                <div class="subtitle">
-                    Runamarga Employee Management
-                </div>
-
-
-                <table class="table">
-
-                    <thead>
-
-                        <tr>
-
-                            <th>
-                                Employee
-                            </th>
-
-                            <th>
-                                Employee ID
-                            </th>
-
-                            <th>
-                                Punch In
-                            </th>
-
-                            <th>
-                                Status
-                            </th>
-
-                            <th>
-                                Late
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody>
-
-                        ${
-                            rowsHtml ||
-                            `
-                                <tr>
-                                    <td
-                                        colspan="5"
-                                        class="empty"
-                                    >
-                                        No attendance records
-                                        available for this date.
-                                    </td>
-                                </tr>
-                            `
+                        .date {
+                            margin-bottom: 24px;
+                            color: #666;
+                            font-size: 13px;
                         }
 
-                    </tbody>
+                        .summary {
+                            display: flex;
+                            gap: 12px;
+                            margin-bottom: 24px;
+                        }
 
-                </table>
+                        .summary-card {
+                            border: 1px solid #ddd;
+                            border-radius: 8px;
+                            padding: 12px 18px;
+                            min-width: 120px;
+                        }
+
+                        .summary-label {
+                            font-size: 11px;
+                            color: #777;
+                            margin-bottom: 4px;
+                        }
+
+                        .summary-value {
+                            font-size: 20px;
+                            font-weight: 600;
+                        }
+
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                        }
+
+                        th,
+                        td {
+                            border: 1px solid #ddd;
+                            padding: 10px;
+                            text-align: left;
+                            font-size: 12px;
+                        }
+
+                        th {
+                            background: #f5f5f5;
+                            font-weight: 600;
+                        }
+
+                        .footer {
+                            margin-top: 24px;
+                            font-size: 10px;
+                            color: #888;
+                        }
+
+                        @media print {
+
+                            body {
+                                padding: 12px;
+                            }
+
+                        }
+
+                    </style>
+
+                </head>
 
 
-                <div class="footer">
+                <body>
 
-                    <span>
-                        Generated: ${displayDate}
-                    </span>
+                    <h1>
+                        ${modalTitle}
+                    </h1>
 
-                    <span>
-                        Runamarga
-                    </span>
+                    <div class="date">
+                        Date: ${formatDisplayDate(
+                            selectedDate
+                        )}
+                    </div>
 
-                </div>
+
+                    <div class="summary">
+
+                        <div class="summary-card">
+
+                            <div class="summary-label">
+                                Total
+                            </div>
+
+                            <div class="summary-value">
+                                ${summary.total}
+                            </div>
+
+                        </div>
 
 
-                <script>
+                        <div class="summary-card">
 
-                    window.onload = function () {
-                        window.focus()
-                        window.print()
-                    }
+                            <div class="summary-label">
+                                Present
+                            </div>
 
-                    window.onafterprint = function () {
-                        window.close()
-                    }
+                            <div class="summary-value">
+                                ${summary.present}
+                            </div>
 
-                </script>
+                        </div>
 
-            </body>
+
+                        <div class="summary-card">
+
+                            <div class="summary-label">
+                                Absent
+                            </div>
+
+                            <div class="summary-value">
+                                ${summary.absent}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Employee
+                                </th>
+
+                                <th>
+                                    Employee ID
+                                </th>
+
+                                <th>
+                                    Punch In
+                                </th>
+
+                                <th>
+                                    Lunch Out
+                                </th>
+
+                                <th>
+                                    Lunch In
+                                </th>
+
+                                <th>
+                                    Punch Out
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            ${tableRows}
+
+                        </tbody>
+
+                    </table>
+
+
+                    <div class="footer">
+                        Generated on ${new Date().toLocaleString(
+                            'en-IN'
+                        )}
+                    </div>
+
+                </body>
 
             </html>
+
         `)
 
 
         printWindow.document.close()
 
+
+        printWindow.focus()
+
+
+        setTimeout(
+            () => {
+
+                printWindow.print()
+
+            },
+            250
+        )
+
     }
 
 
-    // =========================================================
-    // CLOSE
-    // =========================================================
-
-    const handleClose = () => {
-        onClose?.()
-    }
-
+    // ========================================================================
+    // CLOSED
+    // ========================================================================
 
     if (!open) {
         return null
     }
 
 
-    // =========================================================
-    // RENDER
-    // =========================================================
+    // ========================================================================
+    // MODAL
+    // ========================================================================
 
-    return (
+    const modal = (
 
-        <div
-            className="
-                fixed
-                inset-0
-                z-[100]
-                flex
-                items-center
-                justify-center
-                bg-black/40
-                p-3
-                sm:p-5
-            "
-            onMouseDown={(event) => {
+        <div className="
+            fixed
+            inset-0
+            z-[100]
+            flex
+            items-center
+            justify-center
+            bg-black/50
+            p-4
+            sm:p-6
+        ">
 
-                if (
-                    event.target ===
-                    event.currentTarget
-                ) {
-                    handleClose()
+            {/* ================================================================
+                BACKDROP
+            ================================================================ */}
+
+            <button
+                type="button"
+                aria-label="Close attendance modal"
+                onClick={
+                    onClose
                 }
+                className="
+                    absolute
+                    inset-0
+                    cursor-default
+                "
+            />
 
-            }}
-        >
+
+            {/* ================================================================
+                MODAL CARD
+            ================================================================ */}
 
             <div className="
+                relative
+                z-10
                 flex
                 max-h-[90vh]
                 w-full
-                max-w-4xl
+                max-w-6xl
                 flex-col
                 overflow-hidden
                 rounded-2xl
@@ -983,20 +1104,21 @@ function TodayAttendance({
                 shadow-2xl
             ">
 
-
-                {/* =================================================
+                {/* ============================================================
                     HEADER
-                ================================================= */}
+                ============================================================ */}
 
                 <div className="
                     flex
-                    shrink-0
-                    items-center
-                    justify-between
+                    flex-col
+                    gap-4
                     border-b
                     border-base-300
                     px-5
                     py-4
+                    sm:flex-row
+                    sm:items-center
+                    sm:justify-between
                 ">
 
                     <div>
@@ -1006,139 +1128,260 @@ function TodayAttendance({
                             font-semibold
                             text-base-content
                         ">
-                            Today's Attendance
+                            {modalTitle}
                         </h2>
+
 
                         <p className="
                             mt-0.5
                             text-xs
                             text-base-content/50
                         ">
-                            Select a date and manage late employees.
+                            {formatDisplayDate(
+                                selectedDate
+                            )}
                         </p>
 
                     </div>
 
 
-                    <button
-                        type="button"
-                        onClick={handleClose}
-                        title="Close"
-                        className="
-                            flex
-                            h-9
-                            w-9
-                            items-center
-                            justify-center
-                            rounded-lg
-                            text-base-content/50
-                            transition
-                            hover:bg-base-200
-                            hover:text-base-content
-                        "
-                    >
+                    <div className="
+                        flex
+                        flex-wrap
+                        items-center
+                        gap-2
+                    ">
 
-                        <XMarkIcon className="
-                            h-5
-                            w-5
-                        " />
+                        {/* =================================================
+                            CALENDAR
+                        ================================================= */}
 
-                    </button>
+                        <div className="
+                            relative
+                        ">
+
+                            <CalendarDaysIcon className="
+                                pointer-events-none
+                                absolute
+                                left-3
+                                top-1/2
+                                h-4
+                                w-4
+                                -translate-y-1/2
+                                text-base-content/45
+                            " />
+
+
+                            <input
+                                type="date"
+                                value={
+                                    selectedDate
+                                }
+                                onChange={
+                                    handleDateChange
+                                }
+                                className="
+                                    input
+                                    input-bordered
+                                    h-9
+                                    min-h-9
+                                    pl-9
+                                    text-xs
+                                "
+                                aria-label="Select attendance date"
+                            />
+
+                        </div>
+
+
+                        {/* =================================================
+                            PRINT
+                        ================================================= */}
+
+                        <button
+                            type="button"
+                            onClick={
+                                handlePrint
+                            }
+                            disabled={
+                                loading
+                            }
+                            className="
+                                inline-flex
+                                h-9
+                                items-center
+                                justify-center
+                                gap-1.5
+                                rounded-lg
+                                border
+                                border-base-300
+                                bg-base-100
+                                px-3
+                                text-xs
+                                font-medium
+                                text-base-content/70
+                                transition
+                                hover:bg-base-200
+                                hover:text-base-content
+                                disabled:cursor-not-allowed
+                                disabled:opacity-50
+                            "
+                        >
+
+                            <PrinterIcon className="
+                                h-4
+                                w-4
+                            " />
+
+                            Print
+
+                        </button>
+
+
+                        {/* =================================================
+                            CLOSE
+                        ================================================= */}
+
+                        <button
+                            type="button"
+                            onClick={
+                                onClose
+                            }
+                            className="
+                                inline-flex
+                                h-9
+                                w-9
+                                items-center
+                                justify-center
+                                rounded-lg
+                                border
+                                border-base-300
+                                bg-base-100
+                                text-base-content/60
+                                transition
+                                hover:bg-base-200
+                                hover:text-base-content
+                            "
+                            aria-label="Close"
+                        >
+
+                            <XMarkIcon className="
+                                h-5
+                                w-5
+                            " />
+
+                        </button>
+
+                    </div>
 
                 </div>
 
 
-                {/* =================================================
-                    DATE SELECTOR
-                ================================================= */}
+                {/* ============================================================
+                    SUMMARY
+                ============================================================ */}
 
                 <div className="
-                    shrink-0
+                    grid
+                    grid-cols-3
+                    gap-3
                     border-b
                     border-base-300
+                    bg-base-200/20
                     px-5
                     py-4
                 ">
 
                     <div className="
-                        flex
-                        flex-col
-                        gap-3
-                        sm:flex-row
-                        sm:items-end
-                        sm:justify-between
+                        rounded-xl
+                        border
+                        border-base-300
+                        bg-base-100
+                        px-4
+                        py-3
                     ">
 
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                Attendance Date
-                            </label>
-
-
-                            <div className="
-                                relative
-                                w-full
-                                sm:w-56
-                            ">
-
-                                <CalendarDaysIcon className="
-                                    pointer-events-none
-                                    absolute
-                                    left-3
-                                    top-1/2
-                                    h-4
-                                    w-4
-                                    -translate-y-1/2
-                                    text-base-content/40
-                                " />
-
-
-                                <input
-                                    type="date"
-                                    value={
-                                        selectedDate
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        setSelectedDate(
-                                            event
-                                                .target
-                                                .value
-                                        )
-                                    }
-                                    className="
-                                        input
-                                        input-bordered
-                                        h-10
-                                        min-h-10
-                                        w-full
-                                        pl-9
-                                    "
-                                />
-
-                            </div>
-
-                        </div>
+                        <p className="
+                            text-[11px]
+                            font-medium
+                            text-base-content/45
+                        ">
+                            Total
+                        </p>
 
 
                         <p className="
-                            text-xs
-                            text-base-content/45
+                            mt-1
+                            text-xl
+                            font-semibold
+                            text-base-content
                         ">
-                            {attendanceRows.length}{' '}
                             {
-                                attendanceRows.length === 1
-                                    ? 'record'
-                                    : 'records'
+                                summary.total
+                            }
+                        </p>
+
+                    </div>
+
+
+                    <div className="
+                        rounded-xl
+                        border
+                        border-[#8BCF00]/20
+                        bg-[#8BCF00]/5
+                        px-4
+                        py-3
+                    ">
+
+                        <p className="
+                            text-[11px]
+                            font-medium
+                            text-[#6FA800]
+                        ">
+                            Present
+                        </p>
+
+
+                        <p className="
+                            mt-1
+                            text-xl
+                            font-semibold
+                            text-[#6FA800]
+                        ">
+                            {
+                                summary.present
+                            }
+                        </p>
+
+                    </div>
+
+
+                    <div className="
+                        rounded-xl
+                        border
+                        border-red-200
+                        bg-red-50/60
+                        px-4
+                        py-3
+                    ">
+
+                        <p className="
+                            text-[11px]
+                            font-medium
+                            text-red-600
+                        ">
+                            Absent
+                        </p>
+
+
+                        <p className="
+                            mt-1
+                            text-xl
+                            font-semibold
+                            text-red-600
+                        ">
+                            {
+                                summary.absent
                             }
                         </p>
 
@@ -1147,444 +1390,592 @@ function TodayAttendance({
                 </div>
 
 
-                {/* =================================================
-                    TABLE
-                ================================================= */}
+                {/* ============================================================
+                    ERROR
+                ============================================================ */}
+
+                {error && (
+
+                    <div className="
+                        mx-5
+                        mt-4
+                        rounded-lg
+                        border
+                        border-red-200
+                        bg-red-50
+                        px-4
+                        py-3
+                        text-xs
+                        text-red-600
+                    ">
+                        {error}
+                    </div>
+
+                )}
+
+
+                {/* ============================================================
+                    TABLE AREA
+                ============================================================ */}
 
                 <div className="
                     min-h-0
                     flex-1
-                    overflow-y-auto
-                    p-5
+                    overflow-auto
                 ">
 
-                    <div className="
-                        overflow-hidden
-                        rounded-xl
-                        border
-                        border-base-300
+                    <table className="
+                        w-full
+                        min-w-[900px]
+                        border-collapse
                     ">
 
-                        <div className="
-                            overflow-x-auto
+                        {/* =================================================
+                            HEADER
+                        ================================================= */}
+
+                        <thead className="
+                            sticky
+                            top-0
+                            z-10
                         ">
 
-                            <table className="
-                                w-full
-                                min-w-[700px]
-                                border-collapse
+                            <tr className="
+                                border-b
+                                border-base-300
+                                bg-base-200/95
+                                backdrop-blur
                             ">
 
-                                <thead>
-
-                                    <tr className="
-                                        border-b
-                                        border-base-300
-                                        bg-base-200/40
-                                    ">
-
-                                        <th className="
-                                            px-4
-                                            py-3
-                                            text-left
-                                            text-[11px]
-                                            font-semibold
-                                            text-base-content/60
-                                        ">
-                                            Employee
-                                        </th>
+                                <th className="
+                                    whitespace-nowrap
+                                    px-5
+                                    py-3.5
+                                    text-left
+                                    text-xs
+                                    font-semibold
+                                    text-base-content/70
+                                ">
+                                    Employee
+                                </th>
 
 
-                                        <th className="
-                                            px-4
-                                            py-3
-                                            text-left
-                                            text-[11px]
-                                            font-semibold
-                                            text-base-content/60
-                                        ">
-                                            Punch In
-                                        </th>
+                                <th className="
+                                    whitespace-nowrap
+                                    px-5
+                                    py-3.5
+                                    text-left
+                                    text-xs
+                                    font-semibold
+                                    text-base-content/70
+                                ">
+                                    Punch In
+                                </th>
 
 
-                                        <th className="
-                                            px-4
-                                            py-3
-                                            text-left
-                                            text-[11px]
-                                            font-semibold
-                                            text-base-content/60
-                                        ">
-                                            Status
-                                        </th>
+                                <th className="
+                                    whitespace-nowrap
+                                    px-5
+                                    py-3.5
+                                    text-left
+                                    text-xs
+                                    font-semibold
+                                    text-base-content/70
+                                ">
+                                    Lunch Out
+                                </th>
 
 
-                                        <th className="
-                                            w-[110px]
-                                            px-4
-                                            py-3
-                                            text-center
-                                            text-[11px]
-                                            font-semibold
-                                            text-base-content/60
-                                        ">
-                                            Mark Late
-                                        </th>
-
-                                    </tr>
-
-                                </thead>
+                                <th className="
+                                    whitespace-nowrap
+                                    px-5
+                                    py-3.5
+                                    text-left
+                                    text-xs
+                                    font-semibold
+                                    text-base-content/70
+                                ">
+                                    Lunch In
+                                </th>
 
 
-                                <tbody>
+                                <th className="
+                                    whitespace-nowrap
+                                    px-5
+                                    py-3.5
+                                    text-left
+                                    text-xs
+                                    font-semibold
+                                    text-base-content/70
+                                ">
+                                    Punch Out
+                                </th>
 
-                                    {attendanceRows.length ? (
 
-                                        attendanceRows.map(
-                                            (entry) => {
+                                <th className="
+                                    whitespace-nowrap
+                                    px-5
+                                    py-3.5
+                                    text-left
+                                    text-xs
+                                    font-semibold
+                                    text-base-content/70
+                                ">
+                                    Status
+                                </th>
 
-                                                const isLate =
-                                                    lateEmployees.includes(
-                                                        entry.rowId
-                                                    )
+                            </tr>
+
+                        </thead>
 
 
-                                                return (
+                        {/* =================================================
+                            BODY
+                        ================================================= */}
 
-                                                    <tr
+                        <tbody>
+
+                            {loading ? (
+
+                                Array.from(
+                                    {
+                                        length: 8,
+                                    }
+                                ).map(
+                                    (
+                                        _,
+                                        index
+                                    ) => (
+
+                                        <tr
+                                            key={
+                                                `today-loading-${index}`
+                                            }
+                                            className="
+                                                border-b
+                                                border-base-300
+                                            "
+                                        >
+
+                                            {Array.from(
+                                                {
+                                                    length: 6,
+                                                }
+                                            ).map(
+                                                (
+                                                    _,
+                                                    columnIndex
+                                                ) => (
+
+                                                    <td
                                                         key={
-                                                            entry.rowId
+                                                            `today-loading-${index}-${columnIndex}`
                                                         }
-                                                        className={[
-                                                            'border-b',
-                                                            'border-base-300',
-                                                            'last:border-b-0',
-                                                            'transition-colors',
-
-                                                            isLate
-                                                                ? 'bg-amber-50/60'
-                                                                : 'hover:bg-base-200/30',
-
-                                                        ].join(' ')}
+                                                        className="
+                                                            px-5
+                                                            py-4
+                                                        "
                                                     >
 
+                                                        <div className="
+                                                            h-4
+                                                            w-24
+                                                            animate-pulse
+                                                            rounded
+                                                            bg-base-200
+                                                        " />
 
-                                                        {/* EMPLOYEE */}
+                                                    </td>
 
-                                                        <td className="
-                                                            px-4
-                                                            py-3.5
+                                                )
+                                            )}
+
+                                        </tr>
+
+                                    )
+                                )
+
+                            ) : displayedEntries.length === 0 ? (
+
+                                <tr>
+
+                                    <td
+                                        colSpan={6}
+                                        className="
+                                            px-6
+                                            py-16
+                                            text-center
+                                        "
+                                    >
+
+                                        <div className="
+                                            flex
+                                            flex-col
+                                            items-center
+                                        ">
+
+                                            <div className="
+                                                flex
+                                                h-12
+                                                w-12
+                                                items-center
+                                                justify-center
+                                                rounded-full
+                                                bg-base-200
+                                            ">
+
+                                                <CalendarDaysIcon className="
+                                                    h-5
+                                                    w-5
+                                                    text-base-content/30
+                                                " />
+
+                                            </div>
+
+
+                                            <p className="
+                                                mt-4
+                                                text-sm
+                                                font-semibold
+                                                text-base-content/70
+                                            ">
+                                                No attendance found
+                                            </p>
+
+
+                                            <p className="
+                                                mt-1
+                                                text-xs
+                                                text-base-content/45
+                                            ">
+                                                No attendance records are available for {
+                                                    formatDisplayDate(
+                                                        selectedDate
+                                                    )
+                                                }.
+                                            </p>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+
+                            ) : (
+
+                                displayedEntries.map(
+                                    (
+                                        entry,
+                                        index
+                                    ) => {
+
+                                        const profileImage =
+                                            entry?.profileImage ??
+                                            entry?.profile_image ??
+                                            null
+
+
+                                        return (
+
+                                            <tr
+                                                key={
+                                                    entry.id ??
+                                                    `${entry.employeeId}-${entry.date}-${index}`
+                                                }
+                                                className="
+                                                    border-b
+                                                    border-base-300
+                                                    last:border-b-0
+                                                    transition-colors
+                                                    hover:bg-base-200/30
+                                                "
+                                            >
+
+                                                {/* =================================
+                                                    EMPLOYEE
+                                                ================================= */}
+
+                                                <td className="
+                                                    px-5
+                                                    py-4
+                                                ">
+
+                                                    <div className="
+                                                        flex
+                                                        items-center
+                                                        gap-3
+                                                    ">
+
+                                                        {profileImage ? (
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setSelectedImage(
+                                                                        {
+                                                                            url:
+                                                                                profileImage,
+                                                                            name:
+                                                                                entry.name,
+                                                                        }
+                                                                    )
+                                                                }
+                                                                className="
+                                                                    h-9
+                                                                    w-9
+                                                                    shrink-0
+                                                                    overflow-hidden
+                                                                    rounded-full
+                                                                    border
+                                                                    border-base-300
+                                                                "
+                                                            >
+
+                                                                <img
+                                                                    src={
+                                                                        profileImage
+                                                                    }
+                                                                    alt={
+                                                                        entry.name
+                                                                    }
+                                                                    className="
+                                                                        h-full
+                                                                        w-full
+                                                                        object-cover
+                                                                    "
+                                                                />
+
+                                                            </button>
+
+                                                        ) : (
+
+                                                            <div className="
+                                                                flex
+                                                                h-9
+                                                                w-9
+                                                                shrink-0
+                                                                items-center
+                                                                justify-center
+                                                                rounded-full
+                                                                bg-base-200
+                                                                text-xs
+                                                                font-semibold
+                                                                text-base-content/40
+                                                            ">
+                                                                {
+                                                                    String(
+                                                                        entry.name ||
+                                                                        'N'
+                                                                    )
+                                                                        .charAt(0)
+                                                                        .toUpperCase()
+                                                                }
+                                                            </div>
+
+                                                        )}
+
+
+                                                        <div className="
+                                                            min-w-0
                                                         ">
 
                                                             <p className="
+                                                                truncate
                                                                 text-sm
                                                                 font-medium
                                                                 text-base-content
                                                             ">
                                                                 {
                                                                     entry.name ||
-                                                                    'Unknown'
+                                                                    'N/A'
                                                                 }
                                                             </p>
 
 
-                                                            <div className="
+                                                            <p className="
                                                                 mt-0.5
-                                                                flex
-                                                                flex-wrap
-                                                                gap-x-2
-                                                                gap-y-0.5
-                                                            ">
-
-                                                                {entry.employeeId && (
-
-                                                                    <span className="
-                                                                        font-mono
-                                                                        text-[10px]
-                                                                        text-base-content/40
-                                                                    ">
-                                                                        {
-                                                                            entry.employeeId
-                                                                        }
-                                                                    </span>
-
-                                                                )}
-
-
-                                                                {entry.email && (
-
-                                                                    <span className="
-                                                                        text-[10px]
-                                                                        text-base-content/40
-                                                                    ">
-                                                                        {
-                                                                            entry.email
-                                                                        }
-                                                                    </span>
-
-                                                                )}
-
-                                                            </div>
-
-                                                        </td>
-
-
-                                                        {/* PUNCH IN */}
-
-                                                        <td className="
-                                                            whitespace-nowrap
-                                                            px-4
-                                                            py-3.5
-                                                        ">
-
-                                                            <span className="
-                                                                text-sm
-                                                                font-medium
-                                                                text-base-content/80
+                                                                font-mono
+                                                                text-[11px]
+                                                                text-base-content/40
                                                             ">
                                                                 {
-                                                                    entry.punchIn
+                                                                    entry.employeeId ??
+                                                                    '—'
                                                                 }
-                                                            </span>
+                                                            </p>
 
-                                                        </td>
+                                                        </div>
 
+                                                    </div>
 
-                                                        {/* STATUS */}
-
-                                                        <td className="
-                                                            px-4
-                                                            py-3.5
-                                                        ">
-
-                                                            <span
-                                                                className={[
-                                                                    'inline-flex',
-                                                                    'rounded-full',
-                                                                    'border',
-                                                                    'px-2.5',
-                                                                    'py-1',
-                                                                    'text-[10px]',
-                                                                    'font-medium',
-
-                                                                    entry.status === 'absent'
-                                                                        ? 'border-red-200 bg-red-50 text-red-600'
-                                                                        : entry.status === 'wfh'
-                                                                            ? 'border-blue-200 bg-blue-50 text-blue-600'
-                                                                            : entry.status === 'late'
-                                                                                ? 'border-amber-200 bg-amber-50 text-amber-600'
-                                                                                : 'border-[#8BCF00]/30 bg-[#8BCF00]/10 text-[#6FA800]',
-                                                                ].join(' ')}
-                                                            >
-
-                                                                {
-                                                                    entry.status === 'wfh'
-                                                                        ? 'WFH'
-                                                                        : entry.status === 'late'
-                                                                            ? 'Late'
-                                                                            : entry.status === 'absent'
-                                                                                ? 'Absent'
-                                                                                : 'Present'
-                                                                }
-
-                                                            </span>
-
-                                                        </td>
+                                                </td>
 
 
-                                                        {/* MARK LATE */}
+                                                {/* =================================
+                                                    PUNCH IN
+                                                ================================= */}
 
-                                                        <td className="
-                                                            px-4
-                                                            py-3.5
-                                                            text-center
-                                                        ">
+                                                <td className="
+                                                    px-5
+                                                    py-4
+                                                ">
 
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={
-                                                                    isLate
-                                                                }
-                                                                onChange={() =>
-                                                                    handleToggleLate(
-                                                                        entry.rowId
-                                                                    )
-                                                                }
-                                                                className="
-                                                                    h-4
-                                                                    w-4
-                                                                    cursor-pointer
-                                                                    rounded
-                                                                    border-base-300
-                                                                    accent-[#8BCF00]
-                                                                "
-                                                                aria-label={`Mark ${entry.name || 'employee'} as late`}
-                                                            />
+                                                    <TimeCell
+                                                        value={
+                                                            entry.punchIn
+                                                        }
+                                                    />
 
-                                                        </td>
+                                                </td>
 
-                                                    </tr>
 
-                                                )
+                                                {/* =================================
+                                                    LUNCH OUT
+                                                ================================= */}
 
-                                            }
+                                                <td className="
+                                                    px-5
+                                                    py-4
+                                                ">
+
+                                                    <TimeCell
+                                                        value={
+                                                            entry.lunchOut
+                                                        }
+                                                    />
+
+                                                </td>
+
+
+                                                {/* =================================
+                                                    LUNCH IN
+                                                ================================= */}
+
+                                                <td className="
+                                                    px-5
+                                                    py-4
+                                                ">
+
+                                                    <TimeCell
+                                                        value={
+                                                            entry.lunchIn
+                                                        }
+                                                    />
+
+                                                </td>
+
+
+                                                {/* =================================
+                                                    PUNCH OUT
+                                                ================================= */}
+
+                                                <td className="
+                                                    px-5
+                                                    py-4
+                                                ">
+
+                                                    <TimeCell
+                                                        value={
+                                                            entry.punchOut
+                                                        }
+                                                    />
+
+                                                </td>
+
+
+                                                {/* =================================
+                                                    STATUS
+                                                ================================= */}
+
+                                                <td className="
+                                                    px-5
+                                                    py-4
+                                                ">
+
+                                                    <span
+                                                        className={[
+                                                            'inline-flex',
+                                                            'rounded-full',
+                                                            'px-3',
+                                                            'py-1.5',
+                                                            'text-xs',
+                                                            'font-medium',
+
+                                                            getStatusClass(
+                                                                entry.displayStatus
+                                                            ),
+                                                        ].join(' ')}
+                                                    >
+                                                        {
+                                                            entry.displayStatus
+                                                        }
+                                                    </span>
+
+                                                </td>
+
+                                            </tr>
+
                                         )
 
-                                    ) : (
+                                    }
+                                )
 
-                                        <tr>
+                            )}
 
-                                            <td
-                                                colSpan={4}
-                                                className="
-                                                    px-5
-                                                    py-12
-                                                    text-center
-                                                "
-                                            >
+                        </tbody>
 
-                                                <p className="
-                                                    text-sm
-                                                    font-medium
-                                                    text-base-content/60
-                                                ">
-                                                    No attendance records
-                                                    available for this date.
-                                                </p>
-
-                                                <p className="
-                                                    mt-1
-                                                    text-xs
-                                                    text-base-content/40
-                                                ">
-                                                    Select another date to
-                                                    view attendance.
-                                                </p>
-
-                                            </td>
-
-                                        </tr>
-
-                                    )}
-
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    </div>
+                    </table>
 
                 </div>
 
 
-                {/* =================================================
+                {/* ============================================================
                     FOOTER
-                ================================================= */}
+                ============================================================ */}
 
                 <div className="
                     flex
-                    shrink-0
                     flex-col
                     gap-2
                     border-t
                     border-base-300
                     px-5
-                    py-4
+                    py-3
                     sm:flex-row
                     sm:items-center
-                    sm:justify-end
+                    sm:justify-between
                 ">
 
-                    <button
-                        type="button"
-                        onClick={
-                            handleDownloadImage
+                    <p className="
+                        text-[11px]
+                        text-base-content/40
+                    ">
+
+                        {
+                            summary.total
+                        }{' '}
+
+                        {
+                            summary.total === 1
+                                ? 'employee'
+                                : 'employees'
                         }
-                        className="
-                            inline-flex
-                            h-10
-                            items-center
-                            justify-center
-                            gap-1.5
-                            rounded-lg
-                            border
-                            border-base-300
-                            bg-base-100
-                            px-4
-                            text-xs
-                            font-medium
-                            text-base-content/70
-                            transition
-                            hover:bg-base-200
-                            hover:text-base-content
-                        "
-                    >
 
-                        <ArrowDownTrayIcon className="
-                            h-4
-                            w-4
-                        " />
+                        {' '}shown
 
-                        Download Image
-
-                    </button>
+                    </p>
 
 
-                    <button
-                        type="button"
-                        onClick={
-                            handlePrint
+                    <p className="
+                        text-[11px]
+                        text-base-content/40
+                    ">
+                        Attendance for {
+                            formatDisplayDate(
+                                selectedDate
+                            )
                         }
-                        className="
-                            inline-flex
-                            h-10
-                            items-center
-                            justify-center
-                            gap-1.5
-                            rounded-lg
-                            border
-                            border-base-300
-                            bg-base-100
-                            px-4
-                            text-xs
-                            font-medium
-                            text-base-content/70
-                            transition
-                            hover:bg-base-200
-                            hover:text-base-content
-                        "
-                    >
-
-                        <PrinterIcon className="
-                            h-4
-                            w-4
-                        " />
-
-                        Print / PDF
-
-                    </button>
-
-
-                    <button
-                        type="button"
-                        onClick={
-                            handleClose
-                        }
-                        className="
-                            h-10
-                            rounded-lg
-                            bg-[#8BCF00]
-                            px-4
-                            text-xs
-                            font-medium
-                            text-white
-                            transition
-                            hover:bg-[#78B300]
-                        "
-                    >
-                        Close
-                    </button>
+                    </p>
 
                 </div>
 
@@ -1592,6 +1983,193 @@ function TodayAttendance({
 
         </div>
 
+    )
+
+
+    // ========================================================================
+    // IMAGE PREVIEW
+    // ========================================================================
+
+    const imagePreview =
+        selectedImage && (
+
+            <div className="
+                fixed
+                inset-0
+                z-[120]
+                flex
+                items-center
+                justify-center
+                bg-black/80
+                p-4
+            ">
+
+                <button
+                    type="button"
+                    onClick={
+                        closeImage
+                    }
+                    className="
+                        absolute
+                        inset-0
+                        cursor-default
+                    "
+                    aria-label="Close image"
+                />
+
+
+                <div className="
+                    relative
+                    z-10
+                    max-h-[90vh]
+                    max-w-[90vw]
+                    overflow-hidden
+                    rounded-xl
+                    bg-base-100
+                    shadow-2xl
+                ">
+
+                    <div className="
+                        flex
+                        items-center
+                        justify-between
+                        border-b
+                        border-base-300
+                        px-4
+                        py-3
+                    ">
+
+                        <p className="
+                            text-sm
+                            font-medium
+                            text-base-content
+                        ">
+                            {
+                                selectedImage.name ||
+                                'Employee'
+                            }
+                        </p>
+
+
+                        <div className="
+                            flex
+                            items-center
+                            gap-2
+                        ">
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    downloadImage(
+                                        selectedImage.url,
+                                        selectedImage.name
+                                    )
+                                }
+                                className="
+                                    inline-flex
+                                    h-8
+                                    items-center
+                                    justify-center
+                                    gap-1.5
+                                    rounded-lg
+                                    border
+                                    border-base-300
+                                    px-3
+                                    text-xs
+                                    font-medium
+                                    text-base-content/70
+                                    transition
+                                    hover:bg-base-200
+                                "
+                            >
+
+                                <ArrowDownTrayIcon className="
+                                    h-4
+                                    w-4
+                                " />
+
+                                Download
+
+                            </button>
+
+
+                            <button
+                                type="button"
+                                onClick={
+                                    closeImage
+                                }
+                                className="
+                                    inline-flex
+                                    h-8
+                                    w-8
+                                    items-center
+                                    justify-center
+                                    rounded-lg
+                                    border
+                                    border-base-300
+                                    text-base-content/60
+                                    transition
+                                    hover:bg-base-200
+                                "
+                                aria-label="Close image"
+                            >
+
+                                <XMarkIcon className="
+                                    h-4
+                                    w-4
+                                " />
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <div className="
+                        max-h-[calc(90vh-60px)]
+                        overflow-auto
+                        p-4
+                    ">
+
+                        <img
+                            src={
+                                selectedImage.url
+                            }
+                            alt={
+                                selectedImage.name ||
+                                'Employee'
+                            }
+                            className="
+                                max-h-[75vh]
+                                max-w-[80vw]
+                                rounded-lg
+                                object-contain
+                            "
+                        />
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        )
+
+
+    // ========================================================================
+    // PORTAL
+    // ========================================================================
+
+    return createPortal(
+        <>
+
+            {modal}
+
+            {imagePreview}
+
+        </>,
+        document.body
     )
 
 }

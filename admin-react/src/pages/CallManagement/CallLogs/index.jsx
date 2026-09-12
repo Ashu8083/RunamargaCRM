@@ -1,6 +1,10 @@
 // admin-react/src/pages/CallManagement/CallLogs/index.jsx
 
-import { useMemo, useState } from 'react'
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
@@ -11,6 +15,11 @@ import RmDropdown from '../../../components/GlobalModels/Filters/RmDropdown'
 
 import CallLogsTable from './components/CallLogsTable'
 import CallHistoryModal from './components/CallHistoryModal'
+
+import {
+    getCallLogs,
+    getCallHistory,
+} from './Api'
 
 
 // =============================================================
@@ -62,330 +71,87 @@ const MOBILE_STATUSES = [
 
 
 // =============================================================
-// MOCK CALL LOGS
+// HELPERS
 // =============================================================
 
-const INITIAL_CALL_LOGS = [
-
-    {
-        id: 'CALL001',
-
-        name: 'Rahul Kumar',
-
-        phone: '+91 98765 43210',
-
-        contactNumber: '+91 98765 43210',
-
-        agentId: 'AG001',
-
-        agentName: 'Aravind Kumar',
-
-        callType: 'incoming',
-
-        status: 'received',
-
-        date: '2026-08-27',
-
-        time: '10:42 AM',
-
-        duration: '04:32',
-
-    },
-
-
-    {
-        id: 'CALL002',
-
-        name: 'Sneha Reddy',
-
-        phone: '+91 99887 66554',
-
-        contactNumber: '+91 99887 66554',
-
-        agentId: 'AG002',
-
-        agentName: 'Suresh Kumar',
-
-        callType: 'outgoing',
-
-        status: 'received',
-
-        date: '2026-08-27',
-
-        time: '10:15 AM',
-
-        duration: '07:18',
-
-    },
-
-
-    {
-        id: 'CALL003',
-
-        name: 'Vijay Sharma',
-
-        phone: '+91 98761 23456',
-
-        contactNumber: '+91 98761 23456',
-
-        agentId: 'AG001',
-
-        agentName: 'Aravind Kumar',
-
-        callType: 'missed',
-
-        status: 'missed',
-
-        date: '2026-08-27',
-
-        time: '09:48 AM',
-
-        duration: '00:00',
-
-    },
-
-
-    {
-        id: 'CALL004',
-
-        name: 'Anjali Nair',
-
-        phone: '+91 91234 56789',
-
-        contactNumber: '+91 91234 56789',
-
-        agentId: 'AG003',
-
-        agentName: 'Nayana Rao',
-
-        callType: 'outgoing',
-
-        status: 'rejected',
-
-        date: '2026-08-26',
-
-        time: '05:36 PM',
-
-        duration: '00:12',
-
-    },
-
-
-    {
-        id: 'CALL005',
-
-        name: 'Manoj Verma',
-
-        phone: '+91 90123 45678',
-
-        contactNumber: '+91 90123 45678',
-
-        agentId: 'AG002',
-
-        agentName: 'Suresh Kumar',
-
-        callType: 'incoming',
-
-        status: 'received',
-
-        date: '2026-08-26',
-
-        time: '04:22 PM',
-
-        duration: '11:05',
-
-    },
-
-
-    {
-        id: 'CALL006',
-
-        name: 'Pooja Banu',
-
-        phone: '+91 93456 78901',
-
-        contactNumber: '+91 93456 78901',
-
-        agentId: 'AG003',
-
-        agentName: 'Nayana Rao',
-
-        callType: 'outgoing',
-
-        status: 'received',
-
-        date: '2026-08-26',
-
-        time: '03:14 PM',
-
-        duration: '05:46',
-
-    },
-
-
-    {
-        id: 'CALL007',
-
-        name: 'Kiran Gowda',
-
-        phone: '+91 99876 54321',
-
-        contactNumber: '+91 99876 54321',
-
-        agentId: 'AG001',
-
-        agentName: 'Aravind Kumar',
-
-        callType: 'missed',
-
-        status: 'missed',
-
-        date: '2026-08-25',
-
-        time: '02:58 PM',
-
-        duration: '00:00',
-
-    },
-
-
-    {
-        id: 'CALL008',
-
-        name: 'Divya Menon',
-
-        phone: '+91 97654 32109',
-
-        contactNumber: '+91 97654 32109',
-
-        agentId: 'AG002',
-
-        agentName: 'Suresh Kumar',
-
-        callType: 'incoming',
-
-        status: 'received',
-
-        date: '2026-08-25',
-
-        time: '11:26 AM',
-
-        duration: '08:21',
-
-    },
-
-
-    {
-        id: 'CALL009',
-
-        name: 'Ramesh Kumar',
-
-        phone: '+91 91234 67890',
-
-        contactNumber: '+91 91234 67890',
-
-        agentId: 'AG003',
-
-        agentName: 'Nayana Rao',
-
-        callType: 'outgoing',
-
-        status: 'received',
-
-        date: '2026-08-24',
-
-        time: '04:46 PM',
-
-        duration: '03:52',
-
-    },
-
-
-    {
-        id: 'CALL010',
-
-        name: 'Meena Joshi',
-
-        phone: '+91 90909 12345',
-
-        contactNumber: '+91 90909 12345',
-
-        agentId: 'AG001',
-
-        agentName: 'Aravind Kumar',
-
-        callType: 'incoming',
-
-        status: 'received',
-
-        date: '2026-08-23',
-
-        time: '01:18 PM',
-
-        duration: '06:14',
-
-    },
-
-]
-
-
-// =============================================================
-// MOCK CALL HISTORY
-// =============================================================
-
-const generateCallHistory = (call) => {
-
-    const histories = [
-
+const formatDuration = (seconds) => {
+    if (
+        seconds === null ||
+        seconds === undefined ||
+        seconds === ''
+    ) {
+        return '00:00'
+    }
+
+    const totalSeconds = Number(seconds)
+
+    if (Number.isNaN(totalSeconds)) {
+        return '00:00'
+    }
+
+    const hours = Math.floor(
+        totalSeconds / 3600
+    )
+
+    const minutes = Math.floor(
+        (totalSeconds % 3600) / 60
+    )
+
+    const remainingSeconds =
+        totalSeconds % 60
+
+    if (hours > 0) {
+        return [
+            String(hours).padStart(2, '0'),
+            String(minutes).padStart(2, '0'),
+            String(remainingSeconds).padStart(2, '0'),
+        ].join(':')
+    }
+
+    return [
+        String(minutes).padStart(2, '0'),
+        String(remainingSeconds).padStart(2, '0'),
+    ].join(':')
+}
+
+
+const formatDate = (value) => {
+    if (!value) {
+        return ''
+    }
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) {
+        return ''
+    }
+
+    return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
+    ].join('-')
+}
+
+
+const formatTime = (value) => {
+    if (!value) {
+        return ''
+    }
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) {
+        return ''
+    }
+
+    return date.toLocaleTimeString(
+        'en-IN',
         {
-            id: 1,
-            name: call.name,
-            phone: call.phone,
-            callType: 'incoming',
-            callDate: '2026-08-27',
-            callTime: '10:42 AM',
-            duration: '04:32',
-            status: 'received',
-        },
-
-        {
-            id: 2,
-            name: call.name,
-            phone: call.phone,
-            callType: 'outgoing',
-            callDate: '2026-08-26',
-            callTime: '04:15 PM',
-            duration: '07:18',
-            status: 'received',
-        },
-
-        {
-            id: 3,
-            name: call.name,
-            phone: call.phone,
-            callType: 'missed',
-            callDate: '2026-08-25',
-            callTime: '02:58 PM',
-            duration: '00:00',
-            status: 'missed',
-        },
-
-        {
-            id: 4,
-            name: call.name,
-            phone: call.phone,
-            callType: 'outgoing',
-            callDate: '2026-08-23',
-            callTime: '11:35 AM',
-            duration: '03:44',
-            status: 'received',
-        },
-
-    ]
-
-
-    return histories
-
+            hour: '2-digit',
+            minute: '2-digit',
+        }
+    )
 }
 
 
@@ -400,28 +166,22 @@ function SearchableDropdown({
     placeholder = 'Select',
     onChange,
 }) {
-
     const [open, setOpen] =
         useState(false)
-
 
     const [searchValue, setSearchValue] =
         useState('')
 
-
     const filteredOptions =
         useMemo(() => {
-
             const search =
                 searchValue
                     .trim()
                     .toLowerCase()
 
-
             if (!search) {
                 return options
             }
-
 
             return options.filter(
                 (option) =>
@@ -429,12 +189,10 @@ function SearchableDropdown({
                         .toLowerCase()
                         .includes(search)
             )
-
         }, [
             options,
             searchValue,
         ])
-
 
     const selectedOption =
         options.find(
@@ -442,14 +200,11 @@ function SearchableDropdown({
                 option.value === value
         )
 
-
     const displayValue =
         selectedOption?.label ||
         placeholder
 
-
     return (
-
         <div className="
             relative
             min-w-0
@@ -465,18 +220,15 @@ function SearchableDropdown({
                 {label}
             </label>
 
-
             <button
                 type="button"
                 onClick={() => {
-
                     setOpen(
                         (previous) =>
                             !previous
                     )
 
                     setSearchValue('')
-
                 }}
                 className="
                     flex
@@ -504,7 +256,6 @@ function SearchableDropdown({
                     {displayValue}
                 </span>
 
-
                 <ChevronDownIcon className="
                     h-4
                     w-4
@@ -514,9 +265,7 @@ function SearchableDropdown({
 
             </button>
 
-
             {open && (
-
                 <>
 
                     <div
@@ -529,7 +278,6 @@ function SearchableDropdown({
                             setOpen(false)
                         }
                     />
-
 
                     <div className="
                         absolute
@@ -544,8 +292,6 @@ function SearchableDropdown({
                         bg-base-100
                         shadow-xl
                     ">
-
-                        {/* SEARCH */}
 
                         <div className="
                             border-b
@@ -567,7 +313,6 @@ function SearchableDropdown({
                                     -translate-y-1/2
                                     text-base-content/35
                                 " />
-
 
                                 <input
                                     autoFocus
@@ -604,9 +349,6 @@ function SearchableDropdown({
 
                         </div>
 
-
-                        {/* OPTIONS */}
-
                         <div className="
                             max-h-52
                             overflow-y-auto
@@ -633,7 +375,9 @@ function SearchableDropdown({
                                                     false
                                                 )
 
-                                                setSearchValue('')
+                                                setSearchValue(
+                                                    ''
+                                                )
 
                                             }}
                                             className={[
@@ -678,13 +422,10 @@ function SearchableDropdown({
                     </div>
 
                 </>
-
             )}
 
         </div>
-
     )
-
 }
 
 
@@ -699,9 +440,10 @@ function CallLogs() {
     // =========================================================
 
     const [callLogs, setCallLogs] =
-        useState(
-            INITIAL_CALL_LOGS
-        )
+        useState([])
+
+    const [loading, setLoading] =
+        useState(false)
 
 
     // =========================================================
@@ -711,22 +453,17 @@ function CallLogs() {
     const [search, setSearch] =
         useState('')
 
-
     const [agent, setAgent] =
         useState('')
-
 
     const [callType, setCallType] =
         useState('')
 
-
     const [mobileStatus, setMobileStatus] =
         useState('')
 
-
     const [fromDate, setFromDate] =
         useState('')
-
 
     const [toDate, setToDate] =
         useState('')
@@ -739,13 +476,114 @@ function CallLogs() {
     const [showHistoryModal, setShowHistoryModal] =
         useState(false)
 
-
     const [selectedCall, setSelectedCall] =
         useState(null)
 
-
     const [callHistory, setCallHistory] =
         useState([])
+
+
+    // =========================================================
+    // FETCH CALL LOGS
+    // =========================================================
+
+    const fetchCallLogs = async () => {
+        try {
+            setLoading(true)
+
+            const response =
+                await getCallLogs()
+
+            console.log(
+                'CALL LOGS RESPONSE:',
+                response
+            )
+
+            const backendLogs =
+                response?.data || []
+
+            const formattedLogs =
+                backendLogs.map(
+                    (call) => {
+
+                        const startedAt =
+                            call.call_started_at
+
+                        return {
+                            ...call,
+
+                            // Existing table/filter fields
+                            id: call.id,
+
+                            name:
+                                call.employee_name ||
+                                call.name ||
+                                'Unknown',
+
+                            phone:
+                                call.phone_number ||
+                                '',
+
+                            contactNumber:
+                                call.phone_number ||
+                                '',
+
+                            agentId:
+                                call.employee_id,
+
+                            agentName:
+                                call.employee_name ||
+                                call.name ||
+                                `Employee ${call.employee_id}`,
+
+                            callType:
+                                call.call_type ||
+                                '',
+
+                            status:
+                                call.mobile_status ||
+                                '',
+
+                            date:
+                                formatDate(
+                                    startedAt
+                                ),
+
+                            time:
+                                formatTime(
+                                    startedAt
+                                ),
+
+                            duration:
+                                formatDuration(
+                                    call.duration_seconds
+                                ),
+                        }
+                    }
+                )
+
+            setCallLogs(
+                formattedLogs
+            )
+
+        } catch (error) {
+
+            console.error(
+                'CALL LOGS FETCH ERROR:',
+                error
+            )
+
+            setCallLogs([])
+
+        } finally {
+            setLoading(false)
+        }
+    }
+
+
+    useEffect(() => {
+        fetchCallLogs()
+    }, [])
 
 
     // =========================================================
@@ -760,13 +598,14 @@ function CallLogs() {
                     new Map(
                         callLogs.map(
                             (call) => [
-                                call.agentId,
+                                String(
+                                    call.agentId
+                                ),
                                 call.agentName,
                             ]
                         )
                     ).entries()
                 )
-
 
             return [
                 {
@@ -798,7 +637,6 @@ function CallLogs() {
                 search
                     .trim()
                     .toLowerCase()
-
 
             return callLogs.filter(
                 (call) => {
@@ -833,7 +671,6 @@ function CallLogs() {
 
                         ]
 
-
                         const matchesSearch =
                             searchableValues.some(
                                 (value) =>
@@ -845,7 +682,6 @@ function CallLogs() {
                                             searchValue
                                         )
                             )
-
 
                         if (!matchesSearch) {
                             return false
@@ -860,11 +696,11 @@ function CallLogs() {
 
                     if (
                         agent &&
-                        call.agentId !== agent
+                        String(
+                            call.agentId
+                        ) !== String(agent)
                     ) {
-
                         return false
-
                     }
 
 
@@ -876,9 +712,7 @@ function CallLogs() {
                         callType &&
                         call.callType !== callType
                     ) {
-
                         return false
-
                     }
 
 
@@ -890,9 +724,7 @@ function CallLogs() {
                         mobileStatus &&
                         call.status !== mobileStatus
                     ) {
-
                         return false
-
                     }
 
 
@@ -904,9 +736,7 @@ function CallLogs() {
                         fromDate &&
                         call.date < fromDate
                     ) {
-
                         return false
-
                     }
 
 
@@ -918,9 +748,7 @@ function CallLogs() {
                         toDate &&
                         call.date > toDate
                     ) {
-
                         return false
-
                     }
 
 
@@ -947,15 +775,10 @@ function CallLogs() {
     const handleReset = () => {
 
         setSearch('')
-
         setAgent('')
-
         setCallType('')
-
         setMobileStatus('')
-
         setFromDate('')
-
         setToDate('')
 
     }
@@ -966,11 +789,7 @@ function CallLogs() {
     // =========================================================
 
     const handleRefresh = () => {
-
-        setCallLogs(
-            [...INITIAL_CALL_LOGS]
-        )
-
+        fetchCallLogs()
     }
 
 
@@ -978,23 +797,95 @@ function CallLogs() {
     // VIEW HISTORY
     // =========================================================
 
-    const handleViewHistory = (
+    const handleViewHistory = async (
         call
     ) => {
 
-        setSelectedCall(
-            call
-        )
+        try {
 
-        setCallHistory(
-            generateCallHistory(
-                call
+            setSelectedCall(call)
+
+            setShowHistoryModal(
+                true
             )
-        )
 
-        setShowHistoryModal(
-            true
-        )
+            setCallHistory([])
+
+            const response =
+                await getCallHistory(
+                    call.phone_number ||
+                    call.phone
+                )
+
+            console.log(
+                'CALL HISTORY RESPONSE:',
+                response
+            )
+
+            const backendHistory =
+                response?.data || []
+
+            const formattedHistory =
+                backendHistory.map(
+                    (item) => {
+
+                        const startedAt =
+                            item.call_started_at
+
+                        return {
+                            id: item.id,
+
+                            name:
+                                item.employee_name ||
+                                item.name ||
+                                call.name ||
+                                'Unknown',
+
+                            phone:
+                                item.phone_number ||
+                                call.phone ||
+                                '',
+
+                            callType:
+                                item.call_type ||
+                                '',
+
+                            callDate:
+                                formatDate(
+                                    startedAt
+                                ),
+
+                            callTime:
+                                formatTime(
+                                    startedAt
+                                ),
+
+                            duration:
+                                formatDuration(
+                                    item.duration_seconds
+                                ),
+
+                            status:
+                                item.mobile_status ||
+                                '',
+                        }
+                    }
+                )
+
+            setCallHistory(
+                formattedHistory
+            )
+
+        } catch (error) {
+
+            console.error(
+                'CALL HISTORY FETCH ERROR:',
+                error
+            )
+
+            setCallHistory([])
+
+        }
 
     }
 
@@ -1005,13 +896,9 @@ function CallLogs() {
 
     const handleCloseHistory = () => {
 
-        setShowHistoryModal(
-            false
-        )
+        setShowHistoryModal(false)
 
-        setSelectedCall(
-            null
-        )
+        setSelectedCall(null)
 
         setCallHistory([])
 
@@ -1025,11 +912,9 @@ function CallLogs() {
     return (
 
         <div className="
-            space-y-5
             p-4
             sm:p-6
         ">
-
 
             {/* =====================================================
                 FILTER CARD
@@ -1053,7 +938,6 @@ function CallLogs() {
                     2xl:grid-cols-5
                 ">
 
-
                     {/* =================================================
                         SEARCH
                     ================================================= */}
@@ -1074,7 +958,6 @@ function CallLogs() {
                             Search
                         </label>
 
-
                         <div className="
                             relative
                         ">
@@ -1089,7 +972,6 @@ function CallLogs() {
                                 -translate-y-1/2
                                 text-base-content/35
                             " />
-
 
                             <input
                                 type="text"
@@ -1122,6 +1004,7 @@ function CallLogs() {
                     ================================================= */}
 
                     <RmDropdown
+                        label="Select RM"
                         value={agent}
                         options={agentOptions}
                         onChange={setAgent}
@@ -1175,7 +1058,6 @@ function CallLogs() {
                             From Date
                         </label>
 
-
                         <div className="
                             relative
                         ">
@@ -1190,7 +1072,6 @@ function CallLogs() {
                                 -translate-y-1/2
                                 text-base-content/35
                             " />
-
 
                             <input
                                 type="date"
@@ -1236,7 +1117,6 @@ function CallLogs() {
                             To Date
                         </label>
 
-
                         <div className="
                             relative
                         ">
@@ -1251,7 +1131,6 @@ function CallLogs() {
                                 -translate-y-1/2
                                 text-base-content/35
                             " />
-
 
                             <input
                                 type="date"
@@ -1366,12 +1245,12 @@ function CallLogs() {
 
                     </p>
 
-
                     <button
                         type="button"
                         onClick={
                             handleRefresh
                         }
+                        disabled={loading}
                         className="
                             inline-flex
                             h-9
@@ -1389,6 +1268,8 @@ function CallLogs() {
                             transition
                             hover:bg-base-200
                             hover:text-base-content
+                            disabled:cursor-not-allowed
+                            disabled:opacity-50
                         "
                     >
 
@@ -1397,7 +1278,9 @@ function CallLogs() {
                             w-4
                         " />
 
-                        Refresh
+                        {loading
+                            ? 'Refreshing...'
+                            : 'Refresh'}
 
                     </button>
 
@@ -1442,7 +1325,6 @@ function CallLogs() {
         </div>
 
     )
-
 }
 
 

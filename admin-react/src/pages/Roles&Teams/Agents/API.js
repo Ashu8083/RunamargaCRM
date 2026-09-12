@@ -98,6 +98,27 @@ export const getApiErrorMessage = (
 // ============================================================================
 // NORMALIZE AGENT
 // ============================================================================
+//
+// Backend:
+//
+// {
+//     id,
+//     employee_id,
+//     context_id,
+//     name,
+//     email,
+//     phone,
+//     role,
+//     role_code,
+//     status,
+//     is_active,
+//     is_default,
+//     reports_to_id,
+//     created_at,
+//     updated_at
+// }
+//
+// ============================================================================
 
 const normalizeAgent = (agent) => {
 
@@ -132,31 +153,47 @@ const normalizeAgent = (agent) => {
     return {
         ...agent,
 
+        // --------------------------------------------------------------------
         // EmployeeContext.id
+        // --------------------------------------------------------------------
+
         id: employeeContextId,
 
+        // --------------------------------------------------------------------
         // Employee
+        // --------------------------------------------------------------------
+
         employee_id: employeeId,
         employeeId: employeeId,
 
+        // --------------------------------------------------------------------
         // Context
+        // --------------------------------------------------------------------
+
         context_id: contextId,
         contextId: contextId,
 
+        // --------------------------------------------------------------------
         // Role
+        // --------------------------------------------------------------------
+
         role: agent.role || '',
         roleId: contextId,
         role_code: agent.role_code || '',
 
+        // --------------------------------------------------------------------
         // Team Lead relationship
-        //
-        // reports_to_id =
-        // Team Lead EmployeeContext.id
+        // --------------------------------------------------------------------
+
+        // reports_to_id is the Employee ID of the Team Lead.
         //
         reports_to_id: reportsToId,
         reportsToId: reportsToId,
 
+        // --------------------------------------------------------------------
         // Status
+        // --------------------------------------------------------------------
+
         is_active: Boolean(agent.is_active),
 
         status:
@@ -164,14 +201,31 @@ const normalizeAgent = (agent) => {
                 ? 'Active'
                 : 'Inactive',
 
+        // --------------------------------------------------------------------
         // Display
+        // --------------------------------------------------------------------
+
         name: agent.name || 'N/A',
         email: agent.email || 'N/A',
         phone: agent.phone || 'N/A',
 
-        // Dates
-        created_at: agent.created_at || null,
-        updated_at: agent.updated_at || null,
+        // --------------------------------------------------------------------
+        // Date / Time
+        // --------------------------------------------------------------------
+
+        // Backend already returns formatted values such as:
+        //
+        // "06 Sep 2026, 01:55 PM"
+        //
+        // Keep the exact backend formatted value.
+
+        created_at:
+            agent.created_at ||
+            null,
+
+        updated_at:
+            agent.updated_at ||
+            null,
 
         createdAt:
             agent.created_at ||
@@ -236,27 +290,45 @@ const normalizeTeamLead = (teamLead) => {
     return {
         ...teamLead,
 
+        // --------------------------------------------------------------------
         // EmployeeContext.id
+        // --------------------------------------------------------------------
+
         id: employeeContextId,
 
+        // --------------------------------------------------------------------
         // Employee
+        // --------------------------------------------------------------------
+
         employee_id: employeeId,
         employeeId: employeeId,
 
+        // --------------------------------------------------------------------
         // Context
+        // --------------------------------------------------------------------
+
         context_id: contextId,
         contextId: contextId,
 
+        // --------------------------------------------------------------------
         // Role
+        // --------------------------------------------------------------------
+
         role: teamLead.role || '',
         roleId: contextId,
         role_code: teamLead.role_code || '',
 
+        // --------------------------------------------------------------------
         // Hierarchy
+        // --------------------------------------------------------------------
+
         reports_to_id: reportsToId,
         reportsToId: reportsToId,
 
+        // --------------------------------------------------------------------
         // Status
+        // --------------------------------------------------------------------
+
         is_active: Boolean(teamLead.is_active),
 
         status:
@@ -264,14 +336,25 @@ const normalizeTeamLead = (teamLead) => {
                 ? 'Active'
                 : 'Inactive',
 
+        // --------------------------------------------------------------------
         // Display
+        // --------------------------------------------------------------------
+
         name: teamLead.name || 'N/A',
         email: teamLead.email || 'N/A',
         phone: teamLead.phone || 'N/A',
 
-        // Dates
-        created_at: teamLead.created_at || null,
-        updated_at: teamLead.updated_at || null,
+        // --------------------------------------------------------------------
+        // Date / Time
+        // --------------------------------------------------------------------
+
+        created_at:
+            teamLead.created_at ||
+            null,
+
+        updated_at:
+            teamLead.updated_at ||
+            null,
 
         createdAt:
             teamLead.created_at ||
@@ -602,9 +685,6 @@ export const getAssignedTeamLeads = async (
 //     "team_lead_id": 9
 // }
 //
-// This is intentionally passed as a plain JavaScript object.
-// Axios will serialize it as JSON.
-//
 // ============================================================================
 
 export const assignTeamLead = async (
@@ -638,13 +718,19 @@ export const assignTeamLead = async (
     const normalizedTeamLeadId =
         Number(teamLeadId)
 
-    if (!Number.isInteger(normalizedAgentId) || normalizedAgentId <= 0) {
+    if (
+        !Number.isInteger(normalizedAgentId) ||
+        normalizedAgentId <= 0
+    ) {
         throw new Error(
             'Invalid Agent ID.'
         )
     }
 
-    if (!Number.isInteger(normalizedTeamLeadId) || normalizedTeamLeadId <= 0) {
+    if (
+        !Number.isInteger(normalizedTeamLeadId) ||
+        normalizedTeamLeadId <= 0
+    ) {
         throw new Error(
             'Invalid Team Lead ID.'
         )
@@ -694,7 +780,10 @@ export const removeTeamLead = async (
     const normalizedAgentId =
         Number(agentId)
 
-    if (!Number.isInteger(normalizedAgentId) || normalizedAgentId <= 0) {
+    if (
+        !Number.isInteger(normalizedAgentId) ||
+        normalizedAgentId <= 0
+    ) {
         throw new Error(
             'Invalid Agent ID.'
         )

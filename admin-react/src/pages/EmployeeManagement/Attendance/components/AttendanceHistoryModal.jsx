@@ -1,369 +1,382 @@
 // admin-react/src/pages/EmployeeManagement/Attendance/components/AttendanceHistoryModal.jsx
 
-import { useMemo, useState } from 'react'
+import React, {
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
+
+import {
+    createPortal,
+} from 'react-dom'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
-import MapPinIcon from '@heroicons/react/24/outline/MapPinIcon'
-import ArrowDownTrayIcon from '@heroicons/react/24/outline/ArrowDownTrayIcon'
 import PrinterIcon from '@heroicons/react/24/outline/PrinterIcon'
 
 
-// =============================================================
-// MONTH OPTIONS
-// =============================================================
+// ============================================================================
+// DATE FORMAT
+// ============================================================================
 
-const MONTH_OPTIONS = [
-    {
-        value: '2026-08',
-        label: 'August 2026',
-    },
-    {
-        value: '2026-07',
-        label: 'July 2026',
-    },
-    {
-        value: '2026-06',
-        label: 'June 2026',
-    },
-    {
-        value: '2026-05',
-        label: 'May 2026',
-    },
-]
+const formatDate = (value) => {
 
-
-// =============================================================
-// STATUS HELPERS
-// =============================================================
-
-const getStatusLabel = (status) => {
-
-    const normalized =
-        String(status || '')
-            .trim()
-            .toLowerCase()
-
-
-    if (normalized === 'present') {
-        return 'Present'
-    }
-
-
-    if (normalized === 'late') {
-        return 'Late'
-    }
-
-
-    if (normalized === 'absent') {
-        return 'Absent'
-    }
-
-
-    if (normalized === 'half-day') {
-        return 'Half Day'
-    }
-
-
-    return 'Unknown'
-}
-
-
-// =============================================================
-// STATUS CLASSES
-// =============================================================
-
-const getStatusClasses = (status) => {
-
-    const normalized =
-        String(status || '')
-            .trim()
-            .toLowerCase()
-
-
-    if (normalized === 'present') {
-
-        return [
-            'border-[#8BCF00]/40',
-            'bg-[#8BCF00]/10',
-            'text-[#6FA800]',
-        ].join(' ')
-
-    }
-
-
-    if (normalized === 'late') {
-
-        return [
-            'border-amber-300',
-            'bg-amber-50',
-            'text-amber-600',
-        ].join(' ')
-
-    }
-
-
-    if (normalized === 'absent') {
-
-        return [
-            'border-red-300',
-            'bg-red-50',
-            'text-red-600',
-        ].join(' ')
-
-    }
-
-
-    if (normalized === 'half-day') {
-
-        return [
-            'border-blue-300',
-            'bg-blue-50',
-            'text-blue-600',
-        ].join(' ')
-
-    }
-
-
-    return [
-        'border-base-300',
-        'bg-base-200',
-        'text-base-content/50',
-    ].join(' ')
-
-}
-
-
-// =============================================================
-// MAP URL
-// =============================================================
-
-const getMapUrl = (location) => {
-
-    if (!location) {
-        return '#'
+    if (
+        value === null ||
+        value === undefined ||
+        value === ''
+    ) {
+        return '—'
     }
 
 
     if (
-        location.latitude !== null &&
-        location.latitude !== undefined &&
-        location.longitude !== null &&
-        location.longitude !== undefined
+        typeof value === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(value)
     ) {
 
-        return `https://www.google.com/maps?q=${location.latitude},${location.longitude}`
+        const [
+            year,
+            month,
+            day,
+        ] = value.split('-')
 
+
+        const date = new Date(
+            Number(year),
+            Number(month) - 1,
+            Number(day)
+        )
+
+
+        return date.toLocaleDateString(
+            'en-IN',
+            {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+            }
+        )
     }
 
 
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        location.address || ''
-    )}`
+    const date = new Date(value)
 
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return String(value)
+    }
+
+
+    return date.toLocaleDateString(
+        'en-IN',
+        {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        }
+    )
 }
 
 
-// =============================================================
-// LOCATION DISPLAY
-// =============================================================
+// ============================================================================
+// STATUS
+// ============================================================================
 
-const LocationDisplay = ({
-    location,
+const getStatus = (item) => {
+
+    if (
+        item?.checkIn?.time
+    ) {
+        return 'Present'
+    }
+
+
+    if (
+        String(
+            item?.status || ''
+        )
+            .trim()
+            .toLowerCase() === 'present'
+    ) {
+        return 'Present'
+    }
+
+
+    return 'Absent'
+}
+
+
+// ============================================================================
+// STATUS CLASS
+// ============================================================================
+
+const getStatusClass = (status) => {
+
+    if (
+        status === 'Present'
+    ) {
+
+        return `
+            border-green-200
+            bg-green-50
+            text-green-700
+        `
+    }
+
+
+    return `
+        border-red-200
+        bg-red-50
+        text-red-700
+    `
+}
+
+
+// ============================================================================
+// MONTH LABEL
+// ============================================================================
+
+const getMonthLabel = (month) => {
+
+    if (
+        !month ||
+        !/^\d{4}-\d{2}$/.test(
+            String(month)
+        )
+    ) {
+        return String(
+            month || ''
+        )
+    }
+
+
+    const [
+        year,
+        monthNumber,
+    ] = String(month).split('-')
+
+
+    const date = new Date(
+        Number(year),
+        Number(monthNumber) - 1,
+        1
+    )
+
+
+    return date.toLocaleDateString(
+        'en-IN',
+        {
+            month: 'long',
+            year: 'numeric',
+        }
+    )
+}
+
+
+// ============================================================================
+// GET MONTH FROM DATE
+// ============================================================================
+
+const getMonthFromDate = (value) => {
+
+    if (!value) {
+        return ''
+    }
+
+
+    const stringValue =
+        String(value)
+
+
+    if (
+        /^\d{4}-\d{2}-\d{2}$/.test(
+            stringValue
+        )
+    ) {
+
+        return stringValue.slice(
+            0,
+            7
+        )
+    }
+
+
+    return ''
+}
+
+
+// ============================================================================
+// GET MONTHS FROM HISTORY
+// ============================================================================
+
+const getAvailableMonths = (
+    history
+) => {
+
+    if (
+        !Array.isArray(history)
+    ) {
+        return []
+    }
+
+
+    const months = history
+        .map(
+            (item) => {
+
+                if (
+                    item?.month &&
+                    /^\d{4}-\d{2}$/.test(
+                        String(item.month)
+                    )
+                ) {
+
+                    return String(
+                        item.month
+                    )
+                }
+
+
+                return getMonthFromDate(
+                    item?.date
+                )
+            }
+        )
+        .filter(Boolean)
+
+
+    return [
+        ...new Set(months),
+    ].sort(
+        (a, b) =>
+            b.localeCompare(a)
+    )
+}
+
+
+// ============================================================================
+// IMAGE LINK
+// ============================================================================
+
+const ImageLink = ({
+    image,
 }) => {
 
-    if (!location) {
+    if (!image) {
+
         return (
-            <span className="text-xs text-base-content/40">
-                Location unavailable
+            <span className="
+                text-xs
+                text-gray-400
+            ">
+                —
             </span>
         )
     }
 
 
-    const isOffice =
-        Boolean(location.isOffice)
-
-
     return (
 
-        <div className="flex items-center gap-2">
-
-            <a
-                href={getMapUrl(location)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="
-                    inline-flex
-                    items-center
-                    gap-1
-                    text-xs
-                    text-base-content/55
-                    transition
-                    hover:text-[#6FA800]
-                "
-            >
-
-                <MapPinIcon className="h-3.5 w-3.5" />
-
-                <span className="max-w-[150px] truncate">
-                    {location.address || 'View location'}
-                </span>
-
-            </a>
-
-
-            <span
-                className={[
-                    'rounded-full',
-                    'px-1.5',
-                    'py-0.5',
-                    'text-[10px]',
-                    'font-medium',
-                    isOffice
-                        ? 'bg-[#8BCF00]/10 text-[#6FA800]'
-                        : 'bg-amber-50 text-amber-600',
-                ].join(' ')}
-            >
-                {isOffice
-                    ? 'In Office'
-                    : 'Out Office'}
-            </span>
-
-        </div>
-
+        <a
+            href={image}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="
+                text-xs
+                font-medium
+                text-blue-600
+                underline
+                underline-offset-2
+                hover:text-blue-800
+            "
+            onClick={(event) => {
+                event.stopPropagation()
+            }}
+            title="Open attendance image"
+        >
+            View
+        </a>
     )
-
 }
 
 
-// =============================================================
-// PUNCH IMAGE
-// =============================================================
+// ============================================================================
+// IMAGE CELL
+// ============================================================================
 
-const PunchImage = ({
-    image,
-    label,
+const AttendanceImageCell = ({
+    checkIn,
+    checkOut,
 }) => {
 
     return (
 
         <div className="
-            overflow-hidden
-            rounded-lg
-            border
-            border-base-300
-            bg-base-200
+            flex
+            min-w-[120px]
+            flex-col
+            gap-1
         ">
 
-            {image ? (
-
-                <img
-                    src={image}
-                    alt={label}
-                    className="
-                        h-36
-                        w-full
-                        object-cover
-                    "
-                />
-
-            ) : (
-
-                <div className="
-                    flex
-                    h-36
-                    items-center
-                    justify-center
-                    px-4
-                    text-center
-                ">
-
-                    <p className="
-                        text-xs
-                        text-base-content/40
-                    ">
-                        No {label.toLowerCase()} image
-                    </p>
-
-                </div>
-
-            )}
-
             <div className="
-                border-t
-                border-base-300
-                bg-base-100
-                px-3
-                py-2
+                flex
+                items-center
+                gap-1.5
             ">
 
-                <p className="
-                    text-[11px]
-                    font-medium
-                    text-base-content/55
+                <span className="
+                    text-xs
+                    text-gray-500
                 ">
-                    {label}
-                </p>
+                    Punch In:
+                </span>
+
+
+                <ImageLink
+                    image={
+                        checkIn?.image ||
+                        null
+                    }
+                />
+
+            </div>
+
+
+            <div className="
+                flex
+                items-center
+                gap-1.5
+            ">
+
+                <span className="
+                    text-xs
+                    text-gray-500
+                ">
+                    Punch Out:
+                </span>
+
+
+                <ImageLink
+                    image={
+                        checkOut?.image ||
+                        null
+                    }
+                />
 
             </div>
 
         </div>
-
     )
-
 }
 
 
-// =============================================================
-// MONTHLY SUMMARY
-// =============================================================
-
-const SummaryCard = ({
-    label,
-    value,
-}) => {
-
-    return (
-
-        <div className="
-            rounded-lg
-            border
-            border-base-300
-            bg-base-100
-            px-3
-            py-3
-        ">
-
-            <p className="
-                text-[10px]
-                font-medium
-                uppercase
-                tracking-wide
-                text-base-content/40
-            ">
-                {label}
-            </p>
-
-
-            <p className="
-                mt-1
-                text-lg
-                font-semibold
-                text-base-content
-            ">
-                {value}
-            </p>
-
-        </div>
-
-    )
-
-}
-
-
-// =============================================================
-// HISTORY MODAL
-// =============================================================
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 function AttendanceHistoryModal({
     open = false,
@@ -372,352 +385,1007 @@ function AttendanceHistoryModal({
     onClose,
 }) {
 
-    const [selectedMonth, setSelectedMonth] =
-        useState('2026-08')
+    // =========================================================================
+    // SELECTED MONTH
+    // =========================================================================
 
-
-    // =========================================================
-    // CLOSE
-    // =========================================================
-
-    const handleClose = () => {
-
-        onClose?.()
-
-    }
-
-
-    // =========================================================
-    // FILTER MONTH
-    // =========================================================
-
-    const monthlyHistory = useMemo(() => {
-
-        if (!Array.isArray(history)) {
-            return []
-        }
-
-
-        return history.filter(
-            (item) =>
-                item.month === selectedMonth
-        )
-
-    }, [
-        history,
+    const [
         selectedMonth,
-    ])
+        setSelectedMonth,
+    ] = useState('')
 
 
-    // =========================================================
-    // SUMMARY
-    // =========================================================
+    // =========================================================================
+    // AVAILABLE MONTHS
+    // =========================================================================
 
-    const summary = useMemo(() => {
-
-        const present =
-            monthlyHistory.filter(
-                (item) =>
-                    item.status === 'present'
-            ).length
-
-
-        const late =
-            monthlyHistory.filter(
-                (item) =>
-                    item.status === 'late'
-            ).length
+    const availableMonths =
+        useMemo(
+            () =>
+                getAvailableMonths(
+                    history
+                ),
+            [
+                history,
+            ]
+        )
 
 
-        const absent =
-            monthlyHistory.filter(
-                (item) =>
-                    item.status === 'absent'
-            ).length
+    // =========================================================================
+    // SET DEFAULT MONTH
+    // =========================================================================
 
+    useEffect(() => {
 
-        const halfDay =
-            monthlyHistory.filter(
-                (item) =>
-                    item.status === 'half-day'
-            ).length
+        if (
+            availableMonths.length === 0
+        ) {
 
+            setSelectedMonth('')
 
-        return {
-            present,
-            late,
-            absent,
-            halfDay,
-        }
-
-    }, [
-        monthlyHistory,
-    ])
-
-
-    // =========================================================
-    // CURRENT DAY
-    // =========================================================
-
-    const currentEntry =
-        entry || {}
-
-
-    const currentCheckIn =
-        currentEntry.checkIn || null
-
-
-    const currentCheckOut =
-        currentEntry.checkOut || null
-
-
-    // =========================================================
-    // CURRENT STATUS
-    // =========================================================
-
-    const currentStatus =
-        currentEntry.status ||
-        'unknown'
-
-
-    // =========================================================
-    // DOWNLOAD CHART
-    // =========================================================
-
-    const handleDownloadChart = () => {
-
-        const chart =
-            document.getElementById(
-                'attendance-history-chart'
-            )
-
-
-        if (!chart) {
             return
         }
 
 
-        const canvas =
-            document.createElement('canvas')
+        setSelectedMonth(
+            (currentMonth) => {
 
-
-        const width =
-            chart.offsetWidth || 900
-
-
-        const height =
-            chart.offsetHeight || 320
-
-
-        canvas.width = width * 2
-        canvas.height = height * 2
-
-
-        const context =
-            canvas.getContext('2d')
-
-
-        if (!context) {
-            return
-        }
-
-
-        context.scale(2, 2)
-
-
-        context.fillStyle =
-            '#ffffff'
-
-
-        context.fillRect(
-            0,
-            0,
-            width,
-            height
-        )
-
-
-        context.fillStyle =
-            '#222222'
-
-
-        context.font =
-            '600 16px Arial'
-
-
-        context.fillText(
-            `${currentEntry.name || 'Employee'} - Attendance History`,
-            20,
-            30
-        )
-
-
-        context.font =
-            '12px Arial'
-
-
-        context.fillStyle =
-            '#666666'
-
-
-        const monthLabel =
-            MONTH_OPTIONS.find(
-                (month) =>
-                    month.value ===
-                    selectedMonth
-            )?.label || selectedMonth
-
-
-        context.fillText(
-            monthLabel,
-            20,
-            52
-        )
-
-
-        const chartItems =
-            monthlyHistory
-
-
-        const startX = 25
-        const startY = 85
-        const barWidth = 22
-        const gap = 8
-        const maxHeight = 170
-
-
-        chartItems.forEach(
-            (item, index) => {
-
-                const x =
-                    startX +
-                    index *
-                    (barWidth + gap)
-
-
-                const status =
-                    String(
-                        item.status || ''
-                    ).toLowerCase()
-
-
-                let barHeight =
-                    maxHeight
-
-
-                if (status === 'absent') {
-                    barHeight = 35
-                } else if (
-                    status === 'late'
+                if (
+                    currentMonth &&
+                    availableMonths.includes(
+                        currentMonth
+                    )
                 ) {
-                    barHeight = 120
-                } else if (
-                    status === 'half-day'
-                ) {
-                    barHeight = 80
+
+                    return currentMonth
                 }
 
 
-                context.fillStyle =
-                    status === 'present'
-                        ? '#8BCF00'
-                        : status === 'late'
-                            ? '#f59e0b'
-                            : status === 'half-day'
-                                ? '#3b82f6'
-                                : '#ef4444'
-
-
-                context.fillRect(
-                    x,
-                    startY +
-                    maxHeight -
-                    barHeight,
-                    barWidth,
-                    barHeight
-                )
-
-
-                context.fillStyle =
-                    '#666666'
-
-
-                context.font =
-                    '10px Arial'
-
-
-                context.fillText(
-                    String(
-                        item.day || ''
-                    ),
-                    x + 5,
-                    startY +
-                    maxHeight +
-                    15
-                )
-
+                return availableMonths[0]
             }
         )
 
-
-        const link =
-            document.createElement('a')
-
-
-        link.download =
-            `attendance-${selectedMonth}.png`
+    }, [
+        availableMonths,
+    ])
 
 
-        link.href =
-            canvas.toDataURL(
-                'image/png'
+    // =========================================================================
+    // FILTERED HISTORY
+    // =========================================================================
+
+    const monthlyHistory =
+        useMemo(() => {
+
+            if (
+                !Array.isArray(history)
+            ) {
+                return []
+            }
+
+
+            if (
+                !selectedMonth
+            ) {
+                return history
+            }
+
+
+            return history.filter(
+                (item) => {
+
+                    const itemMonth =
+                        (
+                            item?.month &&
+                            /^\d{4}-\d{2}$/.test(
+                                String(
+                                    item.month
+                                )
+                            )
+                        )
+                            ? String(
+                                item.month
+                            )
+                            : getMonthFromDate(
+                                item?.date
+                            )
+
+
+                    return (
+                        itemMonth ===
+                        selectedMonth
+                    )
+                }
             )
 
+        }, [
+            history,
+            selectedMonth,
+        ])
 
-        link.click()
+
+    // =========================================================================
+    // SUMMARY
+    // =========================================================================
+
+    const summary =
+        useMemo(() => {
+
+            const present =
+                monthlyHistory.filter(
+                    (item) =>
+                        getStatus(item) ===
+                        'Present'
+                ).length
+
+
+            const absent =
+                monthlyHistory.filter(
+                    (item) =>
+                        getStatus(item) ===
+                        'Absent'
+                ).length
+
+
+            return {
+                present,
+                absent,
+                total:
+                    monthlyHistory.length,
+            }
+
+        }, [
+            monthlyHistory,
+        ])
+
+
+    // =========================================================================
+    // EMPLOYEE
+    // =========================================================================
+
+    const employee =
+        entry || {}
+
+
+    // =========================================================================
+    // CURRENT STATUS
+    // =========================================================================
+
+    const currentStatus =
+        getStatus(
+            employee
+        )
+
+
+    // =========================================================================
+    // CURRENT CHECK IN
+    // =========================================================================
+
+    const currentCheckIn =
+        employee?.checkIn?.time ||
+        employee?.punchIn ||
+        '—'
+
+
+    // =========================================================================
+    // CURRENT CHECK OUT
+    // =========================================================================
+
+    const currentCheckOut =
+        employee?.checkOut?.time ||
+        employee?.punchOut ||
+        '—'
+
+
+    // =========================================================================
+    // CLOSE
+    // =========================================================================
+
+    const handleClose = () => {
+
+        if (
+            typeof onClose ===
+            'function'
+        ) {
+            onClose()
+        }
 
     }
 
 
-    // =========================================================
-    // PRINT / PDF
-    // =========================================================
+    // =========================================================================
+    // PRINT MODAL
+    // =========================================================================
 
     const handlePrint = () => {
 
-        window.print()
+        const printWindow =
+            window.open(
+                '',
+                '_blank',
+                'width=1200,height=900'
+            )
+
+
+        if (!printWindow) {
+
+            window.alert(
+                'Please allow pop-ups for this site to print attendance history.'
+            )
+
+            return
+        }
+
+
+        // ---------------------------------------------------------------------
+        // BUILD PRINTABLE ROWS
+        // ---------------------------------------------------------------------
+
+        const tableRows =
+            monthlyHistory
+                .map(
+                    (item) => {
+
+                        const status =
+                            getStatus(item)
+
+
+                        const statusClass =
+                            status === 'Present'
+                                ? 'status-present'
+                                : 'status-absent'
+
+
+                        const punchInImage =
+                            item?.checkIn?.image ||
+                            null
+
+
+                        const punchOutImage =
+                            item?.checkOut?.image ||
+                            null
+
+
+                        const imageHtml = `
+
+                            <div class="image-cell">
+
+                                <div>
+                                    Punch In:
+                                    ${
+                                        punchInImage
+                                            ? `<a href="${punchInImage}" target="_blank">View</a>`
+                                            : '—'
+                                    }
+                                </div>
+
+                                <div>
+                                    Punch Out:
+                                    ${
+                                        punchOutImage
+                                            ? `<a href="${punchOutImage}" target="_blank">View</a>`
+                                            : '—'
+                                    }
+                                </div>
+
+                            </div>
+
+                        `
+
+
+                        return `
+
+                            <tr>
+
+                                <td>
+                                    ${formatDate(
+                                        item?.date
+                                    )}
+                                </td>
+
+
+                                <td>
+                                    ${
+                                        item?.checkIn?.time ||
+                                        '—'
+                                    }
+                                </td>
+
+
+                                <td>
+                                    ${
+                                        item?.checkOut?.time ||
+                                        '—'
+                                    }
+                                </td>
+
+
+                                <td>
+                                    ${imageHtml}
+                                </td>
+
+
+                                <td>
+
+                                    <span class="${statusClass}">
+                                        ${status}
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                        `
+                    }
+                )
+                .join('')
+
+
+        // ---------------------------------------------------------------------
+        // EMPLOYEE INFORMATION
+        // ---------------------------------------------------------------------
+
+        const employeeName =
+            employee?.name ||
+            'Employee'
+
+
+        const employeeId =
+            employee?.employeeId
+                ? `ID: ${employee.employeeId}`
+                : ''
+
+
+        const monthLabel =
+            selectedMonth
+                ? getMonthLabel(
+                    selectedMonth
+                )
+                : 'All Months'
+
+
+        // ---------------------------------------------------------------------
+        // PRINT WINDOW
+        // ---------------------------------------------------------------------
+
+        printWindow.document.open()
+
+
+        printWindow.document.write(
+            `
+
+            <!DOCTYPE html>
+
+            <html>
+
+            <head>
+
+                <meta charset="UTF-8" />
+
+                <title>
+                    ${employeeName} - Attendance History
+                </title>
+
+
+                <style>
+
+                    * {
+                        box-sizing: border-box;
+                    }
+
+
+                    body {
+                        margin: 0;
+                        padding: 32px;
+                        background: #ffffff;
+                        color: #111827;
+                        font-family:
+                            Arial,
+                            Helvetica,
+                            sans-serif;
+                        font-size: 13px;
+                    }
+
+
+                    .print-container {
+                        width: 100%;
+                        max-width: 1100px;
+                        margin: 0 auto;
+                    }
+
+
+                    .header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        border-bottom: 2px solid #111827;
+                        padding-bottom: 16px;
+                        margin-bottom: 20px;
+                    }
+
+
+                    .title {
+                        margin: 0;
+                        font-size: 24px;
+                        font-weight: 700;
+                        color: #111827;
+                    }
+
+
+                    .employee-name {
+                        margin-top: 6px;
+                        font-size: 14px;
+                        color: #4b5563;
+                    }
+
+
+                    .generated {
+                        text-align: right;
+                        font-size: 11px;
+                        color: #6b7280;
+                    }
+
+
+                    .section-title {
+                        margin: 0 0 10px 0;
+                        font-size: 15px;
+                        font-weight: 700;
+                        color: #111827;
+                    }
+
+
+                    .current-grid {
+                        display: grid;
+                        grid-template-columns:
+                            repeat(
+                                3,
+                                minmax(0, 1fr)
+                            );
+                        gap: 12px;
+                        margin-bottom: 22px;
+                    }
+
+
+                    .summary-grid {
+                        display: grid;
+                        grid-template-columns:
+                            repeat(
+                                3,
+                                minmax(0, 1fr)
+                            );
+                        gap: 12px;
+                        margin-bottom: 22px;
+                    }
+
+
+                    .info-card {
+                        border: 1px solid #d1d5db;
+                        border-radius: 8px;
+                        padding: 14px;
+                        background: #f9fafb;
+                    }
+
+
+                    .info-label {
+                        font-size: 11px;
+                        font-weight: 600;
+                        color: #6b7280;
+                        text-transform: uppercase;
+                        letter-spacing: 0.04em;
+                    }
+
+
+                    .info-value {
+                        margin-top: 7px;
+                        font-size: 16px;
+                        font-weight: 700;
+                        color: #111827;
+                    }
+
+
+                    .status-present {
+                        display: inline-block;
+                        padding: 5px 10px;
+                        border-radius: 999px;
+                        background: #dcfce7;
+                        color: #15803d;
+                        font-size: 11px;
+                        font-weight: 600;
+                    }
+
+
+                    .status-absent {
+                        display: inline-block;
+                        padding: 5px 10px;
+                        border-radius: 999px;
+                        background: #fee2e2;
+                        color: #b91c1c;
+                        font-size: 11px;
+                        font-weight: 600;
+                    }
+
+
+                    .month-section {
+                        margin-bottom: 14px;
+                    }
+
+
+                    .month-label {
+                        font-size: 13px;
+                        color: #4b5563;
+                    }
+
+
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 10px;
+                    }
+
+
+                    th {
+                        padding: 11px 12px;
+                        border: 1px solid #d1d5db;
+                        background: #f3f4f6;
+                        text-align: left;
+                        font-size: 11px;
+                        font-weight: 700;
+                        color: #374151;
+                        text-transform: uppercase;
+                    }
+
+
+                    td {
+                        padding: 11px 12px;
+                        border: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #374151;
+                    }
+
+
+                    tr {
+                        page-break-inside: avoid;
+                    }
+
+
+                    .image-cell {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 4px;
+                    }
+
+
+                    .image-cell a {
+                        color: #2563eb;
+                        text-decoration: underline;
+                    }
+
+
+                    .empty {
+                        padding: 30px;
+                        text-align: center;
+                        border: 1px solid #d1d5db;
+                        color: #6b7280;
+                    }
+
+
+                    .footer {
+                        margin-top: 24px;
+                        padding-top: 12px;
+                        border-top: 1px solid #d1d5db;
+                        font-size: 10px;
+                        color: #6b7280;
+                        text-align: center;
+                    }
+
+
+                    @page {
+                        size: A4;
+                        margin: 14mm;
+                    }
+
+
+                    @media print {
+
+                        body {
+                            padding: 0;
+                        }
+
+
+                        .print-container {
+                            max-width: none;
+                        }
+
+                    }
+
+                </style>
+
+            </head>
+
+
+            <body>
+
+                <div class="print-container">
+
+
+                    <!-- =====================================================
+                        HEADER
+                    ====================================================== -->
+
+                    <div class="header">
+
+                        <div>
+
+                            <h1 class="title">
+                                Attendance History
+                            </h1>
+
+
+                            <div class="employee-name">
+
+                                ${employeeName}
+
+                                ${
+                                    employeeId
+                                        ? ` &nbsp; ${employeeId}`
+                                        : ''
+                                }
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="generated">
+
+                            Printed on<br />
+
+                            ${new Date().toLocaleString(
+                                'en-IN'
+                            )}
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================================
+                        CURRENT ATTENDANCE
+                    ====================================================== -->
+
+                    <h2 class="section-title">
+                        Current Attendance
+                    </h2>
+
+
+                    <div class="current-grid">
+
+
+                        <div class="info-card">
+
+                            <div class="info-label">
+                                Current Status
+                            </div>
+
+
+                            <div class="info-value">
+
+                                <span class="${
+                                    currentStatus === 'Present'
+                                        ? 'status-present'
+                                        : 'status-absent'
+                                }">
+
+                                    ${currentStatus}
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="info-card">
+
+                            <div class="info-label">
+                                Punch In
+                            </div>
+
+
+                            <div class="info-value">
+                                ${currentCheckIn}
+                            </div>
+
+                        </div>
+
+
+                        <div class="info-card">
+
+                            <div class="info-label">
+                                Punch Out
+                            </div>
+
+
+                            <div class="info-value">
+                                ${currentCheckOut}
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- =====================================================
+                        SELECTED MONTH
+                    ====================================================== -->
+
+                    <div class="month-section">
+
+                        <h2 class="section-title">
+                            Attendance History
+                        </h2>
+
+
+                        <div class="month-label">
+
+                            Selected Month:
+
+                            <strong>
+                                ${monthLabel}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================================
+                        SUMMARY
+                    ====================================================== -->
+
+                    <div class="summary-grid">
+
+
+                        <div class="info-card">
+
+                            <div class="info-label">
+                                Present
+                            </div>
+
+
+                            <div class="info-value">
+                                ${summary.present}
+                            </div>
+
+                        </div>
+
+
+                        <div class="info-card">
+
+                            <div class="info-label">
+                                Absent
+                            </div>
+
+
+                            <div class="info-value">
+                                ${summary.absent}
+                            </div>
+
+                        </div>
+
+
+                        <div class="info-card">
+
+                            <div class="info-label">
+                                Total Days
+                            </div>
+
+
+                            <div class="info-value">
+                                ${summary.total}
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- =====================================================
+                        DAILY DETAILS
+                    ====================================================== -->
+
+                    <h2 class="section-title">
+                        Daily Details
+                    </h2>
+
+
+                    ${
+                        monthlyHistory.length > 0
+                            ? `
+
+                                <table>
+
+                                    <thead>
+
+                                        <tr>
+
+                                            <th>
+                                                Date
+                                            </th>
+
+
+                                            <th>
+                                                Punch In
+                                            </th>
+
+
+                                            <th>
+                                                Punch Out
+                                            </th>
+
+
+                                            <th>
+                                                Image
+                                            </th>
+
+
+                                            <th>
+                                                Status
+                                            </th>
+
+                                        </tr>
+
+                                    </thead>
+
+
+                                    <tbody>
+
+                                        ${tableRows}
+
+                                    </tbody>
+
+                                </table>
+
+                            `
+                            : `
+
+                                <div class="empty">
+
+                                    No attendance records
+                                    found for this month.
+
+                                </div>
+
+                            `
+                    }
+
+
+                    <!-- =====================================================
+                        FOOTER
+                    ====================================================== -->
+
+                    <div class="footer">
+                        Attendance History Report
+                    </div>
+
+
+                </div>
+
+
+                <script>
+
+                    window.onload = function () {
+
+                        window.focus()
+
+                        window.print()
+
+                    }
+
+
+                    window.onafterprint = function () {
+
+                        window.close()
+
+                    }
+
+                </script>
+
+
+            </body>
+
+            </html>
+
+            `
+        )
+
+
+        printWindow.document.close()
 
     }
 
 
-    // =========================================================
+    // =========================================================================
+    // ESCAPE KEY
+    // =========================================================================
+
+    useEffect(() => {
+
+        if (!open) {
+            return undefined
+        }
+
+
+        const handleKeyDown =
+            (event) => {
+
+                if (
+                    event.key ===
+                    'Escape'
+                ) {
+                    handleClose()
+                }
+
+            }
+
+
+        document.addEventListener(
+            'keydown',
+            handleKeyDown
+        )
+
+
+        return () => {
+
+            document.removeEventListener(
+                'keydown',
+                handleKeyDown
+            )
+
+        }
+
+    }, [
+        open,
+    ])
+
+
+    // =========================================================================
     // CLOSED
-    // =========================================================
+    // =========================================================================
 
     if (!open) {
         return null
     }
 
 
-    // =========================================================
-    // RENDER
-    // =========================================================
+    // =========================================================================
+    // MODAL
+    // =========================================================================
 
-    return (
+    const modal = (
 
         <div
             className="
                 fixed
                 inset-0
-                z-[100]
+                z-[99999]
                 flex
+                h-screen
+                w-screen
                 items-center
                 justify-center
-                bg-black/40
+                bg-black/50
                 p-3
                 sm:p-5
             "
-            onMouseDown={(event) => {
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="attendance-history-title"
+            onMouseDown={(
+                event
+            ) => {
 
                 if (
                     event.target ===
@@ -729,95 +1397,184 @@ function AttendanceHistoryModal({
             }}
         >
 
-            <div className="
-                flex
-                max-h-[94vh]
-                w-full
-                max-w-5xl
-                flex-col
-                overflow-hidden
-                rounded-2xl
-                border
-                border-base-300
-                bg-base-100
-                shadow-2xl
-            ">
+            {/* ================================================================
+                MODAL CONTAINER
+            ================================================================ */}
 
-
-                {/* =================================================
-                    HEADER
-                ================================================= */}
-
-                <div className="
+            <div
+                className="
                     flex
-                    shrink-0
-                    items-center
-                    justify-between
-                    border-b
-                    border-base-300
-                    px-5
-                    py-4
-                ">
+                    max-h-[94vh]
+                    w-full
+                    max-w-5xl
+                    flex-col
+                    overflow-hidden
+                    rounded-xl
+                    bg-white
+                    shadow-2xl
+                "
+                onMouseDown={(
+                    event
+                ) => {
 
-                    <div>
+                    event.stopPropagation()
 
-                        <h2 className="
-                            text-base
-                            font-semibold
-                            text-base-content
-                        ">
+                }}
+            >
+
+                {/* ============================================================
+                    HEADER
+                ============================================================ */}
+
+                <div
+                    className="
+                        flex
+                        shrink-0
+                        items-center
+                        justify-between
+                        border-b
+                        border-gray-200
+                        px-5
+                        py-4
+                        sm:px-6
+                    "
+                >
+
+                    <div
+                        className="
+                            min-w-0
+                        "
+                    >
+
+                        <h2
+                            id="attendance-history-title"
+                            className="
+                                truncate
+                                text-lg
+                                font-semibold
+                                text-gray-900
+                            "
+                        >
                             Attendance History
                         </h2>
 
 
-                        <p className="
-                            mt-0.5
-                            text-xs
-                            text-base-content/50
-                        ">
-                            {currentEntry.name ||
-                                'Employee'}
-                        </p>
+                        <div
+                            className="
+                                mt-1
+                                flex
+                                flex-wrap
+                                items-center
+                                gap-x-2
+                                gap-y-0.5
+                                text-xs
+                                text-gray-500
+                            "
+                        >
+
+                            <span>
+                                {
+                                    employee?.name ||
+                                    'Employee'
+                                }
+                            </span>
+
+
+                            {employee?.employeeId && (
+
+                                <>
+
+                                    <span>
+                                        •
+                                    </span>
+
+
+                                    <span>
+                                        ID:{' '}
+                                        {
+                                            employee.employeeId
+                                        }
+                                    </span>
+
+                                </>
+
+                            )}
+
+                        </div>
 
                     </div>
 
 
-                    <div className="
-                        flex
-                        items-center
-                        gap-2
-                    ">
+                    {/* ========================================================
+                        HEADER ACTIONS
+                    ======================================================== */}
+
+                    <div
+                        className="
+                            ml-4
+                            flex
+                            shrink-0
+                            items-center
+                            gap-2
+                        "
+                    >
+
+                        {/* ====================================================
+                            PRINT BUTTON
+                        ==================================================== */}
 
                         <button
                             type="button"
-                            onClick={handlePrint}
-                            title="Print / Save as PDF"
+                            onClick={
+                                handlePrint
+                            }
                             className="
                                 flex
                                 h-9
-                                w-9
                                 items-center
-                                justify-center
+                                gap-2
                                 rounded-lg
-                                text-base-content/50
+                                border
+                                border-gray-300
+                                bg-white
+                                px-3
+                                text-sm
+                                font-medium
+                                text-gray-600
                                 transition
-                                hover:bg-base-200
-                                hover:text-base-content
+                                hover:bg-gray-100
+                                hover:text-gray-800
                             "
+                            title="Print attendance history"
                         >
 
-                            <PrinterIcon className="
-                                h-4
-                                w-4
-                            " />
+                            <PrinterIcon
+                                className="
+                                    h-4
+                                    w-4
+                                "
+                            />
+
+
+                            <span className="
+                                hidden
+                                sm:inline
+                            ">
+                                Print
+                            </span>
 
                         </button>
 
 
+                        {/* ====================================================
+                            CLOSE BUTTON
+                        ==================================================== */}
+
                         <button
                             type="button"
-                            onClick={handleClose}
-                            title="Close"
+                            onClick={
+                                handleClose
+                            }
                             className="
                                 flex
                                 h-9
@@ -825,17 +1582,24 @@ function AttendanceHistoryModal({
                                 items-center
                                 justify-center
                                 rounded-lg
-                                text-base-content/50
+                                border
+                                border-gray-300
+                                bg-white
+                                text-gray-500
                                 transition
-                                hover:bg-base-200
-                                hover:text-base-content
+                                hover:bg-gray-100
+                                hover:text-gray-700
                             "
+                            aria-label="Close attendance history"
+                            title="Close"
                         >
 
-                            <XMarkIcon className="
-                                h-5
-                                w-5
-                            " />
+                            <XMarkIcon
+                                className="
+                                    h-5
+                                    w-5
+                                "
+                            />
 
                         </button>
 
@@ -844,838 +1608,707 @@ function AttendanceHistoryModal({
                 </div>
 
 
-                {/* =================================================
+                {/* ============================================================
                     CONTENT
-                ================================================= */}
-
-                <div className="
-                    min-h-0
-                    flex-1
-                    overflow-y-auto
-                    px-5
-                    py-5
-                ">
-
-
-                    {/* =================================================
-                        CURRENT STATUS
-                    ================================================= */}
-
-                    <div className="
-                        rounded-xl
-                        border
-                        border-base-300
-                        bg-base-200/30
-                        p-4
-                    ">
-
-                        <div className="
-                            flex
-                            flex-col
-                            gap-4
-                            lg:flex-row
-                            lg:items-center
-                            lg:justify-between
-                        ">
-
-                            <div>
-
-                                <p className="
-                                    text-[11px]
-                                    font-medium
-                                    uppercase
-                                    tracking-wide
-                                    text-base-content/40
-                                ">
-                                    Current Status
-                                </p>
-
-
-                                <div className="
-                                    mt-1.5
-                                    flex
-                                    items-center
-                                    gap-2
-                                ">
-
-                                    <span
-                                        className={[
-                                            'rounded-full',
-                                            'border',
-                                            'px-3',
-                                            'py-1.5',
-                                            'text-xs',
-                                            'font-medium',
-                                            getStatusClasses(
-                                                currentStatus
-                                            ),
-                                        ].join(' ')}
-                                    >
-                                        {getStatusLabel(
-                                            currentStatus
-                                        )}
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-
-                            <div className="
-                                grid
-                                grid-cols-2
-                                gap-3
-                            ">
-
-                                <div className="
-                                    rounded-lg
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    px-4
-                                    py-3
-                                ">
-
-                                    <p className="
-                                        text-[10px]
-                                        uppercase
-                                        tracking-wide
-                                        text-base-content/40
-                                    ">
-                                        Punch In
-                                    </p>
-
-
-                                    <p className="
-                                        mt-1
-                                        text-sm
-                                        font-semibold
-                                        text-base-content
-                                    ">
-                                        {
-                                            currentCheckIn?.time ||
-                                            '—'
-                                        }
-                                    </p>
-
-                                </div>
-
-
-                                <div className="
-                                    rounded-lg
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    px-4
-                                    py-3
-                                ">
-
-                                    <p className="
-                                        text-[10px]
-                                        uppercase
-                                        tracking-wide
-                                        text-base-content/40
-                                    ">
-                                        Punch Out
-                                    </p>
-
-
-                                    <p className="
-                                        mt-1
-                                        text-sm
-                                        font-semibold
-                                        text-base-content
-                                    ">
-                                        {
-                                            currentCheckOut?.time ||
-                                            '—'
-                                        }
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    {/* =================================================
-                        CURRENT PUNCH IMAGES
-                    ================================================= */}
-
-                    <div className="
-                        mt-5
-                        grid
-                        grid-cols-1
-                        gap-4
-                        sm:grid-cols-2
-                    ">
-
-                        <PunchImage
-                            image={
-                                currentCheckIn?.image
-                            }
-                            label="Punch In Image"
-                        />
-
-
-                        <PunchImage
-                            image={
-                                currentCheckOut?.image
-                            }
-                            label="Punch Out Image"
-                        />
-
-                    </div>
-
-
-                    {/* =================================================
-                        MONTH SELECTOR
-                    ================================================= */}
-
-                    <div className="
-                        mt-5
-                        flex
-                        flex-col
-                        gap-3
-                        sm:flex-row
-                        sm:items-end
-                        sm:justify-between
-                    ">
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                Attendance Month
-                            </label>
-
-
-                            <select
-                                value={selectedMonth}
-                                onChange={(event) =>
-                                    setSelectedMonth(
-                                        event.target.value
-                                    )
-                                }
-                                className="
-                                    select
-                                    select-bordered
-                                    h-10
-                                    min-h-10
-                                    w-full
-                                    sm:w-[210px]
-                                "
-                            >
-
-                                {MONTH_OPTIONS.map(
-                                    (month) => (
-
-                                        <option
-                                            key={
-                                                month.value
-                                            }
-                                            value={
-                                                month.value
-                                            }
-                                        >
-                                            {month.label}
-                                        </option>
-
-                                    )
-                                )}
-
-                            </select>
-
-                        </div>
-
-
-                        <button
-                            type="button"
-                            onClick={
-                                handleDownloadChart
-                            }
-                            className="
-                                inline-flex
-                                h-10
-                                items-center
-                                justify-center
-                                gap-1.5
-                                rounded-lg
-                                border
-                                border-base-300
-                                bg-base-100
-                                px-4
-                                text-xs
-                                font-medium
-                                text-base-content/70
-                                transition
-                                hover:bg-base-200
-                                hover:text-base-content
-                            "
-                        >
-
-                            <ArrowDownTrayIcon className="
-                                h-4
-                                w-4
-                            " />
-
-                            Download Chart
-
-                        </button>
-
-                    </div>
-
-
-                    {/* =================================================
-                        SUMMARY
-                    ================================================= */}
-
-                    <div className="
-                        mt-4
-                        grid
-                        grid-cols-2
-                        gap-3
-                        sm:grid-cols-4
-                    ">
-
-                        <SummaryCard
-                            label="Present"
-                            value={
-                                summary.present
-                            }
-                        />
-
-
-                        <SummaryCard
-                            label="Late"
-                            value={
-                                summary.late
-                            }
-                        />
-
-
-                        <SummaryCard
-                            label="Half Day"
-                            value={
-                                summary.halfDay
-                            }
-                        />
-
-
-                        <SummaryCard
-                            label="Absent"
-                            value={
-                                summary.absent
-                            }
-                        />
-
-                    </div>
-
-
-                    {/* =================================================
-                        CHART
-                    ================================================= */}
+                ============================================================ */}
+
+                <div
+                    className="
+                        min-h-0
+                        flex-1
+                        overflow-y-auto
+                        px-5
+                        py-5
+                        sm:px-6
+                    "
+                >
+
+                    {/* ========================================================
+                        CURRENT ATTENDANCE
+                    ======================================================== */}
 
                     <div
-                        id="attendance-history-chart"
                         className="
-                            mt-5
-                            overflow-x-auto
-                            rounded-xl
-                            border
-                            border-base-300
-                            bg-base-100
-                            p-5
+                            grid
+                            grid-cols-1
+                            gap-3
+                            sm:grid-cols-3
                         "
                     >
 
-                        <div className="
-                            min-w-[650px]
-                        ">
+                        {/* ====================================================
+                            STATUS
+                        ==================================================== */}
 
-                            <div className="
-                                mb-5
-                                flex
-                                items-center
-                                justify-between
-                            ">
+                        <div
+                            className="
+                                rounded-lg
+                                border
+                                border-gray-200
+                                bg-gray-50
+                                p-4
+                            "
+                        >
 
-                                <div>
+                            <p
+                                className="
+                                    text-xs
+                                    font-medium
+                                    text-gray-500
+                                "
+                            >
+                                Current Status
+                            </p>
 
-                                    <h3 className="
-                                        text-sm
-                                        font-semibold
-                                        text-base-content
-                                    ">
-                                        Daily Attendance
-                                    </h3>
 
+                            <div
+                                className="
+                                    mt-2
+                                "
+                            >
 
-                                    <p className="
-                                        mt-0.5
+                                <span
+                                    className={`
+                                        inline-flex
+                                        rounded-full
+                                        border
+                                        px-3
+                                        py-1
                                         text-xs
-                                        text-base-content/45
-                                    ">
-                                        Day-wise attendance
-                                        for the selected month.
-                                    </p>
-
-                                </div>
+                                        font-medium
+                                        ${getStatusClass(
+                                            currentStatus
+                                        )}
+                                    `}
+                                >
+                                    {
+                                        currentStatus
+                                    }
+                                </span>
 
                             </div>
 
-
-                            {monthlyHistory.length ? (
-
-                                <div className="
-                                    flex
-                                    h-[230px]
-                                    items-end
-                                    gap-2
-                                    border-b
-                                    border-base-300
-                                    pb-7
-                                ">
-
-                                    {monthlyHistory.map(
-                                        (item, index) => {
-
-                                            const status =
-                                                String(
-                                                    item.status ||
-                                                    ''
-                                                ).toLowerCase()
+                        </div>
 
 
-                                            const heightClass =
-                                                status === 'present'
-                                                    ? 'h-[85%]'
-                                                    : status === 'late'
-                                                        ? 'h-[65%]'
-                                                        : status === 'half-day'
-                                                            ? 'h-[45%]'
-                                                            : status === 'absent'
-                                                                ? 'h-[20%]'
-                                                                : 'h-[35%]'
+                        {/* ====================================================
+                            PUNCH IN
+                        ==================================================== */}
+
+                        <div
+                            className="
+                                rounded-lg
+                                border
+                                border-gray-200
+                                bg-gray-50
+                                p-4
+                            "
+                        >
+
+                            <p
+                                className="
+                                    text-xs
+                                    font-medium
+                                    text-gray-500
+                                "
+                            >
+                                Punch In
+                            </p>
 
 
-                                            const barClass =
-                                                status === 'present'
-                                                    ? 'bg-[#8BCF00]'
-                                                    : status === 'late'
-                                                        ? 'bg-amber-400'
-                                                        : status === 'half-day'
-                                                            ? 'bg-blue-400'
-                                                            : status === 'absent'
-                                                                ? 'bg-red-400'
-                                                                : 'bg-base-300'
+                            <p
+                                className="
+                                    mt-2
+                                    text-lg
+                                    font-semibold
+                                    text-gray-900
+                                "
+                            >
+                                {
+                                    currentCheckIn
+                                }
+                            </p>
+
+                        </div>
 
 
-                                            return (
+                        {/* ====================================================
+                            PUNCH OUT
+                        ==================================================== */}
 
-                                                <div
-                                                    key={
-                                                        item.id ??
-                                                        index
-                                                    }
-                                                    className="
-                                                        flex
-                                                        h-full
-                                                        min-w-[22px]
-                                                        flex-1
-                                                        flex-col
-                                                        items-center
-                                                        justify-end
-                                                    "
-                                                    title={`${item.day || ''} - ${getStatusLabel(item.status)}`}
-                                                >
+                        <div
+                            className="
+                                rounded-lg
+                                border
+                                border-gray-200
+                                bg-gray-50
+                                p-4
+                            "
+                        >
 
-                                                    <div
-                                                        className={[
-                                                            'w-full',
-                                                            'max-w-[26px]',
-                                                            'rounded-t-md',
-                                                            'transition',
-                                                            heightClass,
-                                                            barClass,
-                                                        ].join(' ')}
-                                                    />
+                            <p
+                                className="
+                                    text-xs
+                                    font-medium
+                                    text-gray-500
+                                "
+                            >
+                                Punch Out
+                            </p>
 
 
-                                                    <span className="
-                                                        absolute
-                                                        mt-[245px]
-                                                        text-[10px]
-                                                        text-base-content/45
-                                                    ">
-                                                        {
-                                                            item.day ||
-                                                            ''
-                                                        }
-                                                    </span>
-
-                                                </div>
-
-                                            )
-
-                                        }
-                                    )}
-
-                                </div>
-
-                            ) : (
-
-                                <div className="
-                                    flex
-                                    h-[220px]
-                                    items-center
-                                    justify-center
-                                    rounded-lg
-                                    bg-base-200/40
-                                ">
-
-                                    <p className="
-                                        text-xs
-                                        text-base-content/40
-                                    ">
-                                        No attendance data
-                                        for this month.
-                                    </p>
-
-                                </div>
-
-                            )}
-
-
-                            <div className="
-                                mt-4
-                                flex
-                                flex-wrap
-                                gap-4
-                            ">
-
-                                <div className="
-                                    flex
-                                    items-center
-                                    gap-1.5
-                                ">
-
-                                    <span className="
-                                        h-2.5
-                                        w-2.5
-                                        rounded-sm
-                                        bg-[#8BCF00]
-                                    " />
-
-                                    <span className="
-                                        text-[11px]
-                                        text-base-content/50
-                                    ">
-                                        Present
-                                    </span>
-
-                                </div>
-
-
-                                <div className="
-                                    flex
-                                    items-center
-                                    gap-1.5
-                                ">
-
-                                    <span className="
-                                        h-2.5
-                                        w-2.5
-                                        rounded-sm
-                                        bg-amber-400
-                                    " />
-
-                                    <span className="
-                                        text-[11px]
-                                        text-base-content/50
-                                    ">
-                                        Late
-                                    </span>
-
-                                </div>
-
-
-                                <div className="
-                                    flex
-                                    items-center
-                                    gap-1.5
-                                ">
-
-                                    <span className="
-                                        h-2.5
-                                        w-2.5
-                                        rounded-sm
-                                        bg-blue-400
-                                    " />
-
-                                    <span className="
-                                        text-[11px]
-                                        text-base-content/50
-                                    ">
-                                        Half Day
-                                    </span>
-
-                                </div>
-
-
-                                <div className="
-                                    flex
-                                    items-center
-                                    gap-1.5
-                                ">
-
-                                    <span className="
-                                        h-2.5
-                                        w-2.5
-                                        rounded-sm
-                                        bg-red-400
-                                    " />
-
-                                    <span className="
-                                        text-[11px]
-                                        text-base-content/50
-                                    ">
-                                        Absent
-                                    </span>
-
-                                </div>
-
-                            </div>
+                            <p
+                                className="
+                                    mt-2
+                                    text-lg
+                                    font-semibold
+                                    text-gray-900
+                                "
+                            >
+                                {
+                                    currentCheckOut
+                                }
+                            </p>
 
                         </div>
 
                     </div>
 
 
-                    {/* =================================================
-                        DAY-WISE HISTORY
-                    ================================================= */}
+                    {/* ========================================================
+                        MONTH FILTER
+                    ======================================================== */}
 
-                    <div className="
-                        mt-5
-                        overflow-hidden
-                        rounded-xl
-                        border
-                        border-base-300
-                    ">
+                    {availableMonths.length > 0 && (
 
-                        <div className="
-                            border-b
-                            border-base-300
-                            bg-base-200/30
-                            px-4
-                            py-3
-                        ">
+                        <div
+                            className="
+                                mt-5
+                                flex
+                                flex-col
+                                gap-2
+                                sm:flex-row
+                                sm:items-center
+                                sm:justify-between
+                            "
+                        >
 
-                            <h3 className="
-                                text-sm
-                                font-semibold
-                                text-base-content
-                            ">
-                                Daily Details
-                            </h3>
+                            <div>
+
+                                <p
+                                    className="
+                                        text-sm
+                                        font-semibold
+                                        text-gray-900
+                                    "
+                                >
+                                    Attendance History
+                                </p>
+
+
+                                <p
+                                    className="
+                                        mt-0.5
+                                        text-xs
+                                        text-gray-500
+                                    "
+                                >
+                                    Daily attendance records
+                                </p>
+
+                            </div>
+
+
+                            <div>
+
+                                <label
+                                    htmlFor="attendance-history-month"
+                                    className="
+                                        sr-only
+                                    "
+                                >
+                                    Attendance Month
+                                </label>
+
+
+                                <select
+                                    id="attendance-history-month"
+                                    value={
+                                        selectedMonth
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
+                                        setSelectedMonth(
+                                            event.target.value
+                                        )
+                                    }
+                                    className="
+                                        h-10
+                                        w-full
+                                        rounded-lg
+                                        border
+                                        border-gray-300
+                                        bg-white
+                                        px-3
+                                        text-sm
+                                        text-gray-700
+                                        outline-none
+                                        focus:border-blue-500
+                                        focus:ring-1
+                                        focus:ring-blue-500
+                                        sm:w-[210px]
+                                    "
+                                >
+
+                                    {availableMonths.map(
+                                        (month) => (
+
+                                            <option
+                                                key={
+                                                    month
+                                                }
+                                                value={
+                                                    month
+                                                }
+                                            >
+                                                {
+                                                    getMonthLabel(
+                                                        month
+                                                    )
+                                                }
+                                            </option>
+
+                                        )
+                                    )}
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+                    )}
+
+
+                    {/* ========================================================
+                        SUMMARY
+                    ======================================================== */}
+
+                    <div
+                        className="
+                            mt-4
+                            grid
+                            grid-cols-3
+                            gap-3
+                        "
+                    >
+
+                        <div
+                            className="
+                                rounded-lg
+                                bg-green-50
+                                p-3
+                            "
+                        >
+
+                            <p
+                                className="
+                                    text-xs
+                                    text-green-600
+                                "
+                            >
+                                Present
+                            </p>
+
+
+                            <p
+                                className="
+                                    mt-1
+                                    text-xl
+                                    font-semibold
+                                    text-green-700
+                                "
+                            >
+                                {
+                                    summary.present
+                                }
+                            </p>
 
                         </div>
 
 
-                        {monthlyHistory.length ? (
+                        <div
+                            className="
+                                rounded-lg
+                                bg-red-50
+                                p-3
+                            "
+                        >
 
-                            <div className="
+                            <p
+                                className="
+                                    text-xs
+                                    text-red-600
+                                "
+                            >
+                                Absent
+                            </p>
+
+
+                            <p
+                                className="
+                                    mt-1
+                                    text-xl
+                                    font-semibold
+                                    text-red-700
+                                "
+                            >
+                                {
+                                    summary.absent
+                                }
+                            </p>
+
+                        </div>
+
+
+                        <div
+                            className="
+                                rounded-lg
+                                bg-gray-50
+                                p-3
+                            "
+                        >
+
+                            <p
+                                className="
+                                    text-xs
+                                    text-gray-500
+                                "
+                            >
+                                Total Days
+                            </p>
+
+
+                            <p
+                                className="
+                                    mt-1
+                                    text-xl
+                                    font-semibold
+                                    text-gray-700
+                                "
+                            >
+                                {
+                                    summary.total
+                                }
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    {/* ========================================================
+                        DAILY TABLE
+                    ======================================================== */}
+
+                    <div
+                        className="
+                            mt-5
+                            overflow-hidden
+                            rounded-lg
+                            border
+                            border-gray-200
+                        "
+                    >
+
+                        <div
+                            className="
                                 overflow-x-auto
-                            ">
+                            "
+                        >
 
-                                <table className="
-                                    w-full
-                                    min-w-[700px]
-                                    border-collapse
-                                ">
+                            <table
+                                className="
+                                    min-w-[720px]
+                                    divide-y
+                                    divide-gray-200
+                                "
+                            >
 
-                                    <thead>
+                                {/* ==================================================
+                                    TABLE HEADER
+                                ================================================== */}
 
-                                        <tr className="
-                                            border-b
-                                            border-base-300
-                                        ">
+                                <thead
+                                    className="
+                                        bg-gray-50
+                                    "
+                                >
 
-                                            <th className="
+                                    <tr>
+
+                                        <th
+                                            className="
+                                                whitespace-nowrap
                                                 px-4
                                                 py-3
                                                 text-left
-                                                text-[11px]
-                                                font-semibold
-                                                text-base-content/55
-                                            ">
-                                                Date
-                                            </th>
+                                                text-xs
+                                                font-medium
+                                                uppercase
+                                                tracking-wider
+                                                text-gray-500
+                                            "
+                                        >
+                                            Date
+                                        </th>
 
 
-                                            <th className="
+                                        <th
+                                            className="
+                                                whitespace-nowrap
                                                 px-4
                                                 py-3
                                                 text-left
-                                                text-[11px]
-                                                font-semibold
-                                                text-base-content/55
-                                            ">
-                                                Check In
-                                            </th>
+                                                text-xs
+                                                font-medium
+                                                uppercase
+                                                tracking-wider
+                                                text-gray-500
+                                            "
+                                        >
+                                            Punch In
+                                        </th>
 
 
-                                            <th className="
+                                        <th
+                                            className="
+                                                whitespace-nowrap
                                                 px-4
                                                 py-3
                                                 text-left
-                                                text-[11px]
-                                                font-semibold
-                                                text-base-content/55
-                                            ">
-                                                Check Out
-                                            </th>
+                                                text-xs
+                                                font-medium
+                                                uppercase
+                                                tracking-wider
+                                                text-gray-500
+                                            "
+                                        >
+                                            Punch Out
+                                        </th>
 
 
-                                            <th className="
+                                        <th
+                                            className="
+                                                whitespace-nowrap
                                                 px-4
                                                 py-3
                                                 text-left
-                                                text-[11px]
-                                                font-semibold
-                                                text-base-content/55
-                                            ">
-                                                Status
-                                            </th>
+                                                text-xs
+                                                font-medium
+                                                uppercase
+                                                tracking-wider
+                                                text-gray-500
+                                            "
+                                        >
+                                            Image
+                                        </th>
+
+
+                                        <th
+                                            className="
+                                                whitespace-nowrap
+                                                px-4
+                                                py-3
+                                                text-left
+                                                text-xs
+                                                font-medium
+                                                uppercase
+                                                tracking-wider
+                                                text-gray-500
+                                            "
+                                        >
+                                            Status
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+
+                                {/* ==================================================
+                                    TABLE BODY
+                                ================================================== */}
+
+                                <tbody
+                                    className="
+                                        divide-y
+                                        divide-gray-200
+                                        bg-white
+                                    "
+                                >
+
+                                    {monthlyHistory.length === 0 ? (
+
+                                        <tr>
+
+                                            <td
+                                                colSpan={5}
+                                                className="
+                                                    px-4
+                                                    py-10
+                                                    text-center
+                                                    text-sm
+                                                    text-gray-500
+                                                "
+                                            >
+                                                No attendance records
+                                                found for this month.
+                                            </td>
 
                                         </tr>
 
-                                    </thead>
+                                    ) : (
 
+                                        monthlyHistory.map(
+                                            (
+                                                item,
+                                                index
+                                            ) => {
 
-                                    <tbody>
+                                                const status =
+                                                    getStatus(
+                                                        item
+                                                    )
 
-                                        {monthlyHistory.map(
-                                            (item, index) => {
 
                                                 return (
 
                                                     <tr
                                                         key={
-                                                            item.id ??
-                                                            index
+                                                            item?.id ??
+                                                            `${item?.date}-${index}`
                                                         }
                                                         className="
-                                                            border-b
-                                                            border-base-300
-                                                            last:border-b-0
+                                                            hover:bg-gray-50
                                                         "
                                                     >
 
-                                                        <td className="
-                                                            px-4
-                                                            py-3
-                                                        ">
+                                                        {/* ==========================================
+                                                            DATE
+                                                        ========================================== */}
 
-                                                            <span className="
-                                                                text-xs
-                                                                font-medium
-                                                                text-base-content
-                                                            ">
-                                                                {
-                                                                    item.date ||
-                                                                    item.day ||
-                                                                    '—'
-                                                                }
-                                                            </span>
-
+                                                        <td
+                                                            className="
+                                                                whitespace-nowrap
+                                                                px-4
+                                                                py-3
+                                                                text-sm
+                                                                text-gray-700
+                                                            "
+                                                        >
+                                                            {
+                                                                formatDate(
+                                                                    item?.date
+                                                                )
+                                                            }
                                                         </td>
 
 
-                                                        <td className="
-                                                            px-4
-                                                            py-3
-                                                        ">
+                                                        {/* ==========================================
+                                                            PUNCH IN
+                                                        ========================================== */}
 
-                                                            <p className="
-                                                                text-xs
+                                                        <td
+                                                            className="
+                                                                whitespace-nowrap
+                                                                px-4
+                                                                py-3
+                                                                text-sm
                                                                 font-medium
-                                                                text-base-content
-                                                            ">
-                                                                {
-                                                                    item.checkIn?.time ||
-                                                                    '—'
+                                                                text-gray-700
+                                                            "
+                                                        >
+                                                            {
+                                                                item?.checkIn?.time ||
+                                                                '—'
+                                                            }
+                                                        </td>
+
+
+                                                        {/* ==========================================
+                                                            PUNCH OUT
+                                                        ========================================== */}
+
+                                                        <td
+                                                            className="
+                                                                whitespace-nowrap
+                                                                px-4
+                                                                py-3
+                                                                text-sm
+                                                                font-medium
+                                                                text-gray-700
+                                                            "
+                                                        >
+                                                            {
+                                                                item?.checkOut?.time ||
+                                                                '—'
+                                                            }
+                                                        </td>
+
+
+                                                        {/* ==========================================
+                                                            IMAGE
+                                                        ========================================== */}
+
+                                                        <td
+                                                            className="
+                                                                px-4
+                                                                py-3
+                                                            "
+                                                        >
+
+                                                            <AttendanceImageCell
+                                                                checkIn={
+                                                                    item?.checkIn
                                                                 }
-                                                            </p>
-
-
-                                                            <LocationDisplay
-                                                                location={
-                                                                    item.checkIn
+                                                                checkOut={
+                                                                    item?.checkOut
                                                                 }
                                                             />
 
                                                         </td>
 
 
-                                                        <td className="
-                                                            px-4
-                                                            py-3
-                                                        ">
+                                                        {/* ==========================================
+                                                            STATUS
+                                                        ========================================== */}
 
-                                                            <p className="
-                                                                text-xs
-                                                                font-medium
-                                                                text-base-content
-                                                            ">
-                                                                {
-                                                                    item.checkOut?.time ||
-                                                                    '—'
-                                                                }
-                                                            </p>
-
-
-                                                            <LocationDisplay
-                                                                location={
-                                                                    item.checkOut
-                                                                }
-                                                            />
-
-                                                        </td>
-
-
-                                                        <td className="
-                                                            px-4
-                                                            py-3
-                                                        ">
+                                                        <td
+                                                            className="
+                                                                whitespace-nowrap
+                                                                px-4
+                                                                py-3
+                                                            "
+                                                        >
 
                                                             <span
-                                                                className={[
-                                                                    'inline-flex',
-                                                                    'rounded-full',
-                                                                    'border',
-                                                                    'px-2.5',
-                                                                    'py-1',
-                                                                    'text-[11px]',
-                                                                    'font-medium',
-                                                                    getStatusClasses(
-                                                                        item.status
-                                                                    ),
-                                                                ].join(' ')}
+                                                                className={`
+                                                                    inline-flex
+                                                                    rounded-full
+                                                                    border
+                                                                    px-2.5
+                                                                    py-1
+                                                                    text-xs
+                                                                    font-medium
+                                                                    ${getStatusClass(
+                                                                        status
+                                                                    )}
+                                                                `}
                                                             >
                                                                 {
-                                                                    getStatusLabel(
-                                                                        item.status
-                                                                    )
+                                                                    status
                                                                 }
                                                             </span>
 
@@ -1686,68 +2319,55 @@ function AttendanceHistoryModal({
                                                 )
 
                                             }
-                                        )}
+                                        )
 
-                                    </tbody>
+                                    )}
 
-                                </table>
+                                </tbody>
 
-                            </div>
+                            </table>
 
-                        ) : (
-
-                            <div className="
-                                px-5
-                                py-10
-                                text-center
-                            ">
-
-                                <p className="
-                                    text-xs
-                                    text-base-content/40
-                                ">
-                                    No daily records available.
-                                </p>
-
-                            </div>
-
-                        )}
+                        </div>
 
                     </div>
 
                 </div>
 
 
-                {/* =================================================
+                {/* ============================================================
                     FOOTER
-                ================================================= */}
+                ============================================================ */}
 
-                <div className="
-                    flex
-                    shrink-0
-                    justify-end
-                    border-t
-                    border-base-300
-                    px-5
-                    py-4
-                ">
+                <div
+                    className="
+                        flex
+                        shrink-0
+                        justify-end
+                        border-t
+                        border-gray-200
+                        px-5
+                        py-3
+                        sm:px-6
+                    "
+                >
 
                     <button
                         type="button"
-                        onClick={handleClose}
+                        onClick={
+                            handleClose
+                        }
                         className="
-                            h-10
                             rounded-lg
                             border
-                            border-base-300
-                            bg-base-100
+                            border-gray-300
+                            bg-white
                             px-4
+                            py-2
                             text-sm
                             font-medium
-                            text-base-content/70
+                            text-gray-700
                             transition
-                            hover:bg-base-200
-                            hover:text-base-content
+                            hover:bg-gray-50
                         "
                     >
                         Close
@@ -1761,6 +2381,15 @@ function AttendanceHistoryModal({
 
     )
 
+
+    // =========================================================================
+    // PORTAL
+    // =========================================================================
+
+    return createPortal(
+        modal,
+        document.body
+    )
 }
 
 

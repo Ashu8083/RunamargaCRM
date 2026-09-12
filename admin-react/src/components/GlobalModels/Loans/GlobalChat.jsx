@@ -63,6 +63,65 @@ function GlobalChat({
             return
         }
 
+        const loadChat = async () => {
+            try {
+                const response = await getTeamChat(loanId)
+
+                const chatMessages = response?.data || []
+
+                const formattedMessages = chatMessages.map((item) => ({
+                    id: item.id,
+
+                    senderName:
+                        item.sender_name || 'User',
+
+                    senderType:
+                        item.sender_admin_id === item.current_employee_id
+                            ? 'current_user'
+                            : 'team_member',
+
+                    message:
+                        item.message_text || '',
+
+                    attachment: null,
+
+                    createdAt:
+                        item.created_at
+                            ? new Date(item.created_at).toLocaleTimeString(
+                                'en-IN',
+                                {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                }
+                            )
+                            : '',
+
+                    dateLabel:
+                        item.created_at
+                            ? new Date(item.created_at).toLocaleDateString(
+                                'en-IN',
+                                {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                }
+                            )
+                            : '',
+                }))
+
+                setMessages(formattedMessages)
+            } catch (error) {
+                console.error(
+                    'TEAM CHAT LOAD ERROR:',
+                    error
+                )
+            }
+        }
+
+        // Load existing messages
+        loadChat()
+
+        // Connect WebSocket
         const ws = new WebSocket(
             `${WS_BASE_URL}/team-chat/${loanId}/chat/ws`
         )
@@ -143,7 +202,6 @@ function GlobalChat({
                     ...previous,
                     formattedMessage,
                 ])
-
             } catch (error) {
                 console.error(
                     'TEAM CHAT WEBSOCKET MESSAGE ERROR:',
@@ -173,7 +231,6 @@ function GlobalChat({
             ws.close()
             setSocket(null)
         }
-
     }, [open, loanId])
     // =========================================================
     // CLOSE EMOJI PICKER WHEN CLICKING OUTSIDE

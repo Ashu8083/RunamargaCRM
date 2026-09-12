@@ -1,9 +1,11 @@
 // admin-react/src/pages/EmployeeManagement/Attendance/index.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+    useCallback,
+    useEffect,
+    useState,
+} from 'react'
 
-import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
-import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 
@@ -11,1541 +13,658 @@ import AttendanceTable from './components/AttendanceTable'
 import AttendanceHistoryModal from './components/AttendanceHistoryModal'
 import TodayAttendance from './components/TodayAttendance'
 
+import {
+    getAttendance,
+    getTodayAttendance,
+    getEmployeeHistory,
+    getApiErrorMessage,
+} from './API'
 
-// =============================================================
-// DEFAULT PROFILE IMAGES
-// =============================================================
 
-const DEFAULT_PROFILE_IMAGES = {
-    male: '/default/male_profile.png',
-    female: '/default/female_profile.png',
+// ============================================================================
+// DEFAULT ATTENDANCE QUERY
+// ============================================================================
+//
+// The actual filter controls live inside AttendanceTable.
+//
+// This object only represents the query received from the table.
+// ============================================================================
+
+const DEFAULT_ATTENDANCE_QUERY = {
+    search: '',
+    employeeId: '',
+    fromDate: '',
+    toDate: '',
+    status: '',
+    page: 1,
+    limit: 30,
 }
 
 
-// =============================================================
-// GET PROFILE IMAGE
-// =============================================================
-
-const getProfileImage = (employee) => {
-
-    if (
-        employee?.profileImage &&
-        String(employee.profileImage).trim()
-    ) {
-        return employee.profileImage
-    }
-
-
-    return String(employee?.gender || '')
-        .trim()
-        .toLowerCase() === 'female'
-        ? DEFAULT_PROFILE_IMAGES.female
-        : DEFAULT_PROFILE_IMAGES.male
-
-}
-
-
-// =============================================================
-// MONTH OPTIONS
-// =============================================================
-
-const MONTHS = [
-    {
-        value: '2026-01',
-        label: 'January 2026',
-    },
-    {
-        value: '2026-02',
-        label: 'February 2026',
-    },
-    {
-        value: '2026-03',
-        label: 'March 2026',
-    },
-    {
-        value: '2026-04',
-        label: 'April 2026',
-    },
-    {
-        value: '2026-05',
-        label: 'May 2026',
-    },
-    {
-        value: '2026-06',
-        label: 'June 2026',
-    },
-    {
-        value: '2026-07',
-        label: 'July 2026',
-    },
-    {
-        value: '2026-08',
-        label: 'August 2026',
-    },
-]
-
-
-// =============================================================
-// MOCK ATTENDANCE DATA
-// =============================================================
-
-const INITIAL_ATTENDANCE = [
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 001
-    // -----------------------------------------------------------
-
-    {
-        id: 1,
-
-        employeeId: 'EMP001',
-
-        name: 'Aravind Kumar',
-
-        email: 'aravind@runamarga.com',
-
-        gender: 'male',
-
-        profileImage: '',
-
-        date: '2026-08-26',
-
-        checkIn: {
-            time: '09:42 AM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        checkOut: {
-            time: '06:18 PM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        status: 'present',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 002
-    // -----------------------------------------------------------
-
-    {
-        id: 2,
-
-        employeeId: 'EMP002',
-
-        name: 'Priya Sharma',
-
-        email: 'priya@runamarga.com',
-
-        gender: 'female',
-
-        profileImage: '',
-
-        date: '2026-08-26',
-
-        checkIn: {
-            time: '09:18 AM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        checkOut: {
-            time: '06:05 PM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        status: 'present',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 003
-    // -----------------------------------------------------------
-
-    {
-        id: 3,
-
-        employeeId: 'EMP003',
-
-        name: 'Suresh Kumar',
-
-        email: 'suresh@runamarga.com',
-
-        gender: 'male',
-
-        profileImage: '',
-
-        date: '2026-08-26',
-
-        checkIn: {
-            time: '10:16 AM',
-            location: 'Bengaluru Client Location',
-            locationType: 'outside',
-            latitude: 12.9352,
-            longitude: 77.6245,
-        },
-
-        checkOut: {
-            time: '07:02 PM',
-            location: 'Bengaluru Client Location',
-            locationType: 'outside',
-            latitude: 12.9352,
-            longitude: 77.6245,
-        },
-
-        status: 'late',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 004
-    // -----------------------------------------------------------
-
-    {
-        id: 4,
-
-        employeeId: 'EMP004',
-
-        name: 'Nayana Rao',
-
-        email: 'nayana@runamarga.com',
-
-        gender: 'female',
-
-        profileImage: '',
-
-        date: '2026-08-26',
-
-        checkIn: {
-            time: '09:35 AM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        checkOut: {
-            time: '',
-            location: '',
-            locationType: '',
-            latitude: null,
-            longitude: null,
-        },
-
-        status: 'present',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 005
-    // -----------------------------------------------------------
-
-    {
-        id: 5,
-
-        employeeId: 'EMP005',
-
-        name: 'Manoj Rao',
-
-        email: 'manoj@runamarga.com',
-
-        gender: 'male',
-
-        profileImage: '',
-
-        date: '2026-08-26',
-
-        checkIn: {
-            time: '',
-            location: '',
-            locationType: '',
-            latitude: null,
-            longitude: null,
-        },
-
-        checkOut: {
-            time: '',
-            location: '',
-            locationType: '',
-            latitude: null,
-            longitude: null,
-        },
-
-        status: 'absent',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 006
-    // -----------------------------------------------------------
-
-    {
-        id: 6,
-
-        employeeId: 'EMP006',
-
-        name: 'Asma Banu',
-
-        email: 'asma@runamarga.com',
-
-        gender: 'female',
-
-        profileImage: '',
-
-        date: '2026-08-26',
-
-        checkIn: {
-            time: '09:54 AM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        checkOut: {
-            time: '06:20 PM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        status: 'present',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 007
-    // -----------------------------------------------------------
-
-    {
-        id: 7,
-
-        employeeId: 'EMP007',
-
-        name: 'Rahul Verma',
-
-        email: 'rahul@runamarga.com',
-
-        gender: 'male',
-
-        profileImage: '',
-
-        date: '2026-08-26',
-
-        checkIn: {
-            time: '09:58 AM',
-            location: 'Home',
-            locationType: 'outside',
-            latitude: 12.9850,
-            longitude: 77.6050,
-        },
-
-        checkOut: {
-            time: '06:10 PM',
-            location: 'Home',
-            locationType: 'outside',
-            latitude: 12.9850,
-            longitude: 77.6050,
-        },
-
-        status: 'wfh',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 008
-    // -----------------------------------------------------------
-
-    {
-        id: 8,
-
-        employeeId: 'EMP008',
-
-        name: 'Sneha Reddy',
-
-        email: 'sneha@runamarga.com',
-
-        gender: 'female',
-
-        profileImage: '',
-
-        date: '2026-08-24',
-
-        checkIn: {
-            time: '09:32 AM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        checkOut: {
-            time: '06:12 PM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        status: 'present',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 009
-    // -----------------------------------------------------------
-
-    {
-        id: 9,
-
-        employeeId: 'EMP009',
-
-        name: 'Vikram Singh',
-
-        email: 'vikram@runamarga.com',
-
-        gender: 'male',
-
-        profileImage: '',
-
-        date: '2026-08-24',
-
-        checkIn: {
-            time: '',
-            location: '',
-            locationType: '',
-            latitude: null,
-            longitude: null,
-        },
-
-        checkOut: {
-            time: '',
-            location: '',
-            locationType: '',
-            latitude: null,
-            longitude: null,
-        },
-
-        status: 'absent',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 010
-    // -----------------------------------------------------------
-
-    {
-        id: 10,
-
-        employeeId: 'EMP010',
-
-        name: 'Deepa Nair',
-
-        email: 'deepa@runamarga.com',
-
-        gender: 'female',
-
-        profileImage: '',
-
-        date: '2026-08-23',
-
-        checkIn: {
-            time: '10:12 AM',
-            location: 'Bengaluru Client Location',
-            locationType: 'outside',
-            latitude: 12.9352,
-            longitude: 77.6245,
-        },
-
-        checkOut: {
-            time: '06:40 PM',
-            location: 'Bengaluru Client Location',
-            locationType: 'outside',
-            latitude: 12.9352,
-            longitude: 77.6245,
-        },
-
-        status: 'late',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 011
-    // -----------------------------------------------------------
-
-    {
-        id: 11,
-
-        employeeId: 'EMP011',
-
-        name: 'Karthik Rao',
-
-        email: 'karthik@runamarga.com',
-
-        gender: 'male',
-
-        profileImage: '',
-
-        date: '2026-08-23',
-
-        checkIn: {
-            time: '09:20 AM',
-            location: 'Home',
-            locationType: 'outside',
-            latitude: 12.9810,
-            longitude: 77.5900,
-        },
-
-        checkOut: {
-            time: '06:00 PM',
-            location: 'Home',
-            locationType: 'outside',
-            latitude: 12.9810,
-            longitude: 77.5900,
-        },
-
-        status: 'wfh',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 012
-    // -----------------------------------------------------------
-
-    {
-        id: 12,
-
-        employeeId: 'EMP012',
-
-        name: 'Meghana Joshi',
-
-        email: 'meghana@runamarga.com',
-
-        gender: 'female',
-
-        profileImage: '',
-
-        date: '2026-08-22',
-
-        checkIn: {
-            time: '09:28 AM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        checkOut: {
-            time: '06:08 PM',
-            location: 'Runamarga Head Office',
-            locationType: 'office',
-            latitude: 12.9716,
-            longitude: 77.5946,
-        },
-
-        status: 'present',
-    },
-
-
-    // -----------------------------------------------------------
-    // EMPLOYEE 013
-    // -----------------------------------------------------------
-
-    {
-        id: 13,
-
-        employeeId: 'EMP013',
-
-        name: 'Rohit Kumar',
-
-        email: 'rohit@runamarga.com',
-
-        gender: 'male',
-
-        profileImage: '',
-
-        date: '2026-08-22',
-
-        checkIn: {
-            time: '10:05 AM',
-            location: 'Client Location',
-            locationType: 'outside',
-            latitude: 12.9200,
-            longitude: 77.6100,
-        },
-
-        checkOut: {
-            time: '06:30 PM',
-            location: 'Client Location',
-            locationType: 'outside',
-            latitude: 12.9200,
-            longitude: 77.6100,
-        },
-
-        status: 'late',
-    },
-
-]
-
-
-// =============================================================
-// MOCK MONTHLY HISTORY
-// =============================================================
-
-const generateMonthlyHistory = (
-    employee,
-    monthValue
-) => {
-
-    const [year, month] =
-        monthValue
-            .split('-')
-            .map(Number)
-
-
-    const daysInMonth =
-        new Date(
-            year,
-            month,
-            0
-        ).getDate()
-
-
-    const history = []
-
-
-    for (
-        let day = 1;
-        day <= daysInMonth;
-        day += 1
-    ) {
-
-        const date =
-            new Date(
-                year,
-                month - 1,
-                day
-            )
-
-
-        const dayOfWeek =
-            date.getDay()
-
-
-        const formattedDate =
-            `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-
-
-        // -------------------------------------------------------
-        // WEEKENDS
-        // -------------------------------------------------------
-
-        if (
-            dayOfWeek === 0 ||
-            dayOfWeek === 6
-        ) {
-
-            history.push({
-
-                date: formattedDate,
-
-                day:
-                    date.toLocaleDateString(
-                        'en-IN',
-                        {
-                            weekday: 'short',
-                        }
-                    ),
-
-                checkIn: null,
-
-                checkOut: null,
-
-                status: 'weekend',
-
-            })
-
-            continue
-
-        }
-
-
-        // -------------------------------------------------------
-        // ABSENT
-        // -------------------------------------------------------
-
-        if (
-            day % 11 === 0
-        ) {
-
-            history.push({
-
-                date: formattedDate,
-
-                day:
-                    date.toLocaleDateString(
-                        'en-IN',
-                        {
-                            weekday: 'short',
-                        }
-                    ),
-
-                checkIn: null,
-
-                checkOut: null,
-
-                status: 'absent',
-
-            })
-
-            continue
-
-        }
-
-
-        // -------------------------------------------------------
-        // WFH
-        // -------------------------------------------------------
-
-        if (
-            day % 9 === 0
-        ) {
-
-            history.push({
-
-                date: formattedDate,
-
-                day:
-                    date.toLocaleDateString(
-                        'en-IN',
-                        {
-                            weekday: 'short',
-                        }
-                    ),
-
-                checkIn: '09:20 AM',
-
-                checkOut: '06:10 PM',
-
-                status: 'wfh',
-
-                checkInLocation: 'Home',
-
-                checkOutLocation: 'Home',
-
-                checkInLocationType: 'outside',
-
-                checkOutLocationType: 'outside',
-
-            })
-
-            continue
-
-        }
-
-
-        // -------------------------------------------------------
-        // LATE
-        // -------------------------------------------------------
-
-        const late =
-            day % 7 === 3
-
-
-        history.push({
-
-            date: formattedDate,
-
-            day:
-                date.toLocaleDateString(
-                    'en-IN',
-                    {
-                        weekday: 'short',
-                    }
-                ),
-
-            checkIn:
-                late
-                    ? '10:18 AM'
-                    : '09:35 AM',
-
-            checkOut:
-                '06:15 PM',
-
-            status:
-                late
-                    ? 'late'
-                    : 'present',
-
-            checkInLocation:
-                late
-                    ? 'Client Location'
-                    : 'Runamarga Head Office',
-
-            checkOutLocation:
-                'Runamarga Head Office',
-
-            checkInLocationType:
-                late
-                    ? 'outside'
-                    : 'office',
-
-            checkOutLocationType:
-                'office',
-
-        })
-
-    }
-
-
-    return {
-
-        employee: {
-
-            id:
-                employee.employeeId,
-
-            name:
-                employee.name,
-
-            email:
-                employee.email,
-
-            gender:
-                employee.gender,
-
-            profileImage:
-                getProfileImage(
-                    employee
-                ),
-
-        },
-
-        month:
-            monthValue,
-
-        records:
-            history,
-
-    }
-
-}
-
-
-// =============================================================
-// MOCK API — TODAY
-// =============================================================
-
-const fetchTodayAttendance = async () => {
-
-    return new Promise(
-        (resolve) => {
-
-            setTimeout(() => {
-
-                resolve(
-                    INITIAL_ATTENDANCE
-                )
-
-            }, 400)
-
-        }
-    )
-
-}
-
-
-// =============================================================
-// MOCK API — MONTHLY HISTORY
-// =============================================================
-
-const fetchEmployeeHistory = async (
-    employee,
-    month
-) => {
-
-    return new Promise(
-        (resolve) => {
-
-            setTimeout(() => {
-
-                resolve(
-                    generateMonthlyHistory(
-                        employee,
-                        month
-                    )
-                )
-
-            }, 350)
-
-        }
-    )
-
-}
-
-
-// =============================================================
+// ============================================================================
 // COMPONENT
-// =============================================================
+// ============================================================================
 
 function Attendance() {
 
-    // =========================================================
-    // DATA
-    // =========================================================
+    // =========================================================================
+    // ATTENDANCE DATA
+    // =========================================================================
 
-    const [entries, setEntries] =
-        useState([])
-
-
-    const [loading, setLoading] =
-        useState(true)
+    const [
+        entries,
+        setEntries,
+    ] = useState([])
 
 
-    const [error, setError] =
-        useState('')
+    // =========================================================================
+    // PAGINATION / RESULT INFORMATION
+    // =========================================================================
+
+    const [
+        totalRecords,
+        setTotalRecords,
+    ] = useState(0)
 
 
-    // =========================================================
-    // FILTER STATE
-    // =========================================================
-
-    const [search, setSearch] =
-        useState('')
+    const [
+        totalPages,
+        setTotalPages,
+    ] = useState(0)
 
 
-    const [fromDate, setFromDate] =
-        useState('')
+    const [
+        currentPage,
+        setCurrentPage,
+    ] = useState(1)
 
 
-    const [toDate, setToDate] =
-        useState('')
+    const [
+        currentLimit,
+        setCurrentLimit,
+    ] = useState(30)
 
 
-    const [selectedStatus, setSelectedStatus] =
-        useState('')
+    // =========================================================================
+    // ATTENDANCE QUERY
+    // =========================================================================
+    //
+    // The UI controls are inside AttendanceTable.
+    //
+    // This state only stores the query sent by the table so the page can
+    // request the correct data from the backend.
+    //
+    // =========================================================================
+
+    const [
+        attendanceQuery,
+        setAttendanceQuery,
+    ] = useState(
+        DEFAULT_ATTENDANCE_QUERY
+    )
 
 
-    const [selectedEmployeeId, setSelectedEmployeeId] =
-        useState('')
+    // =========================================================================
+    // LOADING
+    // =========================================================================
+
+    const [
+        loading,
+        setLoading,
+    ] = useState(true)
 
 
-    const [employeeSearch, setEmployeeSearch] =
-        useState('')
+    // =========================================================================
+    // ERROR
+    // =========================================================================
+
+    const [
+        error,
+        setError,
+    ] = useState('')
 
 
-    const [showEmployeeDropdown, setShowEmployeeDropdown] =
-        useState(false)
+    // =========================================================================
+    // TODAY / SELECTED-DATE ATTENDANCE
+    // =========================================================================
+
+    const [
+        todayAttendance,
+        setTodayAttendance,
+    ] = useState([])
 
 
-    // =========================================================
-    // HISTORY
-    // =========================================================
-
-    const [showHistoryModal, setShowHistoryModal] =
-        useState(false)
+    const [
+        todayLoading,
+        setTodayLoading,
+    ] = useState(false)
 
 
-    const [selectedEmployee, setSelectedEmployee] =
-        useState(null)
+    const [
+        todayError,
+        setTodayError,
+    ] = useState('')
 
 
-    const [history, setHistory] =
-        useState(null)
+    // =========================================================================
+    // HISTORY STATE
+    // =========================================================================
+
+    const [
+        showHistoryModal,
+        setShowHistoryModal,
+    ] = useState(false)
 
 
-    const [selectedMonth, setSelectedMonth] =
-        useState('2026-08')
+    const [
+        selectedEmployee,
+        setSelectedEmployee,
+    ] = useState(null)
 
 
-    const [historyLoading, setHistoryLoading] =
-        useState(false)
+    const [
+        history,
+        setHistory,
+    ] = useState(null)
 
 
-    // =========================================================
-    // TODAY ATTENDANCE
-    // =========================================================
-
-    const [showTodayAttendance, setShowTodayAttendance] =
-        useState(false)
+    const [
+        historyLoading,
+        setHistoryLoading,
+    ] = useState(false)
 
 
-    // =========================================================
+    // =========================================================================
+    // TODAY ATTENDANCE MODAL
+    // =========================================================================
+
+    const [
+        showTodayAttendance,
+        setShowTodayAttendance,
+    ] = useState(false)
+
+
+    // =========================================================================
     // LOAD ATTENDANCE
-    // =========================================================
+    // =========================================================================
 
-    const loadAttendance = async () => {
+    const loadAttendance = useCallback(
+        async (
+            query = DEFAULT_ATTENDANCE_QUERY
+        ) => {
 
-        try {
+            try {
 
-            setLoading(true)
+                setLoading(true)
 
-            setError('')
-
-
-            const response =
-                await fetchTodayAttendance()
+                setError('')
 
 
-            setEntries(
-                Array.isArray(response)
-                    ? response
-                    : []
-            )
+                // ----------------------------------------------------------------
+                // REQUEST FULL DATABASE SEARCH / SERVER-SIDE PAGINATION
+                // ----------------------------------------------------------------
 
-        } catch (err) {
+                const response =
+                    await getAttendance({
+                        search:
+                            query.search,
 
-            setError(
-                err?.message ||
-                'Unable to load attendance.'
-            )
+                        employeeId:
+                            query.employeeId,
 
-        } finally {
+                        fromDate:
+                            query.fromDate,
 
-            setLoading(false)
+                        toDate:
+                            query.toDate,
 
-        }
+                        status:
+                            query.status,
 
-    }
+                        page:
+                            query.page,
 
+                        limit:
+                            query.limit,
+                    })
+
+
+                // ----------------------------------------------------------------
+                // RESPONSE ITEMS
+                // ----------------------------------------------------------------
+
+                const responseItems =
+                    Array.isArray(
+                        response?.items
+                    )
+                        ? response.items
+                        : []
+
+
+                setEntries(
+                    responseItems
+                )
+
+
+                // ----------------------------------------------------------------
+                // TOTAL RECORDS
+                // ----------------------------------------------------------------
+
+                setTotalRecords(
+                    Number(
+                        response?.total || 0
+                    )
+                )
+
+
+                // ----------------------------------------------------------------
+                // TOTAL PAGES
+                // ----------------------------------------------------------------
+
+                setTotalPages(
+                    Number(
+                        response?.totalPages || 0
+                    )
+                )
+
+
+                // ----------------------------------------------------------------
+                // CURRENT PAGE
+                // ----------------------------------------------------------------
+
+                const responsePage =
+                    Number(
+                        response?.page ||
+                        query.page ||
+                        1
+                    )
+
+
+                setCurrentPage(
+                    responsePage
+                )
+
+
+                // ----------------------------------------------------------------
+                // CURRENT LIMIT
+                // ----------------------------------------------------------------
+
+                const responseLimit =
+                    Number(
+                        response?.limit ||
+                        query.limit ||
+                        30
+                    )
+
+
+                setCurrentLimit(
+                    responseLimit
+                )
+
+
+                // ----------------------------------------------------------------
+                // KEEP QUERY IN SYNC WITH BACKEND
+                // ----------------------------------------------------------------
+
+                setAttendanceQuery(
+                    (currentQuery) => ({
+                        ...currentQuery,
+
+                        page:
+                            responsePage,
+
+                        limit:
+                            responseLimit,
+                    })
+                )
+
+            } catch (err) {
+
+                console.error(
+                    'Unable to load attendance:',
+                    err
+                )
+
+
+                setEntries([])
+
+                setTotalRecords(0)
+
+                setTotalPages(0)
+
+
+                setError(
+                    getApiErrorMessage(
+                        err,
+                        'Unable to load attendance.'
+                    )
+                )
+
+            } finally {
+
+                setLoading(false)
+
+            }
+
+        },
+        []
+    )
+
+
+    // =========================================================================
+    // HANDLE TABLE QUERY CHANGE
+    // =========================================================================
+    //
+    // AttendanceTable owns the actual filter and pagination controls.
+    //
+    // Whenever something changes, the table sends the complete query here.
+    //
+    // Example:
+    //
+    // {
+    //     search: "sharath",
+    //     employeeId: "",
+    //     fromDate: "",
+    //     toDate: "",
+    //     status: "",
+    //     page: 1,
+    //     limit: 50
+    // }
+    //
+    // =========================================================================
+
+    const handleAttendanceQueryChange =
+        useCallback(
+            (query) => {
+
+                const normalizedQuery = {
+                    ...DEFAULT_ATTENDANCE_QUERY,
+
+                    ...query,
+
+                    page:
+                        Number(
+                            query?.page || 1
+                        ),
+
+                    limit:
+                        Number(
+                            query?.limit || 30
+                        ),
+                }
+
+
+                setAttendanceQuery(
+                    normalizedQuery
+                )
+
+
+                loadAttendance(
+                    normalizedQuery
+                )
+
+            },
+            [
+                loadAttendance,
+            ]
+        )
+
+
+    // =========================================================================
+    // INITIAL ATTENDANCE LOAD
+    // =========================================================================
 
     useEffect(() => {
 
-        loadAttendance()
+        loadAttendance(
+            DEFAULT_ATTENDANCE_QUERY
+        )
 
-    }, [])
-
-
-    // =========================================================
-    // EMPLOYEE OPTIONS
-    // =========================================================
-
-    const employeeOptions =
-        useMemo(() => {
-
-            const uniqueEmployees =
-                new Map()
+    }, [
+        loadAttendance,
+    ])
 
 
-            entries.forEach(
-                (entry) => {
+    // =========================================================================
+    // LOAD TODAY / SELECTED-DATE ATTENDANCE
+    // =========================================================================
 
-                    if (
-                        !entry.employeeId
-                    ) {
-                        return
-                    }
+    const loadTodayAttendance =
+        useCallback(
+            async (
+                selectedDate = ''
+            ) => {
+
+                try {
+
+                    setTodayLoading(
+                        true
+                    )
+
+                    setTodayError('')
 
 
-                    if (
-                        !uniqueEmployees.has(
-                            entry.employeeId
-                        )
-                    ) {
-
-                        uniqueEmployees.set(
-                            entry.employeeId,
-                            {
-                                id:
-                                    entry.employeeId,
-
-                                name:
-                                    entry.name,
-
-                                email:
-                                    entry.email,
-
-                                gender:
-                                    entry.gender,
-
-                                profileImage:
-                                    getProfileImage(
-                                        entry
-                                    ),
-                            }
+                    const response =
+                        await getTodayAttendance(
+                            selectedDate
                         )
 
-                    }
 
-                }
-            )
-
-
-            return Array.from(
-                uniqueEmployees.values()
-            ).sort(
-                (a, b) =>
-                    String(a.name)
-                        .localeCompare(
-                            String(b.name)
+                    setTodayAttendance(
+                        Array.isArray(
+                            response
                         )
-            )
+                            ? response
+                            : []
+                    )
 
-        }, [
-            entries,
-        ])
+                } catch (err) {
 
-
-    // =========================================================
-    // FILTERED EMPLOYEE OPTIONS
-    // =========================================================
-
-    const filteredEmployeeOptions =
-        useMemo(() => {
-
-            const value =
-                employeeSearch
-                    .trim()
-                    .toLowerCase()
+                    console.error(
+                        'Unable to load attendance for selected date:',
+                        err
+                    )
 
 
-            if (!value) {
-                return employeeOptions
-            }
+                    setTodayAttendance(
+                        []
+                    )
 
 
-            return employeeOptions.filter(
-                (employee) => {
+                    setTodayError(
+                        getApiErrorMessage(
+                            err,
+                            'Unable to load attendance.'
+                        )
+                    )
 
-                    const searchableValues = [
+                } finally {
 
-                        employee.name,
-
-                        employee.id,
-
-                        employee.email,
-
-                    ]
-
-
-                    return searchableValues.some(
-                        (item) =>
-                            item !== null &&
-                            item !== undefined &&
-                            String(item)
-                                .toLowerCase()
-                                .includes(value)
+                    setTodayLoading(
+                        false
                     )
 
                 }
-            )
 
-        }, [
-            employeeOptions,
-            employeeSearch,
-        ])
-
-
-    // =========================================================
-    // SELECTED EMPLOYEE
-    // =========================================================
-
-    const selectedEmployeeOption =
-        useMemo(() => {
-
-            return employeeOptions.find(
-                (employee) =>
-                    employee.id ===
-                    selectedEmployeeId
-            )
-
-        }, [
-            employeeOptions,
-            selectedEmployeeId,
-        ])
-
-
-    // =========================================================
-    // FILTERED ATTENDANCE
-    // =========================================================
-
-    const filteredEntries =
-        useMemo(() => {
-
-            const searchValue =
-                search
-                    .trim()
-                    .toLowerCase()
-
-
-            return entries.filter(
-                (entry) => {
-
-                    // -------------------------------------------------
-                    // GENERAL SEARCH
-                    // -------------------------------------------------
-
-                    if (
-                        searchValue
-                    ) {
-
-                        const searchableValues = [
-
-                            entry.name,
-
-                            entry.employeeId,
-
-                            entry.email,
-
-                            entry.date,
-
-                        ]
-
-
-                        const matchesSearch =
-                            searchableValues.some(
-                                (value) =>
-                                    value !== null &&
-                                    value !== undefined &&
-                                    String(value)
-                                        .toLowerCase()
-                                        .includes(
-                                            searchValue
-                                        )
-                            )
-
-
-                        if (
-                            !matchesSearch
-                        ) {
-                            return false
-                        }
-
-                    }
-
-
-                    // -------------------------------------------------
-                    // FROM DATE
-                    // -------------------------------------------------
-
-                    if (
-                        fromDate &&
-                        entry.date < fromDate
-                    ) {
-                        return false
-                    }
-
-
-                    // -------------------------------------------------
-                    // TO DATE
-                    // -------------------------------------------------
-
-                    if (
-                        toDate &&
-                        entry.date > toDate
-                    ) {
-                        return false
-                    }
-
-
-                    // -------------------------------------------------
-                    // STATUS
-                    // -------------------------------------------------
-
-                    if (
-                        selectedStatus &&
-                        entry.status !==
-                            selectedStatus
-                    ) {
-                        return false
-                    }
-
-
-                    // -------------------------------------------------
-                    // EMPLOYEE
-                    // -------------------------------------------------
-
-                    if (
-                        selectedEmployeeId &&
-                        entry.employeeId !==
-                            selectedEmployeeId
-                    ) {
-                        return false
-                    }
-
-
-                    return true
-
-                }
-            )
-
-        }, [
-            entries,
-            search,
-            fromDate,
-            toDate,
-            selectedStatus,
-            selectedEmployeeId,
-        ])
-
-
-    // =========================================================
-    // ACTIVE FILTER CHECK
-    // =========================================================
-
-    const hasActiveFilters =
-        Boolean(
-            search ||
-            fromDate ||
-            toDate ||
-            selectedStatus ||
-            selectedEmployeeId
+            },
+            []
         )
 
 
-    // =========================================================
-    // RESET FILTERS
-    // =========================================================
+    // =========================================================================
+    // INITIAL TODAY ATTENDANCE LOAD
+    // =========================================================================
 
-    const handleResetFilters = () => {
+    useEffect(() => {
 
-        setSearch('')
+        loadTodayAttendance()
 
-        setFromDate('')
-
-        setToDate('')
-
-        setSelectedStatus('')
-
-        setSelectedEmployeeId('')
-
-        setEmployeeSearch('')
-
-        setShowEmployeeDropdown(false)
-
-    }
+    }, [
+        loadTodayAttendance,
+    ])
 
 
-    // =========================================================
+    // =========================================================================
+    // REFRESH
+    // =========================================================================
+
+    const handleRefresh =
+        async () => {
+
+            await Promise.all([
+                loadAttendance(
+                    attendanceQuery
+                ),
+
+                loadTodayAttendance(),
+            ])
+        }
+
+
+    // =========================================================================
     // VIEW EMPLOYEE HISTORY
-    // =========================================================
+    // =========================================================================
 
-    const handleViewHistory = async (
-        entry
-    ) => {
-
-        setSelectedEmployee(
+    const handleViewHistory =
+        async (
             entry
-        )
-
-        setShowHistoryModal(
-            true
-        )
-
-        setHistoryLoading(
-            true
-        )
-
-        try {
-
-            const response =
-                await fetchEmployeeHistory(
-                    entry,
-                    selectedMonth
-                )
-
-
-            setHistory(
-                response
-            )
-
-        } catch (err) {
-
-            console.error(
-                'Unable to load attendance history:',
-                err
-            )
-
-            setHistory(null)
-
-        } finally {
-
-            setHistoryLoading(
-                false
-            )
-
-        }
-
-    }
-
-
-    // =========================================================
-    // CHANGE HISTORY MONTH
-    // =========================================================
-
-    const handleMonthChange = async (
-        month
-    ) => {
-
-        setSelectedMonth(
-            month
-        )
-
-
-        if (
-            !selectedEmployee
-        ) {
-            return
-        }
-
-
-        setHistoryLoading(
-            true
-        )
-
-
-        try {
-
-            const response =
-                await fetchEmployeeHistory(
-                    selectedEmployee,
-                    month
-                )
-
-
-            setHistory(
-                response
-            )
-
-        } catch (err) {
-
-            console.error(
-                'Unable to load attendance history:',
-                err
-            )
-
-            setHistory(null)
-
-        } finally {
-
-            setHistoryLoading(
-                false
-            )
-
-        }
-
-    }
-
-
-    // =========================================================
-    // CLOSE HISTORY
-    // =========================================================
-
-    const handleCloseHistory = () => {
-
-        setShowHistoryModal(
-            false
-        )
-
-        setSelectedEmployee(
-            null
-        )
-
-        setHistory(
-            null
-        )
-
-    }
-
-
-    // =========================================================
-    // TODAY'S ATTENDANCE
-    // =========================================================
-    //
-    // IMPORTANT:
-    //
-    // Do NOT filter only check-in records here.
-    //
-    // We want the Today Attendance modal to receive:
-    //
-    // - Present employees
-    // - Late employees
-    // - WFH employees
-    // - Absent employees
-    //
-    // The modal itself handles the presentation.
-    //
-    // =========================================================
-
-    const todayAttendance =
-        useMemo(() => {
+        ) => {
 
             if (
-                !Array.isArray(entries)
+                !entry?.employeeId
             ) {
-                return []
+                return
             }
 
 
-            // Use the latest attendance date
-            // from the loaded data as the demo "today".
-            //
-            // This keeps the mock data useful even if
-            // the browser's actual date is different.
-
-            const attendanceDates =
-                entries
-                    .map(
-                        (entry) =>
-                            entry?.date
-                    )
-                    .filter(Boolean)
-                    .sort()
-
-
-            const latestDate =
-                attendanceDates[
-                    attendanceDates.length - 1
-                ]
-
-
-            if (!latestDate) {
-                return []
-            }
-
-
-            return entries.filter(
-                (entry) =>
-                    entry.date ===
-                    latestDate
+            setSelectedEmployee(
+                entry
             )
 
-        }, [
-            entries,
-        ])
+
+            setHistory(null)
 
 
-    // =========================================================
+            setShowHistoryModal(
+                true
+            )
+
+
+            setHistoryLoading(
+                true
+            )
+
+
+            try {
+
+                const response =
+                    await getEmployeeHistory(
+                        entry.employeeId
+                    )
+
+
+                setHistory(
+                    response
+                )
+
+            } catch (err) {
+
+                console.error(
+                    'Unable to load attendance history:',
+                    err
+                )
+
+
+                setHistory(null)
+
+            } finally {
+
+                setHistoryLoading(
+                    false
+                )
+
+            }
+        }
+
+
+    // =========================================================================
+    // CLOSE HISTORY
+    // =========================================================================
+
+    const handleCloseHistory =
+        () => {
+
+            setShowHistoryModal(
+                false
+            )
+
+
+            setSelectedEmployee(
+                null
+            )
+
+
+            setHistory(
+                null
+            )
+
+
+            setHistoryLoading(
+                false
+            )
+        }
+
+
+    // =========================================================================
+    // OPEN TODAY ATTENDANCE
+    // =========================================================================
+
+    const handleOpenTodayAttendance =
+        async () => {
+
+            setShowTodayAttendance(
+                true
+            )
+
+
+            await loadTodayAttendance()
+
+        }
+
+
+    // =========================================================================
+    // CLOSE TODAY ATTENDANCE
+    // =========================================================================
+
+    const handleCloseTodayAttendance =
+        () => {
+
+            setShowTodayAttendance(
+                false
+            )
+
+        }
+
+
+    // =========================================================================
     // TODAY ATTENDANCE COUNT
-    // =========================================================
+    // =========================================================================
 
     const todayAttendanceCount =
         todayAttendance.length
 
 
-    // =========================================================
-    // ERROR
-    // =========================================================
+    // =========================================================================
+    // ERROR STATE
+    // =========================================================================
 
     if (
         error &&
-        !loading
+        !loading &&
+        !entries.length
     ) {
 
         return (
-
             <div className="
                 space-y-5
                 p-4
@@ -1583,7 +702,11 @@ function Attendance() {
                     <button
                         type="button"
                         onClick={
-                            loadAttendance
+                            handleRefresh
+                        }
+                        disabled={
+                            loading ||
+                            todayLoading
                         }
                         className="
                             mt-4
@@ -1600,6 +723,8 @@ function Attendance() {
                             text-white
                             transition
                             hover:bg-[#78B300]
+                            disabled:cursor-not-allowed
+                            disabled:opacity-50
                         "
                     >
 
@@ -1615,15 +740,13 @@ function Attendance() {
                 </div>
 
             </div>
-
         )
-
     }
 
 
-    // =========================================================
+    // =========================================================================
     // RENDER
-    // =========================================================
+    // =========================================================================
 
     return (
 
@@ -1633,10 +756,9 @@ function Attendance() {
             sm:p-6
         ">
 
-
-            {/* =====================================================
+            {/* =================================================================
                 PAGE HEADER
-            ===================================================== */}
+            ================================================================= */}
 
             <div className="
                 flex
@@ -1647,37 +769,11 @@ function Attendance() {
                 sm:justify-between
             ">
 
+             
 
-                {/* =================================================
-                    PAGE TITLE
-                ================================================= */}
-
-                <div>
-
-                    <h1 className="
-                        text-lg
-                        font-semibold
-                        text-base-content
-                    ">
-                        Attendance
-                    </h1>
-
-
-                    <p className="
-                        mt-0.5
-                        text-xs
-                        text-base-content/50
-                    ">
-                        Manage employee attendance,
-                        check-ins and check-outs.
-                    </p>
-
-                </div>
-
-
-                {/* =================================================
+                {/* =============================================================
                     PAGE ACTIONS
-                ================================================= */}
+                ============================================================= */}
 
                 <div className="
                     flex
@@ -1685,18 +781,18 @@ function Attendance() {
                     gap-2
                 ">
 
-
-                    {/* =============================================
+                    {/* =========================================================
                         REFRESH
-                    ============================================= */}
+                    ========================================================= */}
 
                     <button
                         type="button"
                         onClick={
-                            loadAttendance
+                            handleRefresh
                         }
                         disabled={
-                            loading
+                            loading ||
+                            todayLoading
                         }
                         className="
                             inline-flex
@@ -1724,6 +820,7 @@ function Attendance() {
                             className={[
                                 'h-4',
                                 'w-4',
+
                                 loading
                                     ? 'animate-spin'
                                     : '',
@@ -1735,16 +832,14 @@ function Attendance() {
                     </button>
 
 
-                    {/* =============================================
-                        TODAY'S ATTENDANCE
-                    ============================================= */}
+                    {/* =========================================================
+                        TODAY ATTENDANCE
+                    ========================================================= */}
 
                     <button
                         type="button"
-                        onClick={() =>
-                            setShowTodayAttendance(
-                                true
-                            )
+                        onClick={
+                            handleOpenTodayAttendance
                         }
                         className="
                             inline-flex
@@ -1774,8 +869,6 @@ function Attendance() {
                         Today's Attendance
 
 
-                        {/* RECORD COUNT */}
-
                         {todayAttendanceCount > 0 && (
 
                             <span className="
@@ -1801,780 +894,204 @@ function Attendance() {
             </div>
 
 
-            {/* =====================================================
-                FILTER CARD
-            ===================================================== */}
+            {/* =================================================================
+                ATTENDANCE ERROR
+            ================================================================= */}
 
-            <div className="
-                rounded-xl
-                border
-                border-base-300
-                bg-base-100
-                shadow-sm
-            ">
+            {error &&
+                entries.length > 0 && (
 
                 <div className="
-                    p-4
-                    sm:p-5
+                    rounded-lg
+                    border
+                    border-red-200
+                    bg-red-50
+                    px-4
+                    py-3
+                    text-xs
+                    text-red-600
                 ">
-
-
-                    {/* =================================================
-                        FILTER GRID
-                    ================================================= */}
-
-                    <div className="
-                        grid
-                        grid-cols-1
-                        gap-3
-                        md:grid-cols-2
-                        xl:grid-cols-[minmax(260px,1.5fr)_150px_150px_150px_230px]
-                    ">
-
-
-                        {/* =================================================
-                            SEARCH
-                        ================================================= */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                Search
-                            </label>
-
-
-                            <div className="
-                                relative
-                            ">
-
-                                <MagnifyingGlassIcon className="
-                                    pointer-events-none
-                                    absolute
-                                    left-3
-                                    top-1/2
-                                    h-4
-                                    w-4
-                                    -translate-y-1/2
-                                    text-base-content/35
-                                " />
-
-
-                                <input
-                                    type="text"
-                                    value={
-                                        search
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        setSearch(
-                                            event
-                                                .target
-                                                .value
-                                        )
-                                    }
-                                    placeholder="Search name, employee ID, email or date..."
-                                    className="
-                                        input
-                                        input-bordered
-                                        h-10
-                                        min-h-10
-                                        w-full
-                                        pl-9
-                                    "
-                                />
-
-                            </div>
-
-                        </div>
-
-
-                        {/* =================================================
-                            FROM DATE
-                        ================================================= */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                From Date
-                            </label>
-
-
-                            <input
-                                type="date"
-                                value={
-                                    fromDate
-                                }
-                                onChange={(
-                                    event
-                                ) =>
-                                    setFromDate(
-                                        event
-                                            .target
-                                            .value
-                                    )
-                                }
-                                className="
-                                    input
-                                    input-bordered
-                                    h-10
-                                    min-h-10
-                                    w-full
-                                "
-                            />
-
-                        </div>
-
-
-                        {/* =================================================
-                            TO DATE
-                        ================================================= */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                To Date
-                            </label>
-
-
-                            <input
-                                type="date"
-                                value={
-                                    toDate
-                                }
-                                min={
-                                    fromDate ||
-                                    undefined
-                                }
-                                onChange={(
-                                    event
-                                ) =>
-                                    setToDate(
-                                        event
-                                            .target
-                                            .value
-                                    )
-                                }
-                                className="
-                                    input
-                                    input-bordered
-                                    h-10
-                                    min-h-10
-                                    w-full
-                                "
-                            />
-
-                        </div>
-
-
-                        {/* =================================================
-                            STATUS
-                        ================================================= */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                Status
-                            </label>
-
-
-                            <select
-                                value={
-                                    selectedStatus
-                                }
-                                onChange={(
-                                    event
-                                ) =>
-                                    setSelectedStatus(
-                                        event
-                                            .target
-                                            .value
-                                    )
-                                }
-                                className="
-                                    select
-                                    select-bordered
-                                    h-10
-                                    min-h-10
-                                    w-full
-                                "
-                            >
-
-                                <option value="">
-                                    All Status
-                                </option>
-
-                                <option value="present">
-                                    Present
-                                </option>
-
-                                <option value="absent">
-                                    Absent
-                                </option>
-
-                                <option value="wfh">
-                                    WFH
-                                </option>
-
-                                <option value="late">
-                                    Late
-                                </option>
-
-                            </select>
-
-                        </div>
-
-
-                        {/* =================================================
-                            EMPLOYEE DROPDOWN
-                        ================================================= */}
-
-                        <div className="
-                            relative
-                        ">
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                Employee
-                            </label>
-
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setShowEmployeeDropdown(
-                                        (previous) =>
-                                            !previous
-                                    )
-                                }
-                                className="
-                                    flex
-                                    h-10
-                                    w-full
-                                    items-center
-                                    justify-between
-                                    rounded-lg
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    px-3
-                                    text-left
-                                    text-sm
-                                    text-base-content
-                                    transition
-                                    hover:bg-base-200/40
-                                    focus:outline-none
-                                    focus:ring-2
-                                    focus:ring-[#8BCF00]/20
-                                "
-                            >
-
-                                <span className="
-                                    truncate
-                                ">
-
-                                    {
-                                        selectedEmployeeOption
-                                            ? selectedEmployeeOption.name
-                                            : 'All Employees'
-                                    }
-
-                                </span>
-
-
-                                <span className="
-                                    ml-2
-                                    shrink-0
-                                    text-xs
-                                    text-base-content/40
-                                ">
-
-                                    {
-                                        showEmployeeDropdown
-                                            ? '▲'
-                                            : '▼'
-                                    }
-
-                                </span>
-
-                            </button>
-
-
-                            {showEmployeeDropdown && (
-
-                                <div className="
-                                    absolute
-                                    left-0
-                                    right-0
-                                    z-40
-                                    mt-1
-                                    overflow-hidden
-                                    rounded-xl
-                                    border
-                                    border-base-300
-                                    bg-base-100
-                                    shadow-xl
-                                ">
-
-
-                                    {/* =================================
-                                        SEARCH EMPLOYEES
-                                    ================================= */}
-
-                                    <div className="
-                                        border-b
-                                        border-base-300
-                                        p-2
-                                    ">
-
-                                        <div className="
-                                            relative
-                                        ">
-
-                                            <MagnifyingGlassIcon className="
-                                                pointer-events-none
-                                                absolute
-                                                left-2.5
-                                                top-1/2
-                                                h-4
-                                                w-4
-                                                -translate-y-1/2
-                                                text-base-content/35
-                                            " />
-
-
-                                            <input
-                                                type="text"
-                                                value={
-                                                    employeeSearch
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    setEmployeeSearch(
-                                                        event
-                                                            .target
-                                                            .value
-                                                    )
-                                                }
-                                                placeholder="Search employee..."
-                                                autoFocus
-                                                className="
-                                                    input
-                                                    input-bordered
-                                                    h-9
-                                                    min-h-9
-                                                    w-full
-                                                    pl-8
-                                                    text-xs
-                                                "
-                                                onClick={(
-                                                    event
-                                                ) =>
-                                                    event.stopPropagation()
-                                                }
-                                            />
-
-                                        </div>
-
-                                    </div>
-
-
-                                    {/* =================================
-                                        EMPLOYEE OPTIONS
-                                    ================================= */}
-
-                                    <div className="
-                                        max-h-64
-                                        overflow-y-auto
-                                        p-1
-                                    ">
-
-
-                                        {/* ALL EMPLOYEES */}
-
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-
-                                                setSelectedEmployeeId(
-                                                    ''
-                                                )
-
-                                                setShowEmployeeDropdown(
-                                                    false
-                                                )
-
-                                                setEmployeeSearch(
-                                                    ''
-                                                )
-
-                                            }}
-                                            className={[
-                                                'flex',
-                                                'w-full',
-                                                'items-center',
-                                                'rounded-lg',
-                                                'px-3',
-                                                'py-2.5',
-                                                'text-left',
-                                                'text-xs',
-                                                'transition',
-
-                                                selectedEmployeeId === ''
-                                                    ? 'bg-[#8BCF00]/10 text-[#6FA800]'
-                                                    : 'text-base-content/70 hover:bg-base-200',
-                                            ].join(' ')}
-                                        >
-                                            All Employees
-                                        </button>
-
-
-                                        {filteredEmployeeOptions.length > 0 ? (
-
-                                            filteredEmployeeOptions.map(
-                                                (
-                                                    employee
-                                                ) => (
-
-                                                    <button
-                                                        type="button"
-                                                        key={
-                                                            employee.id
-                                                        }
-                                                        onClick={() => {
-
-                                                            setSelectedEmployeeId(
-                                                                employee.id
-                                                            )
-
-                                                            setShowEmployeeDropdown(
-                                                                false
-                                                            )
-
-                                                            setEmployeeSearch(
-                                                                ''
-                                                            )
-
-                                                        }}
-                                                        className={[
-                                                            'flex',
-                                                            'w-full',
-                                                            'items-center',
-                                                            'gap-3',
-                                                            'rounded-lg',
-                                                            'px-3',
-                                                            'py-2.5',
-                                                            'text-left',
-                                                            'transition',
-
-                                                            selectedEmployeeId === employee.id
-                                                                ? 'bg-[#8BCF00]/10'
-                                                                : 'hover:bg-base-200',
-                                                        ].join(' ')}
-                                                    >
-
-                                                        <img
-                                                            src={
-                                                                employee.profileImage
-                                                            }
-                                                            alt={
-                                                                employee.name
-                                                            }
-                                                            className="
-                                                                h-7
-                                                                w-7
-                                                                shrink-0
-                                                                rounded-full
-                                                                object-cover
-                                                            "
-                                                        />
-
-
-                                                        <div className="
-                                                            min-w-0
-                                                            flex-1
-                                                        ">
-
-                                                            <p className="
-                                                                truncate
-                                                                text-xs
-                                                                font-medium
-                                                                text-base-content
-                                                            ">
-                                                                {
-                                                                    employee.name
-                                                                }
-                                                            </p>
-
-
-                                                            <p className="
-                                                                truncate
-                                                                text-[10px]
-                                                                text-base-content/45
-                                                            ">
-                                                                {
-                                                                    employee.id
-                                                                }
-
-                                                                {' • '}
-
-                                                                {
-                                                                    employee.email
-                                                                }
-                                                            </p>
-
-                                                        </div>
-
-                                                    </button>
-
-                                                )
-                                            )
-
-                                        ) : (
-
-                                            <div className="
-                                                px-3
-                                                py-6
-                                                text-center
-                                            ">
-
-                                                <p className="
-                                                    text-xs
-                                                    text-base-content/45
-                                                ">
-                                                    No employees found
-                                                </p>
-
-                                            </div>
-
-                                        )}
-
-                                    </div>
-
-                                </div>
-
-                            )}
-
-                        </div>
-
-                    </div>
-
-
-                    {/* =================================================
-                        FILTER FOOTER
-                    ================================================= */}
-
-                    <div className="
-                        mt-4
-                        flex
-                        flex-col
-                        gap-3
-                        border-t
-                        border-base-300
-                        pt-4
-                        sm:flex-row
-                        sm:items-center
-                        sm:justify-between
-                    ">
-
-
-                        {/* RESULT COUNT */}
-
-                        <p className="
-                            text-xs
-                            font-medium
-                            text-base-content/50
-                        ">
-
-                            {filteredEntries.length}{' '}
-
-                            {
-                                filteredEntries.length === 1
-                                    ? 'attendance record'
-                                    : 'attendance records'
-                            }
-
-                            {' '}found
-
-                        </p>
-
-
-                        <div className="
-                            flex
-                            flex-wrap
-                            items-center
-                            gap-2
-                        ">
-
-
-                            {/* SELECTED EMPLOYEE */}
-
-                            {selectedEmployeeOption && (
-
-                                <span className="
-                                    rounded-full
-                                    bg-base-200
-                                    px-3
-                                    py-1.5
-                                    text-[11px]
-                                    font-medium
-                                    text-base-content/60
-                                ">
-                                    {
-                                        selectedEmployeeOption.name
-                                    }
-                                </span>
-
-                            )}
-
-
-                            {/* RESET */}
-
-                            {hasActiveFilters && (
-
-                                <button
-                                    type="button"
-                                    onClick={
-                                        handleResetFilters
-                                    }
-                                    className="
-                                        inline-flex
-                                        h-9
-                                        items-center
-                                        justify-center
-                                        gap-1
-                                        rounded-lg
-                                        px-3
-                                        text-xs
-                                        font-medium
-                                        text-base-content/60
-                                        transition
-                                        hover:bg-base-200
-                                        hover:text-base-content
-                                    "
-                                >
-
-                                    <XMarkIcon className="
-                                        h-4
-                                        w-4
-                                    " />
-
-                                    Reset Filters
-
-                                </button>
-
-                            )}
-
-                        </div>
-
-                    </div>
-
+                    {error}
                 </div>
 
-            </div>
+            )}
 
 
-            {/* =====================================================
+            {/* =================================================================
                 ATTENDANCE TABLE
-            ===================================================== */}
+            ================================================================= */}
+            {/*
+                The AttendanceTable now owns:
+
+                - Search
+                - From Date
+                - To Date
+                - Status
+                - Employee
+                - Reset
+                - Rows per page
+                - Pagination
+                - Record range
+
+                It sends the complete query to this page through
+                onQueryChange().
+            */}
 
             <AttendanceTable
                 entries={
-                    filteredEntries
+                    entries
                 }
+
+                onView={
+                    handleViewHistory
+                }
+
                 loading={
                     loading
                 }
-                onView={
-                    handleViewHistory
+
+                totalRecords={
+                    totalRecords
+                }
+
+                totalPages={
+                    totalPages
+                }
+
+                currentPage={
+                    currentPage
+                }
+
+                currentLimit={
+                    currentLimit
+                }
+
+                onQueryChange={
+                    handleAttendanceQueryChange
                 }
             />
 
 
-            {/* =====================================================
+            {/* =================================================================
                 EMPLOYEE HISTORY MODAL
-            ===================================================== */}
+            ================================================================= */}
 
             <AttendanceHistoryModal
                 open={
                     showHistoryModal
                 }
-                employee={
+
+                entry={
                     selectedEmployee
                 }
+
                 history={
-                    history
+                    history?.history || []
                 }
-                loading={
-                    historyLoading
-                }
-                month={
-                    selectedMonth
-                }
-                months={
-                    MONTHS
-                }
-                onMonthChange={
-                    handleMonthChange
-                }
+
                 onClose={
                     handleCloseHistory
                 }
             />
 
 
-            {/* =====================================================
-                TODAY ATTENDANCE MODAL
-            ===================================================== */}
+            {/* =================================================================
+                HISTORY LOADING
+            ================================================================= */}
+
+            {showHistoryModal &&
+                historyLoading && (
+
+                <div className="
+                    pointer-events-none
+                    fixed
+                    inset-0
+                    z-[110]
+                    flex
+                    items-center
+                    justify-center
+                ">
+
+                    <div className="
+                        rounded-lg
+                        bg-black/70
+                        px-4
+                        py-3
+                        text-xs
+                        font-medium
+                        text-white
+                    ">
+                        Loading attendance history...
+                    </div>
+
+                </div>
+
+            )}
+
+
+            {/* =================================================================
+                TODAY / SELECTED-DATE ATTENDANCE MODAL
+            ================================================================= */}
 
             <TodayAttendance
                 open={
                     showTodayAttendance
                 }
+
                 entries={
                     todayAttendance
                 }
-                onClose={() =>
-                    setShowTodayAttendance(
-                        false
-                    )
+
+                onClose={
+                    handleCloseTodayAttendance
+                }
+
+                loading={
+                    todayLoading
+                }
+
+                error={
+                    todayError
+                }
+
+                onDateChange={
+                    loadTodayAttendance
                 }
             />
 
+
+            {/* =================================================================
+                TODAY ATTENDANCE ERROR
+            ================================================================= */}
+
+            {showTodayAttendance &&
+                todayError &&
+                !todayLoading && (
+
+                <div className="
+                    pointer-events-none
+                    fixed
+                    bottom-5
+                    left-1/2
+                    z-[120]
+                    -translate-x-1/2
+                    rounded-lg
+                    border
+                    border-red-200
+                    bg-red-50
+                    px-4
+                    py-3
+                    text-xs
+                    text-red-600
+                    shadow-lg
+                ">
+                    {todayError}
+                </div>
+
+            )}
+
         </div>
-
     )
-
 }
 
 

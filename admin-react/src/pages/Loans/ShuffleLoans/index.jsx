@@ -1,13 +1,20 @@
 // admin-react/src/pages/Loans/ShuffleLoans/index.jsx
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import AgentDropdown from '../../../components/GlobalModels/Filters/AgentDropdown'
 import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeDropdown'
 import RmDropdown from '../../../components/GlobalModels/Filters/RmDropdown'
+import FeedbackModal from '../../../components/GlobalModels/FeedbackModal'
 
 import ShuffleLoansTable from './components/ShuffleLoansTable'
 import AssignShuffleLoansModal from './components/AssignShuffleLoansModal'
+
+import {
+    getShuffleLoans,
+    assignShuffleLoans,
+    getApiErrorMessage,
+} from './API'
 
 
 function ShuffleLoans() {
@@ -16,90 +23,22 @@ function ShuffleLoans() {
     // APPLICATION DATA
     // =========================================================
 
-    const [applications, setApplications] = useState([
-        {
-            id: 1,
-            loanId: 'SL-2026-0001',
-            name: 'Gowtham',
-            phone: '9844882194',
-            email: 'gowtham@example.com',
-            loanType: 'Personal Loan',
-            amount: '500000',
-            agentId: 101,
-            agentName: 'Prashanth',
-            rmId: 201,
-            rmName: 'Premalatha N',
-            status: 'In Process',
-            appliedDate: '2026-08-20',
-        },
-        {
-            id: 2,
-            loanId: 'SL-2026-0002',
-            name: 'Mohammad',
-            phone: '9980647870',
-            email: 'mohammad@example.com',
-            loanType: 'Personal Loan',
-            amount: '400000',
-            agentId: 102,
-            agentName: 'Kasturi',
-            rmId: 201,
-            rmName: 'Premalatha N',
-            status: 'In Process',
-            appliedDate: '2026-08-20',
-        },
-        {
-            id: 3,
-            loanId: 'SL-2026-0003',
-            name: 'Meghana',
-            phone: '6362426300',
-            email: 'meghana@example.com',
-            loanType: 'Personal Loan',
-            amount: '500000',
-            agentId: 102,
-            agentName: 'Kasturi',
-            rmId: 202,
-            rmName: 'Shubha',
-            status: 'In Process',
-            appliedDate: '2026-08-19',
-        },
-        {
-            id: 4,
-            loanId: 'SL-2026-0004',
-            name: 'Rajesh Kumar',
-            phone: '9876543210',
-            email: 'rajesh@example.com',
-            loanType: 'Business Loan',
-            amount: '1000000',
-            agentId: 103,
-            agentName: 'Nayana',
-            rmId: 203,
-            rmName: 'Prasanna Y R',
-            status: 'Docs Pending',
-            appliedDate: '2026-08-18',
-        },
-        {
-            id: 5,
-            loanId: 'SL-2026-0005',
-            name: 'Priya Sharma',
-            phone: '9876543211',
-            email: 'priya@example.com',
-            loanType: 'Home Loan',
-            amount: '2500000',
-            agentId: 104,
-            agentName: 'Prashanth',
-            rmId: 202,
-            rmName: 'Shubha',
-            status: 'In Process',
-            appliedDate: '2026-08-18',
-        },
-    ])
+    const [applications, setApplications] =
+        useState([])
+
+    const [loading, setLoading] =
+        useState(true)
+
+    const [assigning, setAssigning] =
+        useState(false)
 
 
     // =========================================================
     // FILTER STATE
     // =========================================================
 
-    const [search, setSearch] = useState('')
+    const [search, setSearch] =
+        useState('')
 
     const [selectedAgent, setSelectedAgent] =
         useState('')
@@ -133,47 +72,128 @@ function ShuffleLoans() {
 
 
     // =========================================================
+    // FEEDBACK
+    // =========================================================
+
+    const [feedback, setFeedback] = useState({
+        open: false,
+        type: 'info',
+        title: '',
+        message: '',
+    })
+
+
+    const showFeedback = (
+        type,
+        title,
+        message
+    ) => {
+
+        setFeedback({
+            open: true,
+            type,
+            title,
+            message,
+        })
+    }
+
+
+    const closeFeedback = () => {
+
+        setFeedback((previous) => ({
+            ...previous,
+            open: false,
+        }))
+    }
+
+
+    // =========================================================
+    // LOAD APPLICATIONS
+    // =========================================================
+
+    const loadApplications = async () => {
+
+        try {
+
+            setLoading(true)
+
+            const data =
+                await getShuffleLoans()
+
+            setApplications(
+                Array.isArray(data)
+                    ? data
+                    : []
+            )
+
+        } catch (error) {
+
+            showFeedback(
+                'error',
+                'Failed to Load Applications',
+                getApiErrorMessage(
+                    error,
+                    'Unable to load shuffle applications.'
+                )
+            )
+
+        } finally {
+
+            setLoading(false)
+
+        }
+    }
+
+
+    // =========================================================
+    // INITIAL LOAD
+    // =========================================================
+
+    useEffect(() => {
+
+        loadApplications()
+
+    }, [])
+
+
+    // =========================================================
     // AGENTS
+    // =========================================================
+    //
+    // These are derived only from loaded applications.
+    // The AgentDropdown itself continues to use its own API.
+    //
     // =========================================================
 
     const agents = useMemo(() => {
 
         const map = new Map()
 
-
         applications.forEach((application) => {
 
             const id =
                 application.agentId ??
-                application.agent_id ??
-                application.agent?.id
-
+                application.agent_id
 
             const name =
                 application.agentName ??
-                application.agent_name ??
-                application.agent?.name
+                application.agent_name
 
-
-            if (!id && !name) {
+            if (!id || !name) {
                 return
             }
 
-
-            const key = String(id ?? name)
-
+            const key = String(id)
 
             if (!map.has(key)) {
 
                 map.set(key, {
-                    id: id ?? name,
-                    name: name || 'Unknown Agent',
+                    id,
+                    name,
                 })
-
             }
 
         })
-
 
         return [...map.values()]
 
@@ -188,40 +208,31 @@ function ShuffleLoans() {
 
         const map = new Map()
 
-
         applications.forEach((application) => {
 
             const id =
                 application.rmId ??
-                application.rm_id ??
-                application.rm?.id
-
+                application.rm_id
 
             const name =
                 application.rmName ??
-                application.rm_name ??
-                application.rm?.name
+                application.rm_name
 
-
-            if (!id && !name) {
+            if (!id || !name) {
                 return
             }
 
-
-            const key = String(id ?? name)
-
+            const key = String(id)
 
             if (!map.has(key)) {
 
                 map.set(key, {
-                    id: id ?? name,
-                    name: name || 'Unknown RM',
+                    id,
+                    name,
                 })
-
             }
 
         })
-
 
         return [...map.values()]
 
@@ -234,16 +245,35 @@ function ShuffleLoans() {
 
     const loanTypes = useMemo(() => {
 
-        return [
-            ...new Set(
-                applications
-                    .map(
-                        (application) =>
-                            application.loanType
-                    )
-                    .filter(Boolean)
-            ),
-        ]
+        const map = new Map()
+
+        applications.forEach((application) => {
+
+            const id =
+                application.loanTypeId ??
+                application.loan_type_id
+
+            const name =
+                application.loanType ??
+                application.loan_type
+
+            if (!id || !name) {
+                return
+            }
+
+            const key = String(id)
+
+            if (!map.has(key)) {
+
+                map.set(key, {
+                    id,
+                    name,
+                })
+            }
+
+        })
+
+        return [...map.values()]
 
     }, [applications])
 
@@ -275,10 +305,7 @@ function ShuffleLoans() {
     const filteredApplications = useMemo(() => {
 
         const value =
-            search
-                .trim()
-                .toLowerCase()
-
+            search.trim().toLowerCase()
 
         return applications.filter((application) => {
 
@@ -293,15 +320,14 @@ function ShuffleLoans() {
                     application.phone,
                     application.email,
                     application.loanId,
+                    application.unique_id,
                     application.id,
                     application.loanType,
                     application.status,
                     application.agentName,
                     application.agent_name,
-                    application.agent?.name,
                     application.rmName,
                     application.rm_name,
-                    application.rm?.name,
                 ].some(
                     (field) =>
                         field !== null &&
@@ -311,9 +337,7 @@ function ShuffleLoans() {
                             .includes(value)
                 )
             ) {
-
                 return false
-
             }
 
 
@@ -325,22 +349,14 @@ function ShuffleLoans() {
 
                 const applicationAgent =
                     application.agentId ??
-                    application.agent_id ??
-                    application.agent?.id ??
-                    application.agentName ??
-                    application.agent_name ??
-                    application.agent?.name
-
+                    application.agent_id
 
                 if (
                     String(applicationAgent) !==
                     String(selectedAgent)
                 ) {
-
                     return false
-
                 }
-
             }
 
 
@@ -352,22 +368,14 @@ function ShuffleLoans() {
 
                 const applicationRM =
                     application.rmId ??
-                    application.rm_id ??
-                    application.rm?.id ??
-                    application.rmName ??
-                    application.rm_name ??
-                    application.rm?.name
-
+                    application.rm_id
 
                 if (
                     String(applicationRM) !==
                     String(selectedRM)
                 ) {
-
                     return false
-
                 }
-
             }
 
 
@@ -375,13 +383,18 @@ function ShuffleLoans() {
             // LOAN TYPE
             // -----------------------------------------------------
 
-            if (
-                selectedLoanType &&
-                application.loanType !== selectedLoanType
-            ) {
+            if (selectedLoanType) {
 
-                return false
+                const applicationLoanType =
+                    application.loanTypeId ??
+                    application.loan_type_id
 
+                if (
+                    String(applicationLoanType) !==
+                    String(selectedLoanType)
+                ) {
+                    return false
+                }
             }
 
 
@@ -393,9 +406,7 @@ function ShuffleLoans() {
                 selectedStatus &&
                 application.status !== selectedStatus
             ) {
-
                 return false
-
             }
 
 
@@ -424,7 +435,6 @@ function ShuffleLoans() {
         setSelectedRM('')
         setSelectedLoanType('')
         setSelectedStatus('')
-
         setSelectedApplicationIds([])
 
     }
@@ -434,27 +444,27 @@ function ShuffleLoans() {
     // SELECT APPLICATION
     // =========================================================
 
-    const handleSelectApplication = (applicationId) => {
+    const handleSelectApplication = (
+        applicationId
+    ) => {
 
         setSelectedApplicationIds((previous) => {
 
-            if (previous.includes(applicationId)) {
+            if (
+                previous.includes(applicationId)
+            ) {
 
                 return previous.filter(
                     (id) =>
                         id !== applicationId
                 )
-
             }
-
 
             return [
                 ...previous,
                 applicationId,
             ]
-
         })
-
     }
 
 
@@ -470,14 +480,12 @@ function ShuffleLoans() {
                     application.id
             )
 
-
         const allSelected =
             filteredIds.length > 0 &&
             filteredIds.every(
                 (id) =>
                     selectedApplicationIds.includes(id)
             )
-
 
         if (allSelected) {
 
@@ -490,9 +498,7 @@ function ShuffleLoans() {
             )
 
             return
-
         }
-
 
         setSelectedApplicationIds(
             (previous) => [
@@ -502,7 +508,6 @@ function ShuffleLoans() {
                 ]),
             ]
         )
-
     }
 
 
@@ -515,12 +520,17 @@ function ShuffleLoans() {
         if (
             selectedApplicationIds.length === 0
         ) {
+
+            showFeedback(
+                'warning',
+                'No Applications Selected',
+                'Select at least one application before assigning.'
+            )
+
             return
         }
 
-
         setShowAssignModal(true)
-
     }
 
 
@@ -530,75 +540,114 @@ function ShuffleLoans() {
 
     const handleCloseAssignModal = () => {
 
-        setShowAssignModal(false)
+        if (assigning) {
+            return
+        }
 
+        setShowAssignModal(false)
     }
 
 
     // =========================================================
-    // ASSIGN SUBMIT
+    // ASSIGN / SHUFFLE
     // =========================================================
 
-    const handleAssignSubmit = (data) => {
+    const handleAssignSubmit = async (data) => {
 
-        const {
-            agentId,
-            agentName,
-            rmId,
-            rmName,
-            loanType,
-        } = data
+        if (
+            !selectedApplicationIds.length
+        ) {
+            return
+        }
 
+        try {
 
-        setApplications((previous) =>
-            previous.map((application) => {
+            setAssigning(true)
 
-                if (
-                    !selectedApplicationIds.includes(
-                        application.id
-                    )
-                ) {
-
-                    return application
-
-                }
-
-
-                return {
-                    ...application,
+            const updatedApplications =
+                await assignShuffleLoans({
+                    applicationIds:
+                        selectedApplicationIds,
 
                     agentId:
-                        agentId ??
-                        application.agentId,
-
-                    agentName:
-                        agentName ??
-                        application.agentName,
+                        data.agentId,
 
                     rmId:
-                        rmId ??
-                        application.rmId,
+                        data.rmId,
 
-                    rmName:
-                        rmName ??
-                        application.rmName,
-
-                    loanType:
-                        loanType ||
-                        application.loanType,
-
-                    updatedAt:
-                        new Date().toISOString(),
-                }
-
-            })
-        )
+                    loanTypeId:
+                        data.loanTypeId,
+                })
 
 
-        setSelectedApplicationIds([])
+            // -------------------------------------------------
+            // Replace only the updated applications returned
+            // by the backend.
+            // -------------------------------------------------
 
-        handleCloseAssignModal()
+            if (
+                Array.isArray(
+                    updatedApplications
+                ) &&
+                updatedApplications.length
+            ) {
 
+                const updatedMap =
+                    new Map(
+                        updatedApplications.map(
+                            (application) => [
+                                application.id,
+                                application,
+                            ]
+                        )
+                    )
+
+                setApplications(
+                    (previous) =>
+                        previous.map(
+                            (application) =>
+                                updatedMap.get(
+                                    application.id
+                                ) || application
+                        )
+                )
+
+            } else {
+
+                await loadApplications()
+            }
+
+
+            setSelectedApplicationIds([])
+
+            setShowAssignModal(false)
+
+            showFeedback(
+                'success',
+                'Applications Updated',
+                `${selectedApplicationIds.length} application${
+                    selectedApplicationIds.length !== 1
+                        ? 's'
+                        : ''
+                } updated successfully.`
+            )
+
+        } catch (error) {
+
+            showFeedback(
+                'error',
+                'Assignment Failed',
+                getApiErrorMessage(
+                    error,
+                    'Unable to update selected applications.'
+                )
+            )
+
+        } finally {
+
+            setAssigning(false)
+
+        }
     }
 
 
@@ -606,16 +655,17 @@ function ShuffleLoans() {
     // REFRESH
     // =========================================================
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
 
-        /*
-         * API refresh will be added later.
-         */
+        setSelectedApplicationIds([])
 
-        console.log(
-            'Refresh Shuffle Loans'
+        await loadApplications()
+
+        showFeedback(
+            'success',
+            'Applications Refreshed',
+            'Shuffle loan data refreshed successfully.'
         )
-
     }
 
 
@@ -626,13 +676,13 @@ function ShuffleLoans() {
     return (
 
         <div className="
+            space-y-5
             p-4
             sm:p-6
-            space-y-5
         ">
 
             {/* =================================================
-                FILTERS + ASSIGN
+                FILTERS
             ================================================= */}
 
             <div className="
@@ -674,51 +724,74 @@ function ShuffleLoans() {
                     />
 
 
-                    {/* AGENT FILTER */}
+                    {/* AGENT */}
 
                     <AgentDropdown
                         value={selectedAgent}
                         onChange={setSelectedAgent}
-                        options={agents}
                         showLabel={false}
-                        className="w-full lg:w-44 lg:flex-none"
+                        placeholder="Select Agent"
+                        searchPlaceholder="Search agent"
+                        emptyMessage="No agents found"
+                        includeAllOption={false}
+                        className="
+                            w-full
+                            lg:w-44
+                            lg:flex-none
+                        "
                     />
 
 
-                    {/* RM FILTER */}
+                    {/* RM */}
 
                     <RmDropdown
                         value={selectedRM}
                         onChange={setSelectedRM}
-                        options={rms}
                         showLabel={false}
-                        className="w-full lg:w-44 lg:flex-none"
+                        placeholder="Select RM"
+                        searchPlaceholder="Search RM"
+                        emptyMessage="No RMs found"
+                        includeAllOption={false}
+                        className="
+                            w-full
+                            lg:w-44
+                            lg:flex-none
+                        "
                     />
 
 
-                    {/* LOAN TYPE FILTER */}
+                    {/* LOAN TYPE */}
 
                     <LoanTypeDropdown
                         value={selectedLoanType}
                         onChange={setSelectedLoanType}
-                        options={loanTypes}
                         showLabel={false}
-                        className="w-full lg:w-44 lg:flex-none"
+                        placeholder="Select Loan Type"
+                        searchPlaceholder="Search loan type"
+                        emptyMessage="No loan types found"
+                        includeAllOption={false}
+                        className="
+                            w-full
+                            lg:w-44
+                            lg:flex-none
+                        "
                     />
 
 
-                    {/* ASSIGN BUTTON */}
+                    {/* ASSIGN */}
 
                     <button
                         type="button"
-                        onClick={handleOpenAssignModal}
+                        onClick={
+                            handleOpenAssignModal
+                        }
                         disabled={
+                            assigning ||
                             selectedApplicationIds.length === 0
                         }
                         className="
                             btn
                             w-full
-                            lg:w-auto
                             border-[#8BCF00]
                             bg-[#8BCF00]
                             text-white
@@ -727,6 +800,7 @@ function ShuffleLoans() {
                             disabled:border-base-300
                             disabled:bg-base-300
                             disabled:text-base-content/40
+                            lg:w-auto
                         "
                     >
 
@@ -760,7 +834,9 @@ function ShuffleLoans() {
 
                         <button
                             type="button"
-                            onClick={handleClearFilters}
+                            onClick={
+                                handleClearFilters
+                            }
                             className="
                                 btn
                                 btn-sm
@@ -787,19 +863,15 @@ function ShuffleLoans() {
                 applications={
                     filteredApplications
                 }
-
                 selectedApplicationIds={
                     selectedApplicationIds
                 }
-
                 onSelectApplication={
                     handleSelectApplication
                 }
-
                 onSelectAll={
                     handleSelectAll
                 }
-
                 onRefresh={
                     handleRefresh
                 }
@@ -812,7 +884,6 @@ function ShuffleLoans() {
 
             <AssignShuffleLoansModal
                 open={showAssignModal}
-
                 applications={
                     applications.filter(
                         (application) =>
@@ -821,26 +892,32 @@ function ShuffleLoans() {
                             )
                     )
                 }
-
                 agents={agents}
-
                 rms={rms}
-
                 loanTypes={loanTypes}
-
                 onClose={
                     handleCloseAssignModal
                 }
-
                 onSubmit={
                     handleAssignSubmit
                 }
             />
 
+
+            {/* =================================================
+                FEEDBACK
+            ================================================= */}
+
+            <FeedbackModal
+                open={feedback.open}
+                type={feedback.type}
+                title={feedback.title}
+                message={feedback.message}
+                onClose={closeFeedback}
+            />
+
         </div>
-
     )
-
 }
 
 

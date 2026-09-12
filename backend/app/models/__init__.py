@@ -27,6 +27,10 @@ from app.models.reverted_loans import RevertedLoan
 from app.models.attendance import Attendance
 from app.models.bank_processings import BankProcessing
 from app.models.team_chat import TeamChat
+from app.models.call_logs import CallLog
+from app.models.call_assignments import CallAssignment
+
+
 
 
 

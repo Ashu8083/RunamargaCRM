@@ -17,7 +17,6 @@ const getCommonValue = (items, getter) => {
         return ''
     }
 
-
     const values = items
         .map(getter)
         .filter(
@@ -26,21 +25,19 @@ const getCommonValue = (items, getter) => {
                 value !== undefined &&
                 value !== ''
         )
-        .map((value) => String(value))
-
+        .map(String)
 
     if (!values.length) {
         return ''
     }
 
-
     const firstValue = values[0]
 
-
-    return values.every((value) => value === firstValue)
+    return values.every(
+        (value) => value === firstValue
+    )
         ? firstValue
         : ''
-
 }
 
 
@@ -48,7 +45,6 @@ const getAgentValue = (agent) =>
     agent?.id ??
     agent?.agentId ??
     agent?.employeeId ??
-    agent?.name ??
     ''
 
 
@@ -56,8 +52,25 @@ const getRmValue = (rm) =>
     rm?.id ??
     rm?.rmId ??
     rm?.employeeId ??
-    rm?.name ??
     ''
+
+
+const getLoanTypeValue = (loanType) => {
+
+    if (
+        typeof loanType === 'string' ||
+        typeof loanType === 'number'
+    ) {
+        return loanType
+    }
+
+    return (
+        loanType?.id ??
+        loanType?.loanTypeId ??
+        loanType?.loan_type_id ??
+        ''
+    )
+}
 
 
 function AssignShuffleLoansModal({
@@ -80,6 +93,10 @@ function AssignShuffleLoansModal({
         useState('')
 
 
+    // =========================================================
+    // INITIAL VALUES
+    // =========================================================
+
     useEffect(() => {
 
         if (!open) {
@@ -89,7 +106,6 @@ function AssignShuffleLoansModal({
             setSelectedLoanType('')
 
             return
-
         }
 
 
@@ -99,10 +115,7 @@ function AssignShuffleLoansModal({
                 (application) =>
                     application.agentId ??
                     application.agent_id ??
-                    application.agent?.id ??
-                    application.agentName ??
-                    application.agent_name ??
-                    application.agent?.name
+                    application.agent?.id
             )
         )
 
@@ -113,10 +126,7 @@ function AssignShuffleLoansModal({
                 (application) =>
                     application.rmId ??
                     application.rm_id ??
-                    application.rm?.id ??
-                    application.rmName ??
-                    application.rm_name ??
-                    application.rm?.name
+                    application.rm?.id
             )
         )
 
@@ -125,8 +135,10 @@ function AssignShuffleLoansModal({
             getCommonValue(
                 applications,
                 (application) =>
-                    application.loanType ??
-                    application.loan_type
+                    application.loanTypeId ??
+                    application.loan_type_id ??
+                    application.loanType?.id ??
+                    application.loan_type?.id
             )
         )
 
@@ -136,18 +148,24 @@ function AssignShuffleLoansModal({
     ])
 
 
+    // =========================================================
+    // SELECTED AGENT NAME
+    // =========================================================
+
     const selectedAgentName = useMemo(() => {
 
         if (!selectedAgent) {
             return ''
         }
 
-
-        return agents.find(
-            (agent) =>
-                String(getAgentValue(agent)) ===
-                String(selectedAgent)
-        )?.name || ''
+        return (
+            agents.find(
+                (agent) =>
+                    String(
+                        getAgentValue(agent)
+                    ) === String(selectedAgent)
+            )?.name || ''
+        )
 
     }, [
         agents,
@@ -155,18 +173,24 @@ function AssignShuffleLoansModal({
     ])
 
 
+    // =========================================================
+    // SELECTED RM NAME
+    // =========================================================
+
     const selectedRMName = useMemo(() => {
 
         if (!selectedRM) {
             return ''
         }
 
-
-        return rms.find(
-            (rm) =>
-                String(getRmValue(rm)) ===
-                String(selectedRM)
-        )?.name || ''
+        return (
+            rms.find(
+                (rm) =>
+                    String(
+                        getRmValue(rm)
+                    ) === String(selectedRM)
+            )?.name || ''
+        )
 
     }, [
         rms,
@@ -174,46 +198,68 @@ function AssignShuffleLoansModal({
     ])
 
 
+    // =========================================================
+    // SUBMIT STATE
+    // =========================================================
+
     const canSubmit =
         Boolean(selectedAgent) ||
         Boolean(selectedRM) ||
         Boolean(selectedLoanType)
 
 
+    // =========================================================
+    // SUBMIT
+    // =========================================================
+
     const handleSubmit = (event) => {
 
         event.preventDefault()
-
 
         if (!canSubmit) {
             return
         }
 
-
         onSubmit?.({
-            agentId:
-                selectedAgent || null,
 
-            agentName:
-                selectedAgentName || null,
+            applicationIds:
+                applications.map(
+                    (application) =>
+                        Number(application.id)
+                ),
+
+            agentId:
+                selectedAgent
+                    ? Number(selectedAgent)
+                    : null,
 
             rmId:
-                selectedRM || null,
+                selectedRM
+                    ? Number(selectedRM)
+                    : null,
+
+            loanTypeId:
+                selectedLoanType
+                    ? Number(selectedLoanType)
+                    : null,
+
+            // Display values are retained for UI compatibility.
+            agentName:
+                selectedAgentName || null,
 
             rmName:
                 selectedRMName || null,
 
-            loanType:
-                selectedLoanType || null,
         })
-
     }
 
 
+    // =========================================================
+    // CLOSE
+    // =========================================================
+
     const handleClose = () => {
-
         onClose?.()
-
     }
 
 
@@ -242,6 +288,10 @@ function AssignShuffleLoansModal({
                 bg-base-100
                 p-0
             ">
+
+                {/* =================================================
+                    HEADER
+                ================================================= */}
 
                 <div className="
                     flex
@@ -290,7 +340,6 @@ function AssignShuffleLoansModal({
                                 Assign / Shuffle Loans
                             </h3>
 
-
                             <p className="
                                 mt-0.5
                                 text-xs
@@ -315,16 +364,18 @@ function AssignShuffleLoansModal({
                         "
                         aria-label="Close"
                     >
-
                         <XMarkIcon className="
                             h-5
                             w-5
                         " />
-
                     </button>
 
                 </div>
 
+
+                {/* =================================================
+                    FORM
+                ================================================= */}
 
                 <form onSubmit={handleSubmit}>
 
@@ -332,6 +383,8 @@ function AssignShuffleLoansModal({
                         space-y-5
                         p-5
                     ">
+
+                        {/* SELECTED APPLICATIONS */}
 
                         <div className="
                             rounded-xl
@@ -357,7 +410,6 @@ function AssignShuffleLoansModal({
                                     ">
                                         Selected Applications
                                     </p>
-
 
                                     <p className="
                                         mt-1
@@ -385,6 +437,8 @@ function AssignShuffleLoansModal({
                         </div>
 
 
+                        {/* AGENT */}
+
                         <AgentDropdown
                             label="Agent"
                             value={selectedAgent}
@@ -395,12 +449,20 @@ function AssignShuffleLoansModal({
                             emptyMessage="No agents found"
                             includeAllOption={false}
                             className="min-w-0"
-                            buttonClassName="h-11 min-h-11 hover:border-[#8BCF00]"
+                            buttonClassName="
+                                h-11
+                                min-h-11
+                                hover:border-[#8BCF00]
+                            "
                             getOptionValue={(agent) =>
-                                String(getAgentValue(agent))
+                                String(
+                                    getAgentValue(agent)
+                                )
                             }
                         />
 
+
+                        {/* RM */}
 
                         <RmDropdown
                             label="RM"
@@ -412,12 +474,20 @@ function AssignShuffleLoansModal({
                             emptyMessage="No RMs found"
                             includeAllOption={false}
                             className="min-w-0"
-                            buttonClassName="h-11 min-h-11 hover:border-[#8BCF00]"
+                            buttonClassName="
+                                h-11
+                                min-h-11
+                                hover:border-[#8BCF00]
+                            "
                             getOptionValue={(rm) =>
-                                String(getRmValue(rm))
+                                String(
+                                    getRmValue(rm)
+                                )
                             }
                         />
 
+
+                        {/* LOAN TYPE */}
 
                         <LoanTypeDropdown
                             label="Loan Type"
@@ -429,9 +499,22 @@ function AssignShuffleLoansModal({
                             emptyMessage="No loan types found"
                             includeAllOption={false}
                             className="min-w-0"
-                            buttonClassName="h-11 min-h-11 hover:border-[#8BCF00]"
+                            buttonClassName="
+                                h-11
+                                min-h-11
+                                hover:border-[#8BCF00]
+                            "
+                            getOptionValue={(loanType) =>
+                                String(
+                                    getLoanTypeValue(
+                                        loanType
+                                    )
+                                )
+                            }
                         />
 
+
+                        {/* INFO */}
 
                         <div className="
                             rounded-lg
@@ -455,6 +538,10 @@ function AssignShuffleLoansModal({
 
                     </div>
 
+
+                    {/* =================================================
+                        FOOTER
+                    ================================================= */}
 
                     <div className="
                         flex
@@ -504,22 +591,20 @@ function AssignShuffleLoansModal({
             </div>
 
 
+            {/* BACKDROP */}
+
             <form
                 method="dialog"
                 className="modal-backdrop"
                 onClick={handleClose}
             >
-
                 <button type="button">
                     close
                 </button>
-
             </form>
 
         </dialog>
-
     )
-
 }
 
 

@@ -13,7 +13,6 @@ from app.models.loan_reference import LoanReference
 from app.models.loan_document import LoanDocument
 from app.models.bank_processings import BankProcessing
 from app.models.dsa_details import DSADetail
-
 from app.models.bank import Bank
 
 
