@@ -12,7 +12,7 @@ import {
     getTeamChat,
     sendTeamChat,
 } from '../../../pages/Loans/ViewApplication/components/Teamchat/Api'
-
+import { WS_BASE_URL } from '../../../config/url'
 const EMOJIS = [
     '😀', '😃', '😄', '😁', '😆', '😅',
     '😂', '🤣', '😊', '😇', '🙂', '🙃',
@@ -44,6 +44,7 @@ function GlobalChat({
     customerPhone = '',
 }) {
 
+    const [socket, setSocket] = useState(null)
     const [message, setMessage] = useState('')
     const [messages, setMessages] = useState([])
     const [loading, setLoading] = useState(false)
@@ -62,43 +63,56 @@ function GlobalChat({
             return
         }
 
-        const loadChat = async () => {
-            try {
-                setLoading(true)
+        const ws = new WebSocket(
+            `${WS_BASE_URL}/team-chat/${loanId}/chat/ws`
+        )
 
-                const response = await getTeamChat(
-                    loanId
+        ws.onopen = () => {
+            console.log(
+                'TEAM CHAT WEBSOCKET CONNECTED'
+            )
+        }
+
+        ws.onmessage = (event) => {
+            try {
+                const response = JSON.parse(
+                    event.data
                 )
 
                 console.log(
-                    'TEAM CHAT RESPONSE:',
+                    'TEAM CHAT WEBSOCKET MESSAGE:',
                     response
                 )
-                const chatMessages = response?.data || []
 
-                const formattedMessages = chatMessages.map(
-                    (item) => ({
-                        id: item.id,
+                if (
+                    !response?.success ||
+                    !response?.data
+                ) {
+                    return
+                }
 
-                        senderName:
-                            item.sender_name || 'Team Member',
+                const item = response.data
 
-                        senderType: 'team_member',
+                const formattedMessage = {
+                    id: item.id,
 
-                        message:
-                            item.message_text || '',
+                    senderName:
+                        item.sender_name ||
+                        'Team Member',
 
-                        attachment: item.file_name
-                            ? {
-                                name: item.file_name,
-                                type:
-                                    item.file_mime_type || '',
-                                size:
-                                    item.file_size || 0,
-                            }
-                            : null,
+                    senderType:
+                        item.sender_admin_id ===
+                            item.current_employee_id
+                            ? 'current_user'
+                            : 'team_member',
 
-                        createdAt: item.created_at
+                    message:
+                        item.message_text || '',
+
+                    attachment: null,
+
+                    createdAt:
+                        item.created_at
                             ? new Date(
                                 item.created_at
                             ).toLocaleTimeString(
@@ -110,7 +124,8 @@ function GlobalChat({
                             )
                             : '',
 
-                        dateLabel: item.created_at
+                    dateLabel:
+                        item.created_at
                             ? new Date(
                                 item.created_at
                             ).toLocaleDateString(
@@ -122,27 +137,42 @@ function GlobalChat({
                                 }
                             )
                             : '',
-                    })
-                )
+                }
 
-                setMessages(formattedMessages)
+                setMessages((previous) => [
+                    ...previous,
+                    formattedMessage,
+                ])
 
             } catch (error) {
                 console.error(
-                    'TEAM CHAT LOAD ERROR:',
+                    'TEAM CHAT WEBSOCKET MESSAGE ERROR:',
                     error
                 )
-
-                setMessages([])
-            } finally {
-                setLoading(false)
             }
         }
 
-        loadChat()
+        ws.onerror = (error) => {
+            console.error(
+                'TEAM CHAT WEBSOCKET ERROR:',
+                error
+            )
+        }
 
-        setMessage('')
-        setShowEmojiPicker(false)
+        ws.onclose = () => {
+            console.log(
+                'TEAM CHAT WEBSOCKET DISCONNECTED'
+            )
+
+            setSocket(null)
+        }
+
+        setSocket(ws)
+
+        return () => {
+            ws.close()
+            setSocket(null)
+        }
 
     }, [open, loanId])
     // =========================================================
