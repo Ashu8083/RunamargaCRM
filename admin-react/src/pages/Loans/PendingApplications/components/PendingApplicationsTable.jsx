@@ -1,6 +1,6 @@
 // admin-react/src/pages/Loans/PendingApplications/components/PendingApplicationsTable.jsx
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from 'react-dom'
 
 import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
@@ -26,11 +26,7 @@ function PendingApplicationsTable({
     search,
     setSearch,
 
-    loanTypes = [],
-    rms = [],
-    teamLeads = [],
-    agents = [],
-    statuses = [],
+
 
     selectedLoanType,
     setSelectedLoanType,
@@ -46,9 +42,7 @@ function PendingApplicationsTable({
 
     selectedStatus,
     setSelectedStatus,
-    showRM = false,
-    showAgent = false,
-    showTeamLead = false,
+    statuses = [],
     onClearFilters,
     onLoanTypeChange,
     onStatusChange,
@@ -57,6 +51,7 @@ function PendingApplicationsTable({
     onViewApplication,
     onRefresh,
 }) {
+    const [loanTypes, setLoanTypes] = useState([]);
     // =============================================================
     // CONSTANTS
     // =============================================================
@@ -99,51 +94,57 @@ function PendingApplicationsTable({
     // =========================================================
     // HELPERS
     // =========================================================
+    const handleLoanTypesLoaded = useCallback(
+        (options) => {
+            setLoanTypes(options || []);
+        },
+        []
+    );
+    // =============================================================
+    // LOAN TYPE
+    // =============================================================
 
-    const getLoanTypeName = (application) => {
+    const getLoanTypeName = (
+        application,
+        loanTypes = []
+    ) => {
+
+        if (
+            application.loanType &&
+            typeof application.loanType === "string"
+        ) {
+            return application.loanType;
+        }
+
+        if (
+            application.loan_type &&
+            typeof application.loan_type === "string"
+        ) {
+            return application.loan_type;
+        }
+
         const loanTypeId =
             application.loanTypeId ??
-            application.loan_type_id
+            application.loan_type_id ??
+            application.loanType?.id ??
+            application.loan_type?.id;
+
+        if (
+            loanTypeId === null ||
+            loanTypeId === undefined ||
+            loanTypeId === ""
+        ) {
+            return "Not Assigned";
+        }
 
         const loanType = loanTypes.find(
             (item) =>
                 String(item.id) ===
                 String(loanTypeId)
-        )
+        );
 
-        if (loanType?.name) {
-            return loanType.name
-        }
-
-        if (
-            application.loanType &&
-            typeof application.loanType === 'object'
-        ) {
-            return application.loanType.name || 'N/A'
-        }
-
-        if (
-            application.loan_type &&
-            typeof application.loan_type === 'object'
-        ) {
-            return application.loan_type.name || 'N/A'
-        }
-
-        if (
-            typeof application.loanType === 'string'
-        ) {
-            return application.loanType
-        }
-
-        if (
-            typeof application.loan_type === 'string'
-        ) {
-            return application.loan_type
-        }
-
-        return 'Not Assigned'
-    }
-
+        return loanType?.name || "Not Assigned";
+    };
 
     const getAgentName = (application) => {
         if (application.agent?.name) {
@@ -857,27 +858,13 @@ function PendingApplicationsTable({
 
                         <LoanTypeDropdown
                             label=""
-                            value={
-                                selectedLoanType
-                            }
-                            onChange={
-                                setSelectedLoanType
-                            }
-                            options={
-                                loanTypes
-                            }
-                            allLabel="
-                                All Loan Types
-                            "
-                            placeholder="
-                                All Loan Types
-                            "
-                            searchPlaceholder="
-                                Search loan type
-                            "
-                            emptyMessage="
-                                No loan types found
-                            "
+                            value={selectedLoanType}
+                            onChange={setSelectedLoanType}
+                            onOptionsLoaded={handleLoanTypesLoaded}
+                            allLabel="All Loan Types"
+                            placeholder="All Loan Types"
+                            searchPlaceholder="Search loan type"
+                            emptyMessage="No loan types found"
                         />
 
                     </div>
@@ -889,22 +876,15 @@ function PendingApplicationsTable({
 
                         {/* RM */}
 
-                        {showRM && (
-                            <div className="w-44 shrink-0">
-
-                                <RmDropdown
-                                    label=""
-                                    value={selectedRM}
-                                    onChange={setSelectedRM}
-                                    options={rms}
-                                    allLabel="All RMs"
-                                    placeholder="All RMs"
-                                    searchPlaceholder="Search RM"
-                                    emptyMessage="No RMs found"
-                                />
-
-                            </div>
-                        )}
+                        <RmDropdown
+                            label=""
+                            value={selectedRM}
+                            onChange={setSelectedRM}
+                            allLabel="All RMs"
+                            placeholder="All RMs"
+                            searchPlaceholder="Search RM"
+                            emptyMessage="No RMs found"
+                        />
 
                     </div>
 
@@ -913,22 +893,15 @@ function PendingApplicationsTable({
 
                     <div className="w-44 shrink-0">
 
-                        {showTeamLead && (
-                            <div className="w-44 shrink-0">
-
-                                <TeamLeadDropdown
-                                    label=""
-                                    value={selectedTeamLead}
-                                    onChange={setSelectedTeamLead}
-                                    options={teamLeads}
-                                    allLabel="All Team Leads"
-                                    placeholder="All Team Leads"
-                                    searchPlaceholder="Search Team Lead"
-                                    emptyMessage="No Team Leads found"
-                                />
-
-                            </div>
-                        )}
+                        <TeamLeadDropdown
+                            label=""
+                            value={selectedTeamLead}
+                            onChange={setSelectedTeamLead}
+                            allLabel="All Team Leads"
+                            placeholder="All Team Leads"
+                            searchPlaceholder="Search Team Lead"
+                            emptyMessage="No Team Leads found"
+                        />
 
                     </div>
 
@@ -936,23 +909,15 @@ function PendingApplicationsTable({
                     {/* AGENT */}
 
                     <div className="w-44 shrink-0">
-
-                        {showAgent && (
-                            <div className="w-44 shrink-0">
-
-                                <AgentDropdown
-                                    label=""
-                                    value={selectedAgent}
-                                    onChange={setSelectedAgent}
-                                    options={agents}
-                                    allLabel="All Agents"
-                                    placeholder="All Agents"
-                                    searchPlaceholder="Search Agent"
-                                    emptyMessage="No Agents found"
-                                />
-
-                            </div>
-                        )}
+                        <AgentDropdown
+                            label=""
+                            value={selectedAgent}
+                            onChange={setSelectedAgent}
+                            allLabel="All Agents"
+                            placeholder="All Agents"
+                            searchPlaceholder="Search Agent"
+                            emptyMessage="No Agents found"
+                        />
 
                     </div>
 
@@ -1185,7 +1150,8 @@ function PendingApplicationsTable({
 
                                         const loanTypeName =
                                             getLoanTypeName(
-                                                application
+                                                application,
+                                                loanTypes
                                             )
 
                                         const agentName =

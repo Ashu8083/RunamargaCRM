@@ -1,10 +1,11 @@
-# backend/app/schemas/duplicate_approval_schema.py
 from pydantic import BaseModel
 
 
 class DuplicateApprovalCreateRequest(BaseModel):
 
-    loan_application_id: int
+    loan_id: int | None = None
+
+    rm_id: int | None = None
 
     name: str | None = None
 

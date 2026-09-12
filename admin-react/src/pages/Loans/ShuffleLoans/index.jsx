@@ -1,17 +1,15 @@
 // admin-react/src/pages/Loans/ShuffleLoans/index.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+    useState,
+} from 'react'
 
-import AgentDropdown from '../../../components/GlobalModels/Filters/AgentDropdown'
-import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeDropdown'
-import RmDropdown from '../../../components/GlobalModels/Filters/RmDropdown'
 import FeedbackModal from '../../../components/GlobalModels/FeedbackModal'
 
 import ShuffleLoansTable from './components/ShuffleLoansTable'
 import AssignShuffleLoansModal from './components/AssignShuffleLoansModal'
 
 import {
-    getShuffleLoans,
     assignShuffleLoans,
     getApiErrorMessage,
 } from './API'
@@ -23,34 +21,57 @@ function ShuffleLoans() {
     // APPLICATION DATA
     // =========================================================
 
-    const [applications, setApplications] =
-        useState([])
-
-    const [loading, setLoading] =
-        useState(true)
-
-    const [assigning, setAssigning] =
-        useState(false)
+    const [
+        applications,
+        setApplications,
+    ] = useState([])
 
 
     // =========================================================
-    // FILTER STATE
+    // LOADING
     // =========================================================
 
-    const [search, setSearch] =
-        useState('')
+    const [
+        loading,
+        setLoading,
+    ] = useState(true)
 
-    const [selectedAgent, setSelectedAgent] =
-        useState('')
 
-    const [selectedRM, setSelectedRM] =
-        useState('')
+    // =========================================================
+    // ASSIGNING
+    // =========================================================
 
-    const [selectedLoanType, setSelectedLoanType] =
-        useState('')
+    const [
+        assigning,
+        setAssigning,
+    ] = useState(false)
 
-    const [selectedStatus, setSelectedStatus] =
-        useState('')
+
+    // =========================================================
+    // PAGINATION DATA
+    // =========================================================
+    //
+    // These values come from the backend.
+    //
+    // The table controls:
+    //
+    //     page
+    //     limit
+    //     filters
+    //
+    // and reports the loaded page back here.
+    //
+    // =========================================================
+
+    const [
+        pagination,
+        setPagination,
+    ] = useState({
+        total: 0,
+        page: 1,
+        limit: 30,
+        totalPages: 0,
+    })
 
 
     // =========================================================
@@ -67,15 +88,39 @@ function ShuffleLoans() {
     // ASSIGN MODAL
     // =========================================================
 
-    const [showAssignModal, setShowAssignModal] =
-        useState(false)
+    const [
+        showAssignModal,
+        setShowAssignModal,
+    ] = useState(false)
+
+
+    // =========================================================
+    // ASSIGN MODAL DATA
+    // =========================================================
+    //
+    // We keep the currently selected applications here so the
+    // assign modal can continue to work with the rows currently
+    // selected by the user.
+    //
+    // The table will provide the selected rows through
+    // handleSelectionChange.
+    //
+    // =========================================================
+
+    const [
+        selectedApplications,
+        setSelectedApplications,
+    ] = useState([])
 
 
     // =========================================================
     // FEEDBACK
     // =========================================================
 
-    const [feedback, setFeedback] = useState({
+    const [
+        feedback,
+        setFeedback,
+    ] = useState({
         open: false,
         type: 'info',
         title: '',
@@ -108,335 +153,104 @@ function ShuffleLoans() {
 
 
     // =========================================================
-    // LOAD APPLICATIONS
+    // TABLE DATA LOADED
+    // =========================================================
+    //
+    // ShuffleLoansTable performs the actual backend request.
+    //
+    // This callback receives:
+    //
+    //     items
+    //     total
+    //     page
+    //     limit
+    //     totalPages
+    //
     // =========================================================
 
-    const loadApplications = async () => {
+    const handleDataLoaded = (
+        data
+    ) => {
 
-        try {
-
-            setLoading(true)
-
-            const data =
-                await getShuffleLoans()
-
-            setApplications(
-                Array.isArray(data)
-                    ? data
-                    : []
+        const items =
+            Array.isArray(
+                data?.items
             )
+                ? data.items
+                : []
 
-        } catch (error) {
 
-            showFeedback(
-                'error',
-                'Failed to Load Applications',
-                getApiErrorMessage(
-                    error,
-                    'Unable to load shuffle applications.'
+        setApplications(
+            items
+        )
+
+
+        setPagination({
+            total:
+                Number(
+                    data?.total ??
+                    0
+                ),
+
+            page:
+                Number(
+                    data?.page ??
+                    1
+                ),
+
+            limit:
+                Number(
+                    data?.limit ??
+                    30
+                ),
+
+            totalPages:
+                Number(
+                    data?.totalPages ??
+                    0
+                ),
+        })
+
+
+        setLoading(false)
+
+
+        // -----------------------------------------------------
+        // Remove selections that no longer exist in the
+        // currently loaded dataset.
+        //
+        // IMPORTANT:
+        //
+        // We do NOT automatically clear selections here.
+        // Existing selections are preserved where possible.
+        //
+        // -----------------------------------------------------
+
+        setSelectedApplications(
+            (previous) =>
+                previous.filter(
+                    (application) =>
+                        items.some(
+                            (item) =>
+                                item.id ===
+                                application.id
+                        )
                 )
-            )
-
-        } finally {
-
-            setLoading(false)
-
-        }
+        )
     }
 
 
     // =========================================================
-    // INITIAL LOAD
+    // TABLE LOADING STATE
     // =========================================================
 
-    useEffect(() => {
-
-        loadApplications()
-
-    }, [])
-
-
-    // =========================================================
-    // AGENTS
-    // =========================================================
-    //
-    // These are derived only from loaded applications.
-    // The AgentDropdown itself continues to use its own API.
-    //
-    // =========================================================
-
-    const agents = useMemo(() => {
-
-        const map = new Map()
-
-        applications.forEach((application) => {
-
-            const id =
-                application.agentId ??
-                application.agent_id
-
-            const name =
-                application.agentName ??
-                application.agent_name
-
-            if (!id || !name) {
-                return
-            }
-
-            const key = String(id)
-
-            if (!map.has(key)) {
-
-                map.set(key, {
-                    id,
-                    name,
-                })
-            }
-
-        })
-
-        return [...map.values()]
-
-    }, [applications])
-
-
-    // =========================================================
-    // RMS
-    // =========================================================
-
-    const rms = useMemo(() => {
-
-        const map = new Map()
-
-        applications.forEach((application) => {
-
-            const id =
-                application.rmId ??
-                application.rm_id
-
-            const name =
-                application.rmName ??
-                application.rm_name
-
-            if (!id || !name) {
-                return
-            }
-
-            const key = String(id)
-
-            if (!map.has(key)) {
-
-                map.set(key, {
-                    id,
-                    name,
-                })
-            }
-
-        })
-
-        return [...map.values()]
-
-    }, [applications])
-
-
-    // =========================================================
-    // LOAN TYPES
-    // =========================================================
-
-    const loanTypes = useMemo(() => {
-
-        const map = new Map()
-
-        applications.forEach((application) => {
-
-            const id =
-                application.loanTypeId ??
-                application.loan_type_id
-
-            const name =
-                application.loanType ??
-                application.loan_type
-
-            if (!id || !name) {
-                return
-            }
-
-            const key = String(id)
-
-            if (!map.has(key)) {
-
-                map.set(key, {
-                    id,
-                    name,
-                })
-            }
-
-        })
-
-        return [...map.values()]
-
-    }, [applications])
-
-
-    // =========================================================
-    // STATUSES
-    // =========================================================
-
-    const statuses = useMemo(() => {
-
-        return [
-            ...new Set(
-                applications
-                    .map(
-                        (application) =>
-                            application.status
-                    )
-                    .filter(Boolean)
-            ),
-        ]
-
-    }, [applications])
-
-
-    // =========================================================
-    // FILTER APPLICATIONS
-    // =========================================================
-
-    const filteredApplications = useMemo(() => {
-
-        const value =
-            search.trim().toLowerCase()
-
-        return applications.filter((application) => {
-
-            // -----------------------------------------------------
-            // SEARCH
-            // -----------------------------------------------------
-
-            if (
-                value &&
-                ![
-                    application.name,
-                    application.phone,
-                    application.email,
-                    application.loanId,
-                    application.unique_id,
-                    application.id,
-                    application.loanType,
-                    application.status,
-                    application.agentName,
-                    application.agent_name,
-                    application.rmName,
-                    application.rm_name,
-                ].some(
-                    (field) =>
-                        field !== null &&
-                        field !== undefined &&
-                        String(field)
-                            .toLowerCase()
-                            .includes(value)
-                )
-            ) {
-                return false
-            }
-
-
-            // -----------------------------------------------------
-            // AGENT
-            // -----------------------------------------------------
-
-            if (selectedAgent) {
-
-                const applicationAgent =
-                    application.agentId ??
-                    application.agent_id
-
-                if (
-                    String(applicationAgent) !==
-                    String(selectedAgent)
-                ) {
-                    return false
-                }
-            }
-
-
-            // -----------------------------------------------------
-            // RM
-            // -----------------------------------------------------
-
-            if (selectedRM) {
-
-                const applicationRM =
-                    application.rmId ??
-                    application.rm_id
-
-                if (
-                    String(applicationRM) !==
-                    String(selectedRM)
-                ) {
-                    return false
-                }
-            }
-
-
-            // -----------------------------------------------------
-            // LOAN TYPE
-            // -----------------------------------------------------
-
-            if (selectedLoanType) {
-
-                const applicationLoanType =
-                    application.loanTypeId ??
-                    application.loan_type_id
-
-                if (
-                    String(applicationLoanType) !==
-                    String(selectedLoanType)
-                ) {
-                    return false
-                }
-            }
-
-
-            // -----------------------------------------------------
-            // STATUS
-            // -----------------------------------------------------
-
-            if (
-                selectedStatus &&
-                application.status !== selectedStatus
-            ) {
-                return false
-            }
-
-
-            return true
-
-        })
-
-    }, [
-        applications,
-        search,
-        selectedAgent,
-        selectedRM,
-        selectedLoanType,
-        selectedStatus,
-    ])
-
-
-    // =========================================================
-    // CLEAR FILTERS
-    // =========================================================
-
-    const handleClearFilters = () => {
-
-        setSearch('')
-        setSelectedAgent('')
-        setSelectedRM('')
-        setSelectedLoanType('')
-        setSelectedStatus('')
-        setSelectedApplicationIds([])
-
+    const handleLoadingChange = (
+        value
+    ) => {
+
+        setLoading(
+            Boolean(value)
+        )
     }
 
 
@@ -445,47 +259,116 @@ function ShuffleLoans() {
     // =========================================================
 
     const handleSelectApplication = (
-        applicationId
+        application
     ) => {
 
-        setSelectedApplicationIds((previous) => {
+        if (
+            !application?.id
+        ) {
+            return
+        }
 
-            if (
-                previous.includes(applicationId)
-            ) {
 
-                return previous.filter(
-                    (id) =>
-                        id !== applicationId
-                )
+        setSelectedApplicationIds(
+            (previous) => {
+
+                if (
+                    previous.includes(
+                        application.id
+                    )
+                ) {
+
+                    return previous.filter(
+                        (id) =>
+                            id !==
+                            application.id
+                    )
+                }
+
+
+                return [
+                    ...previous,
+                    application.id,
+                ]
             }
+        )
 
-            return [
-                ...previous,
-                applicationId,
-            ]
-        })
+
+        setSelectedApplications(
+            (previous) => {
+
+                const exists =
+                    previous.some(
+                        (item) =>
+                            item.id ===
+                            application.id
+                    )
+
+
+                if (exists) {
+
+                    return previous.filter(
+                        (item) =>
+                            item.id !==
+                            application.id
+                    )
+                }
+
+
+                return [
+                    ...previous,
+                    application,
+                ]
+            }
+        )
     }
 
 
     // =========================================================
     // SELECT ALL
     // =========================================================
+    //
+    // Select all applies to the currently displayed page.
+    //
+    // Backend pagination means the frontend only has the
+    // current page available.
+    //
+    // =========================================================
 
-    const handleSelectAll = () => {
+    const handleSelectAll = (
+        pageApplications
+    ) => {
 
-        const filteredIds =
-            filteredApplications.map(
+        const currentApplications =
+            Array.isArray(
+                pageApplications
+            )
+                ? pageApplications
+                : []
+
+
+        const currentIds =
+            currentApplications.map(
                 (application) =>
                     application.id
             )
 
+
+        if (
+            currentIds.length === 0
+        ) {
+            return
+        }
+
+
         const allSelected =
-            filteredIds.length > 0 &&
-            filteredIds.every(
+            currentIds.every(
                 (id) =>
-                    selectedApplicationIds.includes(id)
+                    selectedApplicationIds.includes(
+                        id
+                    )
             )
+
 
         if (allSelected) {
 
@@ -493,20 +376,63 @@ function ShuffleLoans() {
                 (previous) =>
                     previous.filter(
                         (id) =>
-                            !filteredIds.includes(id)
+                            !currentIds.includes(
+                                id
+                            )
+                    )
+            )
+
+
+            setSelectedApplications(
+                (previous) =>
+                    previous.filter(
+                        (application) =>
+                            !currentIds.includes(
+                                application.id
+                            )
                     )
             )
 
             return
         }
 
+
         setSelectedApplicationIds(
             (previous) => [
                 ...new Set([
                     ...previous,
-                    ...filteredIds,
+                    ...currentIds,
                 ]),
             ]
+        )
+
+
+        setSelectedApplications(
+            (previous) => {
+
+                const existingIds =
+                    new Set(
+                        previous.map(
+                            (application) =>
+                                application.id
+                        )
+                    )
+
+
+                const newApplications =
+                    currentApplications.filter(
+                        (application) =>
+                            !existingIds.has(
+                                application.id
+                            )
+                    )
+
+
+                return [
+                    ...previous,
+                    ...newApplications,
+                ]
+            }
         )
     }
 
@@ -530,7 +456,10 @@ function ShuffleLoans() {
             return
         }
 
-        setShowAssignModal(true)
+
+        setShowAssignModal(
+            true
+        )
     }
 
 
@@ -540,11 +469,16 @@ function ShuffleLoans() {
 
     const handleCloseAssignModal = () => {
 
-        if (assigning) {
+        if (
+            assigning
+        ) {
             return
         }
 
-        setShowAssignModal(false)
+
+        setShowAssignModal(
+            false
+        )
     }
 
 
@@ -552,7 +486,9 @@ function ShuffleLoans() {
     // ASSIGN / SHUFFLE
     // =========================================================
 
-    const handleAssignSubmit = async (data) => {
+    const handleAssignSubmit = async (
+        data
+    ) => {
 
         if (
             !selectedApplicationIds.length
@@ -560,9 +496,13 @@ function ShuffleLoans() {
             return
         }
 
+
         try {
 
-            setAssigning(true)
+            setAssigning(
+                true
+            )
+
 
             const updatedApplications =
                 await assignShuffleLoans({
@@ -581,8 +521,7 @@ function ShuffleLoans() {
 
 
             // -------------------------------------------------
-            // Replace only the updated applications returned
-            // by the backend.
+            // Update applications currently loaded on the page.
             // -------------------------------------------------
 
             if (
@@ -602,25 +541,47 @@ function ShuffleLoans() {
                         )
                     )
 
+
                 setApplications(
                     (previous) =>
                         previous.map(
                             (application) =>
                                 updatedMap.get(
                                     application.id
-                                ) || application
+                                ) ||
+                                application
                         )
                 )
 
-            } else {
 
-                await loadApplications()
+                setSelectedApplications(
+                    (previous) =>
+                        previous.map(
+                            (application) =>
+                                updatedMap.get(
+                                    application.id
+                                ) ||
+                                application
+                        )
+                )
+
             }
 
 
-            setSelectedApplicationIds([])
+            setSelectedApplicationIds(
+                []
+            )
 
-            setShowAssignModal(false)
+
+            setSelectedApplications(
+                []
+            )
+
+
+            setShowAssignModal(
+                false
+            )
+
 
             showFeedback(
                 'success',
@@ -632,7 +593,9 @@ function ShuffleLoans() {
                 } updated successfully.`
             )
 
-        } catch (error) {
+        } catch (
+            error
+        ) {
 
             showFeedback(
                 'error',
@@ -645,8 +608,9 @@ function ShuffleLoans() {
 
         } finally {
 
-            setAssigning(false)
-
+            setAssigning(
+                false
+            )
         }
     }
 
@@ -654,17 +618,22 @@ function ShuffleLoans() {
     // =========================================================
     // REFRESH
     // =========================================================
+    //
+    // The actual refresh request is handled by the table.
+    //
+    // This callback is kept for the existing table structure
+    // and can be triggered from the refresh button.
+    //
+    // =========================================================
 
-    const handleRefresh = async () => {
+    const handleRefresh = () => {
 
-        setSelectedApplicationIds([])
+        setSelectedApplicationIds(
+            []
+        )
 
-        await loadApplications()
-
-        showFeedback(
-            'success',
-            'Applications Refreshed',
-            'Shuffle loan data refreshed successfully.'
+        setSelectedApplications(
+            []
         )
     }
 
@@ -675,185 +644,13 @@ function ShuffleLoans() {
 
     return (
 
-        <div className="
-            space-y-5
-            p-4
-            sm:p-6
-        ">
-
-            {/* =================================================
-                FILTERS
-            ================================================= */}
-
-            <div className="
-                rounded-xl
-                border
-                border-base-300
-                bg-base-100
-                p-3
-                shadow-sm
-            ">
-
-                <div className="
-                    flex
-                    flex-col
-                    gap-3
-                    lg:flex-row
-                    lg:items-center
-                ">
-
-                    {/* SEARCH */}
-
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(event) =>
-                            setSearch(
-                                event.target.value
-                            )
-                        }
-                        placeholder="Search"
-                        className="
-                            input
-                            input-bordered
-                            w-full
-                            lg:flex-1
-                            focus:border-[#8BCF00]
-                            focus:outline-[#8BCF00]
-                        "
-                    />
-
-
-                    {/* AGENT */}
-
-                    <AgentDropdown
-                        value={selectedAgent}
-                        onChange={setSelectedAgent}
-                        showLabel={false}
-                        placeholder="Select Agent"
-                        searchPlaceholder="Search agent"
-                        emptyMessage="No agents found"
-                        includeAllOption={false}
-                        className="
-                            w-full
-                            lg:w-44
-                            lg:flex-none
-                        "
-                    />
-
-
-                    {/* RM */}
-
-                    <RmDropdown
-                        value={selectedRM}
-                        onChange={setSelectedRM}
-                        showLabel={false}
-                        placeholder="Select RM"
-                        searchPlaceholder="Search RM"
-                        emptyMessage="No RMs found"
-                        includeAllOption={false}
-                        className="
-                            w-full
-                            lg:w-44
-                            lg:flex-none
-                        "
-                    />
-
-
-                    {/* LOAN TYPE */}
-
-                    <LoanTypeDropdown
-                        value={selectedLoanType}
-                        onChange={setSelectedLoanType}
-                        showLabel={false}
-                        placeholder="Select Loan Type"
-                        searchPlaceholder="Search loan type"
-                        emptyMessage="No loan types found"
-                        includeAllOption={false}
-                        className="
-                            w-full
-                            lg:w-44
-                            lg:flex-none
-                        "
-                    />
-
-
-                    {/* ASSIGN */}
-
-                    <button
-                        type="button"
-                        onClick={
-                            handleOpenAssignModal
-                        }
-                        disabled={
-                            assigning ||
-                            selectedApplicationIds.length === 0
-                        }
-                        className="
-                            btn
-                            w-full
-                            border-[#8BCF00]
-                            bg-[#8BCF00]
-                            text-white
-                            hover:border-[#6FA800]
-                            hover:bg-[#6FA800]
-                            disabled:border-base-300
-                            disabled:bg-base-300
-                            disabled:text-base-content/40
-                            lg:w-auto
-                        "
-                    >
-
-                        Assign
-
-                        {selectedApplicationIds.length > 0 && (
-                            <>
-                                {' '}
-                                ({selectedApplicationIds.length})
-                            </>
-                        )}
-
-                    </button>
-
-                </div>
-
-
-                {/* CLEAR FILTERS */}
-
-                {(search ||
-                    selectedAgent ||
-                    selectedRM ||
-                    selectedLoanType ||
-                    selectedStatus) && (
-
-                    <div className="
-                        mt-3
-                        flex
-                        justify-end
-                    ">
-
-                        <button
-                            type="button"
-                            onClick={
-                                handleClearFilters
-                            }
-                            className="
-                                btn
-                                btn-sm
-                                btn-ghost
-                                text-base-content/60
-                                hover:bg-base-200
-                            "
-                        >
-                            Clear Filters
-                        </button>
-
-                    </div>
-
-                )}
-
-            </div>
-
+        <div
+            className="
+                space-y-5
+                p-4
+                sm:p-6
+            "
+        >
 
             {/* =================================================
                 TABLE
@@ -861,19 +658,47 @@ function ShuffleLoans() {
 
             <ShuffleLoansTable
                 applications={
-                    filteredApplications
+                    applications
                 }
+
+                loading={
+                    loading
+                }
+
+                pagination={
+                    pagination
+                }
+
                 selectedApplicationIds={
                     selectedApplicationIds
                 }
+
                 onSelectApplication={
                     handleSelectApplication
                 }
+
                 onSelectAll={
                     handleSelectAll
                 }
+
+                onDataLoaded={
+                    handleDataLoaded
+                }
+
+                onLoadingChange={
+                    handleLoadingChange
+                }
+
                 onRefresh={
                     handleRefresh
+                }
+
+                onOpenAssignModal={
+                    handleOpenAssignModal
+                }
+
+                assigning={
+                    assigning
                 }
             />
 
@@ -883,21 +708,18 @@ function ShuffleLoans() {
             ================================================= */}
 
             <AssignShuffleLoansModal
-                open={showAssignModal}
-                applications={
-                    applications.filter(
-                        (application) =>
-                            selectedApplicationIds.includes(
-                                application.id
-                            )
-                    )
+                open={
+                    showAssignModal
                 }
-                agents={agents}
-                rms={rms}
-                loanTypes={loanTypes}
+
+                applications={
+                    selectedApplications
+                }
+
                 onClose={
                     handleCloseAssignModal
                 }
+
                 onSubmit={
                     handleAssignSubmit
                 }
@@ -909,11 +731,25 @@ function ShuffleLoans() {
             ================================================= */}
 
             <FeedbackModal
-                open={feedback.open}
-                type={feedback.type}
-                title={feedback.title}
-                message={feedback.message}
-                onClose={closeFeedback}
+                open={
+                    feedback.open
+                }
+
+                type={
+                    feedback.type
+                }
+
+                title={
+                    feedback.title
+                }
+
+                message={
+                    feedback.message
+                }
+
+                onClose={
+                    closeFeedback
+                }
             />
 
         </div>

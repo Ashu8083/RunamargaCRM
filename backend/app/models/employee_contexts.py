@@ -1,4 +1,5 @@
 # backend\app\models\employee_contexts.py
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -137,6 +138,16 @@ class EmployeeContext(Base):
 
     permissions = relationship(
         "EmployeeContextPermission",
+        back_populates="employee_context",
+        cascade="all, delete-orphan",
+    )
+
+    # ------------------------------------------------------------------------
+    # Loan Assignments
+    # ------------------------------------------------------------------------
+
+    loan_assignments = relationship(
+        "LoanAssignment",
         back_populates="employee_context",
         cascade="all, delete-orphan",
     )

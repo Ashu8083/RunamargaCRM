@@ -4,8 +4,13 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.schemas.shuffle_loans_schema import ShuffleLoansAssign
-from app.services.shuffle_loans_service import ShuffleLoansService
+from app.schemas.shuffle_loans_schema import (
+    ShuffleLoansAssign,
+)
+
+from app.services.shuffle_loans_service import (
+    ShuffleLoansService,
+)
 
 
 class ShuffleLoansController:
@@ -22,6 +27,8 @@ class ShuffleLoansController:
         rm_id: Optional[int] = None,
         loan_type_id: Optional[int] = None,
         status: Optional[str] = None,
+        page: int = 1,
+        limit: int = 30,
     ):
         return ShuffleLoansService.get_shuffle_loans(
             db=db,
@@ -30,6 +37,8 @@ class ShuffleLoansController:
             rm_id=rm_id,
             loan_type_id=loan_type_id,
             status=status,
+            page=page,
+            limit=limit,
         )
 
 

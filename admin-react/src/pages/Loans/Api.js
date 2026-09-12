@@ -1,6 +1,6 @@
-// src/services/applicationService.js
+// admin-react/src/pages/Loans/Api.js
 
-import apiClient from '../app/apiClient'
+import apiClient from '../../app/apiClient'
 
 
 // =============================================================
@@ -26,7 +26,7 @@ export const getApplications = async (contextId) => {
 // GET SINGLE APPLICATION
 // =============================================================
 
-export const getApplication = async (
+export const viewApplication = async (
     applicationId
 ) => {
 

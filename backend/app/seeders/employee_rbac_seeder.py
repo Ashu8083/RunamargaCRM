@@ -67,12 +67,18 @@ EMPLOYEE_CONTEXTS = {
         {
             "context": "AGENT",
             "is_default": True,
-            "reports_to": "Test Employee",
+            "reports_to": {
+                "employee": "Test Employee",
+                "context": "RM",
+            },
         },
         {
             "context": "RM",
             "is_default": False,
-            "reports_to": "Test Admin 1",
+            "reports_to": {
+                "employee": "Test Admin 1",
+                "context": "GLOBAL",
+            },
         },
     ],
 
@@ -80,7 +86,10 @@ EMPLOYEE_CONTEXTS = {
         {
             "context": "RM",
             "is_default": True,
-            "reports_to": "Test Admin 1",
+            "reports_to": {
+                "employee": "Test Admin 1",
+                "context": "GLOBAL",
+            },
         },
     ],
 
@@ -92,7 +101,6 @@ EMPLOYEE_CONTEXTS = {
         },
     ],
 }
-
 
 # ============================================================
 # EMPLOYEE CONTEXT PERMISSIONS
@@ -123,6 +131,7 @@ PERMISSIONS = {
         "loans:edit",
         "loans:pending:view",
         "loans:status:update",
+        "loans:duplicates:approve",
         "loans:chat:view",
         "application-filter:view",
         "profile:view",
@@ -295,16 +304,13 @@ def get_or_create_employee_context(
     employee: Employee,
     context: Context,
     is_default: bool,
-    reports_to: Employee | None,
 ) -> EmployeeContext:
 
     employee_context = (
         db.query(EmployeeContext)
         .filter(
-            EmployeeContext.employee_id
-            == employee.id,
-            EmployeeContext.context_id
-            == context.id,
+            EmployeeContext.employee_id == employee.id,
+            EmployeeContext.context_id == context.id,
         )
         .first()
     )
@@ -313,12 +319,10 @@ def get_or_create_employee_context(
 
         employee_context.is_active = True
         employee_context.is_default = is_default
-        employee_context.reports_to_id = (
-            reports_to.id
-            if reports_to
-            else None
-        )
 
+        # IMPORTANT:
+        # reports_to_id is assigned in a second pass
+        # because it references employee_contexts.id.
         return employee_context
 
     employee_context = EmployeeContext(
@@ -326,11 +330,7 @@ def get_or_create_employee_context(
         context_id=context.id,
         is_active=True,
         is_default=is_default,
-        reports_to_id=(
-            reports_to.id
-            if reports_to
-            else None
-        ),
+        reports_to_id=None,
     )
 
     db.add(employee_context)
@@ -623,24 +623,26 @@ def seed():
 
         employee_contexts = {}
 
+        # ----------------------------------------------------
+        # PASS 1
+        #
+        # Create every EmployeeContext first.
+        # reports_to_id stays NULL temporarily because it
+        # references employee_contexts.id, not employees.id.
+        # ----------------------------------------------------
+
         for (
             employee_name,
             context_data_list,
         ) in EMPLOYEE_CONTEXTS.items():
 
-            employee = employees[
-                employee_name
-            ]
+            employee = employees[employee_name]
 
             for context_data in context_data_list:
 
-                context_code = (
-                    context_data["context"]
-                )
+                context_code = context_data["context"]
 
-                context = contexts.get(
-                    context_code
-                )
+                context = contexts.get(context_code)
 
                 if not context:
 
@@ -649,34 +651,12 @@ def seed():
                         f"{context_code}"
                     )
 
-                reports_to_name = (
-                    context_data["reports_to"]
-                )
-
-                reports_to = None
-
-                if reports_to_name:
-
-                    reports_to = employees.get(
-                        reports_to_name
-                    )
-
-                    if not reports_to:
-
-                        raise ValueError(
-                            "reports_to employee not found: "
-                            f"{reports_to_name}"
-                        )
-
                 employee_context = (
                     get_or_create_employee_context(
                         db=db,
                         employee=employee,
                         context=context,
-                        is_default=context_data[
-                            "is_default"
-                        ],
-                        reports_to=reports_to,
+                        is_default=context_data["is_default"],
                     )
                 )
 
@@ -686,6 +666,62 @@ def seed():
                         context_code,
                     )
                 ] = employee_context
+
+
+        # Make sure every EmployeeContext has an ID
+        db.flush()
+
+
+        # ====================================================
+        # PASS 2
+        # Resolve reports_to EmployeeContext IDs
+        # ====================================================
+
+        for (
+            employee_name,
+            context_data_list,
+        ) in EMPLOYEE_CONTEXTS.items():
+
+            for context_data in context_data_list:
+
+                context_code = context_data["context"]
+
+                employee_context = employee_contexts[
+                    (
+                        employee_name,
+                        context_code,
+                    )
+                ]
+
+                reports_to = context_data.get("reports_to")
+
+                if not reports_to:
+
+                    employee_context.reports_to_id = None
+
+                    continue
+
+                reporting_employee = reports_to["employee"]
+                reporting_context_code = reports_to["context"]
+
+                reporting_context = employee_contexts.get(
+                    (
+                        reporting_employee,
+                        reporting_context_code,
+                    )
+                )
+
+                if not reporting_context:
+
+                    raise ValueError(
+                        "Reporting EmployeeContext not found: "
+                        f"{reporting_employee} / "
+                        f"{reporting_context_code}"
+                    )
+
+                employee_context.reports_to_id = (
+                    reporting_context.id
+                )
 
         db.flush()
 

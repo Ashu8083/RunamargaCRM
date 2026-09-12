@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import { employeeService } from '../../../services/employeeService'
+import { EmpAPI } from '../Employees/Api'
 import EmployeeTable from './components/EmployeeTable'
 import EmployeeModal from './components/EmployeeModal'
 import { useToast } from '../../../components/Toast/ToastProvider'
@@ -30,7 +30,7 @@ function Employees() {
         try {
 
             const { data } =
-                await employeeService.getAll()
+                await EmpAPI.getAll()
 
             setEmployees(
                 Array.isArray(data) ? data : []
@@ -63,7 +63,7 @@ function Employees() {
             const [
                 rolesResponse,
                 permissionsResponse,
-            ] = await employeeService.getOptions()
+            ] = await EmpAPI.getOptions()
 
             setRoles(rolesResponse.data)
             setPermissions(permissionsResponse.data)
@@ -129,7 +129,7 @@ function Employees() {
 
             if (editingEmployee) {
 
-                await employeeService.update(
+                await EmpAPI.update(
                     editingEmployee.id,
                     data
                 )
@@ -140,7 +140,7 @@ function Employees() {
 
             } else {
 
-                await employeeService.create(data)
+                await EmpAPI.create(data)
 
                 showSuccess(
                     'Employee created successfully'
@@ -181,7 +181,7 @@ function Employees() {
 
         try {
 
-            await employeeService.delete(
+            await EmpAPI.delete(
                 employee.id
             )
 
@@ -213,7 +213,7 @@ function Employees() {
 
         try {
 
-            await employeeService.setBlocked(
+            await EmpAPI.setBlocked(
                 employee.id,
                 blocked
             )

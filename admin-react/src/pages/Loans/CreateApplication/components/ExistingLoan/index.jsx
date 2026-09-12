@@ -1,27 +1,20 @@
-// admin-react/src/pages/Loans/CreateApplication/components/ExistingLoan/index.jsx
-
 import { useState } from 'react'
 
-import CheckCircleIcon from '@heroicons/react/24/outline/CheckCircleIcon'
 import ExclamationCircleIcon from '@heroicons/react/24/outline/ExclamationCircleIcon'
 import UserIcon from '@heroicons/react/24/outline/UserIcon'
-import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
 import CreditCardIcon from '@heroicons/react/24/outline/CreditCardIcon'
 import CurrencyRupeeIcon from '@heroicons/react/24/outline/CurrencyRupeeIcon'
-import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 import ArrowLeftIcon from '@heroicons/react/24/outline/ArrowLeftIcon'
-import PaperAirplaneIcon from '@heroicons/react/24/outline/PaperAirplaneIcon'
 
 import { submitExistingLoan } from './API'
+import FeedbackModal from '../../../../../components/GlobalModels/FeedbackModal'
 
 // =============================================================
 // HELPERS
 // =============================================================
 
 const getValue = (...values) => {
-
   for (const value of values) {
-
     if (
       value !== undefined &&
       value !== null &&
@@ -29,7 +22,6 @@ const getValue = (...values) => {
     ) {
       return value
     }
-
   }
 
   return '—'
@@ -40,7 +32,6 @@ const getValue = (...values) => {
 // =============================================================
 
 const formatDateTime = (value) => {
-
   if (!value) {
     return '—'
   }
@@ -65,7 +56,6 @@ const formatDateTime = (value) => {
 // =============================================================
 
 const formatCurrency = (value) => {
-
   if (
     value === undefined ||
     value === null ||
@@ -88,7 +78,6 @@ const formatCurrency = (value) => {
 // =============================================================
 
 const getStatusConfig = (status) => {
-
   const normalizedStatus =
     String(status || '')
       .trim()
@@ -96,7 +85,6 @@ const getStatusConfig = (status) => {
       .replace(/\s+/g, '_')
 
   switch (normalizedStatus) {
-
     case 'IN_PROCESS':
     case 'INPROCESS':
       return {
@@ -138,15 +126,14 @@ const getStatusConfig = (status) => {
         label:
           status
             ? String(status)
-              .replace(/_/g, ' ')
-              .replace(/\b\w/g, (char) =>
-                char.toUpperCase()
-              )
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, (char) =>
+                  char.toUpperCase()
+                )
             : '—',
         className:
           'border-base-300 bg-base-200 text-base-content/70',
       }
-
   }
 }
 
@@ -158,7 +145,6 @@ const DetailItem = ({
   label,
   value,
 }) => (
-
   <div
     className="
       min-w-0
@@ -170,7 +156,6 @@ const DetailItem = ({
       py-2.5
     "
   >
-
     <p
       className="
         mb-1
@@ -195,9 +180,7 @@ const DetailItem = ({
     >
       {value}
     </p>
-
   </div>
-
 )
 
 // =============================================================
@@ -209,7 +192,6 @@ const SectionHeader = ({
   title,
   description,
 }) => (
-
   <div
     className="
       mb-4
@@ -221,7 +203,6 @@ const SectionHeader = ({
       pb-3
     "
   >
-
     <div
       className="
         flex
@@ -235,18 +216,10 @@ const SectionHeader = ({
         text-[#6FA800]
       "
     >
-
-      <Icon
-        className="
-          h-4
-          w-4
-        "
-      />
-
+      <Icon className="h-4 w-4" />
     </div>
 
     <div className="min-w-0">
-
       <h2
         className="
           text-sm
@@ -258,7 +231,6 @@ const SectionHeader = ({
       </h2>
 
       {description && (
-
         <p
           className="
             mt-0.5
@@ -268,13 +240,9 @@ const SectionHeader = ({
         >
           {description}
         </p>
-
       )}
-
     </div>
-
   </div>
-
 )
 
 // =============================================================
@@ -287,23 +255,24 @@ function ExistingLoan({
   onCancel,
   onSubmitSuccess,
 }) {
-
   const [submitting, setSubmitting] = useState(false)
 
-  const [notification, setNotification] = useState(null)
   // ===========================================================
   // FEEDBACK MODAL
   // ===========================================================
 
-  const [feedback, setFeedback] =
-    useState({
-      open: false,
-      type: 'success',
-      title: '',
-      message: '',
-    })
+  const [feedback, setFeedback] = useState({
+    open: false,
+    type: 'success',
+    title: '',
+    message: '',
+  })
+
+  // Store successful API response until FeedbackModal is closed.
+  const [successResponse, setSuccessResponse] = useState(null)
+
   // ===========================================================
-  // DATA
+  // EXISTING APPLICATION DATA
   // ===========================================================
 
   const applicationId = getValue(
@@ -331,25 +300,24 @@ function ExistingLoan({
     existingLoanData?.loanType,
     existingLoanData?.loan_type_name,
     existingLoanData?.loanTypeName,
-    originalApplicationData?.loan_type_id
+    existingLoanData?.loan_type_id
   )
 
   const loanAmount = getValue(
     existingLoanData?.loan_amount,
     existingLoanData?.loanAmount,
-    originalApplicationData?.loan_amount
+    existingLoanData?.loan_amt,
+    existingLoanData?.loanAmt
   )
 
   const creditScore = getValue(
     existingLoanData?.credit_score,
-    existingLoanData?.creditScore,
-    originalApplicationData?.credit_score
+    existingLoanData?.creditScore
   )
 
   const appliedBy = getValue(
-    existingLoanData?.applied_by_name ||
-    existingLoanData?.applied_by ||
-    '—'
+    existingLoanData?.applied_by_name,
+    existingLoanData?.applied_by
   )
 
   const rmName = getValue(
@@ -366,6 +334,7 @@ function ExistingLoan({
   )
 
   const appliedAt = getValue(
+    existingLoanData?.applied_date,
     existingLoanData?.applied_at,
     existingLoanData?.appliedAt,
     existingLoanData?.created_at,
@@ -379,19 +348,48 @@ function ExistingLoan({
       existingLoanData?.applicationStatus
     )
   )
-  const handleRequestApproval = async () => {
-    const existingApplicationId =
-      existingLoanData?.application_id ||
-      existingLoanData?.applicationId ||
-      existingLoanData?.id
 
-    if (!existingApplicationId) {
+  // ===========================================================
+  // REQUEST APPROVAL
+  // ===========================================================
+
+  const handleRequestApproval = async () => {
+    if (submitting) {
+      return
+    }
+
+    // ---------------------------------------------------------
+    // Validate new application data
+    // ---------------------------------------------------------
+
+    if (!originalApplicationData?.name) {
       setFeedback({
         open: true,
         type: 'error',
         title: 'Unable to Request Approval',
-        message:
-          'Existing application ID is missing.',
+        message: 'Applicant name is missing.',
+      })
+
+      return
+    }
+
+    if (!originalApplicationData?.phone) {
+      setFeedback({
+        open: true,
+        type: 'error',
+        title: 'Unable to Request Approval',
+        message: 'Phone number is missing.',
+      })
+
+      return
+    }
+
+    if (!originalApplicationData?.loan_type_id) {
+      setFeedback({
+        open: true,
+        type: 'error',
+        title: 'Unable to Request Approval',
+        message: 'Loan type is missing.',
       })
 
       return
@@ -400,10 +398,75 @@ function ExistingLoan({
     setSubmitting(true)
 
     try {
-      const response = await submitExistingLoan({
-        loan_application_id:
-          Number(existingApplicationId),
-      })
+      // -------------------------------------------------------
+      // NEW APPLICATION DATA
+      // -------------------------------------------------------
+
+      const payload = {
+        loan_id: null,
+
+        rm_id:
+          originalApplicationData?.rm_id !== undefined &&
+          originalApplicationData?.rm_id !== null &&
+          originalApplicationData?.rm_id !== ''
+            ? Number(originalApplicationData.rm_id)
+            : null,
+
+        name:
+          originalApplicationData?.name,
+
+        phone:
+          originalApplicationData?.phone,
+
+        loan_type_id:
+          Number(
+            originalApplicationData.loan_type_id
+          ),
+
+        loan_amount:
+          originalApplicationData?.loan_amount !== undefined &&
+          originalApplicationData?.loan_amount !== null &&
+          originalApplicationData?.loan_amount !== ''
+            ? Number(
+                originalApplicationData.loan_amount
+              )
+            : null,
+
+        loan_purpose:
+          originalApplicationData?.loan_purpose || null,
+
+        reference_name:
+          originalApplicationData?.reference_name || null,
+      }
+
+      console.log(
+        'Submitting duplicate approval request:',
+        payload
+      )
+
+      // -------------------------------------------------------
+      // CREATE PENDING DUPLICATE APPROVAL
+      // -------------------------------------------------------
+
+      const response =
+        await submitExistingLoan(payload)
+
+      if (response?.success === false) {
+        throw new Error(
+          response?.message ||
+          'Unable to submit approval request.'
+        )
+      }
+
+      // -------------------------------------------------------
+      // SAVE RESPONSE
+      // -------------------------------------------------------
+
+      setSuccessResponse(response)
+
+      // -------------------------------------------------------
+      // SHOW FEEDBACK MODAL
+      // -------------------------------------------------------
 
       setFeedback({
         open: true,
@@ -414,34 +477,56 @@ function ExistingLoan({
           'Approval request submitted successfully.',
       })
 
-      // Optional: close existing-loan popup after success
-      // after user closes FeedbackModal / according to your UX
     } catch (error) {
+      console.error(
+        'Duplicate approval request failed:',
+        error
+      )
+
       setFeedback({
         open: true,
         type: 'error',
         title: 'Unable to Request Approval',
         message:
+          error?.response?.data?.detail ||
+          error?.response?.data?.message ||
           error?.message ||
-          'Unable to submit the approval request.',
+          'Unable to request approval. Please try again.',
       })
+
     } finally {
       setSubmitting(false)
     }
   }
+
+  // ===========================================================
+  // FEEDBACK CLOSE
+  // ===========================================================
+
+  const handleFeedbackClose = () => {
+    const wasSuccess =
+      feedback.type === 'success'
+
+    setFeedback((previous) => ({
+      ...previous,
+      open: false,
+    }))
+
+    // Only close the Existing Loan modal AFTER
+    // the success FeedbackModal has been closed.
+    if (
+      wasSuccess &&
+      typeof onSubmitSuccess === 'function'
+    ) {
+      onSubmitSuccess(successResponse)
+    }
+  }
+
   // ===========================================================
   // HANDLE CANCEL
   // ===========================================================
-  //
-  // No API call is made.
-  //
-  // Parent will remove ExistingLoan and mount
-  // ApplicationForm again, which gives a fresh form.
-  //
-  // ===========================================================
 
   const handleCancel = () => {
-
     if (submitting) {
       return
     }
@@ -449,114 +534,13 @@ function ExistingLoan({
     if (typeof onCancel === 'function') {
       onCancel()
     }
-
   }
 
-  // ===========================================================
-  // HANDLE FINAL SUBMIT
-  // ===========================================================
-
-  const handleSubmit = async () => {
-
-    if (submitting) {
-      return
-    }
-
-    setNotification(null)
-    setSubmitting(true)
-
-    try {
-
-      const existingApplicationId =
-        existingLoanData?.application_id ||
-        existingLoanData?.applicationId ||
-        existingLoanData?.id
-
-      if (!existingApplicationId) {
-        throw new Error(
-          'Existing application ID is missing.'
-        )
-      }
-
-      const response =
-        await submitExistingLoan({
-
-          loan_application_id:
-            Number(existingApplicationId),
-
-          name:
-            originalApplicationData?.name,
-
-          phone:
-            originalApplicationData?.phone,
-
-          loan_type_id:
-            originalApplicationData?.loan_type_id
-              ? Number(
-                originalApplicationData.loan_type_id
-              )
-              : null,
-
-          loan_amount:
-            originalApplicationData?.loan_amount
-              ? Number(
-                originalApplicationData.loan_amount
-              )
-              : null,
-
-          loan_purpose:
-            originalApplicationData?.loan_purpose,
-
-          reference_name:
-            originalApplicationData?.reference_name,
-        })
-
-      if (response?.success === false) {
-        throw new Error(
-          response?.message ||
-          'Unable to submit approval request.'
-        )
-      }
-
-      setNotification({
-        type: 'success',
-        message:
-          response?.message ||
-          'Approval request submitted successfully.',
-      })
-
-      if (
-        typeof onSubmitSuccess === 'function'
-      ) {
-        onSubmitSuccess(response)
-      }
-
-    } catch (error) {
-
-      console.error(
-        'Duplicate approval request failed:',
-        error
-      )
-
-      setNotification({
-        type: 'error',
-        message:
-          error?.message ||
-          'Unable to request approval. Please try again.',
-      })
-
-    } finally {
-
-      setSubmitting(false)
-
-    }
-  }
   // ===========================================================
   // RENDER
   // ===========================================================
 
   return (
-
     <div
       className="
         w-full
@@ -568,76 +552,6 @@ function ExistingLoan({
         lg:px-6
       "
     >
-
-      {/* =====================================================
-          NOTIFICATION
-      ===================================================== */}
-
-      {notification && (
-
-        <div
-          role="alert"
-          className={`
-            mb-4
-            flex
-            items-start
-            gap-3
-            rounded-lg
-            border
-            px-4
-            py-3
-            ${notification.type === 'success'
-              ? `
-                  border-[#8BCF00]/30
-                  bg-[#8BCF00]/10
-                  text-[#5E8F00]
-                `
-              : `
-                  border-error/20
-                  bg-error/5
-                  text-error
-                `
-            }
-          `}
-        >
-
-          {notification.type === 'success' ? (
-
-            <CheckCircleIcon
-              className="
-                mt-0.5
-                h-5
-                w-5
-                shrink-0
-              "
-            />
-
-          ) : (
-
-            <ExclamationCircleIcon
-              className="
-                mt-0.5
-                h-5
-                w-5
-                shrink-0
-              "
-            />
-
-          )}
-
-          <p
-            className="
-              text-sm
-              font-medium
-            "
-          >
-            {notification.message}
-          </p>
-
-        </div>
-
-      )}
-
       {/* =====================================================
           MAIN CARD
       ===================================================== */}
@@ -654,7 +568,6 @@ function ExistingLoan({
           shadow-sm
         "
       >
-
         {/* ===================================================
             HEADER
         =================================================== */}
@@ -669,7 +582,6 @@ function ExistingLoan({
             lg:px-6
           "
         >
-
           <div
             className="
               flex
@@ -680,7 +592,6 @@ function ExistingLoan({
               sm:justify-between
             "
           >
-
             <div
               className="
                 flex
@@ -689,7 +600,6 @@ function ExistingLoan({
                 gap-3
               "
             >
-
               <div
                 className="
                   flex
@@ -703,18 +613,12 @@ function ExistingLoan({
                   text-[#6FA800]
                 "
               >
-
                 <ExclamationCircleIcon
-                  className="
-                    h-5
-                    w-5
-                  "
+                  className="h-5 w-5"
                 />
-
               </div>
 
               <div className="min-w-0">
-
                 <h1
                   className="
                     text-base
@@ -733,12 +637,11 @@ function ExistingLoan({
                     text-base-content/50
                   "
                 >
-                  An existing application was found for this customer.
-                  Review the details before continuing.
+                  An existing application was found for
+                  this customer. Review the details before
+                  continuing.
                 </p>
-
               </div>
-
             </div>
 
             {/* Status */}
@@ -759,7 +662,6 @@ function ExistingLoan({
                 ${status.className}
               `}
             >
-
               <span
                 className="
                   h-1.5
@@ -770,11 +672,8 @@ function ExistingLoan({
               />
 
               {status.label}
-
             </div>
-
           </div>
-
         </div>
 
         {/* ===================================================
@@ -789,13 +688,9 @@ function ExistingLoan({
             lg:p-6
           "
         >
-
-          {/* =================================================
-              APPLICATION SUMMARY
-          ================================================= */}
+          {/* APPLICATION SUMMARY */}
 
           <section>
-
             <SectionHeader
               icon={CreditCardIcon}
               title="Application Summary"
@@ -810,7 +705,6 @@ function ExistingLoan({
                 sm:grid-cols-3
               "
             >
-
               <DetailItem
                 label="Application ID"
                 value={applicationId}
@@ -825,17 +719,12 @@ function ExistingLoan({
                 label="Current Status"
                 value={status.label}
               />
-
             </div>
-
           </section>
 
-          {/* =================================================
-              CUSTOMER DETAILS
-          ================================================= */}
+          {/* CUSTOMER DETAILS */}
 
           <section>
-
             <SectionHeader
               icon={UserIcon}
               title="Customer Details"
@@ -851,7 +740,6 @@ function ExistingLoan({
                 lg:grid-cols-3
               "
             >
-
               <DetailItem
                 label="Applicant Name"
                 value={applicantName}
@@ -866,17 +754,12 @@ function ExistingLoan({
                 label="Credit Score"
                 value={creditScore}
               />
-
             </div>
-
           </section>
 
-          {/* =================================================
-              LOAN DETAILS
-          ================================================= */}
+          {/* LOAN DETAILS */}
 
           <section>
-
             <SectionHeader
               icon={CurrencyRupeeIcon}
               title="Loan Details"
@@ -892,7 +775,6 @@ function ExistingLoan({
                 lg:grid-cols-3
               "
             >
-
               <DetailItem
                 label="Loan Type"
                 value={loanType}
@@ -907,17 +789,12 @@ function ExistingLoan({
                 label="Applied Date"
                 value={formatDateTime(appliedAt)}
               />
-
             </div>
-
           </section>
 
-          {/* =================================================
-              ASSIGNMENT DETAILS
-          ================================================= */}
+          {/* ASSIGNMENT DETAILS */}
 
           <section>
-
             <SectionHeader
               icon={UserIcon}
               title="Assignment Details"
@@ -933,7 +810,6 @@ function ExistingLoan({
                 lg:grid-cols-3
               "
             >
-
               <DetailItem
                 label="Applied By"
                 value={appliedBy}
@@ -948,14 +824,10 @@ function ExistingLoan({
                 label="Agent"
                 value={agentName}
               />
-
             </div>
-
           </section>
 
-          {/* =================================================
-              INFORMATION MESSAGE
-          ================================================= */}
+          {/* INFORMATION MESSAGE */}
 
           <div
             className="
@@ -971,7 +843,6 @@ function ExistingLoan({
               text-amber-800
             "
           >
-
             <ExclamationCircleIcon
               className="
                 mt-0.5
@@ -982,13 +853,7 @@ function ExistingLoan({
             />
 
             <div>
-
-              <p
-                className="
-                  text-xs
-                  font-semibold
-                "
-              >
+              <p className="text-xs font-semibold">
                 Existing application detected
               </p>
 
@@ -1000,14 +865,12 @@ function ExistingLoan({
                   text-amber-700
                 "
               >
-                Please verify the application details before
-                submitting this application for further processing.
+                A new application will not be created
+                immediately. Request approval to submit
+                the new application for review.
               </p>
-
             </div>
-
           </div>
-
         </div>
 
         {/* ===================================================
@@ -1031,8 +894,7 @@ function ExistingLoan({
             lg:px-6
           "
         >
-
-          {/* Cancel */}
+          {/* CANCEL */}
 
           <button
             type="button"
@@ -1052,30 +914,29 @@ function ExistingLoan({
               disabled:opacity-50
             "
           >
-
-            <ArrowLeftIcon
-              className="
-                h-4
-                w-4
-              "
-            />
+            <ArrowLeftIcon className="h-4 w-4" />
 
             Cancel
-
           </button>
+
+          {/* REQUEST APPROVAL */}
 
           <button
             type="button"
             onClick={handleRequestApproval}
             disabled={submitting}
             className="
-        btn
-        btn-sm
-        bg-[#8BCF00]
-        text-white
-        hover:bg-[#6FA800]
-        disabled:opacity-60
-    "
+              btn
+              btn-sm
+              h-10
+              min-h-10
+              bg-[#8BCF00]
+              px-5
+              text-white
+              hover:bg-[#6FA800]
+              disabled:cursor-not-allowed
+              disabled:opacity-60
+            "
           >
             {submitting ? (
               <>
@@ -1087,11 +948,20 @@ function ExistingLoan({
             )}
           </button>
         </div>
-
       </div>
 
-    </div>
+      {/* =====================================================
+          FEEDBACK MODAL
+      ===================================================== */}
 
+      <FeedbackModal
+        open={feedback.open}
+        type={feedback.type}
+        title={feedback.title}
+        message={feedback.message}
+        onClose={handleFeedbackClose}
+      />
+    </div>
   )
 }
 

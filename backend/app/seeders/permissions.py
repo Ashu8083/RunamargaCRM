@@ -201,6 +201,10 @@ PERMISSIONS = [
         "Loan Reference Edit",
         "loans:reference:edit",
     ),
+    (
+        "Loan Duplicate Approval",
+        "loans:duplicates:approve",
+    ),
 
     # --------------------------------------------------------
     # Communication

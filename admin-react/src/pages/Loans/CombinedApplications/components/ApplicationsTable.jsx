@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
@@ -657,13 +657,7 @@ function ApplicationsTable({
     search,
     setSearch,
 
-    loanTypes = [],
-    rms = [],
-    teamLeads = [],
-    agents = [],
-    showRM = false,
-    showAgent = false,
-    showTeamLead = false,
+
     statuses = STATUS_OPTIONS,
 
     selectedLoanType,
@@ -689,7 +683,9 @@ function ApplicationsTable({
     onViewApplication,
     onRefresh,
 }) {
-
+    const [loanTypes, setLoanTypes] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
     // =========================================================
     // STATE
     // =========================================================
@@ -718,7 +714,12 @@ function ApplicationsTable({
         expandedPhoneId,
         setExpandedPhoneId,
     ] = useState(null);
-
+    const handleLoanTypesLoaded = useCallback(
+        (options) => {
+            setLoanTypes(options || []);
+        },
+        []
+    );
 
     // =========================================================
     // INFO POPUP
@@ -800,7 +801,16 @@ function ApplicationsTable({
         });
     };
 
-
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [
+        search,
+        selectedLoanType,
+        selectedRM,
+        selectedTeamLead,
+        selectedAgent,
+        selectedStatus,
+    ]);
     // =========================================================
     // CLOSE POPUP ON SCROLL / RESIZE
     // =========================================================
@@ -909,7 +919,18 @@ function ApplicationsTable({
         );
     };
 
+    const totalPages = Math.ceil(
+        applications.length / itemsPerPage
+    );
 
+    const startIndex =
+        (currentPage - 1) * itemsPerPage;
+
+    const paginatedApplications =
+        applications.slice(
+            startIndex,
+            startIndex + itemsPerPage
+        );
     // =========================================================
     // SEARCH
     // =========================================================
@@ -930,7 +951,7 @@ function ApplicationsTable({
 
     return (
 
-        <div className="space-y-4">
+        <div className="">
 
             {/* =================================================
                 FILTERS
@@ -1005,31 +1026,16 @@ function ApplicationsTable({
 
                         <LoanTypeDropdown
                             label=""
-                            value={
-                                selectedLoanType
-                            }
-                            onChange={
-                                setSelectedLoanType
-                            }
-                            options={
-                                loanTypes
-                            }
-                            allLabel="
-                                All Loan Types
-                            "
-                            placeholder="
-                                All Loan Types
-                            "
-                            searchPlaceholder="
-                                Search loan type
-                            "
-                            emptyMessage="
-                                No loan types found
-                            "
+                            value={selectedLoanType}
+                            onChange={setSelectedLoanType}
+                            onOptionsLoaded={handleLoanTypesLoaded}
+                            allLabel="All Loan Types"
+                            placeholder="All Loan Types"
+                            searchPlaceholder="Search loan type"
+                            emptyMessage="No loan types found"
                         />
 
                     </div>
-
 
                     {/* RM */}
 
@@ -1037,22 +1043,15 @@ function ApplicationsTable({
 
                         {/* RM */}
 
-                        {showRM && (
-                            <div className="w-44 shrink-0">
-
-                                <RmDropdown
-                                    label=""
-                                    value={selectedRM}
-                                    onChange={setSelectedRM}
-                                    options={rms}
-                                    allLabel="All RMs"
-                                    placeholder="All RMs"
-                                    searchPlaceholder="Search RM"
-                                    emptyMessage="No RMs found"
-                                />
-
-                            </div>
-                        )}
+                        <RmDropdown
+                            label=""
+                            value={selectedRM}
+                            onChange={setSelectedRM}
+                            allLabel="All RMs"
+                            placeholder="All RMs"
+                            searchPlaceholder="Search RM"
+                            emptyMessage="No RMs found"
+                        />
 
                     </div>
 
@@ -1061,22 +1060,15 @@ function ApplicationsTable({
 
                     <div className="w-44 shrink-0">
 
-                        {showTeamLead && (
-    <div className="w-44 shrink-0">
-
-        <TeamLeadDropdown
-            label=""
-            value={selectedTeamLead}
-            onChange={setSelectedTeamLead}
-            options={teamLeads}
-            allLabel="All Team Leads"
-            placeholder="All Team Leads"
-            searchPlaceholder="Search Team Lead"
-            emptyMessage="No Team Leads found"
-        />
-
-    </div>
-)}
+                        <TeamLeadDropdown
+                            label=""
+                            value={selectedTeamLead}
+                            onChange={setSelectedTeamLead}
+                            allLabel="All Team Leads"
+                            placeholder="All Team Leads"
+                            searchPlaceholder="Search Team Lead"
+                            emptyMessage="No Team Leads found"
+                        />
 
                     </div>
 
@@ -1084,27 +1076,17 @@ function ApplicationsTable({
                     {/* AGENT */}
 
                     <div className="w-44 shrink-0">
-
-                        {showAgent && (
-    <div className="w-44 shrink-0">
-
-        <AgentDropdown
-            label=""
-            value={selectedAgent}
-            onChange={setSelectedAgent}
-            options={agents}
-            allLabel="All Agents"
-            placeholder="All Agents"
-            searchPlaceholder="Search Agent"
-            emptyMessage="No Agents found"
-        />
-
-    </div>
-)}
+                        <AgentDropdown
+                            label=""
+                            value={selectedAgent}
+                            onChange={setSelectedAgent}
+                            allLabel="All Agents"
+                            placeholder="All Agents"
+                            searchPlaceholder="Search Agent"
+                            emptyMessage="No Agents found"
+                        />
 
                     </div>
-
-
                     {/* STATUS */}
 
                     <div className="w-44 shrink-0">
@@ -1328,7 +1310,7 @@ function ApplicationsTable({
 
                             ) : (
 
-                                applications.map(
+                                paginatedApplications.map(
                                     (
                                         application,
                                         index
@@ -1427,9 +1409,7 @@ function ApplicationsTable({
                                                             text-base-content/70
                                                         "
                                                     >
-                                                        {
-                                                            index + 1
-                                                        }
+                                                        {startIndex + index + 1}
                                                     </Cell>
 
                                                 </td>
@@ -1928,7 +1908,53 @@ function ApplicationsTable({
 
             </div>
 
+            {totalPages > 1 && (
+                <div className="
+        flex
+        items-center
+        justify-end
+        gap-3
+        mt-3
+    ">
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        disabled={currentPage === 1}
+                        onClick={() =>
+                            setCurrentPage((page) =>
+                                Math.max(page - 1, 1)
+                            )
+                        }
+                    >
+                        Previous
+                    </button>
 
+                    <span className="
+            text-sm
+            text-base-content/60
+        ">
+                        Page {currentPage} of {totalPages}
+                    </span>
+
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        disabled={
+                            currentPage === totalPages
+                        }
+                        onClick={() =>
+                            setCurrentPage((page) =>
+                                Math.min(
+                                    page + 1,
+                                    totalPages
+                                )
+                            )
+                        }
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
             {/* =================================================
                 REJECTION DETAILS POPUP
             ================================================= */}

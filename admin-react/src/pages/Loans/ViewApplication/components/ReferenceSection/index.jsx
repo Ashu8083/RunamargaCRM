@@ -1,16 +1,16 @@
-
-
 import React, { useState } from 'react'
-import { COLORS } from '../../../../constants/colors'
-import AddCoApplicantModal from '../modals/AddCoApplicantModal'
-function CoApplicantsSection({ application }) {
+import { COLORS } from '../../../../../constants/colors'
+import AddAddressReference from '../../modals/AddReferenceModal'
+import { addApplicationReference } from './Api'
 
-    const coApplicants = application?.co_applicants || []
-    const [showCoApplicantModal, setShowCoApplicantModal] =
+function ReferenceSection({ application, onRefresh }) {
+
+    const references = application?.references || []
+    const [showAddReference, setShowAddReference] =
         useState(false)
     return (
 
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
+        <div className="card bg-base-100 border border-base-300 shadow-sm m-5">
 
             <div className="card-body">
 
@@ -23,12 +23,12 @@ function CoApplicantsSection({ application }) {
                     <div>
 
                         <h2 className="text-lg font-semibold">
-                            Co-Applicants
+                            References
                         </h2>
 
                         <p className="text-xs text-base-content/50 mt-1">
-                            {coApplicants.length} co-applicant
-                            {coApplicants.length !== 1 ? 's' : ''}
+                            {references.length} reference
+                            {references.length !== 1 ? 's' : ''}
                         </p>
 
                     </div>
@@ -36,16 +36,12 @@ function CoApplicantsSection({ application }) {
 
                     <button
                         type="button"
-                        className="btn btn-sm btn-outline"
-                        style={{
+                        className="btn btn-sm btn-outline" onClick={() => setShowAddReference(true)} style={{
                             borderColor: COLORS.GREEN,
                             color: COLORS.GREEN,
                         }}
-                        onClick={() =>
-                            setShowCoApplicantModal(true)
-                        }
                     >
-                        + ADD CO-APPLICANT
+                        + Add Reference
                     </button>
 
                 </div>
@@ -55,16 +51,16 @@ function CoApplicantsSection({ application }) {
                     EMPTY STATE
                 -------------------------------------------------- */}
 
-                {coApplicants.length === 0 && (
+                {references.length === 0 && (
 
                     <div className="border border-dashed border-base-300 rounded-xl mt-4 py-10 text-center">
 
                         <div className="text-3xl text-base-content/20">
-                            👥
+                            👤
                         </div>
 
                         <p className="mt-3 text-sm text-base-content/60">
-                            No co-applicants added
+                            No references added yet
                         </p>
 
                         <button
@@ -73,11 +69,9 @@ function CoApplicantsSection({ application }) {
                             style={{
                                 color: COLORS.GREEN,
                             }}
-                            onClick={() =>
-                                setShowCoApplicantModal(true)
-                            }
+                            onClick={() => setShowAddReference(true)}
                         >
-                            + ADD CO-APPLICANT
+                            ADD YOUR FIRST REFERENCE
                         </button>
 
                     </div>
@@ -86,21 +80,21 @@ function CoApplicantsSection({ application }) {
 
 
                 {/* -------------------------------------------------
-                    CO-APPLICANTS
+                    REFERENCES
                 -------------------------------------------------- */}
 
-                {coApplicants.length > 0 && (
+                {references.length > 0 && (
 
                     <div className="space-y-3 mt-4">
 
-                        {coApplicants.map((coApplicant, index) => (
+                        {references.map((reference, index) => (
 
                             <div
-                                key={coApplicant.id || index}
+                                key={reference.id || index}
                                 className="border border-base-300 rounded-xl p-4"
                             >
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                                     {/* Name */}
 
@@ -111,7 +105,7 @@ function CoApplicantsSection({ application }) {
                                         </p>
 
                                         <p className="text-sm font-medium mt-1">
-                                            {coApplicant.name || '-'}
+                                            {reference.name || '-'}
                                         </p>
 
                                     </div>
@@ -126,7 +120,7 @@ function CoApplicantsSection({ application }) {
                                         </p>
 
                                         <p className="text-sm font-medium mt-1">
-                                            {coApplicant.phone || '-'}
+                                            {reference.phone || '-'}
                                         </p>
 
                                     </div>
@@ -141,52 +135,22 @@ function CoApplicantsSection({ application }) {
                                         </p>
 
                                         <p className="text-sm font-medium mt-1">
-                                            {coApplicant.relation || '-'}
+                                            {reference.relation || '-'}
                                         </p>
 
                                     </div>
 
 
-                                    {/* Email */}
+                                    {/* Address */}
 
                                     <div>
 
                                         <p className="text-xs text-base-content/50">
-                                            Email
+                                            Address
                                         </p>
 
                                         <p className="text-sm font-medium mt-1">
-                                            {coApplicant.email || '-'}
-                                        </p>
-
-                                    </div>
-
-
-                                    {/* PAN */}
-
-                                    <div>
-
-                                        <p className="text-xs text-base-content/50">
-                                            PAN Number
-                                        </p>
-
-                                        <p className="text-sm font-medium mt-1">
-                                            {coApplicant.pan_number || '-'}
-                                        </p>
-
-                                    </div>
-
-
-                                    {/* Aadhaar */}
-
-                                    <div>
-
-                                        <p className="text-xs text-base-content/50">
-                                            Aadhaar Number
-                                        </p>
-
-                                        <p className="text-sm font-medium mt-1">
-                                            {coApplicant.aadhaar_number || '-'}
+                                            {reference.address || '-'}
                                         </p>
 
                                     </div>
@@ -202,37 +166,33 @@ function CoApplicantsSection({ application }) {
                 )}
 
             </div>
-            <AddCoApplicantModal
-                isOpen={showCoApplicantModal}
-                onClose={() =>
-                    setShowCoApplicantModal(false)
-                }
-                onSubmit={async (coApplicantData) => {
+            <AddAddressReference
+                isOpen={showAddReference}
+                onClose={() => setShowAddReference(false)}
+                onSubmit={async (referenceData) => {
+                    try {
+                        const response = await addApplicationReference(
+                            application?.unique_id,
+                            referenceData
+                        )
 
-                    console.log(
-                        'Co-applicant:',
-                        coApplicantData
-                    )
+                        console.log('Reference added:', response)
 
-                    /*
-                        Later:
-            
-                        POST /applications/{id}/co-applicants
-            
-                        {
-                            application_id: application.id,
-                            ...coApplicantData
+                        setShowAddReference(false)
+
+                        if (onRefresh) {
+                            await onRefresh()
                         }
-            
-                        Then refresh the application.
-                    */
-
-                    setShowCoApplicantModal(false)
+                    } catch (error) {
+                        console.error(
+                            'Failed to add reference:',
+                            error
+                        )
+                    }
                 }}
             />
-
         </div>
     )
 }
 
-export default CoApplicantsSection
+export default ReferenceSection

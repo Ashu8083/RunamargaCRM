@@ -308,7 +308,7 @@ const routes = [
     },
 
     {
-        path: '/view-application/:applicationId',
+        path: '/view-application/:uniqueId',
         component: ViewApplication,
         permission: PERMISSIONS.LOANS_VIEW,
     },
