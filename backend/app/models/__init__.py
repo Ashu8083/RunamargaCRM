@@ -25,4 +25,8 @@ from app.models.loan_document import LoanDocument
 from app.models.employee_roles import EmployeeRole
 from app.models.reverted_loans import RevertedLoan
 from app.models.attendance import Attendance
+from app.models.bank_processings import BankProcessing
+from app.models.team_chat import TeamChat
+
+
 

@@ -1,4 +1,5 @@
 # app/schemas/application_schema.py
+from typing import Any
 from pydantic import BaseModel
 from datetime import date
 
@@ -63,9 +64,18 @@ class AddApplicationCoApplicantRequest(BaseModel):
     pan_number: str | None = None
     aadhaar_number: str | None = None
 
-from pydantic import BaseModel
 
 
 class UploadApplicationDocumentRequest(BaseModel):
     doc_type: str
     bank_stmt_pass: str | None = None
+
+class AssignBankRequest(BaseModel):
+    bank_id: int
+    dsa_code: str | None = None
+    dsa_name: str | None = None
+
+
+class UpdateBankProcessingWorkflowRequest(BaseModel):
+    action: str
+    data: dict[str, Any] = {}

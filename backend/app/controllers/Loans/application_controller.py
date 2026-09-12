@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from datetime import datetime,date
 
 from app.core.access_control import AccessControl
@@ -10,6 +10,12 @@ from app.models.loan_addresses import LoanAddress
 from app.models.loan_applications import LoanApplication, LoanStatus
 from app.models.reverted_loans import RevertedLoan
 from app.models.loan_reference import LoanReference
+from app.models.loan_document import LoanDocument
+from app.models.bank_processings import BankProcessing
+from app.models.dsa_details import DSADetail
+
+from app.models.bank import Bank
+
 
 # =============================================================
 # GET APPLICATIONS
@@ -220,6 +226,14 @@ def view_application(
         )
         .all()
     )
+    documents = (
+        db.query(LoanDocument)
+        .filter(
+            LoanDocument.loan_id == application.id,
+            LoanDocument.deleted_at.is_(None),
+        )
+        .all()
+    )
     if not application:
         return None
 
@@ -417,7 +431,23 @@ def view_application(
             }
             for reference in references
         ],
-        "documents": [],
+        "documents": [
+            {
+                "id": document.id,
+                "loan_id": document.loan_id,
+                "document_key": document.doc_type,
+                "doc_type": document.doc_type,
+                "path": document.path,
+                "bank_stmt_pass": document.bank_stmt_pass,
+                "file_name": (
+                    document.path.split("/")[-1]
+                    if document.path
+                    else None
+                ),
+                "created_at": document.created_at,
+            }
+            for document in documents
+        ],
         "co_applicants": [
             {
                 "id": co_applicant.id,
@@ -666,5 +696,199 @@ def create_application(
         "data": {
             "id": application.id,
             "status": application.status.value,
+        },
+    }
+
+def get_bank_processings(
+    db: Session,
+    employee: Employee,
+    application_id: str,
+):
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    bank_processings = (
+        db.query(
+            BankProcessing,
+            Bank.name.label("bank_name"),
+        )
+        .join(
+            Bank,
+            Bank.id == BankProcessing.bank_id,
+        )
+        .filter(
+            BankProcessing.loan_id == application.id,
+            BankProcessing.deleted_at.is_(None),
+        )
+        .order_by(
+            BankProcessing.created_at.desc()
+        )
+        .all()
+    )
+
+    data = []
+
+    for bp, bank_name in bank_processings:
+        data.append({
+            "id": bp.id,
+            "loan_id": bp.loan_id,
+
+            "bank_id": bp.bank_id,
+            "bank_name": bank_name,
+
+            "loan_type_id": bp.loan_type_id,
+
+            "dsa_id": bp.dsa_id,
+            "dsa_code": bp.dsa_code,
+            "dsa_name": bp.dsa_name,
+
+            "status": bp.status,
+
+            "offered_amount": (
+                float(bp.offered_amount)
+                if bp.offered_amount is not None
+                else None
+            ),
+
+            "disbursement_amount": (
+                float(bp.disbursement_amount)
+                if bp.disbursement_amount is not None
+                else None
+            ),
+
+            "interest_rate": (
+                float(bp.interest_rate)
+                if bp.interest_rate is not None
+                else None
+            ),
+
+            "tenure_months": bp.tenure_months,
+
+            "processing_fees": (
+                float(bp.processing_fees)
+                if bp.processing_fees is not None
+                else None
+            ),
+
+            "insurance": bp.insurance,
+            "remarks": bp.remarks,
+
+            "assigned_at": (
+                bp.created_at.isoformat()
+                if bp.created_at
+                else None
+            ),
+
+            "login_at": (
+                bp.loggedin_at.isoformat()
+                if bp.loggedin_at
+                else None
+            ),
+
+            "sanction_at": (
+                bp.sanctioned_at.isoformat()
+                if bp.sanctioned_at
+                else None
+            ),
+
+            "disbursement_at": (
+                bp.disbursed_at.isoformat()
+                if bp.disbursed_at
+                else None
+            ),
+
+            "rejected_at": (
+                bp.rejected_at.isoformat()
+                if bp.rejected_at
+                else None
+            ),
+
+            "approved_by": bp.approved_by,
+
+            "application_reference_id":
+                bp.application_reference_id,
+
+            "created_at": (
+                bp.created_at.isoformat()
+                if bp.created_at
+                else None
+            ),
+
+            "updated_at": (
+                bp.updated_at.isoformat()
+                if bp.updated_at
+                else None
+            ),
+        })
+
+    return {
+        "success": True,
+        "data": data,
+    }
+def get_default_dsa(
+    db: Session,
+    employee,
+    application_id: str,
+    bank_id: int,
+):
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    # KEEP THE SAME RBAC CHECK USED BY YOUR OTHER
+    # VIEW-APPLICATION CONTROLLERS
+
+    if not application.loan_type_id:
+        return {
+            "success": True,
+            "data": {
+                "found": False,
+                "dsa_id": None,
+                "dsa_code": None,
+                "dsa_name": None,
+            },
+        }
+
+    dsa = (
+        db.query(DSADetail)
+        .filter(
+            DSADetail.bank_id == bank_id,
+            DSADetail.loan_type_id == application.loan_type_id,
+            DSADetail.status == "1",
+            DSADetail.is_default.is_(True),
+        )
+        .first()
+    )
+
+    return {
+        "success": True,
+        "data": {
+            "found": bool(dsa),
+            "dsa_id": str(dsa.id) if dsa else None,
+            "dsa_code": dsa.dsa_code if dsa else None,
+            "dsa_name": dsa.dsa_name if dsa else None,
         },
     }

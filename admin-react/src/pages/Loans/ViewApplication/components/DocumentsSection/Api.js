@@ -16,3 +16,13 @@ export const uploadApplicationDocument = async (
 
     return response.data
 }
+export const deleteApplicationDocument = async (
+    applicationId,
+    documentId
+) => {
+    const response = await apiClient.delete(
+        `/applications/${applicationId}/documents/${documentId}`
+    )
+
+    return response.data
+}

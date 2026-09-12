@@ -7,11 +7,11 @@ from app.core.security import get_current_employee
 from app.controllers.Loans.application_controller import (
     get_applications,
     view_application,
-    create_application
+    create_application,get_bank_processings,get_default_dsa
 )
 
 from app.schemas.application_schema import (
-   LoanApplicationCreateRequest
+   LoanApplicationCreateRequest,AssignBankRequest
 )
 from app.models.employees import Employee
 
@@ -69,4 +69,32 @@ def create_loan_application(
         db=db,
         employee=employee,
         payload=payload,
+    )
+
+
+@router.get("/{application_id}/bank-processing")
+def get_bank_processing_route(
+    application_id: str,
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
+):
+    return get_bank_processings(
+        db=db,
+        employee=employee,
+        application_id=application_id,
+    )
+
+
+@router.get("/{application_id}/bank-processing/default-dsa/{bank_id}")
+def get_default_dsa_route(
+    application_id: str,
+    bank_id: int,
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
+):
+    return get_default_dsa(
+        db=db,
+        employee=employee,
+        application_id=application_id,
+        bank_id=bank_id,
     )

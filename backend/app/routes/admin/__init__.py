@@ -8,6 +8,7 @@ from .employee_routes import router as employee_router
 from .common_routes import router as common_router
 from .state_routes import router as state_router
 from .city_routes import router as city_router
+from .Loans.team_chat import router as team_chat_router
 from .context_routes import router as context_router
 from .attendance_routes import router as attendance_router
 from .phone_number_routes import router as phone_num_router
@@ -38,4 +39,4 @@ router.include_router(banker_directory_router)
 router.include_router(team_leads_router)
 router.include_router(agents_router)
 router.include_router(duplicate_approval_router)
-
+router.include_router(team_chat_router)

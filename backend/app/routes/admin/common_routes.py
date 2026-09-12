@@ -2,12 +2,11 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-
 from app.config.database import get_db
 from app.core.security import get_current_employee
 from app.core.access_control import AccessControl
-
 from app.models.roles import Role
+from app.models.bank import Bank
 from app.models.permissions import Permission
 from app.models.states import State
 from app.models.cities import City
@@ -666,3 +665,23 @@ def get_cities(
         .order_by(City.id)
         .all()
     )
+
+
+# ============================================================================
+# GET /common/banks
+# ============================================================================
+
+@router.get("/banks")
+def get_banks(
+    db: Session = Depends(get_db),
+):
+    return (
+        db.query(Bank)
+         .filter(
+            Bank.deleted_at.is_(None),
+            Bank.is_active == True
+        )
+        .order_by(Bank.id)
+        .all()
+    )
+

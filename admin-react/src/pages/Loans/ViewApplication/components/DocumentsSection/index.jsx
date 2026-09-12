@@ -9,7 +9,10 @@ import {
 } from '@heroicons/react/24/outline'
 
 import UploadDocumentModal from '../../modals/UploadDocumentModal'
-import { uploadApplicationDocument } from './Api'
+import {
+    uploadApplicationDocument,
+    deleteApplicationDocument,
+} from './Api'
 import { COLORS } from '../../../../../constants/colors'
 
 import {
@@ -21,7 +24,7 @@ function DocumentsSection({ application, onRefresh }) {
     const [selectedDocument, setSelectedDocument] = useState(null)
     const [showUploadModal, setShowUploadModal] = useState(false)
     const [uploading, setUploading] = useState(false)
-
+    const [deletingDocumentId, setDeletingDocumentId] = useState(null)
     /*
     ============================================================
     LOAN TYPE
@@ -125,32 +128,60 @@ function DocumentsSection({ application, onRefresh }) {
         formData
     ) => {
 
-        try {
-
+       try {
             setUploading(true)
 
-            const response =
-                await uploadApplicationDocument(
-                    application?.unique_id,
-                    formData
-                )
-
-            console.log(
-                'DOCUMENT UPLOAD RESPONSE:',
-                response
+            await uploadApplicationDocument(
+                application?.unique_id,
+                formData
             )
 
             setShowUploadModal(false)
-            setSelectedDocument(null)
+
+            if (onRefresh) {
+                await onRefresh()
+            }
+        } catch (error) {
+            console.error('DOCUMENT UPLOAD ERROR:', error)
+            console.error('ERROR RESPONSE:', error?.response)
+            console.error('ERROR DATA:', error?.response?.data)
+
+            alert(
+                error?.response?.data?.detail ||
+                'Failed to upload document'
+            )
+        } finally {
+            setUploading(false)
+        }
+    }
+    const handleDelete = async (document) => {
+        if (!document?.id) {
+            return
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to delete ${document.name || document.doc_type}?`
+        )
+
+        if (!confirmed) {
+            return
+        }
+
+        try {
+            setDeletingDocumentId(document.id)
+
+            await deleteApplicationDocument(
+                application?.unique_id,
+                document.id
+            )
 
             if (onRefresh) {
                 await onRefresh()
             }
 
         } catch (error) {
-
             console.error(
-                'DOCUMENT UPLOAD ERROR:',
+                'DOCUMENT DELETE ERROR:',
                 error
             )
 
@@ -166,16 +197,13 @@ function DocumentsSection({ application, onRefresh }) {
 
             alert(
                 error?.response?.data?.detail ||
-                'Failed to upload document'
+                'Failed to delete document'
             )
 
         } finally {
-
-            setUploading(false)
-
+            setDeletingDocumentId(null)
         }
     }
-
     /*
     ============================================================
     REFRESH
@@ -384,9 +412,9 @@ function DocumentsSection({ application, onRefresh }) {
                             />
 
                             {selectedDocument &&
-                            isUploaded(
-                                selectedDocument.key
-                            )
+                                isUploaded(
+                                    selectedDocument.key
+                                )
                                 ? 'REPLACE DOCUMENT'
                                 : 'UPLOAD DOCUMENT'}
 
@@ -431,16 +459,16 @@ function DocumentsSection({ application, onRefresh }) {
                                 selectedDocument.key
                             ) && (
 
-                                <span
-                                    className="
+                                    <span
+                                        className="
                                         text-base-content/50
                                     "
-                                >
-                                    — uploading again will replace
-                                    the existing document
-                                </span>
+                                    >
+                                        — uploading again will replace
+                                        the existing document
+                                    </span>
 
-                            )}
+                                )}
 
                         </div>
 
@@ -545,11 +573,10 @@ function DocumentsSection({ application, onRefresh }) {
                                                 gap-4
                                                 px-4
                                                 py-3
-                                                ${
-                                                    index !==
+                                                ${index !==
                                                     documents.length - 1
-                                                        ? 'border-b border-base-300'
-                                                        : ''
+                                                    ? 'border-b border-base-300'
+                                                    : ''
                                                 }
                                             `}
                                         >
@@ -664,7 +691,29 @@ function DocumentsSection({ application, onRefresh }) {
                                                 </div>
 
                                             </div>
-
+                                            {uploaded && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleDelete(uploadedDocument)
+                                                    }
+                                                    disabled={
+                                                        uploading ||
+                                                        deletingDocumentId === uploadedDocument?.id
+                                                    }
+                                                    className="
+            btn
+            btn-sm
+            btn-error
+            btn-outline
+            shrink-0
+        "
+                                                >
+                                                    {deletingDocumentId === uploadedDocument?.id
+                                                        ? 'DELETING...'
+                                                        : 'DELETE'}
+                                                </button>
+                                            )}
                                         </div>
 
                                     )

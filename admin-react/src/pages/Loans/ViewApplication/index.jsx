@@ -136,6 +136,7 @@ function ViewApplication() {
 
                     <DocumentsSection
                         application={application}
+                        onRefresh={fetchApplication}
                     />
 
                 </div>
@@ -147,8 +148,8 @@ function ViewApplication() {
 
             <BankProcessing
                 application={application}
+                onRefresh={fetchApplication}
             />
-
         </div>
     )
 }

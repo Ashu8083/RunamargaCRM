@@ -684,6 +684,8 @@ function ApplicationsTable({
     onRefresh,
 }) {
     const [loanTypes, setLoanTypes] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
     // =========================================================
     // STATE
     // =========================================================
@@ -799,7 +801,16 @@ function ApplicationsTable({
         });
     };
 
-
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [
+        search,
+        selectedLoanType,
+        selectedRM,
+        selectedTeamLead,
+        selectedAgent,
+        selectedStatus,
+    ]);
     // =========================================================
     // CLOSE POPUP ON SCROLL / RESIZE
     // =========================================================
@@ -908,7 +919,18 @@ function ApplicationsTable({
         );
     };
 
+    const totalPages = Math.ceil(
+        applications.length / itemsPerPage
+    );
 
+    const startIndex =
+        (currentPage - 1) * itemsPerPage;
+
+    const paginatedApplications =
+        applications.slice(
+            startIndex,
+            startIndex + itemsPerPage
+        );
     // =========================================================
     // SEARCH
     // =========================================================
@@ -929,7 +951,7 @@ function ApplicationsTable({
 
     return (
 
-        <div className="space-y-4">
+        <div className="">
 
             {/* =================================================
                 FILTERS
@@ -1288,7 +1310,7 @@ function ApplicationsTable({
 
                             ) : (
 
-                                applications.map(
+                                paginatedApplications.map(
                                     (
                                         application,
                                         index
@@ -1387,9 +1409,7 @@ function ApplicationsTable({
                                                             text-base-content/70
                                                         "
                                                     >
-                                                        {
-                                                            index + 1
-                                                        }
+                                                        {startIndex + index + 1}
                                                     </Cell>
 
                                                 </td>
@@ -1888,7 +1908,53 @@ function ApplicationsTable({
 
             </div>
 
+            {totalPages > 1 && (
+                <div className="
+        flex
+        items-center
+        justify-end
+        gap-3
+        mt-3
+    ">
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        disabled={currentPage === 1}
+                        onClick={() =>
+                            setCurrentPage((page) =>
+                                Math.max(page - 1, 1)
+                            )
+                        }
+                    >
+                        Previous
+                    </button>
 
+                    <span className="
+            text-sm
+            text-base-content/60
+        ">
+                        Page {currentPage} of {totalPages}
+                    </span>
+
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-ghost"
+                        disabled={
+                            currentPage === totalPages
+                        }
+                        onClick={() =>
+                            setCurrentPage((page) =>
+                                Math.min(
+                                    page + 1,
+                                    totalPages
+                                )
+                            )
+                        }
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
             {/* =================================================
                 REJECTION DETAILS POPUP
             ================================================= */}

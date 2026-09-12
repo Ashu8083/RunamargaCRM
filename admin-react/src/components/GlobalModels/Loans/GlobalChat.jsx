@@ -1,7 +1,6 @@
 // admin-react/src/components/GlobalChat.jsx
 
 import { useEffect, useRef, useState } from 'react'
-
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
@@ -9,7 +8,10 @@ import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import PaperClipIcon from '@heroicons/react/24/outline/PaperClipIcon'
 import FaceSmileIcon from '@heroicons/react/24/outline/FaceSmileIcon'
 import PaperAirplaneIcon from '@heroicons/react/24/outline/PaperAirplaneIcon'
-
+import {
+    getTeamChat,
+    sendTeamChat,
+} from '../../../pages/Loans/ViewApplication/components/Teamchat/Api'
 
 const EMOJIS = [
     '😀', '😃', '😄', '😁', '😆', '😅',
@@ -47,10 +49,7 @@ function GlobalChat({
     const [loading, setLoading] = useState(false)
 
     const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-    const [selectedFile, setSelectedFile] = useState(null)
-
     const messagesEndRef = useRef(null)
-    const fileInputRef = useRef(null)
     const emojiPickerRef = useRef(null)
 
 
@@ -59,45 +58,93 @@ function GlobalChat({
     // =========================================================
 
     useEffect(() => {
-
-        if (!open) {
+        if (!open || !loanId) {
             return
         }
 
+        const loadChat = async () => {
+            try {
+                setLoading(true)
 
-        /*
-         * API integration will be added here.
-         *
-         * GET /loans/{loanId}/chat?agent_id={agentId}
-         */
+                const response = await getTeamChat(
+                    loanId
+                )
 
-        setMessages([
-            {
-                id: 1,
-                senderName: 'Premalatha N',
-                senderType: 'team_member',
-                message:
-                    "Need pl, he doesn't not work recently, he will ask his friends",
-                createdAt: '08:27 pm',
-                dateLabel: 'Yesterday',
-            },
-            {
-                id: 2,
-                senderName: 'Premalatha N',
-                senderType: 'team_member',
-                message: 'Lead created by deepa',
-                createdAt: '08:27 pm',
-                dateLabel: 'Yesterday',
-            },
-        ])
+                console.log(
+                    'TEAM CHAT RESPONSE:',
+                    response
+                )
+                const chatMessages = response?.data || []
+
+                const formattedMessages = chatMessages.map(
+                    (item) => ({
+                        id: item.id,
+
+                        senderName:
+                            item.sender_name || 'Team Member',
+
+                        senderType: 'team_member',
+
+                        message:
+                            item.message_text || '',
+
+                        attachment: item.file_name
+                            ? {
+                                name: item.file_name,
+                                type:
+                                    item.file_mime_type || '',
+                                size:
+                                    item.file_size || 0,
+                            }
+                            : null,
+
+                        createdAt: item.created_at
+                            ? new Date(
+                                item.created_at
+                            ).toLocaleTimeString(
+                                'en-IN',
+                                {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                }
+                            )
+                            : '',
+
+                        dateLabel: item.created_at
+                            ? new Date(
+                                item.created_at
+                            ).toLocaleDateString(
+                                'en-IN',
+                                {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                }
+                            )
+                            : '',
+                    })
+                )
+
+                setMessages(formattedMessages)
+
+            } catch (error) {
+                console.error(
+                    'TEAM CHAT LOAD ERROR:',
+                    error
+                )
+
+                setMessages([])
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadChat()
 
         setMessage('')
-        setSelectedFile(null)
         setShowEmojiPicker(false)
 
-    }, [open, loanId, agentId])
-
-
+    }, [open, loanId])
     // =========================================================
     // CLOSE EMOJI PICKER WHEN CLICKING OUTSIDE
     // =========================================================
@@ -173,138 +220,105 @@ function GlobalChat({
     }
 
 
-    // =========================================================
-    // ATTACHMENT
-    // =========================================================
-
-    const handleAttachmentClick = () => {
-
-        fileInputRef.current?.click()
-
-    }
-
-
-    const handleFileChange = (event) => {
-
-        const file = event.target.files?.[0]
-
-        if (!file) {
-            return
-        }
-
-
-        setSelectedFile(file)
-
-        event.target.value = ''
-
-    }
-
-
-    // =========================================================
-    // REMOVE ATTACHMENT
-    // =========================================================
-
-    const handleRemoveAttachment = () => {
-
-        setSelectedFile(null)
-
-    }
-
 
     // =========================================================
     // SEND MESSAGE
     // =========================================================
 
     const handleSend = async () => {
-
         const value = message.trim()
 
         if (
-            (!value && !selectedFile) ||
-            loading
+            !value ||
+            loading ||
+            !loanId
         ) {
             return
         }
 
-
-        const newMessage = {
-
-            id: Date.now(),
-
-            senderName: 'You',
-
-            senderType: 'current_user',
-
-            message: value,
-
-            attachment: selectedFile
-                ? {
-                    name: selectedFile.name,
-                    type: selectedFile.type,
-                    size: selectedFile.size,
-                }
-                : null,
-
-            createdAt: new Date().toLocaleTimeString(
-                'en-IN',
-                {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                }
-            ),
-
-            dateLabel: 'Today',
-
-        }
-
-
-        setMessages((previous) => [
-            ...previous,
-            newMessage,
-        ])
-
-        setMessage('')
-        setSelectedFile(null)
-        setShowEmojiPicker(false)
-
-
-        /*
-         * API integration will be added later.
-         *
-         * For text:
-         *
-         * POST /loans/{loanId}/chat
-         *
-         * {
-         *     agent_id: agentId,
-         *     message: value
-         * }
-         *
-         * For attachments use FormData:
-         *
-         * {
-         *     agent_id,
-         *     message,
-         *     file
-         * }
-         */
-
-
         try {
-
             setLoading(true)
 
-            // API call will be added later.
+            await sendTeamChat(
+                loanId,
+                {
+                    message_text: value,
+                    message_type: 'text',
+                }
+            )
 
+            const response = await getTeamChat(
+                loanId
+            )
+
+            const chatMessages =
+                response?.data || []
+
+            const formattedMessages =
+                chatMessages.map(
+                    (item) => ({
+                        id: item.id,
+
+                        senderName:
+                            item.sender_name ||
+                            'User',
+
+                        senderType:
+                            item.sender_admin_id
+                                ? 'team_member'
+                                : 'team_member',
+
+                        message:
+                            item.message_text ||
+                            '',
+
+                        attachment: null,
+
+                        createdAt:
+                            item.created_at
+                                ? new Date(
+                                    item.created_at
+                                ).toLocaleTimeString(
+                                    'en-IN',
+                                    {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                    }
+                                )
+                                : '',
+
+                        dateLabel:
+                            item.created_at
+                                ? new Date(
+                                    item.created_at
+                                ).toLocaleDateString(
+                                    'en-IN',
+                                    {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric',
+                                    }
+                                )
+                                : '',
+                    })
+                )
+
+            setMessages(
+                formattedMessages
+            )
+
+            setMessage('')
+            setShowEmojiPicker(false)
+
+        } catch (error) {
+            console.error(
+                'TEAM CHAT SEND ERROR:',
+                error
+            )
         } finally {
-
             setLoading(false)
-
         }
-
     }
-
-
     // =========================================================
     // KEYBOARD
     // =========================================================
@@ -404,28 +418,25 @@ function GlobalChat({
             items-center
             justify-center
             bg-black/50
-            p-0
-            sm:p-3
-            space-y-0
+            p-4 m-0
         ">
-
             {/* =====================================================
                 CHAT CONTAINER
             ===================================================== */}
 
             <div className="
                 flex
-                h-full
+                h-[680px]
                 w-full
+                max-w-[900px]
+                max-h-[calc(100vh-32px)]
                 flex-col
                 overflow-hidden
+                rounded-[20px]
+                border
+                border-base-300
                 bg-base-100
                 shadow-2xl
-                sm:h-[calc(100vh-24px)]
-                sm:max-h-[760px]
-                sm:w-[calc(100vw-24px)]
-                sm:max-w-5xl
-                sm:rounded-[24px]
             ">
 
                 {/* =================================================
@@ -768,10 +779,9 @@ function GlobalChat({
                                         className={`
                                             flex
                                             gap-2.5
-                                            ${
-                                                isCurrentUser
-                                                    ? 'justify-end'
-                                                    : 'justify-start'
+                                            ${isCurrentUser
+                                                ? 'justify-end'
+                                                : 'justify-start'
                                             }
                                         `}
                                     >
@@ -804,10 +814,9 @@ function GlobalChat({
                                         <div className={`
                                             max-w-[80%]
                                             sm:max-w-[65%]
-                                            ${
-                                                isCurrentUser
-                                                    ? 'items-end'
-                                                    : 'items-start'
+                                            ${isCurrentUser
+                                                ? 'items-end'
+                                                : 'items-start'
                                             }
                                         `}>
 
@@ -827,10 +836,9 @@ function GlobalChat({
                                                 border
                                                 px-4
                                                 py-3
-                                                ${
-                                                    isCurrentUser
-                                                        ? 'border-[#8BCF00]/20 bg-[#8BCF00]/10'
-                                                        : 'border-base-300 bg-base-100'
+                                                ${isCurrentUser
+                                                    ? 'border-[#8BCF00]/20 bg-[#8BCF00]/10'
+                                                    : 'border-base-300 bg-base-100'
                                                 }
                                             `}>
 
@@ -861,10 +869,9 @@ function GlobalChat({
                                                         border
                                                         px-3
                                                         py-2
-                                                        ${
-                                                            item.message
-                                                                ? 'mt-2'
-                                                                : ''
+                                                        ${item.message
+                                                            ? 'mt-2'
+                                                            : ''
                                                         }
                                                         border-base-300
                                                         bg-base-200/50
@@ -1062,147 +1069,13 @@ function GlobalChat({
                     )}
 
 
-                    {/* =================================================
-                        SELECTED ATTACHMENT
-                    ================================================= */}
-
-                    {selectedFile && (
-
-                        <div className="
-                            mb-2
-                            flex
-                            items-center
-                            gap-2.5
-                            rounded-xl
-                            border
-                            border-base-300
-                            bg-base-200/50
-                            px-3
-                            py-2
-                        ">
-
-                            <div className="
-                                flex
-                                h-8
-                                w-8
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-lg
-                                bg-base-100
-                            ">
-
-                                <PaperClipIcon className="
-                                    h-4
-                                    w-4
-                                    text-base-content/60
-                                " />
-
-                            </div>
-
-
-                            <div className="
-                                min-w-0
-                                flex-1
-                            ">
-
-                                <p className="
-                                    truncate
-                                    text-xs
-                                    font-medium
-                                ">
-                                    {selectedFile.name}
-                                </p>
-
-
-                                <p className="
-                                    text-[11px]
-                                    text-base-content/45
-                                ">
-                                    {formatFileSize(
-                                        selectedFile.size
-                                    )}
-                                </p>
-
-                            </div>
-
-
-                            <button
-                                type="button"
-                                onClick={
-                                    handleRemoveAttachment
-                                }
-                                className="
-                                    flex
-                                    h-7
-                                    w-7
-                                    shrink-0
-                                    items-center
-                                    justify-center
-                                    rounded-full
-                                    hover:bg-base-300
-                                "
-                                title="Remove attachment"
-                            >
-
-                                <XMarkIcon className="
-                                    h-4
-                                    w-4
-                                    text-base-content/60
-                                " />
-
-                            </button>
-
-                        </div>
-
-                    )}
-
-
                     <div className="
                         flex
                         items-center
                         gap-2
                     ">
 
-                        {/* Hidden file input */}
 
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            className="hidden"
-                            onChange={handleFileChange}
-                        />
-
-
-                        {/* Attachment */}
-
-                        <button
-                            type="button"
-                            onClick={handleAttachmentClick}
-                            className="
-                                flex
-                                h-10
-                                w-10
-                                shrink-0
-                                items-center
-                                justify-center
-                                rounded-full
-                                border
-                                border-base-300
-                                bg-base-100
-                                transition
-                                hover:bg-base-200
-                            "
-                            title="Attach file"
-                        >
-
-                            <PaperClipIcon className="
-                                h-5
-                                w-5
-                                text-base-content/60
-                            " />
-
-                        </button>
 
 
                         {/* Emoji */}
@@ -1235,10 +1108,9 @@ function GlobalChat({
                                     bg-base-100
                                     transition
                                     hover:bg-base-200
-                                    ${
-                                        showEmojiPicker
-                                            ? 'bg-base-200 text-[#78B300]'
-                                            : ''
+                                    ${showEmojiPicker
+                                        ? 'bg-base-200 text-[#78B300]'
+                                        : ''
                                     }
                                 `}
                                 title="Emoji"
@@ -1298,8 +1170,7 @@ function GlobalChat({
                             onClick={handleSend}
                             disabled={
                                 (
-                                    !message.trim() &&
-                                    !selectedFile
+                                    !message.trim()
                                 ) ||
                                 loading
                             }

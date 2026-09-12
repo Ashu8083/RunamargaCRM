@@ -1,11 +1,14 @@
-import React, { useState } from 'react'
-
+import React, { useState, useEffect } from 'react'
 import AssignBankModal from '../../modals/AssignBankModal'
+import {
+    assignBank,
+    getBankProcessing, updateBankProcessingWorkflow, deleteApplicationBankProcessing
+} from './Api'
 /* -------------------------------------------------
    HELPERS
 -------------------------------------------------- */
 import { COLORS } from '../../../../../constants/colors'
-
+import BankProcessingWorkflowModal from '../../modals/BankProcessingWorkflowModal'
 
 
 const formatAmount = (amount) => {
@@ -103,10 +106,13 @@ function TimelineItem({
    BANK CARD
 -------------------------------------------------- */
 
-function BankCard({ bank }) {
-
+function BankCard({ bank, onWorkflowUpdate, onDelete }) {
+    const [workflowAction, setWorkflowAction] = useState(null)
     const status =
-        bank?.status || 'Assigned'
+        bank?.status
+            ? bank.status.charAt(0).toUpperCase() +
+            bank.status.slice(1)
+            : 'Login'
 
 
     return (
@@ -151,10 +157,17 @@ function BankCard({ bank }) {
                             {bank?.bank_name || '-'}
                         </h3>
 
-                        <p className="text-xs text-base-content/50 mt-0.5">
-                            DSA: {bank?.dsa || '-'}
-                        </p>
+                        <div className="mt-0.5">
+                            <p className="text-xs text-base-content/50">
+                                DSA: {bank?.dsa_name || '-'}
+                            </p>
 
+                            {bank?.dsa_code && (
+                                <p className="text-[11px] text-base-content/40 mt-0.5">
+                                    Code: {bank.dsa_code}
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                 </div>
@@ -163,7 +176,7 @@ function BankCard({ bank }) {
                 <button
                     type="button"
                     className="btn btn-ghost btn-xs text-error"
-                    title="Remove bank"
+                    title="Remove bank" onClick={() => onDelete(bank)}
                 >
                     🗑
                 </button>
@@ -236,7 +249,7 @@ function BankCard({ bank }) {
 
                     <p className="text-sm font-semibold mt-1">
                         {formatAmount(
-                            bank?.disbursed_amount
+                            bank?.disbursement_amount
                         )}
                     </p>
 
@@ -323,7 +336,44 @@ function BankCard({ bank }) {
                 </div>
 
             </div>
+            {bank?.status === 'login' && (
+                <div className="flex gap-2 mt-4">
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        onClick={() => setWorkflowAction('sanction')}
+                    >
+                        Sanction
+                    </button>
 
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-error btn-outline"
+                        onClick={() => setWorkflowAction('reject')}
+                    >
+                        Reject
+                    </button>
+                </div>
+            )}
+
+            {bank?.status === 'sanctioned' && (
+                <div className="mt-4">
+                    <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        onClick={() => setWorkflowAction('disburse')}
+                    >
+                        Disburse
+                    </button>
+                </div>
+            )}
+            <BankProcessingWorkflowModal
+                isOpen={!!workflowAction}
+                onClose={() => setWorkflowAction(null)}
+                action={workflowAction}
+                bank={bank}
+                onSubmit={onWorkflowUpdate}
+            />
         </div>
     )
 }
@@ -333,27 +383,81 @@ function BankCard({ bank }) {
    BANK PROCESSING
 -------------------------------------------------- */
 
-function BankProcessingSection({ application }) {
+function BankProcessingSection({
+    application,
+    onRefresh,
+}) {
 
-    /*
-        IMPORTANT:
 
-        Do NOT modify application here.
-
-        Backend will eventually return:
-
-        application.bank_processing
-    */
-
+    const [banks, setBanks] = useState([])
+    const [loadingBanks, setLoadingBanks] = useState(false)
     const [showAssignBank, setShowAssignBank] =
         useState(false)
-    const banks =
-        application?.bank_processing || []
+    const fetchBankProcessing = async () => {
+        if (!application?.unique_id) {
+            return
+        }
 
+        try {
+            setLoadingBanks(true)
 
+            const response = await getBankProcessing(
+                application.unique_id
+            )
+            // console.log(response)
+            setBanks(response?.data || [])
+        } catch (error) {
+            console.error(
+                'BANK PROCESSING FETCH ERROR:',
+                error
+            )
+            console.error(
+                'ERROR RESPONSE:',
+                error?.response
+            )
+            console.error(
+                'ERROR DATA:',
+                error?.response?.data
+            )
+        } finally {
+            setLoadingBanks(false)
+        }
+    }
+    useEffect(() => {
+        fetchBankProcessing()
+    }, [application?.unique_id])
+    const handleDeleteBank = async (bank) => {
+        if (bank?.status === 'disbursed' || bank?.status === 'rejected') {
+            alert('Cannot delete a disbursed or rejected bank processing')
+            return
+        }
+
+        const confirmed = window.confirm(
+            `Remove ${bank?.bank_name || 'this bank'}?`
+        )
+
+        if (!confirmed) return
+
+        try {
+            await deleteApplicationBankProcessing(
+                application?.unique_id,
+                bank.id
+            )
+
+            await fetchBankProcessing()
+
+            if (onRefresh) {
+                await onRefresh()
+            }
+        } catch (error) {
+            console.error('DELETE BANK PROCESSING ERROR:', error)
+            console.error('ERROR RESPONSE:', error?.response)
+            console.error('ERROR DATA:', error?.response?.data)
+        }
+    }
     return (
 
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
+        <div className="card bg-base-100 border border-base-300 shadow-sm m-5">
 
             <div className="card-body">
 
@@ -432,31 +536,13 @@ function BankProcessingSection({ application }) {
                         <p className="text-sm text-base-content/50">
                             No banks assigned to this application yet
                         </p>
-
-
-                        <button
-                            type="button"
-                            onClick={() => setShowAssignBank(true)}
-                            className="
-                                btn
-                                btn-sm
-                                text-black
-                                border-none
-                            "
-                            style={{
-                                backgroundColor: COLORS.GREEN,
-                            }}
-                        >
-                            + Assign First Bank
-                        </button>
-
                     </div>
 
                 ) : (
 
                     <div
                         className="
-                            grid
+                            grid    
                             grid-cols-1
                             md:grid-cols-2
                             xl:grid-cols-3
@@ -465,17 +551,36 @@ function BankProcessingSection({ application }) {
                         "
                     >
 
-                        {banks.map((bank, index) => (
-
+                        {banks.map((bank) => (
                             <BankCard
-                                key={
-                                    bank?.id ||
-                                    bank?.bank_id ||
-                                    index
-                                }
+                                key={bank.id}
                                 bank={bank}
-                            />
+                                onDelete={handleDeleteBank}
+                                onWorkflowUpdate={async ({ action, data }) => {
+                                    try {
+                                        await updateBankProcessingWorkflow(
+                                            application?.unique_id,
+                                            bank.id,
+                                            {
+                                                action,
+                                                data,
+                                            }
+                                        )
 
+                                        await fetchBankProcessing()
+
+                                        if (onRefresh) {
+                                            await onRefresh()
+                                        }
+                                    } catch (error) {
+                                        console.error('WORKFLOW UPDATE ERROR:', error)
+                                        console.error('ERROR RESPONSE:', error?.response)
+                                        console.error('ERROR DATA:', error?.response?.data)
+
+                                        throw error
+                                    }
+                                }}
+                            />
                         ))}
 
                     </div>
@@ -486,27 +591,34 @@ function BankProcessingSection({ application }) {
             <AssignBankModal
                 isOpen={showAssignBank}
                 onClose={() => setShowAssignBank(false)}
+                applicationId={application?.unique_id}
                 onSubmit={async (bank) => {
+                    try {
+                        await assignBank(
+                            application?.unique_id,
+                            {
+                                bank_id: bank.id,
+                                dsa_code: bank.dsa_code || null,
+                                dsa_name: bank.dsa_name || null,
+                            }
+                        )
 
-                    console.log(
-                        'Bank selected:',
-                        bank
-                    )
+                        await fetchBankProcessing()
+                        setShowAssignBank(false)
 
-                    /*
-                        Later:
-            
-                        POST /applications/{id}/banks
-            
-                        {
-                            application_id: application.id,
-                            bank_id: bank.id
-                        }
-            
-                        Then refresh application.
-                    */
+                        // We'll connect the refresh properly in the next step
+                    } catch (error) {
+                        console.error('ASSIGN BANK ERROR:', error)
+                        console.error('ERROR RESPONSE:', error?.response)
+                        console.error('ERROR DATA:', error?.response?.data)
 
-                    setShowAssignBank(false)
+                        alert(
+                            error?.response?.data?.detail ||
+                            'Failed to assign bank'
+                        )
+
+                        throw error
+                    }
                 }}
             />
 

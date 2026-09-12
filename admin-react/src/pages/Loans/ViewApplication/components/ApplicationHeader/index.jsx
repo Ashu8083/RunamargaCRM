@@ -595,7 +595,7 @@ function ApplicationHeader({
 
                         {/* VIEW TIMELINE */}
 
-                        <button
+                        {/* <button 
                             type="button"
                             onClick={onViewTimeline}
                             className="
@@ -618,7 +618,7 @@ function ApplicationHeader({
                                 View Timeline
                             </span>
 
-                        </button>
+                        </button> */}
 
                     </div>
 
