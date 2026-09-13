@@ -1,7 +1,6 @@
 # backend/app/core/access_control.py
 
 from typing import Optional
-
 from sqlalchemy import or_, func
 from sqlalchemy.orm import Session, Query
 
@@ -10,6 +9,9 @@ from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
 from app.models.contexts import Context
 from app.models.permissions import Permission
+from app.models.call_assignments import CallAssignment
+from app.models.call_logs import CallLog
+from app.models.loan_applications import LoanApplication
 from app.models.employee_context_permissions import (
     EmployeeContextPermission,
 )
@@ -1084,6 +1086,238 @@ class AccessControl:
                 for item in team_leads
             ],
         }
+        # =========================================================
+    # CALL LOG VISIBILITY
+    # =========================================================
+
+    @staticmethod
+    def apply_call_log_scope(
+        query: Query,
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+    ) -> Query:
+        """
+        Restrict CallLog records according to the employee's
+        active context.
+
+        GLOBAL:
+            all call logs.
+
+        AGENT:
+            own call logs.
+
+        RM:
+            own call logs.
+
+        TEAMLEAD:
+            call logs belonging to the RM(s) reporting to
+            the current Team Lead.
+
+        MANAGER:
+            all call logs.
+
+        Unknown:
+            no call logs.
+        """
+
+        if not employee:
+            return query.filter(False)
+
+        context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not context or not context.context:
+            return query.filter(False)
+
+        family = AccessControl.get_context_family(
+            context.context.code
+        )
+
+        # -----------------------------------------------------
+        # GLOBAL
+        # -----------------------------------------------------
+
+        if family == "GLOBAL":
+            return query
+
+        # -----------------------------------------------------
+        # AGENT
+        # -----------------------------------------------------
+
+        if family == "AGENT":
+            return query.filter(
+                CallLog.employee_id == employee.id
+            )
+
+        # -----------------------------------------------------
+        # RM
+        # -----------------------------------------------------
+
+        if family == "RM":
+            return query.filter(
+                CallLog.employee_id == employee.id
+            )
+
+        # -----------------------------------------------------
+        # TEAM LEAD
+        # -----------------------------------------------------
+
+        if family == "TEAMLEAD":
+
+            rm_query = AccessControl._employee_query_by_family(
+                db=db,
+                family="RM",
+            )
+
+            if rm_query is None:
+                return query.filter(False)
+
+            rm_ids = [
+                rm.id
+                for rm in rm_query.filter(
+                    EmployeeContext.reports_to_id == employee.id
+                ).all()
+            ]
+
+            if not rm_ids:
+                return query.filter(False)
+
+            return query.filter(
+                CallLog.employee_id.in_(rm_ids)
+            )
+
+        # -----------------------------------------------------
+        # MANAGER
+        # -----------------------------------------------------
+
+        if family == "MANAGER":
+            return query
+
+        # -----------------------------------------------------
+        # Unknown
+        # -----------------------------------------------------
+
+        return query.filter(False)
+    # =========================================================
+    # CALL ASSIGNMENT VISIBILITY
+    # =========================================================
+
+    @staticmethod
+    def apply_call_assignment_scope(
+        query: Query,
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+    ) -> Query:
+        """
+        Restrict CallAssignment records according to the
+        employee's active context.
+
+        GLOBAL:
+            all assignments.
+
+        AGENT:
+            assignments assigned to the current employee.
+
+        RM:
+            assignments assigned to the current employee.
+
+        TEAMLEAD:
+            assignments assigned to the RM referenced by
+            the Team Lead's reports_to_id.
+
+        MANAGER:
+            all assignments.
+
+        Unknown:
+            no assignments.
+        """
+
+        if not employee:
+            return query.filter(False)
+
+        context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not context or not context.context:
+            return query.filter(False)
+
+        family = AccessControl.get_context_family(
+            context.context.code
+        )
+
+        # -----------------------------------------------------
+        # GLOBAL
+        # -----------------------------------------------------
+
+        if family == "GLOBAL":
+            return query
+
+        # -----------------------------------------------------
+        # AGENT
+        # -----------------------------------------------------
+
+        if family == "AGENT":
+            return query.filter(
+                CallAssignment.assigned_to_id == employee.id
+            )
+
+        # -----------------------------------------------------
+        # RM
+        # -----------------------------------------------------
+
+        if family == "RM":
+            return query.filter(
+                CallAssignment.assigned_to_id == employee.id
+            )
+
+        # -----------------------------------------------------
+        # TEAM LEAD
+        # -----------------------------------------------------
+
+        if family == "TEAMLEAD":
+
+            rm_query = AccessControl._employee_query_by_family(
+                db=db,
+                family="RM",
+            )
+
+        if rm_query is None:
+            return query.filter(False)
+
+        rm_ids = [
+            rm.id
+            for rm in rm_query.filter(
+                EmployeeContext.reports_to_id == employee.id
+            ).all()
+        ]
+
+        if not rm_ids:
+            return query.filter(False)
+
+        return query.filter(
+            CallAssignment.assigned_to_id.in_(rm_ids)
+        )
+
+        # -----------------------------------------------------
+        # MANAGER
+        # -----------------------------------------------------
+
+        if family == "MANAGER":
+            return query
+
+        # -----------------------------------------------------
+        # Unknown
+        # -----------------------------------------------------
+
+        return query.filter(False)
 
     # =========================================================
     # APPLICATION VISIBILITY
@@ -1192,3 +1426,5 @@ class AccessControl:
         # -----------------------------------------------------
 
         return query.filter(False)
+
+

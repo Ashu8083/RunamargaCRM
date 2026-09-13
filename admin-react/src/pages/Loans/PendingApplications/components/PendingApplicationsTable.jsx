@@ -23,9 +23,15 @@ import StatusDropdown from '../../../../components/GlobalModels/Filters/StatusDr
 function PendingApplicationsTable({
     applications = [],
 
+    currentPage,
+    pageSize,
+    totalApplications,
+    totalPages,
+    setCurrentPage,
+    setPageSize,
+
     search,
     setSearch,
-
 
 
     selectedLoanType,
@@ -783,7 +789,7 @@ function PendingApplicationsTable({
     // =========================================================
 
     return (
-        <div className="space-y-4 p-5">
+        <div className="p-5">
 
             {/* =================================================
                 FILTERS
@@ -1213,7 +1219,7 @@ function PendingApplicationsTable({
                                                             text-base-content/70
                                                         "
                                                     >
-                                                        {index + 1}
+                                                        {(currentPage - 1) * pageSize + index + 1}
                                                     </Cell>
                                                 </td>
 
@@ -1661,6 +1667,114 @@ function PendingApplicationsTable({
                     </table>
 
                 </div>
+                {/* PAGINATION */}
+                {totalApplications > 0 && (
+                    <div
+                        className="
+                            flex
+                            flex-wrap
+                            items-center
+                            justify-between
+                            gap-3
+                            border-t
+                            border-base-300
+                            px-4
+                            py-3
+                        "
+                    >
+                        {/* LEFT */}
+                        <div className="flex items-center gap-2 text-sm text-base-content/60">
+                            <span>Rows per page:</span>
+
+                            <select
+                                value={pageSize}
+                                onChange={(event) => {
+                                    setPageSize(
+                                        Number(event.target.value)
+                                    )
+                                    setCurrentPage(1)
+                                }}
+                                className="
+                                    select
+                                    select-bordered
+                                    select-sm
+                                    w-20
+                                "
+                            >
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                        </div>
+
+                        {/* MIDDLE */}
+                        <div className="text-sm text-base-content/60">
+                            Showing{' '}
+                            {(currentPage - 1) * pageSize + 1}
+                            {'–'}
+                            {Math.min(
+                                currentPage * pageSize,
+                                totalApplications
+                            )}{' '}
+                            of {totalApplications}
+                        </div>
+
+                        {/* RIGHT */}
+                        <div className="flex items-center gap-1">
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-ghost"
+                                disabled={currentPage === 1}
+                                onClick={() =>
+                                    setCurrentPage(
+                                        currentPage - 1
+                                    )
+                                }
+                            >
+                                Previous
+                            </button>
+
+                            {Array.from(
+                                { length: totalPages },
+                                (_, index) => index + 1
+                            ).map((page) => (
+                                <button
+                                    key={page}
+                                    type="button"
+                                    onClick={() =>
+                                        setCurrentPage(page)
+                                    }
+                                    className={`
+                                        btn
+                                        btn-sm
+                                        ${currentPage === page
+                                            ? 'btn-primary'
+                                            : 'btn-ghost'
+                                        }
+                                    `}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-ghost"
+                                disabled={
+                                    currentPage === totalPages
+                                }
+                                onClick={() =>
+                                    setCurrentPage(
+                                        currentPage + 1
+                                    )
+                                }
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
 

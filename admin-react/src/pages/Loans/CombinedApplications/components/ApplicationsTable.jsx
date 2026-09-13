@@ -685,7 +685,7 @@ function ApplicationsTable({
 }) {
     const [loanTypes, setLoanTypes] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
+    const [pageSize, setPageSize] = useState(10);
     // =========================================================
     // STATE
     // =========================================================
@@ -919,17 +919,20 @@ function ApplicationsTable({
         );
     };
 
-    const totalPages = Math.ceil(
-        applications.length / itemsPerPage
+    const totalApplications = applications.length;
+
+    const totalPages = Math.max(
+        1,
+        Math.ceil(totalApplications / pageSize)
     );
 
     const startIndex =
-        (currentPage - 1) * itemsPerPage;
+        (currentPage - 1) * pageSize;
 
     const paginatedApplications =
         applications.slice(
             startIndex,
-            startIndex + itemsPerPage
+            startIndex + pageSize
         );
     // =========================================================
     // SEARCH
@@ -1908,51 +1911,95 @@ function ApplicationsTable({
 
             </div>
 
-            {totalPages > 1 && (
-                <div className="
-        flex
-        items-center
-        justify-end
-        gap-3
-        mt-3
-    ">
-                    <button
-                        type="button"
-                        className="btn btn-sm btn-ghost"
-                        disabled={currentPage === 1}
-                        onClick={() =>
-                            setCurrentPage((page) =>
-                                Math.max(page - 1, 1)
-                            )
-                        }
-                    >
-                        Previous
-                    </button>
+            {totalApplications > 0 && (
+                <div
+                    className="
+            flex
+            flex-wrap
+            items-center
+            justify-between
+            gap-3
+            mt-3
+        "
+                >
+                    {/* ROWS PER PAGE */}
+                    <div className="flex items-center gap-2 text-sm text-base-content/60">
+                        <span>Rows per page:</span>
 
-                    <span className="
-            text-sm
-            text-base-content/60
-        ">
-                        Page {currentPage} of {totalPages}
-                    </span>
+                        <select
+                            value={pageSize}
+                            onChange={(event) => {
+                                setPageSize(
+                                    Number(event.target.value)
+                                );
+                                setCurrentPage(1);
+                            }}
+                            className="
+                    select
+                    select-bordered
+                    select-sm
+                    w-20
+                "
+                        >
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                        </select>
+                    </div>
 
-                    <button
-                        type="button"
-                        className="btn btn-sm btn-ghost"
-                        disabled={
-                            currentPage === totalPages
-                        }
-                        onClick={() =>
-                            setCurrentPage((page) =>
-                                Math.min(
-                                    page + 1,
-                                    totalPages
-                                )
-                            )
-                        }
-                    >
-                        Next
-                    </button>
+                    {/* SHOWING */}
+                    <div className="text-sm text-base-content/60">
+                        Showing{" "}
+                        {startIndex + 1}
+                        {"–"}
+                        {Math.min(
+                            startIndex + pageSize,
+                            totalApplications
+                        )}
+                        {" "}of{" "}
+                        {totalApplications}
+                    </div>
+
+                    {/* NAVIGATION */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center gap-1">
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-ghost"
+                                disabled={currentPage === 1}
+                                onClick={() =>
+                                    setCurrentPage((page) =>
+                                        Math.max(page - 1, 1)
+                                    )
+                                }
+                            >
+                                Previous
+                            </button>
+
+                            <span className="px-2 text-sm text-base-content/60">
+                                Page {currentPage} of {totalPages}
+                            </span>
+
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-ghost"
+                                disabled={
+                                    currentPage === totalPages
+                                }
+                                onClick={() =>
+                                    setCurrentPage((page) =>
+                                        Math.min(
+                                            page + 1,
+                                            totalPages
+                                        )
+                                    )
+                                }
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
             {/* =================================================

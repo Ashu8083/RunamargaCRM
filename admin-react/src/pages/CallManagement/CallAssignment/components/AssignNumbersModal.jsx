@@ -40,6 +40,7 @@ function AssignNumbersModal({
 }) {
 
     const [selectedRm, setSelectedRm] = useState('')
+    const [selectedEmployee, setSelectedEmployee] = useState(null)
 
     const [dateRange, setDateRange] = useState('all')
 
@@ -75,7 +76,7 @@ function AssignNumbersModal({
 
         const list =
             Array.isArray(employees) &&
-            employees.length
+                employees.length
                 ? employees
                 : Array.isArray(rms)
                     ? rms
@@ -166,23 +167,7 @@ function AssignNumbersModal({
     }
 
 
-    // =========================================================
-    // SELECTED RM
-    // =========================================================
-
-    const selectedEmployee =
-        rmList.find((employee) => {
-
-            const id =
-                employee.id ??
-                employee.employeeId ??
-                employee.name
-
-            return String(id) === String(selectedRm)
-
-        }) || null
-
-
+   
     // =========================================================
     // ASSIGN
     // =========================================================
@@ -213,7 +198,7 @@ function AssignNumbersModal({
                     selectedEmployee,
 
                 rmId:
-                selectedRm,
+                    selectedRm,
 
                 dateRange,
 
@@ -444,7 +429,10 @@ function AssignNumbersModal({
                     <RmDropdown
                         label="Agent / RM *"
                         value={selectedRm}
-                        onChange={setSelectedRm}
+                        onChange={(value, option) => {
+                            setSelectedRm(value)
+                            setSelectedEmployee(option)
+                        }}
                         options={rmList}
                         placeholder="Search agent / RM..."
                         searchPlaceholder="Search agent / RM"
@@ -565,7 +553,7 @@ function AssignNumbersModal({
                                                     'text-sm',
                                                     'transition',
                                                     dateRange ===
-                                                    item.value
+                                                        item.value
                                                         ? 'bg-[#8BCF00]/10 text-[#6FA800]'
                                                         : 'text-base-content hover:bg-base-200',
                                                 ].join(' ')}

@@ -4,15 +4,15 @@
 from fastapi import (
     APIRouter,
     Depends,
-    File,
-    Form,
-    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
 )
-
 from sqlalchemy.orm import Session
 from app.config.database import get_db
+from app.core.security import get_current_employee
 from app.models.employees import Employee
 from app.schemas.team_chat import CreateTeamChatRequest
+from app.websockets.team_chat_websocket import team_chat_manager
 from app.controllers.Loans.team_chat_controller import (
     get_team_chat,
     create_team_chat,
@@ -35,7 +35,7 @@ router = APIRouter(
 def get_team_chat_route(
     application_id: str,
     db: Session = Depends(get_db),
-    employee=Depends(check_permission("banks:create")),
+    employee: Employee = Depends(get_current_employee),
 
 ):
     return get_team_chat(
@@ -54,7 +54,7 @@ def create_team_chat_route(
     application_id: str,
     payload: CreateTeamChatRequest,
     db: Session = Depends(get_db),
-    employee=Depends(check_permission("banks:create")),
+    employee: Employee = Depends(get_current_employee),
 ):
     return create_team_chat(
         db=db,
@@ -71,11 +71,8 @@ def create_team_chat_route(
 def delete_team_chat_route(
     application_id: str,
     chat_id: int,
-
     db: Session = Depends(get_db),
-
-    employee=Depends(check_permission("banks:create")),
-
+    employee: Employee = Depends(get_current_employee),
 ):
 
     return delete_team_chat(

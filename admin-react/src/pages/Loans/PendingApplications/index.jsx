@@ -260,6 +260,9 @@ const PendingApplications = () => {
 
     const [search, setSearch] = useState('')
 
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
+
     const [selectedLoanType, setSelectedLoanType] = useState('')
     const [selectedRM, setSelectedRM] = useState('')
     const [selectedTeamLead, setSelectedTeamLead] = useState('')
@@ -276,7 +279,7 @@ const PendingApplications = () => {
         getActiveContext()
     )
 
-   
+
     /*
      * FETCH APPLICATIONS
      */
@@ -542,7 +545,34 @@ const PendingApplications = () => {
         setSelectedStatus('')
     }
 
+    /*
+ * PAGINATION
+ */
 
+    const totalApplications = filteredApplications.length
+
+    const totalPages = Math.max(
+        1,
+        Math.ceil(totalApplications / pageSize)
+    )
+
+    const paginatedApplications =
+        filteredApplications.slice(
+            (currentPage - 1) * pageSize,
+            currentPage * pageSize
+        )
+
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [
+        search,
+        selectedLoanType,
+        selectedRM,
+        selectedTeamLead,
+        selectedAgent,
+        selectedStatus,
+        pageSize,
+    ])
     /*
      * REFRESH
      */
@@ -707,7 +737,13 @@ const PendingApplications = () => {
     return (
         <>
             <PendingApplicationsTable
-                applications={filteredApplications}
+                applications={paginatedApplications}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalApplications={totalApplications}
+                totalPages={totalPages}
+                setCurrentPage={setCurrentPage}
+                setPageSize={setPageSize}
                 loading={loading}
 
                 search={search}
