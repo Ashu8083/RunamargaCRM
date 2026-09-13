@@ -7,7 +7,8 @@ import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 
 import RmDropdown from '../../../components/GlobalModels/Filters/RmDropdown'
-
+import ExistingLoan from '../../Loans/CreateApplication/components/ExistingLoan'
+import FeedbackModal from '../../../components/GlobalModels/FeedbackModal'
 import AssignNumbersModal from './components/AssignNumbersModal'
 import CallAssignmentTable from './components/CallAssignmentTable'
 import CallHistoryModal from './components/CallHistoryModal'
@@ -18,51 +19,9 @@ import {
     getCallAssignments,
     getAvailableCallNumbers,
     createCallAssignment,
+    getCallHistory,
+    createApplication,
 } from './Api'
-
-// =============================================================
-// MOCK CALL HISTORY
-// =============================================================
-
-const MOCK_CALL_HISTORY = [
-
-    {
-        id: 1,
-        type: 'incoming',
-        date: '2026-08-27',
-        time: '10:35 AM',
-        duration: '00:00',
-        status: 'missed',
-    },
-
-    {
-        id: 2,
-        type: 'outgoing',
-        date: '2026-08-26',
-        time: '04:35 PM',
-        duration: '00:00',
-        status: 'missed',
-    },
-
-    {
-        id: 3,
-        type: 'outgoing',
-        date: '2026-08-25',
-        time: '03:20 PM',
-        duration: '00:00',
-        status: 'rejected',
-    },
-
-    {
-        id: 4,
-        type: 'incoming',
-        date: '2026-08-24',
-        time: '01:15 PM',
-        duration: '04:32',
-        status: 'received',
-    },
-
-]
 
 
 // =============================================================
@@ -328,7 +287,13 @@ function CallAssignment() {
     // =========================================================
     // DATA
     // =========================================================
-
+    const [existingLoan, setExistingLoan] = useState(null)
+    const [feedback, setFeedback] = useState({
+        open: false,
+        type: 'success',
+        title: '',
+        message: '',
+    })
     const [entries, setEntries] =
         useState([])
 
@@ -423,6 +388,12 @@ function CallAssignment() {
             setLoading(false)
         }
     }
+    const closeFeedback = () => {
+        setFeedback((previous) => ({
+            ...previous,
+            open: false,
+        }))
+    }
     // =========================================================
     // LOAD DATA
     // =========================================================
@@ -468,6 +439,7 @@ function CallAssignment() {
 
                 callStatus:
                     assignment.call_status ?? null,
+
             }))
 
             setEntries(normalizedAssignments)
@@ -738,7 +710,7 @@ function CallAssignment() {
             setError('')
 
             for (const entryId of selectedNumbers) {
-                const entry = entries.find(
+                const entry = availableNumbers.find(
                     (item) => item.id === entryId
                 )
 
@@ -775,16 +747,113 @@ function CallAssignment() {
     // VIEW CALL HISTORY
     // =========================================================
 
-    const handleViewHistory = (entry) => {
+    const handleViewHistory = async (entry) => {
 
         setSelectedEntry(entry)
 
-        setCallHistory(
-            MOCK_CALL_HISTORY
-        )
+        try {
+            setLoading(true)
+            setError('')
 
-        setShowHistoryModal(true)
+            const phoneNumber =
+                entry?.phone ||
+                entry?.phone_number ||
+                entry?.contact
 
+            if (!phoneNumber) {
+                setCallHistory([])
+                setShowHistoryModal(true)
+                return
+            }
+
+            const response =
+                await getCallHistory(phoneNumber)
+
+            const history =
+                response?.success &&
+                    Array.isArray(response.data)
+                    ? response.data.map((call) => {
+
+                        const startedAt =
+                            call.call_started_at
+                                ? new Date(call.call_started_at)
+                                : null
+
+                        const durationSeconds =
+                            Number(call.duration_seconds || 0)
+
+                        const minutes =
+                            Math.floor(durationSeconds / 60)
+
+                        const seconds =
+                            durationSeconds % 60
+
+                        return {
+                            ...call,
+
+                            phone:
+                                call.phone_number ||
+                                phoneNumber,
+
+                            type:
+                                call.call_type,
+
+                            status:
+                                call.mobile_status,
+
+                            date:
+                                startedAt
+                                    ? startedAt.toLocaleDateString(
+                                        'en-IN',
+                                        {
+                                            day: '2-digit',
+                                            month: 'short',
+                                            year: 'numeric',
+                                        }
+                                    )
+                                    : '—',
+
+                            time:
+                                startedAt
+                                    ? startedAt.toLocaleTimeString(
+                                        'en-IN',
+                                        {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            hour12: true,
+                                        }
+                                    )
+                                    : '—',
+
+                            duration:
+                                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+
+                            name:
+                                entry?.assignedToName ||
+                                entry?.name ||
+                                entry?.customerName ||
+                                'Unknown',
+                        }
+                    })
+                    : []
+
+            setCallHistory(history)
+            setShowHistoryModal(true)
+
+        } catch (err) {
+
+            setError(
+                err?.response?.data?.detail ||
+                err?.message ||
+                'Unable to load call history.'
+            )
+
+            setCallHistory([])
+            setShowHistoryModal(true)
+
+        } finally {
+            setLoading(false)
+        }
     }
 
 
@@ -819,13 +888,83 @@ function CallAssignment() {
     }
 
 
-    const handleLeadCreated = (leadData) => {
+    const handleLeadCreated = async (leadData) => {
+        try {
+            setLoading(true)
+            setError('')
 
-        console.log(
-            'Lead created:',
-            leadData
-        )
+            const response = await createApplication({
+                name: leadData.name,
+                phone: leadData.phone,
+                gender: leadData.gender,
+                loan_type_id: Number(leadData.loanType),
+                loan_amount: leadData.loanAmount
+                    ? Number(leadData.loanAmount)
+                    : null,
+                loan_purpose: leadData.loanPurpose || null,
+                state_id: leadData.stateId
+                    ? Number(leadData.stateId)
+                    : null,
+                city_id: leadData.cityId
+                    ? Number(leadData.cityId)
+                    : null,
+                reference_name: leadData.remarks || null,
+            })
+            if (response?.existing_loan === true) {
+                setExistingLoan({
+                    existingLoanData: response.data,
+                    originalApplicationData: {
+                        name: leadData.name,
+                        phone: leadData.phone,
+                        loan_type_id: Number(leadData.loanType),
+                        loan_amount: leadData.loanAmount
+                            ? Number(leadData.loanAmount)
+                            : null,
+                        reference_name: leadData.remarks,
+                    },
+                })
 
+                return
+            }
+            if (!response?.success) {
+                throw new Error(
+                    response?.message ||
+                    'Unable to create lead.'
+                )
+            }
+
+            await loadAssignments()
+
+            setShowCreateLeadModal(false)
+            setSelectedEntry(null)
+
+            setFeedback({
+                open: true,
+                type: 'success',
+                title: 'Lead Created',
+                message: 'The lead was created successfully.',
+            })
+
+        } catch (err) {
+            const detail = err?.response?.data?.detail
+
+            const message = Array.isArray(detail)
+                ? detail
+                    .map((item) => item?.msg || 'Validation error')
+                    .join(', ')
+                : detail ||
+                err?.message ||
+                'Unable to create lead.'
+
+            setFeedback({
+                open: true,
+                type: 'error',
+                title: 'Unable to Create Lead',
+                message,
+            })
+        } finally {
+            setLoading(false)
+        }
     }
 
 
@@ -1531,7 +1670,32 @@ function CallAssignment() {
                     handleExchangeComplete
                 }
             />
-
+            <FeedbackModal
+                open={feedback.open}
+                type={feedback.type}
+                title={feedback.title}
+                message={feedback.message}
+                onClose={closeFeedback}
+            />
+            {existingLoan && (
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[1px]"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Existing loan application"
+                >
+                    <div className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-base-100 shadow-2xl">
+                        <ExistingLoan
+                            existingLoanData={existingLoan.existingLoanData}
+                            originalApplicationData={
+                                existingLoan.originalApplicationData
+                            }
+                            onCancel={() => setExistingLoan(null)}
+                            onSubmitSuccess={() => setExistingLoan(null)}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
 
     )

@@ -132,7 +132,7 @@ export const COMMON_APPLICATION_FIELDS = [
     name: 'loan_purpose',
     label: 'Loan Purpose',
     type: 'text',
-    required: true,
+    required: false,
   },
 
   {

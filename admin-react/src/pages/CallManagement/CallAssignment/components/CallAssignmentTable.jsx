@@ -12,41 +12,37 @@ import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
 // =============================================================
 
 const getStatusClasses = (status) => {
-
     switch (String(status || '').toLowerCase()) {
-
-        case 'assigned':
-            return 'border-[#8BCF00]/40 bg-[#8BCF00]/10 text-[#6FA800]'
-
-        case 'pending':
+        case 'received':
             return 'border-amber-300 bg-amber-50 text-amber-600'
 
-        case 'completed':
+        case 'missed':
+            return 'border-red-300 bg-red-50 text-red-600'
+
+        case 'rejected':
+            return 'border-gray-300 bg-gray-50 text-gray-600'
+
+        case 'in_progress':
             return 'border-blue-300 bg-blue-50 text-blue-600'
 
         default:
             return 'border-base-300 bg-base-200 text-base-content/50'
-
     }
-
 }
 
-
 const formatStatus = (status) => {
-
     const value =
         String(status || '')
             .trim()
             .toLowerCase()
 
-    if (value === 'assigned') return 'Assigned'
-    if (value === 'pending') return 'Pending'
-    if (value === 'completed') return 'Completed'
+    if (value === 'received') return 'Received'
+    if (value === 'missed') return 'Missed'
+    if (value === 'rejected') return 'Rejected'
+    if (value === 'in_progress') return 'In Progress'
 
     return 'Unknown'
-
 }
-
 
 // =============================================================
 // TABLE
@@ -489,7 +485,7 @@ function CallAssignmentTable({
                                                 text-base-content
                                             ">
                                                 {
-                                                    entry.assignedTo ||
+                                                    entry.assignedToName ||
                                                     'Unassigned'
                                                 }
                                             </p>
