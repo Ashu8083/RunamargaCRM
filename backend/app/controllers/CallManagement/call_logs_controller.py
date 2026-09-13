@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.call_logs import CallLog
 from app.models.employees import Employee
-
+from app.core.access_control import AccessControl
 
 def get_call_logs(
     db: Session,
@@ -96,12 +96,21 @@ def get_call_history(
     employee: Employee,
     phone_number: str,
 ):
-    call_logs = (
+    query = (
         db.query(CallLog)
         .filter(
             CallLog.phone_number == phone_number,
-            CallLog.employee_id == employee.id,
         )
+    )
+
+    query = AccessControl.apply_call_log_scope(
+        query=query,
+        db=db,
+        employee=employee,
+    )
+
+    call_logs = (
+        query
         .order_by(
             CallLog.call_started_at.desc(),
             CallLog.id.desc(),

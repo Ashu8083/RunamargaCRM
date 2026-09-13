@@ -29,3 +29,38 @@ export const getAvailableCallNumbers = async () => {
 
     return response.data
 }
+
+
+export const getCallHistory = async (phoneNumber) => {
+    const response = await apiClient.get(
+        `/call-logs/${encodeURIComponent(phoneNumber)}/history`
+    )
+
+    return response.data
+}
+
+
+export const createApplication = async (payload) => {
+    const response = await apiClient.post(
+        '/applications/create',
+        payload
+    )
+
+    return response.data
+}
+
+
+export const exchangeCallAssignment = async ({
+    assignmentId,
+    newAgentId,
+}) => {
+    const response = await apiClient.post(
+        '/call-assignments/exchange',
+        {
+            assignmentId,
+            newAgentId,
+        }
+    )
+
+    return response.data
+}
