@@ -1,39 +1,13 @@
 // admin-react/src/pages/CallManagement/CallAssignment/components/ExchangeNumberModal.jsx
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import ArrowsRightLeftIcon from '@heroicons/react/24/outline/ArrowsRightLeftIcon'
 import InformationCircleIcon from '@heroicons/react/24/outline/InformationCircleIcon'
-import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
+
+import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
 import { exchangeCallAssignment } from '../Api'
-
-// =============================================================
-// MOCK RM DATA
-// =============================================================
-
-const RM_OPTIONS = [
-    {
-        id: 'RM001',
-        name: 'Aravind Kumar',
-    },
-    {
-        id: 'RM002',
-        name: 'Priya Sharma',
-    },
-    {
-        id: 'RM003',
-        name: 'Suresh Kumar',
-    },
-    {
-        id: 'RM004',
-        name: 'Nayana Rao',
-    },
-    {
-        id: 'RM005',
-        name: 'Manoj Rao',
-    },
-]
 
 
 // =============================================================
@@ -50,13 +24,14 @@ function ExchangeNumberModal({
     const [selectedRM, setSelectedRM] =
         useState('')
 
-
     const [remarks, setRemarks] =
         useState('')
 
-
     const [loading, setLoading] =
         useState(false)
+
+    const [error, setError] =
+        useState('')
 
 
     // =========================================================
@@ -83,55 +58,47 @@ function ExchangeNumberModal({
 
 
     // =========================================================
-    // AVAILABLE RM
-    // =========================================================
-
-    const availableRMs =
-        useMemo(
-            () =>
-                RM_OPTIONS.filter(
-                    (rm) =>
-                        rm.name !== currentRM
-                ),
-            [currentRM]
-        )
-
-
-    // =========================================================
     // EXCHANGE
     // =========================================================
 
     const handleExchange = async () => {
 
         if (!selectedRM) {
+            setError('Please select an RM.')
             return
         }
 
-
-        const selected =
-            RM_OPTIONS.find(
-                (rm) =>
-                    rm.id === selectedRM
-            )
-
-
-        if (!selected) {
+        if (!entry?.id) {
+            setError('Assignment ID is missing.')
             return
         }
 
 
         setLoading(true)
+        setError('')
 
 
         try {
 
-            await new Promise(
-                (resolve) =>
-                    setTimeout(
-                        resolve,
-                        500
-                    )
-            )
+            const response =
+                await exchangeCallAssignment({
+                    assignmentId: entry.id,
+                    newAgentId: Number(selectedRM),
+                })
+
+
+            if (!response?.success) {
+
+                throw new Error(
+                    response?.message ||
+                    'Unable to exchange assignment.'
+                )
+
+            }
+
+
+            const updatedData =
+                response?.data || {}
 
 
             onExchange?.({
@@ -139,12 +106,15 @@ function ExchangeNumberModal({
                 ...entry,
 
                 assignedTo:
-                    selected.id,
+                    updatedData.new_agent_id ??
+                    Number(selectedRM),
 
                 assignedToName:
-                    selected.name,
+                    updatedData.new_agent_name ??
+                    entry.assignedToName,
 
                 exchangedFrom:
+                    updatedData.previous_agent_name ??
                     currentRM,
 
                 remarks:
@@ -154,6 +124,20 @@ function ExchangeNumberModal({
 
 
             handleClose()
+
+        } catch (error) {
+
+            console.error(
+                'Exchange assignment failed:',
+                error
+            )
+
+
+            setError(
+                error?.response?.data?.detail ||
+                error?.message ||
+                'Unable to exchange assignment.'
+            )
 
         } finally {
 
@@ -173,6 +157,8 @@ function ExchangeNumberModal({
         setSelectedRM('')
 
         setRemarks('')
+
+        setError('')
 
         setLoading(false)
 
@@ -214,7 +200,9 @@ function ExchangeNumberModal({
                     event.target ===
                     event.currentTarget
                 ) {
+
                     handleClose()
+
                 }
 
             }}
@@ -372,70 +360,23 @@ function ExchangeNumberModal({
 
 
                     {/* =================================================
-                        ASSIGN TO
+                        EXCHANGE TO
                     ================================================= */}
 
-                    <div className="relative">
+                    <div>
 
-                        <label className="
-                            mb-1.5
-                            block
-                            text-xs
-                            font-medium
-                            text-base-content/60
-                        ">
-                            Exchange To
-                        </label>
-
-
-                        <select
+                        <RmDropdown
                             value={selectedRM}
-                            onChange={(event) =>
-                                setSelectedRM(
-                                    event.target.value
-                                )
-                            }
-                            className="
-                                select
-                                select-bordered
-                                h-11
-                                min-h-11
-                                w-full
-                                appearance-none
-                                pr-10
-                            "
-                        >
+                            onChange={(value) => {
 
-                            <option value="">
-                                Select RM
-                            </option>
+                                setSelectedRM(value)
+                                setError('')
 
-
-                            {availableRMs.map(
-                                (rm) => (
-
-                                    <option
-                                        key={rm.id}
-                                        value={rm.id}
-                                    >
-                                        {rm.name} ({rm.id})
-                                    </option>
-
-                                )
-                            )}
-
-                        </select>
-
-
-                        <ChevronDownIcon className="
-                            pointer-events-none
-                            absolute
-                            bottom-3
-                            right-3
-                            h-5
-                            w-5
-                            text-base-content/40
-                        " />
+                            }}
+                            placeholder="Select RM"
+                            disabled={loading}
+                            label="Exchange To"
+                        />
 
                     </div>
 
@@ -466,6 +407,7 @@ function ExchangeNumberModal({
                             }
                             rows={3}
                             placeholder="Enter reason for exchange..."
+                            disabled={loading}
                             className="
                                 textarea
                                 textarea-bordered
@@ -476,6 +418,23 @@ function ExchangeNumberModal({
                         />
 
                     </div>
+
+
+                    {/* =================================================
+                        ERROR
+                    ================================================= */}
+
+                    {error && (
+
+                        <p className="
+                            text-xs
+                            font-medium
+                            text-error
+                        ">
+                            {error}
+                        </p>
+
+                    )}
 
 
                     {/* =================================================
@@ -532,6 +491,7 @@ function ExchangeNumberModal({
                     <button
                         type="button"
                         onClick={handleClose}
+                        disabled={loading}
                         className="
                             h-10
                             rounded-lg
@@ -541,6 +501,8 @@ function ExchangeNumberModal({
                             text-base-content/70
                             transition
                             hover:bg-base-200
+                            disabled:cursor-not-allowed
+                            disabled:opacity-50
                         "
                     >
                         Cancel
@@ -553,9 +515,7 @@ function ExchangeNumberModal({
                             !selectedRM ||
                             loading
                         }
-                        onClick={
-                            handleExchange
-                        }
+                        onClick={handleExchange}
                         className="
                             inline-flex
                             h-10
@@ -580,6 +540,7 @@ function ExchangeNumberModal({
                             w-4
                         " />
 
+
                         {loading
                             ? 'Exchanging...'
                             : 'Exchange'}
@@ -593,7 +554,6 @@ function ExchangeNumberModal({
         </div>
 
     )
-
 }
 
 

@@ -64,3 +64,15 @@ export const exchangeCallAssignment = async ({
 
     return response.data
 }
+
+// =============================================================
+// DELETE CALL ASSIGNMENT
+// =============================================================
+
+export const deleteCallAssignment = async (assignmentId) => {
+    const response = await apiClient.delete(
+        `/call-assignments/${assignmentId}`
+    )
+
+    return response.data
+}

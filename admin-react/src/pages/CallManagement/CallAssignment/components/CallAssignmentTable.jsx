@@ -561,51 +561,7 @@ function CallAssignmentTable({
                                             )}
 
 
-                                            {/* APPLICATION BUTTON */}
-
-                                            <button
-                                                type="button"
-                                                disabled={
-                                                    !hasApplication
-                                                }
-                                                onClick={() => {
-
-                                                    if (
-                                                        hasApplication
-                                                    ) {
-                                                        onViewLoan?.(
-                                                            entry
-                                                        )
-                                                    }
-
-                                                }}
-                                                className={[
-                                                    'mt-1.5',
-                                                    'inline-flex',
-                                                    'items-center',
-                                                    'gap-1',
-                                                    'text-[11px]',
-                                                    'font-medium',
-                                                    'transition',
-                                                    hasApplication
-                                                        ? 'text-[#6FA800] hover:text-[#4F7900]'
-                                                        : 'cursor-not-allowed text-base-content/25',
-                                                ].join(' ')}
-                                            >
-
-                                                <EyeIcon className="
-                                                    h-3.5
-                                                    w-3.5
-                                                " />
-
-                                                {
-                                                    hasApplication
-                                                        ? 'View Application'
-                                                        : 'No Application'
-                                                }
-
-                                            </button>
-
+                                        
                                         </td>
 
 

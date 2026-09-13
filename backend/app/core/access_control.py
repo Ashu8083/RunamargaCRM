@@ -1428,3 +1428,64 @@ class AccessControl:
         return query.filter(False)
 
 
+@staticmethod
+def can_assign_call_to_employee(
+    db: Session,
+    employee: Employee,
+    target_employee: Employee,
+    permission: str = "calls:number:assign",
+) -> bool:
+    """
+    Check whether the current employee has permission to assign/exchange
+    a call to the target employee.
+
+    Permission decides whether the action is allowed.
+    Context scope decides whether the target employee is allowed.
+    """
+
+    if not employee or not target_employee:
+        return False
+
+    # ---------------------------------------------------------
+    # PERMISSION CHECK
+    # ---------------------------------------------------------
+
+    if not AccessControl.has_permission(
+        db=db,
+        employee=employee,
+        permission=permission,
+    ):
+        return False
+
+    # ---------------------------------------------------------
+    # TARGET SCOPE CHECK
+    # ---------------------------------------------------------
+
+    visible_rms = AccessControl.get_visible_rms(
+        db=db,
+        employee=employee,
+    )
+
+    visible_rm_ids = {
+        rm.id
+        for rm in visible_rms
+    }
+
+    context_family = AccessControl.get_active_context_family(
+        db=db,
+        employee=employee,
+    )
+
+    if context_family == "GLOBAL":
+        return True
+
+    if context_family == "RM":
+        return target_employee.id == employee.id
+
+    if context_family in {"AGENT", "TEAMLEAD"}:
+        return target_employee.id in visible_rm_ids
+
+    if context_family == "MANAGER":
+        return True
+
+    return False

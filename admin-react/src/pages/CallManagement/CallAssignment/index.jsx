@@ -21,8 +21,8 @@ import {
     createCallAssignment,
     getCallHistory,
     createApplication,
+    deleteCallAssignment,
 } from './Api'
-
 
 // =============================================================
 // STATUS OPTIONS
@@ -34,7 +34,6 @@ const STATUS_OPTIONS = [
     'assigned',
     'contacted',
 ]
-
 
 // =============================================================
 // DATE OPTIONS
@@ -71,13 +70,11 @@ const DATE_OPTIONS = [
     },
 ]
 
-
 // =============================================================
 // DATE HELPERS
 // =============================================================
 
 const parseDate = (value) => {
-
     if (!value) {
         return null
     }
@@ -94,12 +91,9 @@ const parseDate = (value) => {
     )
         ? null
         : date
-
 }
 
-
 const startOfDay = (date) => {
-
     const result =
         new Date(date)
 
@@ -111,12 +105,9 @@ const startOfDay = (date) => {
     )
 
     return result
-
 }
 
-
 const endOfDay = (date) => {
-
     const result =
         new Date(date)
 
@@ -128,30 +119,22 @@ const endOfDay = (date) => {
     )
 
     return result
-
 }
 
-
 const getDateRange = (value) => {
-
     const today =
         startOfDay(
             new Date()
         )
 
-
     if (value === 'today') {
-
         return {
             from: today,
             to: endOfDay(today),
         }
-
     }
 
-
     if (value === 'yesterday') {
-
         const yesterday =
             new Date(today)
 
@@ -163,12 +146,9 @@ const getDateRange = (value) => {
             from: yesterday,
             to: endOfDay(yesterday),
         }
-
     }
 
-
     if (value === 'this-week') {
-
         const from =
             new Date(today)
 
@@ -189,12 +169,9 @@ const getDateRange = (value) => {
             from,
             to: endOfDay(today),
         }
-
     }
 
-
     if (value === 'last-week') {
-
         const from =
             new Date(today)
 
@@ -223,12 +200,9 @@ const getDateRange = (value) => {
             from,
             to: endOfDay(to),
         }
-
     }
 
-
     if (value === 'this-month') {
-
         return {
             from: new Date(
                 today.getFullYear(),
@@ -237,12 +211,9 @@ const getDateRange = (value) => {
             ),
             to: endOfDay(today),
         }
-
     }
 
-
     if (value === 'last-month') {
-
         const from =
             new Date(
                 today.getFullYear(),
@@ -261,19 +232,16 @@ const getDateRange = (value) => {
             from,
             to: endOfDay(to),
         }
-
     }
 
-
     return null
-
 }
-
 
 const fetchAssignments = async () => {
     const response = await getCallAssignments()
 
-    return response?.success && Array.isArray(response.data)
+    return response?.success &&
+        Array.isArray(response.data)
         ? response.data
         : []
 }
@@ -287,25 +255,29 @@ function CallAssignment() {
     // =========================================================
     // DATA
     // =========================================================
-    const [existingLoan, setExistingLoan] = useState(null)
-    const [feedback, setFeedback] = useState({
-        open: false,
-        type: 'success',
-        title: '',
-        message: '',
-    })
+
+    const [existingLoan, setExistingLoan] =
+        useState(null)
+
+    const [feedback, setFeedback] =
+        useState({
+            open: false,
+            type: 'success',
+            title: '',
+            message: '',
+        })
+
     const [entries, setEntries] =
         useState([])
 
-    const [availableNumbers, setAvailableNumbers] = useState([])
-    const [showAssignModal, setShowAssignModal] = useState(false)
+    const [availableNumbers, setAvailableNumbers] =
+        useState([])
+
+    const [showAssignModal, setShowAssignModal] =
+        useState(false)
+
     const [loading, setLoading] =
         useState(true)
-
-
-    const [error, setError] =
-        useState('')
-
 
     // =========================================================
     // FILTERS
@@ -314,26 +286,20 @@ function CallAssignment() {
     const [search, setSearch] =
         useState('')
 
-
     const [status, setStatus] =
         useState('')
-
 
     const [dateFilter, setDateFilter] =
         useState('')
 
-
     const [rm, setRM] =
         useState('')
-
 
     const [fromDate, setFromDate] =
         useState('')
 
-
     const [toDate, setToDate] =
         useState('')
-
 
     // =========================================================
     // MODALS
@@ -342,33 +308,55 @@ function CallAssignment() {
     const [selectedEntry, setSelectedEntry] =
         useState(null)
 
-
     const [showHistoryModal, setShowHistoryModal] =
         useState(false)
-
 
     const [showApplicationModal, setShowApplicationModal] =
         useState(false)
 
-
     const [showCreateLeadModal, setShowCreateLeadModal] =
         useState(false)
-
 
     const [showExchangeModal, setShowExchangeModal] =
         useState(false)
 
-
     const [callHistory, setCallHistory] =
         useState([])
 
+    // =========================================================
+    // FEEDBACK
+    // =========================================================
+
+    const closeFeedback = () => {
+        setFeedback((previous) => ({
+            ...previous,
+            open: false,
+        }))
+    }
+
+    const showFeedback = ({
+        type = 'success',
+        title = '',
+        message = '',
+    }) => {
+        setFeedback({
+            open: true,
+            type,
+            title,
+            message,
+        })
+    }
+
+    // =========================================================
+    // LOAD AVAILABLE NUMBERS
+    // =========================================================
 
     const openAssignModal = async () => {
         try {
             setLoading(true)
-            setError('')
 
-            const response = await getAvailableCallNumbers()
+            const response =
+                await getAvailableCallNumbers()
 
             const numbers =
                 response?.success &&
@@ -378,94 +366,95 @@ function CallAssignment() {
 
             setAvailableNumbers(numbers)
             setShowAssignModal(true)
+
         } catch (err) {
-            setError(
-                err?.response?.data?.detail ||
-                err?.message ||
-                'Unable to load available call numbers.'
-            )
+
+            showFeedback({
+                type: 'error',
+                title: 'Unable to Load Numbers',
+                message:
+                    err?.response?.data?.detail ||
+                    err?.message ||
+                    'Unable to load available call numbers.',
+            })
+
         } finally {
             setLoading(false)
         }
     }
-    const closeFeedback = () => {
-        setFeedback((previous) => ({
-            ...previous,
-            open: false,
-        }))
-    }
+
     // =========================================================
     // LOAD DATA
     // =========================================================
 
     const loadAssignments = async () => {
-
         try {
-
             setLoading(true)
 
-            setError('')
+            const assignments =
+                await fetchAssignments()
 
+            const normalizedAssignments =
+                assignments.map(
+                    (assignment) => ({
+                        ...assignment,
 
-            const response = await fetchAssignments()
+                        phone:
+                            assignment.phone_number,
 
-            const assignments = Array.isArray(response)
-                ? response
-                : []
+                        contact:
+                            assignment.phone_number,
 
-            const normalizedAssignments = assignments.map((assignment) => ({
-                ...assignment,
+                        assignedBy:
+                            assignment.assigned_by_name ||
+                            '—',
 
-                phone: assignment.phone_number,
-                contact: assignment.phone_number,
+                        assignedTo:
+                            assignment.assigned_to_id,
 
-                assignedBy:
-                    assignment.assigned_by_name || '—',
+                        assignedToName:
+                            assignment.assigned_to_name ||
+                            '—',
 
-                assignedTo:
-                    assignment.assigned_to_id,
+                        assignedDate:
+                            assignment.created_at,
 
-                assignedToName:
-                    assignment.assigned_to_name || '—',
+                        attempts:
+                            assignment.attempts ?? 0,
 
-                assignedDate:
-                    assignment.created_at,
+                        lastCalled:
+                            assignment.last_called ??
+                            null,
 
-                attempts:
-                    assignment.attempts ?? 0,
+                        callStatus:
+                            assignment.call_status ??
+                            null,
+                    })
+                )
 
-                lastCalled:
-                    assignment.last_called ?? null,
-
-                callStatus:
-                    assignment.call_status ?? null,
-
-            }))
-
-            setEntries(normalizedAssignments)
+            setEntries(
+                normalizedAssignments
+            )
 
         } catch (err) {
 
-            setError(
-                err?.message ||
-                'Unable to load call assignments.'
-            )
+            showFeedback({
+                type: 'error',
+                title: 'Unable to Load Assignments',
+                message:
+                    err?.response?.data?.detail ||
+                    err?.message ||
+                    'Unable to load call assignments.',
+            })
 
         } finally {
-
             setLoading(false)
-
         }
-
     }
 
-
     useEffect(() => {
-
         loadAssignments()
-
     }, [])
-
 
     // =========================================================
     // FILTER DATA
@@ -479,17 +468,14 @@ function CallAssignment() {
                     .trim()
                     .toLowerCase()
 
-
             let result =
                 entries
-
 
             // -------------------------------------------------
             // SEARCH
             // -------------------------------------------------
 
             if (searchValue) {
-
                 result =
                     result.filter(
                         (entry) => {
@@ -501,7 +487,6 @@ function CallAssignment() {
                                 entry.assignedToName,
                             ]
 
-
                             return values.some(
                                 (value) =>
                                     String(
@@ -512,19 +497,15 @@ function CallAssignment() {
                                             searchValue
                                         )
                             )
-
                         }
                     )
-
             }
-
 
             // -------------------------------------------------
             // STATUS
             // -------------------------------------------------
 
             if (status) {
-
                 result =
                     result.filter(
                         (entry) =>
@@ -534,24 +515,19 @@ function CallAssignment() {
                             ).toLowerCase() ===
                             status.toLowerCase()
                     )
-
             }
-
 
             // -------------------------------------------------
             // RM
             // -------------------------------------------------
 
             if (rm) {
-
                 result =
                     result.filter(
                         (entry) =>
                             entry.assignedTo === rm
                     )
-
             }
-
 
             // -------------------------------------------------
             // DATE
@@ -567,9 +543,7 @@ function CallAssignment() {
                         dateFilter
                     )
 
-
                 if (range) {
-
                     result =
                         result.filter(
                             (entry) => {
@@ -579,11 +553,9 @@ function CallAssignment() {
                                         entry.assignedDate
                                     )
 
-
                                 if (!date) {
                                     return false
                                 }
-
 
                                 return (
                                     date >=
@@ -591,14 +563,10 @@ function CallAssignment() {
                                     date <=
                                     range.to
                                 )
-
                             }
                         )
-
                 }
-
             }
-
 
             // -------------------------------------------------
             // CUSTOM DATE
@@ -616,14 +584,12 @@ function CallAssignment() {
                         )
                         : null
 
-
                 const to =
                     toDate
                         ? endOfDay(
                             new Date(toDate)
                         )
                         : null
-
 
                 result =
                     result.filter(
@@ -634,11 +600,9 @@ function CallAssignment() {
                                     entry.assignedDate
                                 )
 
-
                             if (!date) {
                                 return false
                             }
-
 
                             if (
                                 from &&
@@ -647,7 +611,6 @@ function CallAssignment() {
                                 return false
                             }
 
-
                             if (
                                 to &&
                                 date > to
@@ -655,14 +618,10 @@ function CallAssignment() {
                                 return false
                             }
 
-
                             return true
-
                         }
                     )
-
             }
-
 
             return result
 
@@ -676,22 +635,18 @@ function CallAssignment() {
             toDate,
         ])
 
-
     // =========================================================
     // RESET
     // =========================================================
 
     const handleReset = () => {
-
         setSearch('')
         setStatus('')
         setDateFilter('')
         setRM('')
         setFromDate('')
         setToDate('')
-
     }
-
 
     // =========================================================
     // ASSIGN
@@ -701,18 +656,27 @@ function CallAssignment() {
         selectedNumbers,
         selectedRM,
     ) => {
-        if (!selectedRM || !selectedNumbers?.length) {
+
+        if (
+            !selectedRM ||
+            !selectedNumbers?.length
+        ) {
             return
         }
 
         try {
             setLoading(true)
-            setError('')
 
-            for (const entryId of selectedNumbers) {
-                const entry = availableNumbers.find(
-                    (item) => item.id === entryId
-                )
+            for (
+                const entryId
+                of selectedNumbers
+            ) {
+
+                const entry =
+                    availableNumbers.find(
+                        (item) =>
+                            item.id === entryId
+                    )
 
                 if (!entry) {
                     continue
@@ -732,12 +696,24 @@ function CallAssignment() {
 
             setShowAssignModal(false)
 
+            showFeedback({
+                type: 'success',
+                title: 'Numbers Assigned',
+                message:
+                    'The selected call numbers were assigned successfully.',
+            })
+
         } catch (err) {
-            setError(
-                err?.response?.data?.detail ||
-                err?.message ||
-                'Unable to assign call numbers.'
-            )
+
+            showFeedback({
+                type: 'error',
+                title: 'Unable to Assign Numbers',
+                message:
+                    err?.response?.data?.detail ||
+                    err?.message ||
+                    'Unable to assign call numbers.',
+            })
+
         } finally {
             setLoading(false)
         }
@@ -753,7 +729,6 @@ function CallAssignment() {
 
         try {
             setLoading(true)
-            setError('')
 
             const phoneNumber =
                 entry?.phone ||
@@ -763,78 +738,99 @@ function CallAssignment() {
             if (!phoneNumber) {
                 setCallHistory([])
                 setShowHistoryModal(true)
+
+                showFeedback({
+                    type: 'error',
+                    title: 'Call History Unavailable',
+                    message:
+                        'No phone number is available for this assignment.',
+                })
+
                 return
             }
 
             const response =
-                await getCallHistory(phoneNumber)
+                await getCallHistory(
+                    phoneNumber
+                )
 
             const history =
                 response?.success &&
                     Array.isArray(response.data)
-                    ? response.data.map((call) => {
+                    ? response.data.map(
+                        (call) => {
 
-                        const startedAt =
-                            call.call_started_at
-                                ? new Date(call.call_started_at)
-                                : null
-
-                        const durationSeconds =
-                            Number(call.duration_seconds || 0)
-
-                        const minutes =
-                            Math.floor(durationSeconds / 60)
-
-                        const seconds =
-                            durationSeconds % 60
-
-                        return {
-                            ...call,
-
-                            phone:
-                                call.phone_number ||
-                                phoneNumber,
-
-                            type:
-                                call.call_type,
-
-                            status:
-                                call.mobile_status,
-
-                            date:
-                                startedAt
-                                    ? startedAt.toLocaleDateString(
-                                        'en-IN',
-                                        {
-                                            day: '2-digit',
-                                            month: 'short',
-                                            year: 'numeric',
-                                        }
+                            const startedAt =
+                                call.call_started_at
+                                    ? new Date(
+                                        call.call_started_at
                                     )
-                                    : '—',
+                                    : null
 
-                            time:
-                                startedAt
-                                    ? startedAt.toLocaleTimeString(
-                                        'en-IN',
-                                        {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                            hour12: true,
-                                        }
-                                    )
-                                    : '—',
+                            const durationSeconds =
+                                Number(
+                                    call.duration_seconds ||
+                                    0
+                                )
 
-                            duration:
-                                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+                            const minutes =
+                                Math.floor(
+                                    durationSeconds /
+                                    60
+                                )
 
-                            name:
-                                entry?.assignedToName ||
-                                entry?.name ||
-                                entry?.customerName ||
-                                'Unknown',
+                            const seconds =
+                                durationSeconds %
+                                60
+
+                            return {
+                                ...call,
+
+                                phone:
+                                    call.phone_number ||
+                                    phoneNumber,
+
+                                type:
+                                    call.call_type,
+
+                                status:
+                                    call.mobile_status,
+
+                                date:
+                                    startedAt
+                                        ? startedAt.toLocaleDateString(
+                                            'en-IN',
+                                            {
+                                                day: '2-digit',
+                                                month: 'short',
+                                                year: 'numeric',
+                                            }
+                                        )
+                                        : '—',
+
+                                time:
+                                    startedAt
+                                        ? startedAt.toLocaleTimeString(
+                                            'en-IN',
+                                            {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                hour12: true,
+                                            }
+                                        )
+                                        : '—',
+
+                                duration:
+                                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+
+                                name:
+                                    entry?.assignedToName ||
+                                    entry?.name ||
+                                    entry?.customerName ||
+                                    'Unknown',
+                            }
                         }
-                    })
+                    )
                     : []
 
             setCallHistory(history)
@@ -842,20 +838,23 @@ function CallAssignment() {
 
         } catch (err) {
 
-            setError(
-                err?.response?.data?.detail ||
-                err?.message ||
-                'Unable to load call history.'
-            )
-
             setCallHistory([])
+
             setShowHistoryModal(true)
+
+            showFeedback({
+                type: 'error',
+                title: 'Unable to Load Call History',
+                message:
+                    err?.response?.data?.detail ||
+                    err?.message ||
+                    'Unable to load call history.',
+            })
 
         } finally {
             setLoading(false)
         }
     }
-
 
     // =========================================================
     // VIEW APPLICATION
@@ -867,13 +866,10 @@ function CallAssignment() {
             return
         }
 
-
         setSelectedEntry(entry)
 
         setShowApplicationModal(true)
-
     }
-
 
     // =========================================================
     // CREATE LEAD
@@ -884,48 +880,94 @@ function CallAssignment() {
         setSelectedEntry(entry)
 
         setShowCreateLeadModal(true)
-
     }
 
-
     const handleLeadCreated = async (leadData) => {
+
         try {
             setLoading(true)
-            setError('')
 
-            const response = await createApplication({
-                name: leadData.name,
-                phone: leadData.phone,
-                gender: leadData.gender,
-                loan_type_id: Number(leadData.loanType),
-                loan_amount: leadData.loanAmount
-                    ? Number(leadData.loanAmount)
-                    : null,
-                loan_purpose: leadData.loanPurpose || null,
-                state_id: leadData.stateId
-                    ? Number(leadData.stateId)
-                    : null,
-                city_id: leadData.cityId
-                    ? Number(leadData.cityId)
-                    : null,
-                reference_name: leadData.remarks || null,
-            })
-            if (response?.existing_loan === true) {
-                setExistingLoan({
-                    existingLoanData: response.data,
-                    originalApplicationData: {
-                        name: leadData.name,
-                        phone: leadData.phone,
-                        loan_type_id: Number(leadData.loanType),
-                        loan_amount: leadData.loanAmount
-                            ? Number(leadData.loanAmount)
+            const response =
+                await createApplication({
+                    name:
+                        leadData.name,
+
+                    phone:
+                        leadData.phone,
+
+                    gender:
+                        leadData.gender,
+
+                    loan_type_id:
+                        Number(
+                            leadData.loanType
+                        ),
+
+                    loan_amount:
+                        leadData.loanAmount
+                            ? Number(
+                                leadData.loanAmount
+                            )
                             : null,
-                        reference_name: leadData.remarks,
+
+                    loan_purpose:
+                        leadData.loanPurpose ||
+                        null,
+
+                    state_id:
+                        leadData.stateId
+                            ? Number(
+                                leadData.stateId
+                            )
+                            : null,
+
+                    city_id:
+                        leadData.cityId
+                            ? Number(
+                                leadData.cityId
+                            )
+                            : null,
+
+                    reference_name:
+                        leadData.remarks ||
+                        null,
+                })
+
+            if (
+                response?.existing_loan === true
+            ) {
+
+                setExistingLoan({
+                    existingLoanData:
+                        response.data,
+
+                    originalApplicationData: {
+                        name:
+                            leadData.name,
+
+                        phone:
+                            leadData.phone,
+
+                        loan_type_id:
+                            Number(
+                                leadData.loanType
+                            ),
+
+                        loan_amount:
+                            leadData.loanAmount
+                                ? Number(
+                                    leadData.loanAmount
+                                )
+                                : null,
+
+                        reference_name:
+                            leadData.remarks,
                     },
                 })
 
                 return
             }
+
             if (!response?.success) {
                 throw new Error(
                     response?.message ||
@@ -938,35 +980,41 @@ function CallAssignment() {
             setShowCreateLeadModal(false)
             setSelectedEntry(null)
 
-            setFeedback({
-                open: true,
+            showFeedback({
                 type: 'success',
                 title: 'Lead Created',
-                message: 'The lead was created successfully.',
+                message:
+                    'The lead was created successfully.',
             })
 
         } catch (err) {
-            const detail = err?.response?.data?.detail
 
-            const message = Array.isArray(detail)
-                ? detail
-                    .map((item) => item?.msg || 'Validation error')
-                    .join(', ')
-                : detail ||
-                err?.message ||
-                'Unable to create lead.'
+            const detail =
+                err?.response?.data?.detail
 
-            setFeedback({
-                open: true,
+            const message =
+                Array.isArray(detail)
+                    ? detail
+                        .map(
+                            (item) =>
+                                item?.msg ||
+                                'Validation error'
+                        )
+                        .join(', ')
+                    : detail ||
+                    err?.message ||
+                    'Unable to create lead.'
+
+            showFeedback({
                 type: 'error',
                 title: 'Unable to Create Lead',
                 message,
             })
+
         } finally {
             setLoading(false)
         }
     }
-
 
     // =========================================================
     // EXCHANGE
@@ -977,141 +1025,172 @@ function CallAssignment() {
         setSelectedEntry(entry)
 
         setShowExchangeModal(true)
-
     }
 
+    const handleExchangeComplete = async () => {
 
-    const handleExchangeComplete = (
-        updatedEntry
-    ) => {
+        try {
 
-        setEntries(
-            (previous) =>
-                previous.map(
-                    (entry) =>
-                        entry.id ===
-                            updatedEntry.id
-                            ? {
-                                ...entry,
-                                ...updatedEntry,
-                                status:
-                                    'assigned',
-                            }
-                            : entry
+            setLoading(true)
+
+            const response =
+                await getCallAssignments()
+
+            if (
+                !response?.success ||
+                !Array.isArray(
+                    response.data
                 )
-        )
+            ) {
+                throw new Error(
+                    response?.message ||
+                    'Unable to refresh call assignments.'
+                )
+            }
 
+            const assignments =
+                response.data
+
+            const normalizedAssignments =
+                assignments.map(
+                    (assignment) => ({
+                        ...assignment,
+
+                        phone:
+                            assignment.phone_number,
+
+                        contact:
+                            assignment.phone_number,
+
+                        assignedBy:
+                            assignment.assigned_by_name ||
+                            '—',
+
+                        assignedTo:
+                            assignment.assigned_to_id,
+
+                        assignedToName:
+                            assignment.assigned_to_name ||
+                            '—',
+
+                        assignedDate:
+                            assignment.created_at,
+
+                        attempts:
+                            assignment.attempts ??
+                            0,
+
+                        lastCalled:
+                            assignment.last_called ??
+                            null,
+
+                        callStatus:
+                            assignment.call_status ??
+                            null,
+                    })
+                )
+
+            setEntries(
+                normalizedAssignments
+            )
+
+            setShowExchangeModal(false)
+            setSelectedEntry(null)
+
+            showFeedback({
+                type: 'success',
+                title: 'Number Exchanged',
+                message:
+                    'The call number was exchanged successfully.',
+            })
+
+        } catch (err) {
+
+            showFeedback({
+                type: 'error',
+                title: 'Unable to Exchange Number',
+                message:
+                    err?.response?.data?.detail ||
+                    err?.message ||
+                    'Unable to refresh call assignments after exchange.',
+            })
+
+        } finally {
+            setLoading(false)
+        }
     }
-
 
     // =========================================================
     // DELETE
     // =========================================================
 
-    const handleDelete = (entry) => {
+    const handleDelete = async (entry) => {
 
         const confirmed =
             window.confirm(
                 `Delete ${entry.name || entry.phone}?`
             )
 
-
         if (!confirmed) {
             return
         }
 
+        try {
 
-        setEntries(
-            (previous) =>
-                previous.filter(
-                    (item) =>
-                        item.id !== entry.id
+            setLoading(true)
+
+            const response =
+                await deleteCallAssignment(
+                    entry.id
                 )
-        )
 
+            if (!response?.success) {
+                throw new Error(
+                    response?.message ||
+                    'Failed to delete assignment.'
+                )
+            }
+
+            setEntries(
+                (previous) =>
+                    previous.filter(
+                        (item) =>
+                            item.id !== entry.id
+                    )
+            )
+
+            showFeedback({
+                type: 'success',
+                title: 'Assignment Deleted',
+                message:
+                    'The call assignment was deleted successfully.',
+            })
+
+        } catch (err) {
+
+            showFeedback({
+                type: 'error',
+                title: 'Unable to Delete Assignment',
+                message:
+                    err?.response?.data?.detail ||
+                    err?.message ||
+                    'Unable to delete assignment.',
+            })
+
+        } finally {
+            setLoading(false)
+        }
     }
-
-
-    // =========================================================
-    // ERROR
-    // =========================================================
-
-    if (
-        error &&
-        !loading
-    ) {
-
-        return (
-
-            <div className="
-                p-4
-                sm:p-6
-            ">
-
-                <div className="
-                    rounded-xl
-                    border
-                    border-base-300
-                    bg-base-100
-                    p-8
-                    text-center
-                    shadow-sm
-                ">
-
-                    <p className="
-                        text-sm
-                        font-semibold
-                    ">
-                        Unable to load call assignments
-                    </p>
-
-
-                    <p className="
-                        mt-1
-                        text-xs
-                        text-base-content/50
-                    ">
-                        {error}
-                    </p>
-
-
-                    <button
-                        type="button"
-                        onClick={loadAssignments}
-                        className="
-                            mt-4
-                            h-9
-                            rounded-lg
-                            bg-[#8BCF00]
-                            px-4
-                            text-xs
-                            font-medium
-                            text-white
-                        "
-                    >
-                        Try Again
-                    </button>
-
-                </div>
-
-            </div>
-
-        )
-
-    }
-
 
     // =========================================================
     // RENDER
     // =========================================================
 
     return (
-
         <div className="
             p-4
             sm:p-6
         ">
-
 
             {/* =====================================================
                 FILTER
@@ -1134,7 +1213,6 @@ function CallAssignment() {
                     xl:items-end
                 ">
 
-
                     {/* =================================================
                         SEARCH
                     ================================================= */}
@@ -1151,7 +1229,6 @@ function CallAssignment() {
                             Search
                         </label>
 
-
                         <div className="relative">
 
                             <MagnifyingGlassIcon className="
@@ -1164,7 +1241,6 @@ function CallAssignment() {
                                 -translate-y-1/2
                                 text-base-content/35
                             " />
-
 
                             <input
                                 type="text"
@@ -1189,7 +1265,6 @@ function CallAssignment() {
 
                     </div>
 
-
                     {/* =================================================
                         STATUS
                     ================================================= */}
@@ -1205,7 +1280,6 @@ function CallAssignment() {
                         ">
                             Status
                         </label>
-
 
                         <select
                             value={status}
@@ -1227,7 +1301,6 @@ function CallAssignment() {
                                 All Status
                             </option>
 
-
                             {STATUS_OPTIONS.map(
                                 (item) => (
 
@@ -1248,7 +1321,6 @@ function CallAssignment() {
 
                     </div>
 
-
                     {/* =================================================
                         DATE
                     ================================================= */}
@@ -1264,7 +1336,6 @@ function CallAssignment() {
                         ">
                             Date
                         </label>
-
 
                         <select
                             value={dateFilter}
@@ -1296,7 +1367,6 @@ function CallAssignment() {
                                 All Dates
                             </option>
 
-
                             {DATE_OPTIONS.map(
                                 (item) => (
 
@@ -1314,7 +1384,6 @@ function CallAssignment() {
 
                     </div>
 
-
                     {/* =================================================
                         RM
                     ================================================= */}
@@ -1324,7 +1393,6 @@ function CallAssignment() {
                         onChange={setRM}
                         className="w-full xl:w-48"
                     />
-
 
                     {/* =================================================
                         RESET
@@ -1352,14 +1420,15 @@ function CallAssignment() {
                             hover:bg-base-200
                         "
                     >
+
                         <ArrowPathIcon className="
                             h-4
                             w-4
                         " />
 
                         Reset
-                    </button>
 
+                    </button>
 
                     {/* =================================================
                         ASSIGN
@@ -1397,7 +1466,6 @@ function CallAssignment() {
 
                 </div>
 
-
                 {/* =================================================
                     CUSTOM DATE
                 ================================================= */}
@@ -1427,7 +1495,6 @@ function CallAssignment() {
                                 From
                             </label>
 
-
                             <input
                                 type="date"
                                 value={fromDate}
@@ -1447,7 +1514,6 @@ function CallAssignment() {
 
                         </div>
 
-
                         <div>
 
                             <label className="
@@ -1460,11 +1526,13 @@ function CallAssignment() {
                                 To
                             </label>
 
-
                             <input
                                 type="date"
                                 value={toDate}
-                                min={fromDate || undefined}
+                                min={
+                                    fromDate ||
+                                    undefined
+                                }
                                 onChange={(event) =>
                                     setToDate(
                                         event.target.value
@@ -1486,7 +1554,6 @@ function CallAssignment() {
                 )}
 
             </div>
-
 
             {/* =====================================================
                 RESULT COUNT
@@ -1512,7 +1579,6 @@ function CallAssignment() {
 
             </div>
 
-
             {/* =====================================================
                 TABLE
             ===================================================== */}
@@ -1537,7 +1603,6 @@ function CallAssignment() {
                 }
             />
 
-
             {/* =====================================================
                 ASSIGN MODAL
             ===================================================== */}
@@ -1547,18 +1612,20 @@ function CallAssignment() {
                     showAssignModal
                 }
 
-                entries={availableNumbers}
+                entries={
+                    availableNumbers
+                }
 
                 onClose={() =>
                     setShowAssignModal(
                         false
                     )
                 }
+
                 onAssign={
                     handleAssign
                 }
             />
-
 
             {/* =====================================================
                 CALL HISTORY
@@ -1568,12 +1635,15 @@ function CallAssignment() {
                 open={
                     showHistoryModal
                 }
+
                 entry={
                     selectedEntry
                 }
+
                 history={
                     callHistory
                 }
+
                 onClose={() => {
 
                     setShowHistoryModal(
@@ -1587,7 +1657,6 @@ function CallAssignment() {
                 }}
             />
 
-
             {/* =====================================================
                 LOAN APPLICATION
             ===================================================== */}
@@ -1596,12 +1665,15 @@ function CallAssignment() {
                 open={
                     showApplicationModal
                 }
+
                 entry={
                     selectedEntry
                 }
+
                 application={
                     selectedEntry?.application
                 }
+
                 onClose={() => {
 
                     setShowApplicationModal(
@@ -1615,7 +1687,6 @@ function CallAssignment() {
                 }}
             />
 
-
             {/* =====================================================
                 CREATE LEAD
             ===================================================== */}
@@ -1624,9 +1695,11 @@ function CallAssignment() {
                 open={
                     showCreateLeadModal
                 }
+
                 entry={
                     selectedEntry
                 }
+
                 onClose={() => {
 
                     setShowCreateLeadModal(
@@ -1638,11 +1711,11 @@ function CallAssignment() {
                     )
 
                 }}
+
                 onCreate={
                     handleLeadCreated
                 }
             />
-
 
             {/* =====================================================
                 EXCHANGE
@@ -1652,9 +1725,11 @@ function CallAssignment() {
                 open={
                     showExchangeModal
                 }
+
                 entry={
                     selectedEntry
                 }
+
                 onClose={() => {
 
                     setShowExchangeModal(
@@ -1666,41 +1741,102 @@ function CallAssignment() {
                     )
 
                 }}
+
                 onExchange={
                     handleExchangeComplete
                 }
             />
+
+            {/* =====================================================
+                FEEDBACK MODAL
+            ===================================================== */}
+
             <FeedbackModal
-                open={feedback.open}
-                type={feedback.type}
-                title={feedback.title}
-                message={feedback.message}
-                onClose={closeFeedback}
+                open={
+                    feedback.open
+                }
+
+                type={
+                    feedback.type
+                }
+
+                title={
+                    feedback.title
+                }
+
+                message={
+                    feedback.message
+                }
+
+                onClose={
+                    closeFeedback
+                }
             />
+
+            {/* =====================================================
+                EXISTING LOAN
+            ===================================================== */}
+
             {existingLoan && (
+
                 <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[1px]"
+                    className="
+                        fixed
+                        inset-0
+                        z-[9999]
+                        flex
+                        items-center
+                        justify-center
+                        bg-black/50
+                        p-4
+                        backdrop-blur-[1px]
+                    "
                     role="dialog"
                     aria-modal="true"
                     aria-label="Existing loan application"
                 >
-                    <div className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl bg-base-100 shadow-2xl">
+
+                    <div className="
+                        relative
+                        max-h-[90vh]
+                        w-full
+                        max-w-5xl
+                        overflow-y-auto
+                        rounded-xl
+                        bg-base-100
+                        shadow-2xl
+                    ">
+
                         <ExistingLoan
-                            existingLoanData={existingLoan.existingLoanData}
+                            existingLoanData={
+                                existingLoan.existingLoanData
+                            }
+
                             originalApplicationData={
                                 existingLoan.originalApplicationData
                             }
-                            onCancel={() => setExistingLoan(null)}
-                            onSubmitSuccess={() => setExistingLoan(null)}
+
+                            onCancel={() =>
+                                setExistingLoan(
+                                    null
+                                )
+                            }
+
+                            onSubmitSuccess={() =>
+                                setExistingLoan(
+                                    null
+                                )
+                            }
                         />
+
                     </div>
+
                 </div>
+
             )}
+
         </div>
-
     )
-
 }
-
 
 export default CallAssignment
