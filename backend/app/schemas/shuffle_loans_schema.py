@@ -1,4 +1,3 @@
-# backend\app\schemas\shuffle_loans_schema.py
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -9,11 +8,40 @@ from pydantic import BaseModel, Field
 # =========================================================
 
 class ShuffleLoansFilters(BaseModel):
+
     search: Optional[str] = None
-    agent_id: Optional[int] = Field(default=None, gt=0)
-    rm_id: Optional[int] = Field(default=None, gt=0)
-    loan_type_id: Optional[int] = Field(default=None, gt=0)
+
+    agent_id: Optional[int] = Field(
+        default=None,
+        gt=0,
+    )
+
+    rm_id: Optional[int] = Field(
+        default=None,
+        gt=0,
+    )
+
+    loan_type_id: Optional[int] = Field(
+        default=None,
+        gt=0,
+    )
+
     status: Optional[str] = None
+
+    # =====================================================
+    # PAGINATION
+    # =====================================================
+
+    page: int = Field(
+        default=1,
+        ge=1,
+    )
+
+    limit: int = Field(
+        default=30,
+        ge=1,
+        le=200,
+    )
 
 
 # =========================================================

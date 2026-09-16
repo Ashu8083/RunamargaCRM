@@ -1,5 +1,6 @@
 # backend/app/services/shuffle_loans_service.py
 
+from math import ceil
 from typing import Optional
 
 from sqlalchemy import or_
@@ -24,9 +25,32 @@ class ShuffleLoansService:
         rm_id: Optional[int] = None,
         loan_type_id: Optional[int] = None,
         status: Optional[str] = None,
+        page: int = 1,
+        limit: int = 30,
     ):
+        # =====================================================
+        # VALIDATE PAGINATION
+        # =====================================================
+
+        if page < 1:
+            page = 1
+
+        if limit < 1:
+            limit = 30
+
+        if limit > 200:
+            limit = 200
+
+        # =====================================================
+        # ALIASES
+        # =====================================================
+
         Agent = aliased(Employee)
         RM = aliased(Employee)
+
+        # =====================================================
+        # BASE QUERY
+        # =====================================================
 
         query = (
             db.query(
@@ -54,6 +78,15 @@ class ShuffleLoansService:
 
         # =====================================================
         # SEARCH
+        # =====================================================
+        #
+        # IMPORTANT:
+        #
+        # Search is performed BEFORE pagination.
+        #
+        # This means searching for a loan that is beyond
+        # the currently displayed page will still find it.
+        #
         # =====================================================
 
         if search and search.strip():
@@ -113,6 +146,70 @@ class ShuffleLoansService:
             )
 
         # =====================================================
+        # TOTAL COUNT
+        # =====================================================
+        #
+        # IMPORTANT:
+        #
+        # Count is performed AFTER all filters/search.
+        #
+        # Example:
+        #
+        # Database:
+        #     10,000 applications
+        #
+        # Search:
+        #     "ABC"
+        #
+        # Matching:
+        #     73 applications
+        #
+        # limit:
+        #     30
+        #
+        # total:
+        #     73
+        #
+        # totalPages:
+        #     3
+        #
+        # =====================================================
+
+        total = query.count()
+
+        # =====================================================
+        # TOTAL PAGES
+        # =====================================================
+
+        total_pages = (
+            ceil(total / limit)
+            if total > 0
+            else 0
+        )
+
+        # =====================================================
+        # HANDLE PAGE OUT OF RANGE
+        # =====================================================
+        #
+        # If the requested page is greater than the available
+        # pages, return an empty result for that page.
+        #
+        # The frontend can use totalPages to correct the page.
+        #
+        # =====================================================
+
+        if total_pages > 0 and page > total_pages:
+            page = total_pages
+
+        # =====================================================
+        # OFFSET
+        # =====================================================
+
+        offset = (
+            (page - 1) * limit
+        )
+
+        # =====================================================
         # ORDER
         # =====================================================
 
@@ -120,9 +217,36 @@ class ShuffleLoansService:
             LoanApplication.id.desc()
         )
 
-        rows = query.all()
+        # =====================================================
+        # PAGINATION
+        # =====================================================
+        #
+        # Only after:
+        #
+        #     search
+        #     filters
+        #     count
+        #     order
+        #
+        # do we apply:
+        #
+        #     offset
+        #     limit
+        #
+        # =====================================================
 
-        return [
+        rows = (
+            query
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+        # =====================================================
+        # FORMAT RESULTS
+        # =====================================================
+
+        items = [
             ShuffleLoansService._format_application(
                 application,
                 agent_name,
@@ -136,6 +260,18 @@ class ShuffleLoansService:
                 loan_type,
             ) in rows
         ]
+
+        # =====================================================
+        # RETURN PAGINATED RESPONSE
+        # =====================================================
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "totalPages": total_pages,
+        }
 
 
     # =========================================================
@@ -276,10 +412,12 @@ class ShuffleLoansService:
         # Only a field that is NOT None is changed.
         #
         # None means:
-        # "User did not select this field."
+        #
+        #     "User did not select this field."
         #
         # It does NOT mean:
-        # "Set this database column to NULL."
+        #
+        #     "Set this database column to NULL."
         #
         # =====================================================
 
@@ -302,6 +440,14 @@ class ShuffleLoansService:
 
         # =====================================================
         # RETURN UPDATED DATA
+        # =====================================================
+        #
+        # This intentionally returns the updated applications
+        # by their IDs, not a paginated response.
+        #
+        # The assign functionality therefore remains
+        # compatible with the existing frontend workflow.
+        #
         # =====================================================
 
         return ShuffleLoansService.get_shuffle_loans_by_ids(
@@ -390,6 +536,7 @@ class ShuffleLoansService:
 
         return {
             "id": application.id,
+
             "loanId": application.unique_id,
             "unique_id": application.unique_id,
 
@@ -406,6 +553,7 @@ class ShuffleLoansService:
                 if application.loan_amt is not None
                 else None
             ),
+
             "loan_amt": (
                 float(application.loan_amt)
                 if application.loan_amt is not None
@@ -414,11 +562,13 @@ class ShuffleLoansService:
 
             "agentId": application.agent_id,
             "agent_id": application.agent_id,
+
             "agentName": agent_name,
             "agent_name": agent_name,
 
             "rmId": application.rm_id,
             "rm_id": application.rm_id,
+
             "rmName": rm_name,
             "rm_name": rm_name,
 

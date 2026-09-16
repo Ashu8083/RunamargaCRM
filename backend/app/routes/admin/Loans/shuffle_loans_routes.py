@@ -30,13 +30,49 @@ router = APIRouter(
 
 @router.get("")
 def get_shuffle_loans_route(
-    search: Optional[str] = Query(default=None),
-    agent_id: Optional[int] = Query(default=None, gt=0),
-    rm_id: Optional[int] = Query(default=None, gt=0),
-    loan_type_id: Optional[int] = Query(default=None, gt=0),
-    status: Optional[str] = Query(default=None),
+    search: Optional[str] = Query(
+        default=None
+    ),
+
+    agent_id: Optional[int] = Query(
+        default=None,
+        gt=0,
+    ),
+
+    rm_id: Optional[int] = Query(
+        default=None,
+        gt=0,
+    ),
+
+    loan_type_id: Optional[int] = Query(
+        default=None,
+        gt=0,
+    ),
+
+    status: Optional[str] = Query(
+        default=None
+    ),
+
+    # =====================================================
+    # PAGINATION
+    # =====================================================
+
+    page: int = Query(
+        default=1,
+        ge=1,
+    ),
+
+    limit: int = Query(
+        default=30,
+        ge=1,
+        le=200,
+    ),
+
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_employee),
+
+    employee: Employee = Depends(
+        get_current_employee
+    ),
 ):
     try:
 
@@ -47,6 +83,8 @@ def get_shuffle_loans_route(
             rm_id=rm_id,
             loan_type_id=loan_type_id,
             status=status,
+            page=page,
+            limit=limit,
         )
 
     except ValueError as exc:
@@ -64,8 +102,14 @@ def get_shuffle_loans_route(
 @router.patch("/assign")
 def assign_shuffle_loans_route(
     payload: ShuffleLoansAssign,
-    db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_employee),
+
+    db: Session = Depends(
+        get_db
+    ),
+
+    employee: Employee = Depends(
+        get_current_employee
+    ),
 ):
     try:
 

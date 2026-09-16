@@ -390,8 +390,7 @@ function ApplicationStatus() {
         const queryString = params.toString();
 
         navigate(
-            `/loans/applications${
-                queryString ? `?${queryString}` : ""
+            `/crm/application-status${queryString ? `?${queryString}` : ""
             }`
         );
     };

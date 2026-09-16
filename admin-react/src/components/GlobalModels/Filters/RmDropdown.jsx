@@ -195,7 +195,7 @@ const RmDropdown = ({
       )}
 
 
-      <SearchableFilterDropdown
+      <SearchableFilterDropdown 
 
         value={value}
 

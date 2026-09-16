@@ -166,7 +166,7 @@ function MonthlyTrend() {
                     loading: false,
                     error:
                         error?.message ||
-                        "Unable to load monthly trend data.",
+                        "Unable to load monthly disbursement trend data.",
                 });
             }
         };
@@ -337,7 +337,7 @@ function MonthlyTrend() {
 
     const activeStyle =
         STATUS_STYLES[status] ||
-        STATUS_STYLES["In Process"];
+        STATUS_STYLES["Disbursed"]
 
     const hoveredPoint =
         hoveredIndex !== null
@@ -426,7 +426,7 @@ function MonthlyTrend() {
                                 dark:text-gray-100
                             "
                         >
-                            Monthly Trend
+                            Monthly Disbursement Trend
                         </h2>
                     </div>
 
@@ -438,72 +438,7 @@ function MonthlyTrend() {
                             gap-2
                         "
                     >
-                        {/* Status */}
-                        <div className="relative">
-                            <select
-                                value={status}
-                                onChange={(event) =>
-                                    setStatus(
-                                        event.target
-                                            .value
-                                    )
-                                }
-                                className="
-                                    h-8
-                                    min-w-[142px]
-                                    cursor-pointer
-                                    appearance-none
-                                    rounded-md
-                                    border
-                                    border-gray-300
-                                    bg-white
-                                    py-0
-                                    pl-2.5
-                                    pr-8
-                                    text-[11px]
-                                    font-medium
-                                    text-gray-700
-                                    outline-none
-                                    transition
-                                    hover:border-gray-400
-                                    focus:border-indigo-500
-                                    focus:ring-2
-                                    focus:ring-indigo-100
-                                    dark:border-gray-600
-                                    dark:bg-gray-800
-                                    dark:text-gray-200
-                                    dark:[color-scheme:dark]
-                                    dark:hover:border-gray-500
-                                    dark:focus:border-indigo-400
-                                    dark:focus:ring-indigo-900/40
-                                "
-                            >
-                                {STATUS_OPTIONS.map(
-                                    (option) => (
-                                        <option
-                                            key={option}
-                                            value={option}
-                                        >
-                                            {option}
-                                        </option>
-                                    )
-                                )}
-                            </select>
-
-                            <ChevronDownIcon
-                                className="
-                                    pointer-events-none
-                                    absolute
-                                    right-2
-                                    top-1/2
-                                    h-3.5
-                                    w-3.5
-                                    -translate-y-1/2
-                                    text-gray-400
-                                    dark:text-gray-500
-                                "
-                            />
-                        </div>
+                       
 
                         {/* Period */}
                         <div className="relative">
@@ -707,7 +642,7 @@ function MonthlyTrend() {
                                         overflow-visible
                                     "
                                     role="img"
-                                    aria-label={`${status} monthly trend`}
+                                    aria-label="Disbursed monthly trend"
                                 >
                                     <defs>
                                         <linearGradient

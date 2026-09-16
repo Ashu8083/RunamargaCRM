@@ -59,7 +59,9 @@ const CreateApplication = lazy(
 const Applications = lazy(() =>
     import('../pages/Loans/CombinedApplications/index')
 )
-
+const ApplicationStatus = lazy(() =>
+    import('../pages/Loans/ApplicationStatus/index')
+)
 
 const PendingApplications = lazy(() =>
     import('../pages/Loans/PendingApplications/index')
@@ -315,6 +317,11 @@ const routes = [
     {
         path: '/applications',
         component: Applications,
+        permission: PERMISSIONS.LOANS_VIEW,
+    },
+    {
+        path: '/application-status',
+        component: ApplicationStatus,
         permission: PERMISSIONS.LOANS_VIEW,
     },
     // {

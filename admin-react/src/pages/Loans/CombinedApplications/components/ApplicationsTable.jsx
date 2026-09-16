@@ -16,7 +16,7 @@ import RmDropdown from "../../../../components/GlobalModels/Filters/RmDropdown";
 import TeamLeadDropdown from "../../../../components/GlobalModels/Filters/TeamLeadDropdown";
 import LoanTypeDropdown from "../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import StatusDropdown from "../../../../components/GlobalModels/Filters/StatusDropdown";
-
+import apiClient from "../../../../app/apiClient";
 
 // =============================================================
 // CONSTANTS
@@ -682,6 +682,7 @@ function ApplicationsTable({
     onChat,
     onViewApplication,
     onRefresh,
+    onAssignmentChange
 }) {
     const [loanTypes, setLoanTypes] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -720,7 +721,104 @@ function ApplicationsTable({
         },
         []
     );
+    const updateApplicationAssignment = async ({
+        applicationId,
+        rmId,
+        agentId,
+    }) => {
+        const payload = {
+            application_ids: [applicationId],
+        }
 
+        if (rmId !== undefined) {
+            payload.rm_id = rmId
+        }
+
+        if (agentId !== undefined) {
+            payload.agent_id = agentId
+        }
+
+        const response = await apiClient({
+            method: 'PATCH',
+            url: '/shuffle-loans/assign',
+            data: payload,
+        })
+
+        return response.data
+    }
+    const handleAgentChange = async (application, newAgentId) => {
+        const applicationId =
+            application.id ??
+            application.loanId ??
+            application.loan_id;
+
+        if (
+            !applicationId ||
+            newAgentId === undefined ||
+            newAgentId === null ||
+            newAgentId === ''
+        ) {
+            return;
+        }
+
+        try {
+            const response = await apiClient({
+                method: 'PATCH',
+                url: '/shuffle-loans/assign',
+                data: {
+                    application_ids: [applicationId],
+                    agent_id: Number(newAgentId),
+                },
+            });
+
+            const updatedApplication = Array.isArray(response.data)
+                ? response.data[0]
+                : response.data;
+
+            if (updatedApplication && onAssignmentChange) {
+                onAssignmentChange(applicationId, updatedApplication);
+            }
+        } catch (error) {
+            console.error('Failed to update Processing Agent:', error);
+        }
+    };
+
+    const handleRmChange = async (application, newRmId) => {
+        const applicationId =
+            application.id ??
+            application.loanId ??
+            application.loan_id;
+
+        if (
+            !applicationId ||
+            newRmId === undefined ||
+            newRmId === null ||
+            newRmId === ''
+        ) {
+            return;
+        }
+
+        try {
+            const response = await apiClient({
+                method: 'PATCH',
+                url: '/shuffle-loans/assign',
+                data: {
+                    application_ids: [applicationId],
+                    rm_id: Number(newRmId),
+                },
+            });
+
+            const updatedApplication = Array.isArray(response.data)
+                ? response.data[0]
+                : response.data;
+
+            if (updatedApplication && onAssignmentChange) {
+                onAssignmentChange(applicationId, updatedApplication);
+            }
+        } catch (error) {
+            console.error('Failed to update RM:', error);
+        }
+    };
     // =========================================================
     // INFO POPUP
     // =========================================================
@@ -1200,7 +1298,6 @@ function ApplicationsTable({
                     >
 
                         <colgroup>
-
                             {/* # */}
                             <col className="w-[3%]" />
 
@@ -1208,7 +1305,7 @@ function ApplicationsTable({
                             <col className="w-[10%]" />
 
                             {/* Phone */}
-                            <col className="w-[8%]" />
+                            <col className="w-[7%]" />
 
                             {/* Loan Type */}
                             <col className="w-[7%]" />
@@ -1220,25 +1317,23 @@ function ApplicationsTable({
                             <col className="w-[7%]" />
 
                             {/* Applied By */}
-                            <col className="w-[8%]" />
+                            {/* <col className="w-[7%]" /> */}
 
                             {/* Referral */}
                             <col className="w-[7%]" />
 
                             {/* RM */}
-                            <col className="w-[7%]" />
+                            <col className="w-[13%]" />
 
                             {/* Processing Agent */}
-                            <col className="w-[9%]" />
+                            <col className="w-[13%]" />
 
                             {/* Status */}
-                            <col className="w-[11%]" />
+                            <col className="w-[9%]" />
 
                             {/* Actions */}
-                            <col className="w-[7%]" />
-
+                            <col className="w-[8%]" />
                         </colgroup>
-
 
                         {/* HEADER */}
 
@@ -1256,7 +1351,7 @@ function ApplicationsTable({
                                     "Loan Type",
                                     "Loan Amount",
                                     "Applied Date",
-                                    "Applied By",
+                                    // "Applied By",
                                     "Referral",
                                     "RM",
                                     "Processing Agent",
@@ -1361,10 +1456,10 @@ function ApplicationsTable({
                                             );
 
 
-                                        const appliedBy =
-                                            getAppliedBy(
-                                                application
-                                            );
+                                        // const appliedBy =
+                                        //     getAppliedBy(
+                                        //         application
+                                        //     );
 
 
                                         const referral =
@@ -1622,7 +1717,7 @@ function ApplicationsTable({
 
                                                 {/* APPLIED BY */}
 
-                                                <td className="
+                                                {/* <td className="
                                                     px-3
                                                     py-4
                                                 ">
@@ -1638,7 +1733,7 @@ function ApplicationsTable({
                                                         }
                                                     </Cell>
 
-                                                </td>
+                                                </td> */}
 
 
                                                 {/* REFERRAL */}
@@ -1669,16 +1764,12 @@ function ApplicationsTable({
                                                     py-4
                                                 ">
 
-                                                    <Cell
-                                                        title={
-                                                            rmName
+                                                    <RmDropdown
+                                                        value={application.rmId ?? application.rm_id ?? ''}
+                                                        onChange={(value) =>
+                                                            handleRmChange(application, value)
                                                         }
-                                                        className="text-sm"
-                                                    >
-                                                        {
-                                                            rmName
-                                                        }
-                                                    </Cell>
+                                                    />
 
                                                 </td>
 
@@ -1686,19 +1777,15 @@ function ApplicationsTable({
                                                 {/* PROCESSING AGENT */}
 
                                                 <td className="
-    px-3
-    py-4
-    align-middle
-">
-                                                    <Cell
-                                                        title={agentName}
-                                                        className="
-            text-sm
-            text-left
-        "
-                                                    >
-                                                        {agentName}
-                                                    </Cell>
+                                                px-3
+                                                py-4
+                                                align-middle
+                                            "><AgentDropdown
+                                                        value={application.agentId ?? application.agent_id ?? ''}
+                                                        onChange={(value) =>
+                                                            handleAgentChange(application, value)
+                                                        }
+                                                    />
                                                 </td>
 
 

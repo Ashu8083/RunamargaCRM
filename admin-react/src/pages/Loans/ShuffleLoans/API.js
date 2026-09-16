@@ -58,7 +58,9 @@ export const getApiErrorMessage = (
 // NORMALIZE APPLICATION
 // =========================================================
 
-const normalizeApplication = (application) => {
+const normalizeApplication = (
+    application
+) => {
 
     if (!application) {
         return null
@@ -67,7 +69,8 @@ const normalizeApplication = (application) => {
     return {
         ...application,
 
-        id: Number(application.id),
+        id:
+            Number(application.id),
 
         loanId:
             application.loanId ??
@@ -97,10 +100,14 @@ const normalizeApplication = (application) => {
             '',
 
         loanTypeId:
-            application.loan_type_id ?? null,
+            application.loanTypeId ??
+            application.loan_type_id ??
+            null,
 
         loan_type_id:
-            application.loan_type_id ?? null,
+            application.loan_type_id ??
+            application.loanTypeId ??
+            null,
 
         agentId:
             application.agentId ??
@@ -142,10 +149,12 @@ const normalizeApplication = (application) => {
             null,
 
         createdAt:
+            application.createdAt ??
             application.created_at ??
             null,
 
         updatedAt:
+            application.updatedAt ??
             application.updated_at ??
             null,
     }
@@ -155,43 +164,179 @@ const normalizeApplication = (application) => {
 // =========================================================
 // GET SHUFFLE LOANS
 // =========================================================
+//
+// Backend performs:
+//
+//     search entire database
+//             ↓
+//         apply filters
+//             ↓
+//           count
+//             ↓
+//          paginate
+//             ↓
+//       return current page
+//
+// Frontend only receives the requested page.
+//
+// =========================================================
 
-export const getShuffleLoans = async (filters = {}) => {
+export const getShuffleLoans = async (
+    {
+        search = '',
+        agentId = '',
+        rmId = '',
+        loanTypeId = '',
+        status = '',
+        page = 1,
+        limit = 30,
+    } = {}
+) => {
 
-    const params = {}
-
-    if (filters.search?.trim()) {
-        params.search = filters.search.trim()
+    const params = {
+        page,
+        limit,
     }
 
-    if (filters.agentId) {
-        params.agent_id = Number(filters.agentId)
+
+    // =====================================================
+    // SEARCH
+    // =====================================================
+
+    if (
+        search &&
+        search.trim()
+    ) {
+
+        params.search =
+            search.trim()
     }
 
-    if (filters.rmId) {
-        params.rm_id = Number(filters.rmId)
+
+    // =====================================================
+    // AGENT
+    // =====================================================
+
+    if (
+        agentId !== '' &&
+        agentId !== null &&
+        agentId !== undefined
+    ) {
+
+        params.agent_id =
+            Number(agentId)
     }
 
-    if (filters.loanTypeId) {
-        params.loan_type_id = Number(filters.loanTypeId)
+
+    // =====================================================
+    // RM
+    // =====================================================
+
+    if (
+        rmId !== '' &&
+        rmId !== null &&
+        rmId !== undefined
+    ) {
+
+        params.rm_id =
+            Number(rmId)
     }
 
-    if (filters.status) {
-        params.status = filters.status
+
+    // =====================================================
+    // LOAN TYPE
+    // =====================================================
+
+    if (
+        loanTypeId !== '' &&
+        loanTypeId !== null &&
+        loanTypeId !== undefined
+    ) {
+
+        params.loan_type_id =
+            Number(loanTypeId)
     }
 
-    const response = await apiClient.get(
-        '/shuffle-loans',
-        { params }
-    )
 
-    const data = Array.isArray(response.data)
-        ? response.data
-        : []
+    // =====================================================
+    // STATUS
+    // =====================================================
 
-    return data
-        .map(normalizeApplication)
-        .filter(Boolean)
+    if (
+        status &&
+        String(status).trim()
+    ) {
+
+        params.status =
+            String(status).trim()
+    }
+
+
+    // =====================================================
+    // REQUEST
+    // =====================================================
+
+    const response =
+        await apiClient.get(
+            '/shuffle-loans',
+            {
+                params,
+            }
+        )
+
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+
+    const responseData =
+        response?.data
+
+
+    // =====================================================
+    // BACKEND PAGINATED RESPONSE
+    // =====================================================
+
+    const items =
+        Array.isArray(
+            responseData?.items
+        )
+            ? responseData.items
+            : []
+
+
+    return {
+        items:
+            items
+                .map(
+                    normalizeApplication
+                )
+                .filter(Boolean),
+
+        total:
+            Number(
+                responseData?.total ??
+                0
+            ),
+
+        page:
+            Number(
+                responseData?.page ??
+                page
+            ),
+
+        limit:
+            Number(
+                responseData?.limit ??
+                limit
+            ),
+
+        totalPages:
+            Number(
+                responseData?.totalPages ??
+                0
+            ),
+    }
 }
 
 
@@ -206,55 +351,112 @@ export const assignShuffleLoans = async ({
     loanTypeId,
 }) => {
 
-    if (!applicationIds?.length) {
+    if (
+        !applicationIds?.length
+    ) {
         throw new Error(
             'Select at least one application.'
         )
     }
 
+
     const payload = {
-        application_ids: applicationIds.map(Number),
+        application_ids:
+            applicationIds.map(Number),
     }
 
-    /*
-     * Only selected fields are added to the request.
-     *
-     * An omitted field means:
-     * DO NOT CHANGE that existing assignment.
-     */
 
-    if (agentId) {
-        payload.agent_id = Number(agentId)
+    // =====================================================
+    // AGENT
+    // =====================================================
+    //
+    // Only include the field when the user selected it.
+    //
+    // =====================================================
+
+    if (
+        agentId !== '' &&
+        agentId !== null &&
+        agentId !== undefined
+    ) {
+
+        payload.agent_id =
+            Number(agentId)
     }
 
-    if (rmId) {
-        payload.rm_id = Number(rmId)
+
+    // =====================================================
+    // RM
+    // =====================================================
+
+    if (
+        rmId !== '' &&
+        rmId !== null &&
+        rmId !== undefined
+    ) {
+
+        payload.rm_id =
+            Number(rmId)
     }
 
-    if (loanTypeId) {
-        payload.loan_type_id = Number(loanTypeId)
+
+    // =====================================================
+    // LOAN TYPE
+    // =====================================================
+
+    if (
+        loanTypeId !== '' &&
+        loanTypeId !== null &&
+        loanTypeId !== undefined
+    ) {
+
+        payload.loan_type_id =
+            Number(loanTypeId)
     }
+
+
+    // =====================================================
+    // VALIDATION
+    // =====================================================
 
     if (
         payload.agent_id === undefined &&
         payload.rm_id === undefined &&
         payload.loan_type_id === undefined
     ) {
+
         throw new Error(
             'Select an Agent, RM or Loan Type to update.'
         )
     }
 
-    const response = await apiClient.patch(
-        '/shuffle-loans/assign',
-        payload
-    )
 
-    const data = Array.isArray(response.data)
-        ? response.data
-        : []
+    // =====================================================
+    // REQUEST
+    // =====================================================
+
+    const response =
+        await apiClient.patch(
+            '/shuffle-loans/assign',
+            payload
+        )
+
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+
+    const data =
+        Array.isArray(
+            response?.data
+        )
+            ? response.data
+            : []
+
 
     return data
-        .map(normalizeApplication)
+        .map(
+            normalizeApplication
+        )
         .filter(Boolean)
 }
