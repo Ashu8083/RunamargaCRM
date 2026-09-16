@@ -12,122 +12,7 @@ import PerformanceCards from './components/PerformanceCards'
 import AgentPerformanceTable from './components/AgentPerformanceTable'
 import AgentPerformanceModal from './components/AgentPerformanceModal'
 
-
-// =============================================================
-// MOCK PERFORMANCE DATA
-// =============================================================
-
-const MOCK_PERFORMANCE = [
-    {
-        id: 101,
-        name: 'Rahul Sharma',
-        teamId: 301,
-        team: 'Bangalore Team',
-        rmId: 201,
-        incoming: 164,
-        outgoing: 120,
-        answered: 214,
-        missed: 42,
-        applications: 18,
-        converted: 5,
-        avgTalkSeconds: 134,
-        status: 'active',
-    },
-    {
-        id: 102,
-        name: 'Anil Kumar',
-        teamId: 301,
-        team: 'Bangalore Team',
-        rmId: 202,
-        incoming: 182,
-        outgoing: 104,
-        answered: 198,
-        missed: 61,
-        applications: 14,
-        converted: 3,
-        avgTalkSeconds: 112,
-        status: 'active',
-    },
-    {
-        id: 103,
-        name: 'Vikram Singh',
-        teamId: 302,
-        team: 'Mysore Team',
-        rmId: 201,
-        incoming: 120,
-        outgoing: 86,
-        answered: 151,
-        missed: 38,
-        applications: 11,
-        converted: 2,
-        avgTalkSeconds: 123,
-        status: 'active',
-    },
-    {
-        id: 104,
-        name: 'Arjun Rao',
-        teamId: 301,
-        team: 'Bangalore Team',
-        rmId: 202,
-        incoming: 146,
-        outgoing: 98,
-        answered: 176,
-        missed: 44,
-        applications: 16,
-        converted: 4,
-        avgTalkSeconds: 128,
-        status: 'active',
-    },
-    {
-        id: 105,
-        name: 'Kiran Kumar',
-        teamId: 302,
-        team: 'Mysore Team',
-        rmId: 201,
-        incoming: 108,
-        outgoing: 92,
-        answered: 142,
-        missed: 31,
-        applications: 9,
-        converted: 2,
-        avgTalkSeconds: 118,
-        status: 'active',
-    },
-    {
-        id: 106,
-        name: 'Niveditha Rao',
-        teamId: 301,
-        team: 'Bangalore Team',
-        rmId: 202,
-        incoming: 136,
-        outgoing: 88,
-        answered: 165,
-        missed: 37,
-        applications: 13,
-        converted: 3,
-        avgTalkSeconds: 121,
-        status: 'active',
-    },
-]
-
-
-// =============================================================
-// MOCK API
-// =============================================================
-
-const fetchPerformance = async () => {
-
-    return new Promise((resolve) => {
-
-        setTimeout(() => {
-
-            resolve(MOCK_PERFORMANCE)
-
-        }, 400)
-
-    })
-
-}
+import performanceAPI from './API'
 
 
 // =============================================================
@@ -411,11 +296,34 @@ function Performance() {
             setLoading(true)
 
             const response =
-                await fetchPerformance()
+                await performanceAPI.getPerformance({
+
+                    employeeId:
+                        agent || null,
+
+                    fromDate:
+                        fromDate || null,
+
+                    toDate:
+                        toDate || null,
+
+                    callType:
+                        direction || null,
+
+                    status:
+                        callStatus || null,
+
+                    contextId:
+                        null,
+
+                })
+
 
             setPerformance(
-                Array.isArray(response)
-                    ? response
+                Array.isArray(
+                    response?.agents
+                )
+                    ? response.agents
                     : []
             )
 
@@ -446,6 +354,23 @@ function Performance() {
         loadData()
 
     }, [])
+
+
+    // =========================================================
+    // LOAD WHEN BACKEND FILTERS CHANGE
+    // =========================================================
+
+    useEffect(() => {
+
+        loadData()
+
+    }, [
+        agent,
+        direction,
+        callStatus,
+        fromDate,
+        toDate,
+    ])
 
 
     // =========================================================
@@ -486,60 +411,10 @@ function Performance() {
                     String(agent)
 
 
-            // -------------------------------------------------
-            // CALL DIRECTION
-            // -------------------------------------------------
-
-            const matchesDirection =
-                !direction ||
-                (
-                    direction === 'incoming' &&
-                    item.incoming > 0
-                ) ||
-                (
-                    direction === 'outgoing' &&
-                    item.outgoing > 0
-                )
-
-
-            // -------------------------------------------------
-            // CALL STATUS
-            // -------------------------------------------------
-
-            const matchesStatus =
-                !callStatus ||
-                (
-                    callStatus === 'answered' &&
-                    item.answered > 0
-                ) ||
-                (
-                    callStatus === 'missed' &&
-                    item.missed > 0
-                )
-
-
-            // -------------------------------------------------
-            // DATE
-            //
-            // Performance is currently aggregate data.
-            // -------------------------------------------------
-
-            const matchesFrom =
-                !fromDate
-
-
-            const matchesTo =
-                !toDate
-
-
             return (
                 matchesTeam &&
                 matchesRm &&
-                matchesAgent &&
-                matchesDirection &&
-                matchesStatus &&
-                matchesFrom &&
-                matchesTo
+                matchesAgent
             )
 
         })
@@ -549,10 +424,6 @@ function Performance() {
         team,
         rm,
         agent,
-        direction,
-        callStatus,
-        fromDate,
-        toDate,
     ])
 
 
@@ -772,6 +643,7 @@ function Performance() {
                     ">
 
                         <RmDropdown
+                            label="RM"
                             value={rm}
                             onChange={setRm}
                         />
@@ -789,6 +661,7 @@ function Performance() {
                     ">
 
                         <AgentDropdown
+                        label="Agent"
                             value={agent}
                             onChange={setAgent}
                         />
@@ -836,7 +709,6 @@ function Performance() {
 
                     {/* =================================================
                         ACTIONS
-                        RESET + REFRESH ARE ONE GRID ITEM
                     ================================================= */}
 
                     <div className="

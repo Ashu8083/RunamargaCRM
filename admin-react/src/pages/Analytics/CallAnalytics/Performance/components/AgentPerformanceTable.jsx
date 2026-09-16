@@ -7,22 +7,32 @@ import EyeIcon from '@heroicons/react/24/outline/EyeIcon'
 // FORMAT DURATION
 // =============================================================
 
-const formatDuration = (seconds) => {
+const formatDuration = (
+    seconds
+) => {
 
     const totalSeconds =
-        Number(seconds || 0)
+        Number(
+            seconds || 0
+        )
+
 
     const minutes =
         Math.floor(
             totalSeconds / 60
         )
 
+
     const remainingSeconds =
         totalSeconds % 60
 
+
     return `${minutes}m ${String(
         remainingSeconds
-    ).padStart(2, '0')}s`
+    ).padStart(
+        2,
+        '0'
+    )}s`
 
 }
 
@@ -136,6 +146,8 @@ function AgentPerformanceTable({
                                 bg-base-200/40
                             ">
 
+                                {/* RANK */}
+
                                 <th className="
                                     w-[55px]
                                     px-4
@@ -149,6 +161,8 @@ function AgentPerformanceTable({
                                 </th>
 
 
+                                {/* AGENT */}
+
                                 <th className="
                                     px-4
                                     py-3.5
@@ -160,6 +174,8 @@ function AgentPerformanceTable({
                                     RM / Agent
                                 </th>
 
+
+                                {/* TEAM */}
 
                                 <th className="
                                     px-4
@@ -173,6 +189,8 @@ function AgentPerformanceTable({
                                 </th>
 
 
+                                {/* INCOMING */}
+
                                 <th className="
                                     px-4
                                     py-3.5
@@ -184,6 +202,8 @@ function AgentPerformanceTable({
                                     Incoming
                                 </th>
 
+
+                                {/* OUTGOING */}
 
                                 <th className="
                                     px-4
@@ -197,6 +217,8 @@ function AgentPerformanceTable({
                                 </th>
 
 
+                                {/* ANSWERED */}
+
                                 <th className="
                                     px-4
                                     py-3.5
@@ -208,6 +230,8 @@ function AgentPerformanceTable({
                                     Answered
                                 </th>
 
+
+                                {/* MISSED */}
 
                                 <th className="
                                     px-4
@@ -221,6 +245,8 @@ function AgentPerformanceTable({
                                 </th>
 
 
+                                {/* APPLICATIONS */}
+
                                 <th className="
                                     px-4
                                     py-3.5
@@ -232,6 +258,8 @@ function AgentPerformanceTable({
                                     Applications
                                 </th>
 
+
+                                {/* CONVERTED */}
 
                                 <th className="
                                     px-4
@@ -245,6 +273,8 @@ function AgentPerformanceTable({
                                 </th>
 
 
+                                {/* AVG TALK */}
+
                                 <th className="
                                     px-4
                                     py-3.5
@@ -256,6 +286,8 @@ function AgentPerformanceTable({
                                     Avg Talk
                                 </th>
 
+
+                                {/* ACTION */}
 
                                 <th className="
                                     w-[90px]
@@ -281,7 +313,10 @@ function AgentPerformanceTable({
                         <tbody>
 
                             {agents.map(
-                                (agent, index) => {
+                                (
+                                    agent,
+                                    index
+                                ) => {
 
                                     return (
 
@@ -299,7 +334,9 @@ function AgentPerformanceTable({
                                             "
                                         >
 
-                                            {/* # */}
+                                            {/* =================================================
+                                                RANK
+                                            ================================================= */}
 
                                             <td className="
                                                 px-4
@@ -314,7 +351,9 @@ function AgentPerformanceTable({
                                             </td>
 
 
-                                            {/* NAME */}
+                                            {/* =================================================
+                                                AGENT NAME
+                                            ================================================= */}
 
                                             <td className="
                                                 px-4
@@ -336,7 +375,9 @@ function AgentPerformanceTable({
                                             </td>
 
 
-                                            {/* TEAM */}
+                                            {/* =================================================
+                                                TEAM
+                                            ================================================= */}
 
                                             <td className="
                                                 px-4
@@ -357,7 +398,9 @@ function AgentPerformanceTable({
                                             </td>
 
 
-                                            {/* INCOMING */}
+                                            {/* =================================================
+                                                INCOMING
+                                            ================================================= */}
 
                                             <td className="
                                                 px-4
@@ -370,15 +413,19 @@ function AgentPerformanceTable({
                                                     text-base-content/80
                                                 ">
                                                     {
-                                                        agent.incoming ??
-                                                        0
+                                                        Number(
+                                                            agent.incoming ||
+                                                            0
+                                                        )
                                                     }
                                                 </span>
 
                                             </td>
 
 
-                                            {/* OUTGOING */}
+                                            {/* =================================================
+                                                OUTGOING
+                                            ================================================= */}
 
                                             <td className="
                                                 px-4
@@ -391,15 +438,19 @@ function AgentPerformanceTable({
                                                     text-base-content/80
                                                 ">
                                                     {
-                                                        agent.outgoing ??
-                                                        0
+                                                        Number(
+                                                            agent.outgoing ||
+                                                            0
+                                                        )
                                                     }
                                                 </span>
 
                                             </td>
 
 
-                                            {/* ANSWERED */}
+                                            {/* =================================================
+                                                ANSWERED
+                                            ================================================= */}
 
                                             <td className="
                                                 px-4
@@ -413,15 +464,19 @@ function AgentPerformanceTable({
                                                     text-[#6FA800]
                                                 ">
                                                     {
-                                                        agent.answered ??
-                                                        0
+                                                        Number(
+                                                            agent.answered ||
+                                                            0
+                                                        )
                                                     }
                                                 </span>
 
                                             </td>
 
 
-                                            {/* MISSED */}
+                                            {/* =================================================
+                                                MISSED
+                                            ================================================= */}
 
                                             <td className="
                                                 px-4
@@ -435,15 +490,19 @@ function AgentPerformanceTable({
                                                     text-red-500
                                                 ">
                                                     {
-                                                        agent.missed ??
-                                                        0
+                                                        Number(
+                                                            agent.missed ||
+                                                            0
+                                                        )
                                                     }
                                                 </span>
 
                                             </td>
 
 
-                                            {/* APPLICATIONS */}
+                                            {/* =================================================
+                                                APPLICATIONS
+                                            ================================================= */}
 
                                             <td className="
                                                 px-4
@@ -456,15 +515,19 @@ function AgentPerformanceTable({
                                                     text-base-content/80
                                                 ">
                                                     {
-                                                        agent.applications ??
-                                                        0
+                                                        Number(
+                                                            agent.applications ||
+                                                            0
+                                                        )
                                                     }
                                                 </span>
 
                                             </td>
 
 
-                                            {/* CONVERTED */}
+                                            {/* =================================================
+                                                CONVERTED
+                                            ================================================= */}
 
                                             <td className="
                                                 px-4
@@ -478,15 +541,19 @@ function AgentPerformanceTable({
                                                     text-[#6FA800]
                                                 ">
                                                     {
-                                                        agent.converted ??
-                                                        0
+                                                        Number(
+                                                            agent.converted ||
+                                                            0
+                                                        )
                                                     }
                                                 </span>
 
                                             </td>
 
 
-                                            {/* AVG TALK */}
+                                            {/* =================================================
+                                                AVG TALK
+                                            ================================================= */}
 
                                             <td className="
                                                 whitespace-nowrap
@@ -509,7 +576,9 @@ function AgentPerformanceTable({
                                             </td>
 
 
-                                            {/* ACTION */}
+                                            {/* =================================================
+                                                ACTION
+                                            ================================================= */}
 
                                             <td className="
                                                 px-4

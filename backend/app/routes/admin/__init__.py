@@ -47,9 +47,15 @@ from .banker_directory_routes import router as banker_directory_router
 # ============================================================================
 # EMPLOYEE MANAGEMENT
 # ============================================================================
-
 from .employee_routes import router as employee_router
+from .employee_management.attendance_routes import router as employement_management_attendance_router
+
+
+# ============================================================================
+# My Attendance
+# ============================================================================
 from .attendance_routes import router as attendance_router
+
 
 
 # ============================================================================
@@ -71,6 +77,12 @@ from .CallManagement.call_assignments import (
     router as call_assignment_router,
 )
 
+# ============================================================================
+# CALL Analytics
+# ============================================================================
+from .CallAnalytics.overview_routes import router as call_analytics_overview_router
+from .CallAnalytics.performance_routes import router as call_analytics_performance_router
+from .CallAnalytics.Trends.ad_number_trend_routes import router as call_analytics_trends_ad_number_trend_router
 
 # ============================================================================
 # MAIN ADMIN ROUTER
@@ -123,22 +135,31 @@ router.include_router(banker_directory_router)
 # ============================================================================
 # EMPLOYEE MANAGEMENT
 # ============================================================================
-
 router.include_router(employee_router)
+router.include_router(employement_management_attendance_router)
+
+# ============================================================================
+# My Attendance
+# ============================================================================
 router.include_router(attendance_router)
 
 
 # ============================================================================
 # FACE ENROLLMENT
 # ============================================================================
-
 router.include_router(face_enrollment_router)
 
 
 # ============================================================================
 # CALL MANAGEMENT
 # ============================================================================
-
 router.include_router(phone_number_router)
 router.include_router(call_logs_router)
 router.include_router(call_assignment_router)
+
+# ============================================================================
+# CALL Analytics
+# ============================================================================
+router.include_router(call_analytics_overview_router)
+router.include_router(call_analytics_performance_router)
+router.include_router(call_analytics_trends_ad_number_trend_router)
