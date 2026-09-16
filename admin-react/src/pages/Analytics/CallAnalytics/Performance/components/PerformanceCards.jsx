@@ -12,47 +12,77 @@ import ArrowTrendingUpIcon from '@heroicons/react/24/outline/ArrowTrendingUpIcon
 // HELPERS
 // =============================================================
 
-const getValue = (calls, key) =>
-    calls.reduce(
-        (total, call) =>
-            total + Number(call[key] || 0),
-        0
-    )
-
-
-const getAnswered = (calls) =>
-    calls.reduce(
-        (total, call) =>
-            total + Number(call.answered || 0),
-        0
-    )
-
-
-const getTotalCalls = (calls) =>
-    calls.reduce(
-        (total, call) =>
+const getValue = (
+    agents,
+    key
+) =>
+    agents.reduce(
+        (
+            total,
+            agent
+        ) =>
             total +
             Number(
-                call.incoming || 0
-            ) +
-            Number(
-                call.outgoing || 0
+                agent?.[key] || 0
             ),
         0
     )
 
 
-const getAnswerRate = (calls) => {
+const getAnswered = (
+    agents
+) =>
+    agents.reduce(
+        (
+            total,
+            agent
+        ) =>
+            total +
+            Number(
+                agent?.answered || 0
+            ),
+        0
+    )
+
+
+const getTotalCalls = (
+    agents
+) =>
+    agents.reduce(
+        (
+            total,
+            agent
+        ) =>
+            total +
+            Number(
+                agent?.incoming || 0
+            ) +
+            Number(
+                agent?.outgoing || 0
+            ),
+        0
+    )
+
+
+const getAnswerRate = (
+    agents
+) => {
 
     const total =
-        getTotalCalls(calls)
+        getTotalCalls(
+            agents
+        )
+
 
     if (!total) {
         return 0
     }
 
+
     return (
-        getAnswered(calls) /
+        getAnswered(
+            agents
+        ) /
         total
     ) * 100
 
@@ -75,12 +105,29 @@ function PerformanceCards({
         agents.length
 
 
+    /*
+     * Calls Handled represents the number of assignments
+     * handled by the visible agents.
+     *
+     * Backend:
+     *
+     * callsHandled = assignments
+     *
+     * Therefore this card must use callsHandled instead
+     * of incoming + outgoing.
+     */
+
     const callsHandled =
-        getTotalCalls(agents)
+        getValue(
+            agents,
+            'callsHandled'
+        )
 
 
     const answered =
-        getAnswered(agents)
+        getAnswered(
+            agents
+        )
 
 
     const missed =
@@ -105,7 +152,9 @@ function PerformanceCards({
 
 
     const answerRate =
-        getAnswerRate(agents)
+        getAnswerRate(
+            agents
+        )
 
 
     // =========================================================
@@ -115,33 +164,62 @@ function PerformanceCards({
     const cards = [
         {
             label: 'Total Agents',
-            value: totalAgents,
-            icon: ChartBarIcon,
+
+            value:
+                totalAgents,
+
+            icon:
+                ChartBarIcon,
         },
+
         {
             label: 'Calls Handled',
-            value: callsHandled,
-            icon: PhoneIcon,
+
+            value:
+                callsHandled,
+
+            icon:
+                PhoneIcon,
         },
+
         {
             label: 'Answer Rate',
-            value: `${answerRate.toFixed(1)}%`,
-            icon: CheckCircleIcon,
+
+            value:
+                `${answerRate.toFixed(1)}%`,
+
+            icon:
+                CheckCircleIcon,
         },
+
         {
             label: 'Missed Calls',
-            value: missed,
-            icon: PhoneXMarkIcon,
+
+            value:
+                missed,
+
+            icon:
+                PhoneXMarkIcon,
         },
+
         {
             label: 'Applications',
-            value: applications,
-            icon: DocumentTextIcon,
+
+            value:
+                applications,
+
+            icon:
+                DocumentTextIcon,
         },
+
         {
             label: 'Conversions',
-            value: converted,
-            icon: ArrowTrendingUpIcon,
+
+            value:
+                converted,
+
+            icon:
+                ArrowTrendingUpIcon,
         },
     ]
 
@@ -161,7 +239,9 @@ function PerformanceCards({
         ">
 
             {cards.map(
-                (card) => {
+                (
+                    card
+                ) => {
 
                     const Icon =
                         card.icon

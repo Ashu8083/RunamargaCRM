@@ -1,195 +1,24 @@
 // admin-react/src/pages/Analytics/CallAnalytics/Overview/index.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 
-import AgentDropdown from '../../../../components/GlobalModels/Filters/AgentDropdown'
-import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
+import EmployeeDropdown from '../../../../components/GlobalModels/Filters/EmployeeDropdown'
 
 import AnalyticsCards from './components/AnalyticsCards'
 import CallActivityGraph from './components/CallActivityGraph'
 
-
-// =============================================================
-// MOCK DATA
-// =============================================================
-
-const MOCK_CALLS = [
-    {
-        id: 1,
-        name: 'Aravind Kumar',
-        phone: '9876543210',
-        agentId: 101,
-        agent: 'Rahul Sharma',
-        rm: 'Priya Nair',
-        team: 'Bangalore Team',
-        type: 'incoming',
-        status: 'received',
-        date: '2026-08-28',
-    },
-    {
-        id: 2,
-        name: 'Priya Sharma',
-        phone: '9876543211',
-        agentId: 101,
-        agent: 'Rahul Sharma',
-        rm: 'Priya Nair',
-        team: 'Bangalore Team',
-        type: 'outgoing',
-        status: 'received',
-        date: '2026-08-28',
-    },
-    {
-        id: 3,
-        name: 'Suresh Kumar',
-        phone: '9876543212',
-        agentId: 102,
-        agent: 'Anil Kumar',
-        rm: 'Rajesh Rao',
-        team: 'Bangalore Team',
-        type: 'incoming',
-        status: 'missed',
-        date: '2026-08-28',
-    },
-    {
-        id: 4,
-        name: 'Nayana Rao',
-        phone: '9876543213',
-        agentId: 102,
-        agent: 'Anil Kumar',
-        rm: 'Rajesh Rao',
-        team: 'Mysore Team',
-        type: 'outgoing',
-        status: 'received',
-        date: '2026-08-27',
-    },
-    {
-        id: 5,
-        name: 'Manoj Rao',
-        phone: '9876543214',
-        agentId: 103,
-        agent: 'Vikram Singh',
-        rm: 'Priya Nair',
-        team: 'Bangalore Team',
-        type: 'incoming',
-        status: 'unknown',
-        date: '2026-08-27',
-    },
-    {
-        id: 6,
-        name: 'Asma Banu',
-        phone: '9876543215',
-        agentId: 103,
-        agent: 'Vikram Singh',
-        rm: 'Rajesh Rao',
-        team: 'Mysore Team',
-        type: 'outgoing',
-        status: 'missed',
-        date: '2026-08-26',
-    },
-    {
-        id: 7,
-        name: 'Kiran Kumar',
-        phone: '9876543216',
-        agentId: 101,
-        agent: 'Rahul Sharma',
-        rm: 'Priya Nair',
-        team: 'Bangalore Team',
-        type: 'incoming',
-        status: 'received',
-        date: '2026-08-26',
-    },
-    {
-        id: 8,
-        name: 'Deepa R',
-        phone: '9876543217',
-        agentId: 102,
-        agent: 'Anil Kumar',
-        rm: 'Rajesh Rao',
-        team: 'Mysore Team',
-        type: 'incoming',
-        status: 'missed',
-        date: '2026-08-25',
-    },
-    {
-        id: 9,
-        name: 'Ramesh Gowda',
-        phone: '9876543218',
-        agentId: 103,
-        agent: 'Vikram Singh',
-        rm: 'Priya Nair',
-        team: 'Bangalore Team',
-        type: 'outgoing',
-        status: 'received',
-        date: '2026-08-25',
-    },
-    {
-        id: 10,
-        name: 'Sneha Rao',
-        phone: '9876543219',
-        agentId: 101,
-        agent: 'Rahul Sharma',
-        rm: 'Rajesh Rao',
-        team: 'Mysore Team',
-        type: 'incoming',
-        status: 'unknown',
-        date: '2026-08-24',
-    },
-    {
-        id: 11,
-        name: 'Vijay Kumar',
-        phone: '9876543220',
-        agentId: 102,
-        agent: 'Anil Kumar',
-        rm: 'Priya Nair',
-        team: 'Bangalore Team',
-        type: 'outgoing',
-        status: 'missed',
-        date: '2026-08-23',
-    },
-    {
-        id: 12,
-        name: 'Pooja Shetty',
-        phone: '9876543221',
-        agentId: 103,
-        agent: 'Vikram Singh',
-        rm: 'Rajesh Rao',
-        team: 'Mysore Team',
-        type: 'incoming',
-        status: 'received',
-        date: '2026-08-22',
-    },
-]
-
-
-// =============================================================
-// MOCK API
-// =============================================================
-
-const fetchCallAnalytics = async () => {
-
-    return new Promise((resolve) => {
-
-        setTimeout(() => {
-            resolve(MOCK_CALLS)
-        }, 400)
-
-    })
-
-}
+import {
+    getCallAnalyticsOverview,
+    getApiErrorMessage,
+} from './API'
 
 
 // =============================================================
 // FILTER OPTIONS
 // =============================================================
-
-const TEAMS = [
-    'Bangalore Team',
-    'Mysore Team',
-]
-
 
 const DIRECTIONS = [
     'incoming',
@@ -200,8 +29,63 @@ const DIRECTIONS = [
 const STATUSES = [
     'received',
     'missed',
-    'unknown',
+    'rejected',
+    'not_reached...',
 ]
+
+
+// =============================================================
+// CURRENT MONTH DATE
+// =============================================================
+//
+// Default frontend date range:
+//
+// From = first day of current month
+// To   = today
+//
+// The backend also has current-month protection when dates
+// are not supplied. Here we explicitly select the month in
+// the UI so the user can see exactly what is being filtered.
+//
+// =============================================================
+
+const getCurrentMonthDateRange = () => {
+
+    const now = new Date()
+
+    const year =
+        now.getFullYear()
+
+
+    const month =
+        String(
+            now.getMonth() + 1
+        ).padStart(
+            2,
+            '0'
+        )
+
+
+    const day =
+        String(
+            now.getDate()
+        ).padStart(
+            2,
+            '0'
+        )
+
+
+    return {
+
+        fromDate:
+            `${year}-${month}-01`,
+
+        toDate:
+            `${year}-${month}-${day}`,
+
+    }
+
+}
 
 
 // =============================================================
@@ -216,6 +100,7 @@ const formatLabel = (value) => {
 
 
     return String(value)
+        .replace(/_/g, ' ')
         .replace(/-/g, ' ')
         .replace(/\b\w/g, (char) =>
             char.toUpperCase()
@@ -336,7 +221,9 @@ function DateRange({
             gap-2
         ">
 
-            {/* FROM */}
+            {/* =================================================
+                FROM
+            ================================================= */}
 
             <div>
 
@@ -372,7 +259,9 @@ function DateRange({
             </div>
 
 
-            {/* TO */}
+            {/* =================================================
+                TO
+            ================================================= */}
 
             <div>
 
@@ -420,23 +309,54 @@ function DateRange({
 
 function Overview() {
 
+    // =========================================================
+    // DEFAULT CURRENT MONTH
+    // =========================================================
+
+    const currentMonth =
+        getCurrentMonthDateRange()
+
+
+    // =========================================================
+    // DATA
+    // =========================================================
+
     const [calls, setCalls] =
         useState([])
 
+
+    const [summary, setSummary] =
+        useState({
+            total: 0,
+            answered: 0,
+            missed: 0,
+            unknown: 0,
+            assigned: 0,
+            converted: 0,
+        })
+
+
+    // =========================================================
+    // LOADING
+    // =========================================================
 
     const [loading, setLoading] =
         useState(true)
 
 
-    const [team, setTeam] =
+    // =========================================================
+    // ERROR
+    // =========================================================
+
+    const [error, setError] =
         useState('')
 
 
-    const [agent, setAgent] =
-        useState('')
+    // =========================================================
+    // FILTERS
+    // =========================================================
 
-
-    const [rm, setRm] =
+    const [employee, setEmployee] =
         useState('')
 
 
@@ -448,265 +368,212 @@ function Overview() {
         useState('')
 
 
+    // ---------------------------------------------------------
+    // DATE FILTER
+    // ---------------------------------------------------------
+    //
+    // IMPORTANT:
+    // The date fields are initialized to the current month.
+    //
+    // Example:
+    //
+    // September 2026
+    //
+    // From = 2026-09-01
+    // To   = 2026-09-14
+    //
+    // ---------------------------------------------------------
+
     const [fromDate, setFromDate] =
-        useState('')
+        useState(
+            currentMonth.fromDate
+        )
 
 
     const [toDate, setToDate] =
-        useState('')
+        useState(
+            currentMonth.toDate
+        )
 
+
+    // =========================================================
+    // KPI
+    // =========================================================
 
     const [activeKpi, setActiveKpi] =
         useState('')
-
-
-    const agentOptions = useMemo(() => {
-
-        const map = new Map()
-
-
-        calls.forEach((call) => {
-
-            const id =
-                call.agentId ??
-                call.agent_id ??
-                call.agent
-
-
-            const name =
-                call.agent ??
-                call.agentName ??
-                call.agent_name ??
-                'Unknown Agent'
-
-
-            if (!id && !name) {
-                return
-            }
-
-
-            const key =
-                String(id ?? name)
-
-
-            if (!map.has(key)) {
-
-                map.set(key, {
-                    id: id ?? name,
-                    name,
-                })
-
-            }
-
-        })
-
-
-        return [...map.values()]
-
-    }, [
-        calls,
-    ])
-
-
-    const rmOptions = useMemo(() => {
-
-        return [
-            ...new Set(
-                calls
-                    .map((call) => call.rm)
-                    .filter(Boolean)
-            ),
-        ]
-
-    }, [
-        calls,
-    ])
 
 
     // =========================================================
     // LOAD DATA
     // =========================================================
 
-    const loadData = async () => {
+    const loadData = useCallback(
+        async () => {
 
-        try {
+            try {
 
-            setLoading(true)
+                setLoading(true)
 
-
-            const response =
-                await fetchCallAnalytics()
+                setError('')
 
 
-            setCalls(
-                Array.isArray(response)
-                    ? response
-                    : []
-            )
+                // -------------------------------------------------
+                // SEND ALL ACTIVE FILTERS
+                // -------------------------------------------------
+                //
+                // These values are converted by API.js into:
+                //
+                // employee_id
+                // from_date
+                // to_date
+                // call_type
+                // status
+                //
+                // -------------------------------------------------
 
-        } finally {
+                const response =
+                    await getCallAnalyticsOverview({
 
-            setLoading(false)
+                        employeeId:
+                            employee,
 
-        }
+                        fromDate:
+                            fromDate,
 
-    }
+                        toDate:
+                            toDate,
 
+                        callType:
+                            direction,
+
+                        status:
+                            status,
+
+                    })
+
+
+                // -------------------------------------------------
+                // CALL RECORDS
+                // -------------------------------------------------
+
+                setCalls(
+                    Array.isArray(
+                        response.calls
+                    )
+                        ? response.calls
+                        : []
+                )
+
+
+                // -------------------------------------------------
+                // SUMMARY
+                // -------------------------------------------------
+
+                setSummary(
+                    response.summary || {
+                        total: 0,
+                        answered: 0,
+                        missed: 0,
+                        unknown: 0,
+                        assigned: 0,
+                        converted: 0,
+                    }
+                )
+
+            } catch (requestError) {
+
+                console.error(
+                    'Failed to load call analytics:',
+                    requestError
+                )
+
+
+                setCalls([])
+
+
+                setSummary({
+                    total: 0,
+                    answered: 0,
+                    missed: 0,
+                    unknown: 0,
+                    assigned: 0,
+                    converted: 0,
+                })
+
+
+                setError(
+                    getApiErrorMessage(
+                        requestError,
+                        'Unable to load call analytics.'
+                    )
+                )
+
+            } finally {
+
+                setLoading(false)
+
+            }
+
+        },
+        [
+            employee,
+            fromDate,
+            toDate,
+            direction,
+            status,
+        ]
+    )
+
+
+    // =========================================================
+    // INITIAL / FILTER LOAD
+    // =========================================================
 
     useEffect(() => {
 
         loadData()
 
-    }, [])
-
-
-    // =========================================================
-    // FILTER DATA
-    // =========================================================
-
-    const filteredCalls = useMemo(() => {
-
-        return calls.filter(
-            (call) => {
-
-                // -------------------------------------------------
-                // TEAM
-                // -------------------------------------------------
-
-                const matchesTeam =
-                    !team ||
-                    call.team === team
-
-
-                // -------------------------------------------------
-                // AGENT
-                // AgentDropdown returns agent ID
-                // -------------------------------------------------
-
-                const matchesAgent =
-                    !agent ||
-                    String(
-                        call.agentId
-                    ) === String(agent)
-
-
-                // -------------------------------------------------
-                // RM
-                // -------------------------------------------------
-
-                const matchesRm =
-                    !rm ||
-                    call.rm === rm
-
-
-                // -------------------------------------------------
-                // CALL DIRECTION
-                // -------------------------------------------------
-
-                const matchesDirection =
-                    !direction ||
-                    call.type === direction
-
-
-                // -------------------------------------------------
-                // CALL STATUS
-                // -------------------------------------------------
-
-                const matchesStatus =
-                    !status ||
-                    call.status === status
-
-
-                // -------------------------------------------------
-                // FROM DATE
-                // -------------------------------------------------
-
-                const matchesFrom =
-                    !fromDate ||
-                    call.date >= fromDate
-
-
-                // -------------------------------------------------
-                // TO DATE
-                // -------------------------------------------------
-
-                const matchesTo =
-                    !toDate ||
-                    call.date <= toDate
-
-
-                // -------------------------------------------------
-                // KPI FILTER
-                // -------------------------------------------------
-
-                const matchesKpi =
-                    !activeKpi ||
-                    activeKpi === 'total' ||
-                    (
-                        activeKpi === 'answered' &&
-                        call.status === 'received'
-                    ) ||
-                    (
-                        activeKpi === 'missed' &&
-                        call.status === 'missed'
-                    ) ||
-                    (
-                        activeKpi === 'unknown' &&
-                        call.status === 'unknown'
-                    ) ||
-                    (
-                        activeKpi === 'assigned' &&
-                        call.followUp === 'assigned'
-                    ) ||
-                    (
-                        activeKpi === 'converted' &&
-                        call.followUp === 'converted'
-                    )
-
-
-                return (
-                    matchesTeam &&
-                    matchesAgent &&
-                    matchesRm &&
-                    matchesDirection &&
-                    matchesStatus &&
-                    matchesFrom &&
-                    matchesTo &&
-                    matchesKpi
-                )
-
-            }
-        )
-
     }, [
-        calls,
-        team,
-        agent,
-        rm,
-        direction,
-        status,
-        fromDate,
-        toDate,
-        activeKpi,
+        loadData,
     ])
 
 
     // =========================================================
-    // RESET
+    // KPI FILTER
+    // =========================================================
+    //
+    // The backend already returns the correct KPI totals.
+    //
+    // For the graph / displayed records, KPI filtering is kept
+    // on the frontend.
+    //
+    // Unknown / assigned / converted are represented by the
+    // backend summary and are not individual call-log statuses.
+    //
     // =========================================================
 
-    const handleReset = () => {
-
-        setTeam('')
-        setAgent('')
-        setRm('')
-        setDirection('')
-        setStatus('')
-        setFromDate('')
-        setToDate('')
-        setActiveKpi('')
-
-    }
+    const displayedCalls =
+        activeKpi === 'total' ||
+        !activeKpi
+            ? calls
+            : activeKpi === 'answered'
+                ? calls.filter(
+                    (call) =>
+                        call.status === 'received'
+                )
+                : activeKpi === 'missed'
+                    ? calls.filter(
+                        (call) =>
+                            call.status === 'missed'
+                    )
+                    : activeKpi === 'unknown'
+                        ? []
+                        : activeKpi === 'assigned'
+                            ? []
+                            : activeKpi === 'converted'
+                                ? []
+                                : calls
 
 
     // =========================================================
@@ -715,11 +582,52 @@ function Overview() {
 
     const handleKpiClick = (key) => {
 
-        setActiveKpi((current) =>
-            current === key
-                ? ''
-                : key
+        setActiveKpi(
+            (current) =>
+                current === key
+                    ? ''
+                    : key
         )
+
+    }
+
+
+    // =========================================================
+    // RESET
+    // =========================================================
+    //
+    // Reset means:
+    //
+    // Employee    = All
+    // Direction   = All
+    // Status      = All
+    // From        = current month's first day
+    // To          = today
+    // KPI         = none
+    //
+    // =========================================================
+
+    const handleReset = () => {
+
+        const current =
+            getCurrentMonthDateRange()
+
+
+        setEmployee('')
+
+        setDirection('')
+
+        setStatus('')
+
+        setFromDate(
+            current.fromDate
+        )
+
+        setToDate(
+            current.toDate
+        )
+
+        setActiveKpi('')
 
     }
 
@@ -738,8 +646,12 @@ function Overview() {
                 sm:p-6
             ">
 
+                {/* =================================================
+                    FILTER SKELETON
+                ================================================= */}
+
                 <div className="
-                    h-24
+                    h-40
                     animate-pulse
                     rounded-xl
                     border
@@ -747,6 +659,10 @@ function Overview() {
                     bg-base-100
                 " />
 
+
+                {/* =================================================
+                    KPI SKELETON
+                ================================================= */}
 
                 <div className="
                     grid
@@ -779,6 +695,10 @@ function Overview() {
                 </div>
 
 
+                {/* =================================================
+                    GRAPH SKELETON
+                ================================================= */}
+
                 <div className="
                     h-[420px]
                     animate-pulse
@@ -807,6 +727,32 @@ function Overview() {
             sm:p-6
         ">
 
+            {/* =================================================
+                ERROR
+            ================================================= */}
+
+            {error && (
+
+                <div className="
+                    rounded-lg
+                    border
+                    border-error/30
+                    bg-error/5
+                    px-4
+                    py-3
+                ">
+
+                    <p className="
+                        text-xs
+                        text-error
+                    ">
+                        {error}
+                    </p>
+
+                </div>
+
+            )}
+
 
             {/* =================================================
                 FILTERS
@@ -830,35 +776,21 @@ function Overview() {
                 ">
 
 
-                    {/* TEAM */}
+                    {/* =================================================
+                        EMPLOYEE
+                    ================================================= */}
 
-                    <FilterDropdown
-                        label="Team"
-                        value={team}
-                        options={TEAMS}
-                        onChange={setTeam}
+                    <EmployeeDropdown
+                        label="Employee"
+                        value={employee}
+                        onChange={setEmployee}
+                        placeholder="Select Employee"
                     />
 
 
-                    {/* AGENT */}
-
-                    <AgentDropdown
-                        value={agent}
-                        onChange={setAgent}
-                        options={agentOptions}
-                    />
-
-
-                    {/* RM */}
-
-                    <RmDropdown
-                        value={rm}
-                        onChange={setRm}
-                        options={rmOptions}
-                    />
-
-
-                    {/* CALL DIRECTION */}
+                    {/* =================================================
+                        CALL DIRECTION
+                    ================================================= */}
 
                     <FilterDropdown
                         label="Call Direction"
@@ -868,7 +800,9 @@ function Overview() {
                     />
 
 
-                    {/* CALL STATUS */}
+                    {/* =================================================
+                        CALL STATUS
+                    ================================================= */}
 
                     <FilterDropdown
                         label="Call Status"
@@ -901,7 +835,9 @@ function Overview() {
                     />
 
 
-                    {/* RESET */}
+                    {/* =================================================
+                        RESET
+                    ================================================= */}
 
                     <button
                         type="button"
@@ -925,7 +861,9 @@ function Overview() {
                     </button>
 
 
-                    {/* REFRESH */}
+                    {/* =================================================
+                        REFRESH
+                    ================================================= */}
 
                     <button
                         type="button"
@@ -966,7 +904,7 @@ function Overview() {
             ================================================= */}
 
             <AnalyticsCards
-                calls={filteredCalls}
+                summary={summary}
                 activeKpi={activeKpi}
                 onKpiClick={handleKpiClick}
             />
@@ -1034,7 +972,7 @@ function Overview() {
             ================================================= */}
 
             <CallActivityGraph
-                calls={filteredCalls}
+                calls={displayedCalls}
             />
 
         </div>

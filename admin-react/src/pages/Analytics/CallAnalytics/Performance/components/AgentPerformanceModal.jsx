@@ -1,33 +1,101 @@
 // admin-react/src/pages/Analytics/CallAnalytics/Performance/components/AgentPerformanceModal.jsx
 
-import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
-import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
-import CheckCircleIcon from '@heroicons/react/24/outline/CheckCircleIcon'
-import PhoneXMarkIcon from '@heroicons/react/24/outline/PhoneXMarkIcon'
-import DocumentTextIcon from '@heroicons/react/24/outline/DocumentTextIcon'
-import ArrowTrendingUpIcon from '@heroicons/react/24/outline/ArrowTrendingUpIcon'
-import ClockIcon from '@heroicons/react/24/outline/ClockIcon'
+import {
+    XMarkIcon,
+} from "@heroicons/react/24/outline";
 
 
 // =============================================================
-// HELPERS
+// FORMAT DURATION
 // =============================================================
 
 const formatDuration = (seconds) => {
-    const total = Number(seconds) || 0
-    const minutes = Math.floor(total / 60)
-    const remaining = total % 60
 
-    return `${minutes}m ${String(remaining).padStart(2, '0')}s`
-}
+    const totalSeconds = Number(seconds || 0);
+
+    const minutes = Math.floor(
+        totalSeconds / 60
+    );
+
+    const remainingSeconds =
+        totalSeconds % 60;
+
+    return `${minutes}m ${String(
+        remainingSeconds
+    ).padStart(2, "0")}s`;
+};
 
 
-const getPercentage = (value, total) => {
-    if (!total) {
-        return 0
+// =============================================================
+// PERCENTAGE
+// =============================================================
+
+const getPercentage = (
+    value,
+    total
+) => {
+
+    const numericValue = Number(
+        value || 0
+    );
+
+    const numericTotal = Number(
+        total || 0
+    );
+
+    if (numericTotal <= 0) {
+        return 0;
     }
 
-    return Number(((value / total) * 100).toFixed(1))
+    return Math.min(
+        100,
+        Math.max(
+            0,
+            (numericValue / numericTotal) * 100
+        )
+    );
+};
+
+
+// =============================================================
+// METRIC CARD
+// =============================================================
+
+function Metric({
+    label,
+    value,
+}) {
+
+    return (
+
+        <div className="
+            rounded-xl
+            border
+            border-base-300
+            bg-base-100
+            p-4
+        ">
+
+            <p className="
+                text-xs
+                font-medium
+                text-base-content/50
+            ">
+                {label}
+            </p>
+
+            <p className="
+                mt-1
+                text-xl
+                font-semibold
+                text-base-content
+            ">
+                {value}
+            </p>
+
+        </div>
+
+    );
 }
 
 
@@ -37,40 +105,78 @@ const getPercentage = (value, total) => {
 
 function PerformanceBar({
     label,
-    value,
+    percentage,
 }) {
-    const percentage = Math.min(
-        Math.max(Number(value) || 0, 0),
-        100
-    )
+
+    const safePercentage = Math.round(
+        Math.min(
+            100,
+            Math.max(
+                0,
+                Number(percentage || 0)
+            )
+        )
+    );
 
     return (
-        <div>
-            <div className="flex items-center justify-between text-xs">
-                <span className="text-base-content/50">
+
+        <div className="space-y-2">
+
+            <div className="
+                flex
+                items-center
+                justify-between
+            ">
+
+                <span className="
+                    text-xs
+                    font-medium
+                    text-base-content/60
+                ">
                     {label}
                 </span>
 
-                <span className="font-semibold text-base-content">
-                    {percentage.toFixed(1)}%
+                <span className="
+                    text-xs
+                    font-semibold
+                    text-base-content/70
+                ">
+                    {safePercentage}%
                 </span>
+
             </div>
 
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-base-300">
+
+            <div className="
+                h-2
+                w-full
+                overflow-hidden
+                rounded-full
+                bg-base-200
+            ">
+
                 <div
-                    className="h-full rounded-full bg-[#8BCF00] transition-all"
+                    className="
+                        h-full
+                        rounded-full
+                        bg-[#8BCF00]
+                        transition-all
+                    "
                     style={{
-                        width: `${percentage}%`,
+                        width: `${safePercentage}%`,
                     }}
                 />
+
             </div>
+
         </div>
-    )
+
+    );
 }
 
 
 // =============================================================
-// COMPONENT
+// MODAL
 // =============================================================
 
 function AgentPerformanceModal({
@@ -80,192 +186,153 @@ function AgentPerformanceModal({
 }) {
 
     if (!open || !agent) {
-        return null
+        return null;
     }
 
 
-    // =========================================================
-    // VALUES
-    // =========================================================
+    const incoming = Number(
+        agent.incoming || 0
+    );
 
-    const incoming = Number(agent.incoming) || 0
-    const outgoing = Number(agent.outgoing) || 0
-    const answered = Number(agent.answered) || 0
-    const missed = Number(agent.missed) || 0
-    const applications = Number(agent.applications) || 0
-    const converted = Number(agent.converted) || 0
+    const outgoing = Number(
+        agent.outgoing || 0
+    );
 
-    const totalCalls =
-        incoming + outgoing
+    const answered = Number(
+        agent.answered || 0
+    );
 
-    const answerRate =
-        getPercentage(
-            answered,
-            totalCalls
-        )
+    const missed = Number(
+        agent.missed || 0
+    );
 
-    const conversionRate =
-        getPercentage(
-            converted,
-            applications
-        )
+    const applications = Number(
+        agent.applications || 0
+    );
 
+    const converted = Number(
+        agent.converted || 0
+    );
 
-    // =========================================================
-    // METRICS
-    // =========================================================
+    const assignments = Number(
+        agent.assignments || 0
+    );
 
-    const metrics = [
-        {
-            label: 'Calls',
-            value: totalCalls,
-            icon: PhoneIcon,
-        },
-        {
-            label: 'Answered',
-            value: answered,
-            icon: CheckCircleIcon,
-        },
-        {
-            label: 'Missed',
-            value: missed,
-            icon: PhoneXMarkIcon,
-        },
-        {
-            label: 'Applications',
-            value: applications,
-            icon: DocumentTextIcon,
-        },
-        {
-            label: 'Converted',
-            value: converted,
-            icon: ArrowTrendingUpIcon,
-        },
-        {
-            label: 'Avg Talk',
-            value: formatDuration(
-                agent.avgTalkSeconds
-            ),
-            icon: ClockIcon,
-        },
-    ]
+    const callsHandled = Number(
+        agent.callsHandled || assignments
+    );
+
+    const totalCalls = Number(
+        agent.totalCalls ||
+        (incoming + outgoing)
+    );
 
 
-    // =========================================================
-    // RENDER
-    // =========================================================
+    const answerRate = getPercentage(
+        answered,
+        totalCalls
+    );
+
+    const conversionRate = getPercentage(
+        converted,
+        applications
+    );
+
 
     return (
+
         <div
             className="
                 fixed
                 inset-0
-                z-[100]
+                z-50
                 flex
                 items-center
                 justify-center
                 bg-black/40
-                p-3
-                sm:p-5
+                p-4
             "
-            onMouseDown={(event) => {
-                if (
-                    event.target ===
-                    event.currentTarget
-                ) {
-                    onClose?.()
-                }
-            }}
+            onClick={onClose}
         >
 
             <div
                 className="
-                    flex
-                    max-h-[90vh]
                     w-full
                     max-w-2xl
-                    flex-col
                     overflow-hidden
                     rounded-2xl
                     border
                     border-base-300
                     bg-base-100
-                    shadow-2xl
+                    shadow-xl
                 "
+                onClick={(event) =>
+                    event.stopPropagation()
+                }
             >
 
-                {/* =================================================
+                {/* =====================================================
                     HEADER
-                ================================================= */}
+                ===================================================== */}
 
-                <div
-                    className="
-                        flex
-                        shrink-0
-                        items-center
-                        justify-between
-                        border-b
-                        border-base-300
-                        px-5
-                        py-4
-                    "
-                >
+                <div className="
+                    flex
+                    items-center
+                    justify-between
+                    border-b
+                    border-base-300
+                    px-6
+                    py-5
+                ">
 
                     <div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="
+                            flex
+                            items-center
+                            gap-3
+                        ">
 
-                            <h2
-                                className="
-                                    text-base
-                                    font-semibold
-                                    text-base-content
-                                "
-                            >
-                                {agent.name || 'Agent'}
+                            <h2 className="
+                                text-lg
+                                font-semibold
+                                text-base-content
+                            ">
+                                {
+                                    agent.name ||
+                                    "Agent Performance"
+                                }
                             </h2>
 
-                            <span
-                                className="
-                                    inline-flex
-                                    items-center
-                                    gap-1
-                                    rounded-full
-                                    border
-                                    border-[#8BCF00]/30
-                                    bg-[#8BCF00]/10
-                                    px-2
-                                    py-1
-                                    text-[10px]
-                                    font-medium
-                                    text-[#6FA800]
-                                "
-                            >
-
-                                <span
-                                    className="
-                                        h-1.5
-                                        w-1.5
-                                        rounded-full
-                                        bg-[#8BCF00]
-                                    "
-                                />
-
-                                Active
-
+                            <span className="
+                                rounded-full
+                                bg-[#8BCF00]/10
+                                px-2.5
+                                py-1
+                                text-[11px]
+                                font-medium
+                                text-[#6FA800]
+                            ">
+                                {
+                                    agent.status ||
+                                    "active"
+                                }
                             </span>
 
                         </div>
 
-                        <p
-                            className="
+
+                        {agent.team && (
+
+                            <p className="
                                 mt-1
                                 text-xs
-                                text-base-content/45
-                            "
-                        >
-                            {agent.team || '—'}
-                        </p>
+                                text-base-content/50
+                            ">
+                                {agent.team}
+                            </p>
+
+                        )}
 
                     </div>
 
@@ -273,7 +340,6 @@ function AgentPerformanceModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        title="Close"
                         className="
                             flex
                             h-9
@@ -287,144 +353,178 @@ function AgentPerformanceModal({
                             hover:text-base-content
                         "
                     >
-                        <XMarkIcon className="h-5 w-5" />
+
+                        <XMarkIcon className="
+                            h-5
+                            w-5
+                        " />
+
                     </button>
 
                 </div>
 
 
-                {/* =================================================
-                    CONTENT
-                ================================================= */}
+                {/* =====================================================
+                    BODY
+                ===================================================== */}
 
-                <div
-                    className="
-                        min-h-0
-                        flex-1
-                        overflow-y-auto
-                        p-5
-                    "
-                >
+                <div className="
+                    max-h-[75vh]
+                    overflow-y-auto
+                    px-6
+                    py-6
+                ">
 
                     {/* =================================================
                         METRICS
                     ================================================= */}
 
-                    <div
-                        className="
-                            grid
-                            grid-cols-2
-                            gap-3
-                            sm:grid-cols-3
-                        "
-                    >
+                    <div className="
+                        grid
+                        grid-cols-2
+                        gap-3
+                        sm:grid-cols-3
+                    ">
 
-                        {metrics.map((metric) => {
+                        <Metric
+                            label="Calls"
+                            value={totalCalls}
+                        />
 
-                            const Icon = metric.icon
+                        <Metric
+                            label="Calls Handled"
+                            value={callsHandled}
+                        />
 
-                            return (
-                                <div
-                                    key={metric.label}
-                                    className="
-                                        rounded-xl
-                                        border
-                                        border-base-300
-                                        bg-base-100
-                                        p-3.5
-                                    "
-                                >
+                        <Metric
+                            label="Answered"
+                            value={answered}
+                        />
 
-                                    <div
-                                        className="
-                                            flex
-                                            items-center
-                                            gap-2
-                                        "
-                                    >
+                        <Metric
+                            label="Missed"
+                            value={missed}
+                        />
 
-                                        <Icon
-                                            className="
-                                                h-4
-                                                w-4
-                                                text-base-content/40
-                                            "
-                                        />
+                        <Metric
+                            label="Applications"
+                            value={applications}
+                        />
 
-                                        <span
-                                            className="
-                                                text-xs
-                                                text-base-content/50
-                                            "
-                                        >
-                                            {metric.label}
-                                        </span>
-
-                                    </div>
-
-
-                                    <p
-                                        className="
-                                            mt-2
-                                            text-lg
-                                            font-semibold
-                                            text-base-content
-                                        "
-                                    >
-                                        {metric.value}
-                                    </p>
-
-                                </div>
-                            )
-                        })}
+                        <Metric
+                            label="Converted"
+                            value={converted}
+                        />
 
                     </div>
 
 
                     {/* =================================================
-                        PERFORMANCE SUMMARY
+                        AVG TALK
                     ================================================= */}
 
-                    <div
-                        className="
-                            mt-4
-                            rounded-xl
-                            border
-                            border-base-300
-                            bg-base-200/20
-                            p-4
-                        "
-                    >
+                    <div className="
+                        mt-4
+                        rounded-xl
+                        border
+                        border-base-300
+                        bg-base-100
+                        p-4
+                    ">
 
-                        <p
-                            className="
-                                text-xs
-                                font-semibold
-                                text-base-content/70
-                            "
-                        >
-                            Performance Summary
-                        </p>
+                        <div className="
+                            flex
+                            items-center
+                            justify-between
+                        ">
+
+                            <div>
+
+                                <p className="
+                                    text-xs
+                                    font-medium
+                                    text-base-content/50
+                                ">
+                                    Average Talk Time
+                                </p>
+
+                                <p className="
+                                    mt-1
+                                    text-xl
+                                    font-semibold
+                                    text-base-content
+                                ">
+                                    {
+                                        formatDuration(
+                                            agent.avgTalkSeconds
+                                        )
+                                    }
+                                </p>
+
+                            </div>
 
 
-                        <div
-                            className="
-                                mt-4
-                                grid
-                                grid-cols-1
-                                gap-4
-                                sm:grid-cols-2
-                            "
-                        >
+                            <div className="
+                                text-right
+                            ">
+
+                                <p className="
+                                    text-xs
+                                    text-base-content/45
+                                ">
+                                    Assignments
+                                </p>
+
+                                <p className="
+                                    mt-1
+                                    text-sm
+                                    font-semibold
+                                    text-base-content/70
+                                ">
+                                    {assignments}
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    {/* =================================================
+                        PERFORMANCE
+                    ================================================= */}
+
+                    <div className="
+                        mt-6
+                    ">
+
+                        <h3 className="
+                            mb-4
+                            text-sm
+                            font-semibold
+                            text-base-content
+                        ">
+                            Performance
+                        </h3>
+
+
+                        <div className="
+                            space-y-5
+                        ">
 
                             <PerformanceBar
                                 label="Answer Rate"
-                                value={answerRate}
+                                percentage={
+                                    answerRate
+                                }
                             />
 
                             <PerformanceBar
                                 label="Conversion Rate"
-                                value={conversionRate}
+                                percentage={
+                                    conversionRate
+                                }
                             />
 
                         </div>
@@ -436,100 +536,72 @@ function AgentPerformanceModal({
                         CALL BREAKDOWN
                     ================================================= */}
 
-                    <div
-                        className="
-                            mt-4
-                            rounded-xl
-                            border
-                            border-base-300
-                            p-4
-                        "
-                    >
+                    <div className="
+                        mt-6
+                    ">
 
-                        <p
-                            className="
-                                text-xs
-                                font-semibold
-                                text-base-content/70
-                            "
-                        >
+                        <h3 className="
+                            mb-4
+                            text-sm
+                            font-semibold
+                            text-base-content
+                        ">
                             Call Breakdown
-                        </p>
+                        </h3>
 
 
-                        <div
-                            className="
-                                mt-3
-                                grid
-                                grid-cols-2
-                                gap-3
-                            "
-                        >
+                        <div className="
+                            grid
+                            grid-cols-2
+                            gap-3
+                        ">
 
-                            {/* INCOMING */}
+                            <div className="
+                                rounded-xl
+                                border
+                                border-base-300
+                                p-4
+                            ">
 
-                            <div
-                                className="
-                                    rounded-lg
-                                    bg-blue-50
-                                    px-3
-                                    py-2.5
-                                "
-                            >
-
-                                <p
-                                    className="
-                                        text-[10px]
-                                        font-medium
-                                        text-blue-600
-                                    "
-                                >
+                                <p className="
+                                    text-xs
+                                    text-base-content/50
+                                ">
                                     Incoming
                                 </p>
 
-                                <p
-                                    className="
-                                        mt-1
-                                        text-sm
-                                        font-semibold
-                                        text-blue-700
-                                    "
-                                >
+                                <p className="
+                                    mt-1
+                                    text-lg
+                                    font-semibold
+                                    text-base-content
+                                ">
                                     {incoming}
                                 </p>
 
                             </div>
 
 
-                            {/* OUTGOING */}
+                            <div className="
+                                rounded-xl
+                                border
+                                border-base-300
+                                p-4
+                            ">
 
-                            <div
-                                className="
-                                    rounded-lg
-                                    bg-violet-50
-                                    px-3
-                                    py-2.5
-                                "
-                            >
-
-                                <p
-                                    className="
-                                        text-[10px]
-                                        font-medium
-                                        text-violet-600
-                                    "
-                                >
+                                <p className="
+                                    text-xs
+                                    text-base-content/50
+                                ">
                                     Outgoing
                                 </p>
 
-                                <p
-                                    className="
-                                        mt-1
-                                        text-sm
-                                        font-semibold
-                                        text-violet-700
-                                    "
-                                >
+                                <p className="
+                                    mt-1
+                                    text-lg
+                                    font-semibold
+                                    text-base-content
+                                ">
                                     {outgoing}
                                 </p>
 
@@ -542,38 +614,33 @@ function AgentPerformanceModal({
                 </div>
 
 
-                {/* =================================================
+                {/* =====================================================
                     FOOTER
-                ================================================= */}
+                ===================================================== */}
 
-                <div
-                    className="
-                        flex
-                        shrink-0
-                        justify-end
-                        border-t
-                        border-base-300
-                        px-5
-                        py-4
-                    "
-                >
+                <div className="
+                    flex
+                    justify-end
+                    border-t
+                    border-base-300
+                    px-6
+                    py-4
+                ">
 
                     <button
                         type="button"
                         onClick={onClose}
                         className="
-                            h-9
                             rounded-lg
-                            bg-[#8BCF00]
+                            border
+                            border-base-300
                             px-4
-                            text-xs
+                            py-2
+                            text-sm
                             font-medium
-                            text-white
+                            text-base-content/70
                             transition
-                            hover:bg-[#78B300]
-                            focus:outline-none
-                            focus:ring-2
-                            focus:ring-[#8BCF00]/30
+                            hover:bg-base-200
                         "
                     >
                         Close
@@ -584,8 +651,9 @@ function AgentPerformanceModal({
             </div>
 
         </div>
-    )
+
+    );
 }
 
 
-export default AgentPerformanceModal
+export default AgentPerformanceModal;

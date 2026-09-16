@@ -20,10 +20,16 @@ const formatDate = (date) => {
 
 
     const parsed =
-        new Date(`${date}T00:00:00`)
+        new Date(
+            `${date}T00:00:00`
+        )
 
 
-    if (Number.isNaN(parsed.getTime())) {
+    if (
+        Number.isNaN(
+            parsed.getTime()
+        )
+    ) {
         return date
     }
 
@@ -79,6 +85,23 @@ const BAR_CONFIG = [
 
 
 // =============================================================
+// NORMALIZE VALUE
+// =============================================================
+
+const normalizeValue = (
+    value
+) => {
+
+    return String(
+        value || ''
+    )
+        .trim()
+        .toLowerCase()
+
+}
+
+
+// =============================================================
 // ACTIVITY GRAPH
 // =============================================================
 
@@ -105,15 +128,24 @@ function CallActivityGraph({
 
         calls.forEach((call) => {
 
+            // -------------------------------------------------
+            // DATE
+            // -------------------------------------------------
+
             const date =
                 call.date ||
-                call.createdAt?.slice(0, 10)
+                call.call_started_at?.slice(0, 10) ||
+                call.callStartedAt?.slice(0, 10)
 
 
             if (!date) {
                 return
             }
 
+
+            // -------------------------------------------------
+            // CREATE DATE GROUP
+            // -------------------------------------------------
 
             if (!grouped[date]) {
 
@@ -128,20 +160,26 @@ function CallActivityGraph({
             }
 
 
-            const type =
-                String(
-                    call.type || ''
-                )
-                    .trim()
-                    .toLowerCase()
+            // -------------------------------------------------
+            // CALL TYPE
+            // -------------------------------------------------
 
+            const type =
+                normalizeValue(
+                    call.type ||
+                    call.call_type
+                )
+
+
+            // -------------------------------------------------
+            // CALL STATUS
+            // -------------------------------------------------
 
             const status =
-                String(
-                    call.status || ''
+                normalizeValue(
+                    call.status ||
+                    call.mobile_status
                 )
-                    .trim()
-                    .toLowerCase()
 
 
             // -------------------------------------------------
@@ -175,7 +213,6 @@ function CallActivityGraph({
             // -------------------------------------------------
 
             if (
-                type === 'missed' ||
                 status === 'missed'
             ) {
 
@@ -189,8 +226,7 @@ function CallActivityGraph({
             // -------------------------------------------------
 
             if (
-                status === 'received' ||
-                status === 'answered'
+                status === 'received'
             ) {
 
                 grouped[date].answered += 1
@@ -200,7 +236,9 @@ function CallActivityGraph({
         })
 
 
-        return Object.values(grouped)
+        return Object.values(
+            grouped
+        )
             .sort(
                 (a, b) =>
                     a.date.localeCompare(

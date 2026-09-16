@@ -9,6 +9,20 @@ import CheckCircleIcon from '@heroicons/react/24/outline/CheckCircleIcon'
 
 
 // =============================================================
+// DEFAULT SUMMARY
+// =============================================================
+
+const DEFAULT_SUMMARY = {
+    total: 0,
+    answered: 0,
+    missed: 0,
+    unknown: 0,
+    assigned: 0,
+    converted: 0,
+}
+
+
+// =============================================================
 // KPI CARD
 // =============================================================
 
@@ -67,7 +81,9 @@ const KpiCard = ({
                         tracking-tight
                         text-base-content
                     ">
-                        {Number(value || 0).toLocaleString('en-IN')}
+                        {Number(
+                            value || 0
+                        ).toLocaleString('en-IN')}
                     </p>
 
                 </div>
@@ -106,87 +122,115 @@ const KpiCard = ({
 // =============================================================
 
 function AnalyticsCards({
-    calls = [],
+    summary = DEFAULT_SUMMARY,
     activeKpi = '',
     onKpiClick,
 }) {
 
+    // =========================================================
+    // SAFE SUMMARY
+    // =========================================================
+
+    const safeSummary = {
+        ...DEFAULT_SUMMARY,
+        ...(summary || {}),
+    }
+
+
+    // =========================================================
+    // BACKEND SUMMARY
+    // =========================================================
+
+    const total =
+        Number(
+            safeSummary.total || 0
+        )
+
+
     const answered =
-        calls.filter(
-            (call) =>
-                call.status === 'received'
-        ).length
+        Number(
+            safeSummary.answered || 0
+        )
 
 
     const missed =
-        calls.filter(
-            (call) =>
-                call.status === 'missed'
-        ).length
+        Number(
+            safeSummary.missed || 0
+        )
 
 
     const unknown =
-        calls.filter(
-            (call) =>
-                call.status === 'unknown'
-        ).length
+        Number(
+            safeSummary.unknown || 0
+        )
 
 
     const assigned =
-        calls.filter(
-            (call) =>
-                call.followUp === 'assigned' ||
-                call.followUp === 'completed' ||
-                call.followUp === 'converted'
-        ).length
+        Number(
+            safeSummary.assigned || 0
+        )
 
 
     const converted =
-        calls.filter(
-            (call) =>
-                call.followUp === 'converted'
-        ).length
+        Number(
+            safeSummary.converted || 0
+        )
 
+
+    // =========================================================
+    // CARDS
+    // =========================================================
 
     const cards = [
+
         {
             key: 'total',
             title: 'Total Calls',
-            value: calls.length,
+            value: total,
             icon: PhoneIcon,
         },
+
         {
             key: 'answered',
             title: 'Answered',
             value: answered,
             icon: PhoneArrowDownLeftIcon,
         },
+
         {
             key: 'missed',
             title: 'Missed',
             value: missed,
             icon: PhoneXMarkIcon,
         },
+
         {
             key: 'unknown',
             title: 'Unknown',
             value: unknown,
             icon: QuestionMarkCircleIcon,
         },
+
         {
             key: 'assigned',
             title: 'Assigned',
             value: assigned,
             icon: UserGroupIcon,
         },
+
         {
             key: 'converted',
             title: 'Converted',
             value: converted,
             icon: CheckCircleIcon,
         },
+
     ]
 
+
+    // =========================================================
+    // RENDER
+    // =========================================================
 
     return (
 
@@ -202,14 +246,27 @@ function AnalyticsCards({
                 (card) => (
 
                     <KpiCard
-                        key={card.key}
-                        title={card.title}
-                        value={card.value}
-                        icon={card.icon}
+                        key={
+                            card.key
+                        }
+
+                        title={
+                            card.title
+                        }
+
+                        value={
+                            card.value
+                        }
+
+                        icon={
+                            card.icon
+                        }
+
                         active={
                             activeKpi ===
                             card.key
                         }
+
                         onClick={() =>
                             onKpiClick?.(
                                 card.key
