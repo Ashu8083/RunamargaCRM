@@ -686,7 +686,7 @@ def update_application_status(
 
             reverted_by_name=employee.name,
 
-            rejection_type="revert_rejected",
+            rejection_type="revert",
 
             reverted_by_role=role_name,
 

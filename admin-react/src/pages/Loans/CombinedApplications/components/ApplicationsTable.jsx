@@ -1444,18 +1444,6 @@ function ApplicationsTable({
                                             );
 
 
-                                        const agentName =
-                                            getAgentName(
-                                                application
-                                            );
-
-
-                                        const rmName =
-                                            getRMName(
-                                                application
-                                            );
-
-
                                         // const appliedBy =
                                         //     getAppliedBy(
                                         //         application

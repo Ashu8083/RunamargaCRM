@@ -1,6 +1,11 @@
 // admin-react/src/pages/Loans/RevertedApplications/index.jsx
 
-import { useMemo, useState } from 'react'
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
@@ -12,6 +17,11 @@ import RevertedApplicationsTable from './components/RevertedApplicationsTable'
 import RevertDateModal from './components/RevertDateModal'
 import RevertHistoryModal from './components/RevertHistoryModal'
 
+import {
+    getRevertedApplications,
+    getRevertHistory,
+    getApiErrorMessage,
+} from './API'
 
 function RevertedApplications() {
 
@@ -19,101 +29,25 @@ function RevertedApplications() {
     // APPLICATION DATA
     // =========================================================
 
-    const [applications, setApplications] = useState([
-        {
-            id: 1,
-            applicantName: 'Sahil',
-            loanType: 'Personal Loan',
-            revertedDate: '2026-12-31T00:00:00',
-            remarks: 'SAHIL KUMAR 79751566 rejected due to low credit score. Customer requested a revised date.',
-            revertedBy: 'Asma Banu',
-            revertedById: 201,
-            originalDate: '2026-12-20T00:00:00',
-            changeHistory: [
-                {
-                    id: 1,
-                    changedBy: 'Asma Banu',
-                    changedAt: '2026-08-24T10:30:00',
-                    fromDate: '2026-12-20T00:00:00',
-                    toDate: '2026-12-31T00:00:00',
-                    remarks: 'Customer requested a revised date.',
-                },
-            ],
-        },
+    const [applications, setApplications] =
+        useState([])
 
-        {
-            id: 2,
-            applicantName: 'jeevan',
-            loanType: 'Personal Loan',
-            revertedDate: '2027-02-18T00:00:00',
-            remarks: 'High fojr',
-            revertedBy: 'Asma Banu',
-            revertedById: 201,
-            originalDate: '2027-02-10T00:00:00',
-            changeHistory: [],
-        },
+    const [loading, setLoading] =
+        useState(false)
 
-        {
-            id: 3,
-            applicantName: 'Govinda',
-            loanType: 'Personal Loan',
-            revertedDate: '2026-10-28T00:00:00',
-            remarks: 'GOVINDADAS REJECT Mo...',
-            revertedBy: 'Asma Banu',
-            revertedById: 201,
-            originalDate: '2026-10-20T00:00:00',
-            changeHistory: [],
-        },
+    const [error, setError] =
+        useState('')
+    // =========================================================
+    // PAGINATION
+    // =========================================================
 
-        {
-            id: 4,
-            applicantName: 'Indrajit',
-            loanType: 'Personal Loan',
-            revertedDate: '2026-10-24T00:00:00',
-            remarks: 'CUSTOMER RECENTLY LO...',
-            revertedBy: 'Nayana',
-            revertedById: 202,
-            originalDate: '2026-10-15T00:00:00',
-            changeHistory: [],
-        },
-
-        {
-            id: 5,
-            applicantName: 'jeevan',
-            loanType: 'Personal Loan',
-            revertedDate: '2026-11-26T00:00:00',
-            remarks: '3 MONTHS REVERTING T...',
-            revertedBy: 'Lokesh A',
-            revertedById: 203,
-            originalDate: '2026-11-18T00:00:00',
-            changeHistory: [],
-        },
-
-        {
-            id: 6,
-            applicantName: 'Sharath',
-            loanType: 'Personal Loan',
-            revertedDate: '2026-11-24T00:00:00',
-            remarks: 'CUSTOMER RECENTLY LO...',
-            revertedBy: 'Nayana',
-            revertedById: 202,
-            originalDate: '2026-11-15T00:00:00',
-            changeHistory: [],
-        },
-
-        {
-            id: 7,
-            applicantName: 'Charwin',
-            loanType: 'Personal Loan',
-            revertedDate: '2026-11-24T00:00:00',
-            remarks: '3 MONTHS AFTER PROCE...',
-            revertedBy: 'Lokesh A',
-            revertedById: 203,
-            originalDate: '2026-11-16T00:00:00',
-            changeHistory: [],
-        },
-    ])
-
+    const [pagination, setPagination] =
+        useState({
+            page: 1,
+            limit: 10,
+            total: 0,
+            totalPages: 0,
+        })
 
     // =========================================================
     // FILTER STATE
@@ -260,140 +194,88 @@ function RevertedApplications() {
 
     }
 
-
     // =========================================================
-    // FILTER APPLICATIONS
+    // FETCH REVERTED APPLICATIONS
     // =========================================================
 
-    const filteredApplications = useMemo(() => {
+    const fetchApplications = useCallback(
+        async (
+            page = pagination.page
+        ) => {
 
-        const value =
-            search
-                .trim()
-                .toLowerCase()
+            try {
+
+                setLoading(true)
+                setError('')
 
 
-        return applications.filter(
-            (application) => {
+                const result =
+                    await getRevertedApplications({
+                        search,
+                        loanTypeId:
+                            selectedLoanType,
+                        revertedById:
+                            selectedAgent,
+                        revertedDate:
+                            selectedDate,
+                        page,
+                        limit:
+                            pagination.limit,
+                    })
 
-                // -------------------------------------------------
-                // SEARCH
-                // -------------------------------------------------
 
-                if (
-                    value &&
-                    ![
-                        application.applicantName,
-                        application.applicant_name,
-                        application.name,
-                        application.phone,
-                        application.loanId,
-                        application.loan_id,
-                        application.loanType,
-                        application.loan_type,
-                        application.remarks,
-                        application.remark,
-                        application.revertedBy,
-                        application.reverted_by,
-                        application.id,
-                    ].some(
-                        (field) =>
-                            field !== null &&
-                            field !== undefined &&
-                            String(field)
-                                .toLowerCase()
-                                .includes(value)
+                setApplications(
+                    result.items
+                )
+
+
+                setPagination({
+                    page:
+                        result.page,
+
+                    limit:
+                        result.limit,
+
+                    total:
+                        result.total,
+
+                    totalPages:
+                        result.totalPages,
+                })
+
+            } catch (error) {
+
+                console.error(
+                    'Failed to fetch reverted applications:',
+                    error
+                )
+
+
+                setApplications([])
+
+
+                setError(
+                    getApiErrorMessage(
+                        error,
+                        'Failed to load reverted applications.'
                     )
-                ) {
+                )
 
-                    return false
+            } finally {
 
-                }
-
-
-                // -------------------------------------------------
-                // LOAN TYPE
-                // -------------------------------------------------
-
-                const applicationLoanType =
-                    application.loanType ??
-                    application.loan_type
-
-
-                if (
-                    selectedLoanType &&
-                    applicationLoanType !==
-                        selectedLoanType
-                ) {
-
-                    return false
-
-                }
-
-
-                // -------------------------------------------------
-                // REVERTED BY / AGENT
-                // -------------------------------------------------
-
-                if (selectedAgent) {
-
-                    const revertedById =
-                        application.revertedById ??
-                        application.reverted_by_id ??
-                        application.revertedBy ??
-                        application.reverted_by
-
-
-                    if (
-                        String(revertedById) !==
-                        String(selectedAgent)
-                    ) {
-
-                        return false
-
-                    }
-
-                }
-
-
-                // -------------------------------------------------
-                // REVERTED DATE
-                // -------------------------------------------------
-
-                if (selectedDate) {
-
-                    const applicationDate =
-                        formatDateForFilter(
-                            application.revertedDate ??
-                            application.reverted_date
-                        )
-
-
-                    if (
-                        applicationDate !==
-                        selectedDate
-                    ) {
-
-                        return false
-
-                    }
-
-                }
-
-
-                return true
+                setLoading(false)
 
             }
-        )
 
-    }, [
-        applications,
-        search,
-        selectedLoanType,
-        selectedAgent,
-        selectedDate,
-    ])
-
+        },
+        [
+            search,
+            selectedLoanType,
+            selectedAgent,
+            selectedDate,
+            pagination.limit,
+        ]
+    )
 
     // =========================================================
     // CLEAR FILTERS
@@ -512,17 +394,53 @@ function RevertedApplications() {
     // VIEW CHANGE HISTORY
     // =========================================================
 
-    const handleViewHistory = (
+    const handleViewHistory = async (
         application
     ) => {
 
-        setSelectedApplication(
-            application
-        )
+        try {
 
-        setShowRevertHistoryModal(
-            true
-        )
+            setLoading(true)
+            setError('')
+
+
+            const history =
+                await getRevertHistory(
+                    application.loanId
+                )
+
+
+            setSelectedApplication({
+                ...application,
+                changeHistory:
+                    history,
+            })
+
+
+            setShowRevertHistoryModal(
+                true
+            )
+
+        } catch (error) {
+
+            console.error(
+                'Failed to fetch revert history:',
+                error
+            )
+
+
+            setError(
+                getApiErrorMessage(
+                    error,
+                    'Failed to load revert history.'
+                )
+            )
+
+        } finally {
+
+            setLoading(false)
+
+        }
 
     }
 
@@ -546,17 +464,77 @@ function RevertedApplications() {
 
     const handleRefresh = () => {
 
-        /*
-         * API refresh will be added later.
-         */
+        fetchApplications(
+            pagination.page
+        )
 
-        console.log(
-            'Refresh Reverted Applications'
+    }
+    // =========================================================
+    // PAGINATION
+    // =========================================================
+
+    const handlePreviousPage = () => {
+
+        if (
+            pagination.page <= 1 ||
+            loading
+        ) {
+            return
+        }
+
+
+        fetchApplications(
+            pagination.page - 1
         )
 
     }
 
 
+    const handleNextPage = () => {
+
+        if (
+            pagination.page >=
+            pagination.totalPages ||
+            loading
+        ) {
+            return
+        }
+
+
+        fetchApplications(
+            pagination.page + 1
+        )
+
+    }
+
+
+    const handlePageChange = (
+        page
+    ) => {
+
+        if (
+            page < 1 ||
+            page > pagination.totalPages ||
+            page === pagination.page ||
+            loading
+        ) {
+            return
+        }
+
+
+        fetchApplications(page)
+
+    }
+    // Filter changes
+    useEffect(() => {
+
+        fetchApplications(1)
+
+    }, [
+        selectedLoanType,
+        selectedAgent,
+        selectedDate,
+    ])
     // =========================================================
     // RENDER
     // =========================================================
@@ -610,12 +588,12 @@ function RevertedApplications() {
                             selectedAgent ||
                             selectedDate) && (
 
-                            <button
-                                type="button"
-                                onClick={
-                                    handleClearFilters
-                                }
-                                className="
+                                <button
+                                    type="button"
+                                    onClick={
+                                        handleClearFilters
+                                    }
+                                    className="
                                     flex
                                     items-center
                                     gap-1
@@ -624,18 +602,18 @@ function RevertedApplications() {
                                     text-[#78B300]
                                     hover:text-[#5f9000]
                                 "
-                            >
+                                >
 
-                                <XMarkIcon className="
+                                    <XMarkIcon className="
                                     h-3.5
                                     w-3.5
                                 " />
 
-                                Clear Filters
+                                    Clear Filters
 
-                            </button>
+                                </button>
 
-                        )}
+                            )}
 
                     </div>
 
@@ -764,9 +742,9 @@ function RevertedApplications() {
                         text-base-content/60
                     ">
 
-                        {filteredApplications.length}{' '}
+                        {applications.length}{' '}
 
-                        {filteredApplications.length === 1
+                        {applications.length === 1
                             ? 'result'
                             : 'results'}{' '}
 
@@ -783,22 +761,176 @@ function RevertedApplications() {
                 TABLE SECTION
             ===================================================== */}
 
-            <RevertedApplicationsTable
-                applications={
-                    filteredApplications
-                }
-                onChangeDate={
-                    handleChangeDate
-                }
-                onViewHistory={
-                    handleViewHistory
-                }
-                onRefresh={
-                    handleRefresh
-                }
-            />
+            {loading ? (
+
+                <div className="
+        flex
+        min-h-[280px]
+        items-center
+        justify-center
+        rounded-xl
+        border
+        border-base-300
+        bg-base-100
+        shadow-sm
+    ">
+
+                    <span className="
+            loading
+            loading-spinner
+            loading-md
+            text-[#78B300]
+        " />
+
+                </div>
+
+            ) : (
+
+                <RevertedApplicationsTable
+                    applications={
+                        applications
+                    }
+                    onChangeDate={
+                        handleChangeDate
+                    }
+                    onViewHistory={
+                        handleViewHistory
+                    }
+                    onRefresh={
+                        handleRefresh
+                    }
+                />
+
+            )}
+            {pagination.totalPages > 0 && (
+                <div className="
+        flex
+        flex-col
+        items-center
+        justify-between
+        gap-3
+        rounded-xl
+        border
+        border-base-300
+        bg-base-100
+        px-4
+        py-3
+        sm:flex-row
+    ">
+
+                    <p className="
+            text-xs
+            text-base-content/60
+        ">
+                        Page {pagination.page} of{' '}
+                        {pagination.totalPages}
+                    </p>
 
 
+                    <div className="
+            flex
+            items-center
+            gap-1
+        ">
+
+                        <button
+                            type="button"
+                            onClick={
+                                handlePreviousPage
+                            }
+                            disabled={
+                                pagination.page <= 1 ||
+                                loading
+                            }
+                            className="
+                    btn
+                    btn-sm
+                    btn-ghost
+                    disabled:opacity-40
+                "
+                        >
+                            Previous
+                        </button>
+
+
+                        {Array.from(
+                            {
+                                length:
+                                    pagination.totalPages,
+                            },
+                            (_, index) =>
+                                index + 1
+                        )
+                            .filter((page) => {
+
+                                if (
+                                    pagination.totalPages <= 7
+                                ) {
+                                    return true
+                                }
+
+                                return (
+                                    page === 1 ||
+                                    page ===
+                                    pagination.totalPages ||
+                                    Math.abs(
+                                        page -
+                                        pagination.page
+                                    ) <= 1
+                                )
+
+                            })
+                            .map((page) => (
+
+                                <button
+                                    key={page}
+                                    type="button"
+                                    onClick={() =>
+                                        handlePageChange(
+                                            page
+                                        )
+                                    }
+                                    disabled={loading}
+                                    className={`
+                            btn
+                            btn-sm
+                            ${page ===
+                                            pagination.page
+                                            ? 'bg-[#8BCF00] text-white hover:bg-[#6FA800]'
+                                            : 'btn-ghost'
+                                        }
+                        `}
+                                >
+                                    {page}
+                                </button>
+
+                            ))}
+
+
+                        <button
+                            type="button"
+                            onClick={
+                                handleNextPage
+                            }
+                            disabled={
+                                pagination.page >=
+                                pagination.totalPages ||
+                                loading
+                            }
+                            className="
+                    btn
+                    btn-sm
+                    btn-ghost
+                    disabled:opacity-40
+                "
+                        >
+                            Next
+                        </button>
+
+                    </div>
+
+                </div>
+            )}
             {/* =====================================================
                 CHANGE DATE MODAL
             ===================================================== */}

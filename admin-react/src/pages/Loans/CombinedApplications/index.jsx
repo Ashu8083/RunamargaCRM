@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams} from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { getActiveContext, getStoredUser } from '../../../app/auth'
 
 import ApplicationsTable from './components/ApplicationsTable'
@@ -16,7 +16,7 @@ import { useToast } from '../../../components/Toast/ToastProvider'
 
 function Applications() {
     const navigate = useNavigate()
-    
+
     const {
         showSuccess,
         showError,
@@ -911,7 +911,69 @@ function Applications() {
         fetchApplications()
 
     }
+    // =========================================================
+    // ASSIGNMENT CHANGE
+    // =========================================================
 
+    const handleAssignmentChange = (
+        applicationId,
+        updatedApplication
+    ) => {
+
+        setApplications((previous) =>
+            previous.map((application) => {
+
+                if (
+                    application.id !== applicationId
+                ) {
+                    return application
+                }
+
+                return {
+                    ...application,
+                    ...updatedApplication,
+
+                    rmId:
+                        updatedApplication?.rmId ??
+                        updatedApplication?.rm_id ??
+                        application.rmId,
+
+                    rm_id:
+                        updatedApplication?.rm_id ??
+                        updatedApplication?.rmId ??
+                        application.rm_id,
+
+                    rm:
+                        updatedApplication?.rm ??
+                        application.rm,
+
+                    rmName:
+                        updatedApplication?.rmName ??
+                        updatedApplication?.rm_name ??
+                        application.rmName,
+
+                    agentId:
+                        updatedApplication?.agentId ??
+                        updatedApplication?.agent_id ??
+                        application.agentId,
+
+                    agent_id:
+                        updatedApplication?.agent_id ??
+                        updatedApplication?.agentId ??
+                        application.agent_id,
+
+                    agent:
+                        updatedApplication?.agent ??
+                        application.agent,
+
+                    agentName:
+                        updatedApplication?.agentName ??
+                        updatedApplication?.agent_name ??
+                        application.agentName,
+                }
+            })
+        )
+    }
 
     // =========================================================
     // RENDER
@@ -1039,7 +1101,9 @@ function Applications() {
                 onRefresh={
                     handleRefresh
                 }
-
+                onAssignmentChange={
+                    handleAssignmentChange
+                }
             />
 
 

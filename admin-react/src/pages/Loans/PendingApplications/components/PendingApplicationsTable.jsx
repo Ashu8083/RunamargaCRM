@@ -18,6 +18,7 @@ import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
 import TeamLeadDropdown from '../../../../components/GlobalModels/Filters/TeamLeadDropdown'
 import LoanTypeDropdown from '../../../../components/GlobalModels/Filters/LoanTypeDropdown'
 import StatusDropdown from '../../../../components/GlobalModels/Filters/StatusDropdown'
+import apiClient from "../../../../app/apiClient";
 
 
 function PendingApplicationsTable({
@@ -56,8 +57,13 @@ function PendingApplicationsTable({
     onChat,
     onViewApplication,
     onRefresh,
+    onAssignmentChange,
 }) {
     const [loanTypes, setLoanTypes] = useState([]);
+    const [
+        expandedPhoneId,
+        setExpandedPhoneId,
+    ] = useState(null);
     // =============================================================
     // CONSTANTS
     // =============================================================
@@ -70,6 +76,7 @@ function PendingApplicationsTable({
         "Sanctioned",
         "Disbursed",
     ];
+
     // =========================================================
     // CHAT
     // =========================================================
@@ -106,6 +113,130 @@ function PendingApplicationsTable({
         },
         []
     );
+    // =========================================================
+    // AGENT CHANGE
+    // =========================================================
+
+    const handleAgentChange = async (
+        application,
+        newAgentId
+    ) => {
+
+        const applicationId =
+            application.id ??
+            application.loanId ??
+            application.loan_id;
+
+        if (
+            !applicationId ||
+            newAgentId === undefined ||
+            newAgentId === null ||
+            newAgentId === ''
+        ) {
+            return;
+        }
+
+        try {
+
+            const response =
+                await apiClient({
+                    method: 'PATCH',
+                    url: '/shuffle-loans/assign',
+                    data: {
+                        application_ids: [
+                            applicationId,
+                        ],
+                        agent_id:
+                            Number(newAgentId),
+                    },
+                });
+
+            const updatedApplication =
+                Array.isArray(response.data)
+                    ? response.data[0]
+                    : response.data;
+
+            if (
+                updatedApplication &&
+                onAssignmentChange
+            ) {
+                onAssignmentChange(
+                    applicationId,
+                    updatedApplication
+                );
+            }
+
+        } catch (error) {
+
+            console.error(
+                'Failed to update Processing Agent:',
+                error
+            );
+        }
+    };
+
+
+    // =========================================================
+    // RM CHANGE
+    // =========================================================
+
+    const handleRmChange = async (
+        application,
+        newRmId
+    ) => {
+
+        const applicationId =
+            application.id ??
+            application.loanId ??
+            application.loan_id;
+
+        if (
+            !applicationId ||
+            newRmId === undefined ||
+            newRmId === null ||
+            newRmId === ''
+        ) {
+            return;
+        }
+
+        try {
+
+            const response =
+                await apiClient({
+                    method: 'PATCH',
+                    url: '/shuffle-loans/assign',
+                    data: {
+                        application_ids: [
+                            applicationId,
+                        ],
+                        rm_id:
+                            Number(newRmId),
+                    },
+                });
+
+            const updatedApplication =
+                Array.isArray(response.data)
+                    ? response.data[0]
+                    : response.data;
+
+            if (
+                updatedApplication &&
+                onAssignmentChange
+            ) {
+                onAssignmentChange(
+                    applicationId,
+                    updatedApplication
+                );
+            }
+
+        } catch (error) {
+
+            console.error(
+                'Failed to update RM:',
+                error
+            );
+        }
+    };
     // =============================================================
     // LOAN TYPE
     // =============================================================
@@ -194,38 +325,6 @@ function PendingApplicationsTable({
         )
     }
 
-
-    const getAppliedBy = (application) => {
-        if (application.appliedBy?.name) {
-            return application.appliedBy.name
-        }
-
-        if (application.applied_by?.name) {
-            return application.applied_by.name
-        }
-
-        if (
-            typeof application.appliedBy === 'string'
-        ) {
-            return application.appliedBy
-        }
-
-        if (
-            typeof application.applied_by === 'string'
-        ) {
-            return application.applied_by
-        }
-
-        if (application.createdBy?.name) {
-            return application.createdBy.name
-        }
-
-        if (application.created_by?.name) {
-            return application.created_by.name
-        }
-
-        return 'N/A'
-    }
 
 
     const getReferralName = (application) => {
@@ -336,7 +435,6 @@ function PendingApplicationsTable({
         application.rejected_by ??
         application.rejectedBy ??
         null
-
 
     // =========================================================
     // STATUS
@@ -570,6 +668,26 @@ function PendingApplicationsTable({
                 `
         }
     }
+    // =========================================================
+    // PHONE
+    // =========================================================
+
+    const handlePhoneClick = (
+        application
+    ) => {
+
+        const applicationId =
+            application.id ??
+            application.loanId ??
+            application.loan_id;
+
+        setExpandedPhoneId(
+            (currentId) =>
+                currentId === applicationId
+                    ? null
+                    : applicationId
+        );
+    };
 
 
     // =========================================================
@@ -1038,7 +1156,6 @@ function PendingApplicationsTable({
                     >
 
                         <colgroup>
-
                             {/* # */}
                             <col className="w-[3%]" />
 
@@ -1046,7 +1163,7 @@ function PendingApplicationsTable({
                             <col className="w-[10%]" />
 
                             {/* Phone */}
-                            <col className="w-[8%]" />
+                            <col className="w-[7%]" />
 
                             {/* Loan Type */}
                             <col className="w-[7%]" />
@@ -1058,23 +1175,22 @@ function PendingApplicationsTable({
                             <col className="w-[7%]" />
 
                             {/* Applied By */}
-                            <col className="w-[8%]" />
+                            {/* <col className="w-[7%]" /> */}
 
                             {/* Referral */}
                             <col className="w-[7%]" />
 
                             {/* RM */}
-                            <col className="w-[7%]" />
+                            <col className="w-[13%]" />
 
                             {/* Processing Agent */}
-                            <col className="w-[9%]" />
+                            <col className="w-[13%]" />
 
                             {/* Status */}
-                            <col className="w-[11%]" />
+                            <col className="w-[9%]" />
 
                             {/* Actions */}
-                            <col className="w-[7%]" />
-
+                            <col className="w-[8%]" />
                         </colgroup>
 
 
@@ -1097,7 +1213,6 @@ function PendingApplicationsTable({
                                     'Loan Type',
                                     'Loan Amount',
                                     'Applied Date',
-                                    'Applied By',
                                     'Referral',
                                     'RM',
                                     'Processing Agent',
@@ -1153,27 +1268,25 @@ function PendingApplicationsTable({
                                         application,
                                         index
                                     ) => {
-
+                                        const applicationId =
+                                            application.id ??
+                                            application.loanId ??
+                                            application.loan_id ??
+                                            index;
                                         const loanTypeName =
                                             getLoanTypeName(
                                                 application,
                                                 loanTypes
                                             )
+                                        const phone =
+                                            application.phone ||
+                                            "N/A";
 
-                                        const agentName =
-                                            getAgentName(
-                                                application
-                                            )
+                                        const phoneExpanded =
+                                            expandedPhoneId ===
+                                            applicationId;
+                                    
 
-                                        const rmName =
-                                            getRMName(
-                                                application
-                                            )
-
-                                        const appliedBy =
-                                            getAppliedBy(
-                                                application
-                                            )
 
                                         const referralName =
                                             getReferralName(
@@ -1246,7 +1359,10 @@ function PendingApplicationsTable({
 
                                                 {/* PHONE */}
 
-                                                <td className="px-3 py-4 align-middle">
+                                                <td className="
+                                                    px-3
+                                                    py-4
+                                                ">
 
                                                     <div
                                                         className="
@@ -1257,23 +1373,44 @@ function PendingApplicationsTable({
                                                         "
                                                     >
 
-                                                        <Cell
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                handlePhoneClick(
+                                                                    application
+                                                                )
+                                                            }
                                                             title={
-                                                                application.phone
+                                                                phoneExpanded
+                                                                    ? "Collapse phone number"
+                                                                    : "Show full phone number"
                                                             }
                                                             className="
-                                                                text-sm
+                                                                min-w-0
                                                                 flex-1
+                                                                text-left
+                                                                text-sm
+                                                                hover:text-[#78B300]
                                                             "
                                                         >
-                                                            {
-                                                                application.phone ||
-                                                                'N/A'
-                                                            }
-                                                        </Cell>
+
+                                                            <span
+                                                                className={
+                                                                    phoneExpanded
+                                                                        ? "break-all"
+                                                                        : "block truncate"
+                                                                }
+                                                            >
+                                                                {
+                                                                    phone
+                                                                }
+                                                            </span>
+
+                                                        </button>
 
 
                                                         {application.phone && (
+
                                                             <a
                                                                 href={`tel:${application.phone}`}
                                                                 title={`Call ${application.name ||
@@ -1293,19 +1430,21 @@ function PendingApplicationsTable({
                                                                     hover:bg-[#8BCF00]/10
                                                                 "
                                                             >
+
                                                                 <PhoneIcon
                                                                     className="
                                                                         w-4
                                                                         h-4
                                                                     "
                                                                 />
+
                                                             </a>
+
                                                         )}
 
                                                     </div>
 
                                                 </td>
-
 
                                                 {/* LOAN TYPE */}
 
@@ -1385,22 +1524,7 @@ function PendingApplicationsTable({
                                                 </td>
 
 
-                                                {/* APPLIED BY */}
 
-                                                <td className="px-3 py-4 align-middle">
-
-                                                    <Cell
-                                                        title={
-                                                            appliedBy
-                                                        }
-                                                        className="text-sm"
-                                                    >
-                                                        {
-                                                            appliedBy
-                                                        }
-                                                    </Cell>
-
-                                                </td>
 
 
                                                 {/* REFERRAL */}
@@ -1425,37 +1549,41 @@ function PendingApplicationsTable({
 
                                                 <td className="px-3 py-4 align-middle">
 
-                                                    <Cell
-                                                        title={
-                                                            rmName
+                                                    <RmDropdown
+                                                        value={
+                                                            application.rmId ??
+                                                            application.rm_id ??
+                                                            ''
                                                         }
-                                                        className="text-sm"
-                                                    >
-                                                        {
-                                                            rmName
+                                                        onChange={(value) =>
+                                                            handleRmChange(
+                                                                application,
+                                                                value
+                                                            )
                                                         }
-                                                    </Cell>
+                                                    />
 
                                                 </td>
-
 
                                                 {/* PROCESSING AGENT */}
 
                                                 <td className="px-3 py-4 align-middle">
 
-                                                    <Cell
-                                                        title={
-                                                            agentName
+                                                    <AgentDropdown
+                                                        value={
+                                                            application.agentId ??
+                                                            application.agent_id ??
+                                                            ''
                                                         }
-                                                        className="text-sm"
-                                                    >
-                                                        {
-                                                            agentName
+                                                        onChange={(value) =>
+                                                            handleAgentChange(
+                                                                application,
+                                                                value
+                                                            )
                                                         }
-                                                    </Cell>
+                                                    />
 
                                                 </td>
-
 
                                                 {/* STATUS */}
 

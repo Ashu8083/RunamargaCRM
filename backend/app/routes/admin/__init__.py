@@ -33,9 +33,9 @@ from .admins_routes import router as admins_router
 from app.routes.admin.bank_routes import router as bank_router
 from app.routes.admin.dsa_routes import router as dsa_router
 from app.routes.admin.banker_directory_routes import router as banker_directory_router
-from .team_leads_routes import router as team_leads_router
-from .agents_routes import router as agents_router
+
 from .Loans.duplicate_approval_routes import router as duplicate_approval_router
+from .Loans.reverted_loans_routes import router as reverted_loans_router
 
 # ============================================================================
 # CALL MANAGEMENT
@@ -110,7 +110,7 @@ router.include_router(shuffle_loans_router)
 router.include_router(duplicate_approval_router)
 router.include_router(team_chat_router)
 router.include_router(loan_assignment_routes)
-
+router.include_router(reverted_loans_router)
 
 # ============================================================================
 # ROLES AND TEAMS
