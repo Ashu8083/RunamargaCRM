@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.core.access_control import AccessControl
+from app.audit.audit_service import AuditService
+from app.models import AuditLog
 from app.models.permissions import Permission
 from app.models.employees import Employee
 from app.models.employee_details import EmployeeDetails
@@ -367,6 +369,7 @@ def create_employee(
     db: Session,
     employee: Employee,
     data: CreateEmployeeRequest,
+    employee_context_id: int | None = None,
     profile_image: UploadFile | None = None,
     aadhaar_card: UploadFile | None = None,
     pan_card: UploadFile | None = None,
@@ -598,6 +601,14 @@ def create_employee(
         # =====================================================
         # 10. Commit
         # =====================================================
+        audit_logs = AuditService.log(
+            db=db,
+            action= "employee create",
+            module= "employee",
+            entity_id=new_employee.id,
+            description= "Employee created successfully",
+            employee_context_id=employee_context_id,
+        )
 
         db.commit()
         db.refresh(new_employee)

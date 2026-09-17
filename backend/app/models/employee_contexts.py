@@ -112,6 +112,11 @@ class EmployeeContext(Base):
         back_populates="employee_contexts",
     )
 
+    audit_logs = relationship(
+        "AuditLog",
+        cascade="all, delete-orphan",
+        back_populates="employee_contexts",
+    )
     # ------------------------------------------------------------------------
     # Hierarchy
     # ------------------------------------------------------------------------

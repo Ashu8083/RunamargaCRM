@@ -18,6 +18,7 @@ def create_employee_controller(
     db: Session,
     employee: Employee,
     data: CreateEmployeeRequest,
+    employee_context_id: int | None = None,
     profile_image: UploadFile | None = None,
     aadhaar_card: UploadFile | None = None,
     pan_card: UploadFile | None = None,
@@ -27,6 +28,7 @@ def create_employee_controller(
     return create_employee(
         db=db,
         employee=employee,
+        employee_context_id = employee_context_id,
         data=data,
         profile_image=profile_image,
         aadhaar_card=aadhaar_card,
