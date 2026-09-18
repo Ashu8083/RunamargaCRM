@@ -398,10 +398,10 @@ function Overview() {
                 sm:p-6
             ">
 
-                {/* FILTER */}
+                {/* FILTER SKELETON */}
 
                 <div className="
-                    h-24
+                    h-40
                     w-full
                     animate-pulse
                     rounded-xl
@@ -411,18 +411,18 @@ function Overview() {
                 " />
 
 
-                {/* TOP CONTENT */}
+                {/* TOP CONTENT SKELETON */}
 
                 <div className="
                     grid
                     w-full
                     grid-cols-1
                     gap-5
-                    xl:grid-cols-3
+                    xl:grid-cols-2
                 ">
 
                     {Array.from({
-                        length: 3,
+                        length: 2,
                     }).map((_, index) => (
 
                         <div
@@ -443,7 +443,7 @@ function Overview() {
                 </div>
 
 
-                {/* PIPELINE */}
+                {/* PIPELINE SKELETON */}
 
                 <div className="
                     h-[280px]
@@ -497,14 +497,13 @@ function Overview() {
                     w-full
                     min-w-0
                     grid-cols-1
-                    gap-3
+                    gap-4
                     sm:grid-cols-2
-                    lg:grid-cols-3
-                    xl:grid-cols-7
+                    lg:grid-cols-4
                 ">
 
                     {/* =================================================
-                        TEAM LEAD
+                        ROW 1 — TEAM LEAD
                     ================================================= */}
 
                     <div className="
@@ -526,7 +525,7 @@ function Overview() {
 
 
                     {/* =================================================
-                        AGENT
+                        ROW 1 — AGENT
                     ================================================= */}
 
                     <div className="
@@ -535,6 +534,7 @@ function Overview() {
                     ">
 
                         <AgentDropdown
+                        label='Agent'
                             value={agent}
                             onChange={setAgent}
                         />
@@ -543,7 +543,7 @@ function Overview() {
 
 
                     {/* =================================================
-                        RM
+                        ROW 1 — RM
                     ================================================= */}
 
                     <div className="
@@ -552,6 +552,7 @@ function Overview() {
                     ">
 
                         <RmDropdown
+                        label='RM'
                             value={rm}
                             onChange={setRm}
                         />
@@ -560,7 +561,7 @@ function Overview() {
 
 
                     {/* =================================================
-                        LOAN TYPE
+                        ROW 1 — LOAN TYPE
                     ================================================= */}
 
                     <div className="
@@ -569,6 +570,7 @@ function Overview() {
                     ">
 
                         <LoanTypeDropdown
+                        label='Loan Type'
                             value={loanType}
                             onChange={setLoanType}
                         />
@@ -577,7 +579,7 @@ function Overview() {
 
 
                     {/* =================================================
-                        FROM
+                        ROW 2 — FROM DATE
                     ================================================= */}
 
                     <div className="
@@ -618,7 +620,7 @@ function Overview() {
 
 
                     {/* =================================================
-                        TO
+                        ROW 2 — TO DATE
                     ================================================= */}
 
                     <div className="
@@ -659,15 +661,18 @@ function Overview() {
 
 
                     {/* =================================================
-                        ACTIONS
+                        ROW 2 — ACTIONS
                     ================================================= */}
 
                     <div className="
+                        col-span-1
                         flex
                         min-w-0
                         w-full
                         items-end
                         gap-2
+                        sm:col-span-2
+                        lg:col-span-2
                     ">
 
                         {/* RESET */}

@@ -192,7 +192,7 @@ function PipelineInsights({
                     <ClockIcon className="
                         h-5
                         w-5
-                        text-[#8BCF00]
+                        text-success
                     " />
 
                     <h3 className="
@@ -209,7 +209,7 @@ function PipelineInsights({
                 <p className="
                     mt-5
                     text-sm
-                    text-base-content/50
+                    text-base-content/55
                 ">
                     No analytics data available for
                     the selected filters.
@@ -233,8 +233,8 @@ function PipelineInsights({
             min-w-0
             rounded-2xl
             border
-            border-[#B9DFF7]
-            bg-[#F5FBFF]
+            border-info/25
+            bg-info/5
             p-5
             shadow-sm
         ">
@@ -253,13 +253,13 @@ function PipelineInsights({
                     h-5
                     w-5
                     shrink-0
-                    text-[#009FE3]
+                    text-info
                 " />
 
                 <h3 className="
                     text-sm
                     font-semibold
-                    text-[#008FD0]
+                    text-info
                 ">
                     Key Insight
                 </h3>
@@ -279,7 +279,7 @@ function PipelineInsights({
                 <p className="
                     text-sm
                     leading-6
-                    text-base-content/65
+                    text-base-content/70
                 ">
 
                     Out of{' '}
@@ -307,7 +307,7 @@ function PipelineInsights({
                     gap-x-2
                     gap-y-1
                     text-sm
-                    text-base-content/65
+                    text-base-content/70
                 ">
 
                     <span>
@@ -323,7 +323,7 @@ function PipelineInsights({
 
                     <span className="
                         font-medium
-                        text-[#008FD0]
+                        text-info
                     ">
                         (
                         {roundPercentage(
@@ -344,7 +344,7 @@ function PipelineInsights({
                     gap-x-2
                     gap-y-1
                     text-sm
-                    text-base-content/65
+                    text-base-content/70
                 ">
 
                     <span>
@@ -360,7 +360,7 @@ function PipelineInsights({
 
                     <span className="
                         font-medium
-                        text-[#D92D20]
+                        text-error
                     ">
                         (
                         {roundPercentage(
@@ -381,7 +381,7 @@ function PipelineInsights({
                     gap-x-2
                     gap-y-1
                     text-sm
-                    text-base-content/65
+                    text-base-content/70
                 ">
 
                     <span>
@@ -407,7 +407,7 @@ function PipelineInsights({
                     gap-x-2
                     gap-y-1
                     text-sm
-                    text-base-content/65
+                    text-base-content/70
                 ">
 
                     <span>
@@ -423,7 +423,7 @@ function PipelineInsights({
 
                     <span className="
                         font-medium
-                        text-[#D97706]
+                        text-warning
                     ">
                         (
                         {roundPercentage(
@@ -444,7 +444,7 @@ function PipelineInsights({
                     gap-x-2
                     gap-y-1
                     text-sm
-                    text-base-content/65
+                    text-base-content/70
                 ">
 
                     <span>
@@ -460,7 +460,7 @@ function PipelineInsights({
 
                     <span className="
                         font-medium
-                        text-[#25803C]
+                        text-success
                     ">
                         (
                         {roundPercentage(
@@ -481,7 +481,7 @@ function PipelineInsights({
             <div className="
                 mt-6
                 border-t
-                border-[#B9DFF7]
+                border-base-300
                 pt-5
             ">
 
@@ -501,12 +501,12 @@ function PipelineInsights({
 
                         <span className="
                             text-sm
-                            text-base-content/65
+                            text-base-content/70
                         ">
                             Pipeline drop-off
                             <span className="
                                 text-xs
-                                text-base-content/45
+                                text-base-content/50
                             ">
                                 {' '}(excluding rejected)
                             </span>
@@ -538,7 +538,7 @@ function PipelineInsights({
 
                         <span className="
                             text-sm
-                            text-base-content/65
+                            text-base-content/70
                         ">
                             Pending sanction
                         </span>
@@ -569,7 +569,7 @@ function PipelineInsights({
 
                         <span className="
                             text-sm
-                            text-base-content/65
+                            text-base-content/70
                         ">
                             Pending disbursement
                         </span>

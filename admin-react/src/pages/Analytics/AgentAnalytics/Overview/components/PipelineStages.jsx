@@ -105,7 +105,7 @@ function PipelineStage({
                         truncate
                         text-xs
                         font-medium
-                        text-base-content/55
+                        text-base-content/60
                     ">
                         {title}
                     </p>
@@ -117,7 +117,7 @@ function PipelineStage({
                     shrink-0
                     text-[11px]
                     font-medium
-                    text-base-content/40
+                    text-base-content/50
                 ">
                     {formatPercentage(percentage)}
                 </span>
@@ -146,13 +146,13 @@ function PipelineStage({
             ">
 
                 <div
-                    className="
+                    className={`
                         h-full
                         rounded-full
-                        bg-current
                         transition-all
                         duration-500
-                    "
+                        ${valueClass}
+                    `}
                     style={{
                         width: `${Math.min(
                             Math.max(
@@ -297,7 +297,7 @@ function PipelineStages({
                         <p className="
                             mt-1
                             text-xs
-                            text-base-content/45
+                            text-base-content/50
                         ">
                             Lead movement across application stages
                         </p>
@@ -310,7 +310,7 @@ function PipelineStages({
                 <div className="
                     mt-8
                     rounded-xl
-                    bg-base-200/50
+                    bg-base-200/60
                     px-4
                     py-8
                     text-center
@@ -318,7 +318,7 @@ function PipelineStages({
 
                     <p className="
                         text-sm
-                        text-base-content/45
+                        text-base-content/50
                     ">
                         No pipeline data available
                     </p>
@@ -334,7 +334,7 @@ function PipelineStages({
 
     // =========================================================
     // RENDER
-    // =========================================================
+    // =============================================================
 
     return (
 
@@ -374,7 +374,7 @@ function PipelineStages({
                     <p className="
                         mt-1
                         text-xs
-                        text-base-content/45
+                        text-base-content/50
                     ">
                         Lead movement across application stages
                     </p>
@@ -384,7 +384,7 @@ function PipelineStages({
 
                 <div className="
                     rounded-lg
-                    bg-[#8BCF00]/10
+                    bg-success/10
                     px-3
                     py-1.5
                 ">
@@ -392,7 +392,7 @@ function PipelineStages({
                     <span className="
                         text-xs
                         font-medium
-                        text-[#78B300]
+                        text-success
                     ">
                         {formatNumber(
                             totals.leadReceived
@@ -427,11 +427,12 @@ function PipelineStages({
                     percentage={100}
                     icon={DocumentTextIcon}
                     iconClass="
-                        bg-[#8BCF00]/10
-                        text-[#78B300]
+                        bg-success/10
+                        text-success
                     "
                     valueClass="
-                        text-[#78B300]
+                        text-success
+                        bg-success
                     "
                 />
 
@@ -446,7 +447,7 @@ function PipelineStages({
                     <ArrowRightIcon className="
                         h-4
                         w-4
-                        text-base-content/25
+                        text-base-content/30
                     " />
 
                 </div>
@@ -460,11 +461,12 @@ function PipelineStages({
                     percentage={loginRate}
                     icon={CheckCircleIcon}
                     iconClass="
-                        bg-[#009FE3]/10
-                        text-[#009FE3]
+                        bg-info/10
+                        text-info
                     "
                     valueClass="
-                        text-[#008FD0]
+                        text-info
+                        bg-info
                     "
                 />
 
@@ -479,7 +481,7 @@ function PipelineStages({
                     <ArrowRightIcon className="
                         h-4
                         w-4
-                        text-base-content/25
+                        text-base-content/30
                     " />
 
                 </div>
@@ -493,11 +495,12 @@ function PipelineStages({
                     percentage={sanctionRate}
                     icon={CheckCircleIcon}
                     iconClass="
-                        bg-[#D97706]/10
-                        text-[#D97706]
+                        bg-warning/10
+                        text-warning
                     "
                     valueClass="
-                        text-[#C26100]
+                        text-warning
+                        bg-warning
                     "
                 />
 
@@ -512,7 +515,7 @@ function PipelineStages({
                     <ArrowRightIcon className="
                         h-4
                         w-4
-                        text-base-content/25
+                        text-base-content/30
                     " />
 
                 </div>
@@ -526,11 +529,12 @@ function PipelineStages({
                     percentage={disbursementRate}
                     icon={CurrencyRupeeIcon}
                     iconClass="
-                        bg-[#25803C]/10
-                        text-[#25803C]
+                        bg-success/10
+                        text-success
                     "
                     valueClass="
-                        text-[#25803C]
+                        text-success
+                        bg-success
                     "
                 />
 
@@ -550,8 +554,8 @@ function PipelineStages({
                 gap-3
                 rounded-xl
                 border
-                border-[#D92D20]/15
-                bg-[#D92D20]/5
+                border-error/20
+                bg-error/5
                 px-4
                 py-3
             ">
@@ -571,13 +575,13 @@ function PipelineStages({
                         items-center
                         justify-center
                         rounded-lg
-                        bg-[#D92D20]/10
+                        bg-error/10
                     ">
 
                         <XCircleIcon className="
                             h-4
                             w-4
-                            text-[#D92D20]
+                            text-error
                         " />
 
                     </div>
@@ -588,7 +592,7 @@ function PipelineStages({
                         <p className="
                             text-xs
                             font-medium
-                            text-base-content/65
+                            text-base-content/70
                         ">
                             Rejected
                         </p>
@@ -596,7 +600,7 @@ function PipelineStages({
                         <p className="
                             mt-0.5
                             text-[11px]
-                            text-base-content/40
+                            text-base-content/50
                         ">
                             Leads rejected during processing
                         </p>
@@ -615,7 +619,7 @@ function PipelineStages({
                     <span className="
                         text-lg
                         font-bold
-                        text-[#D92D20]
+                        text-error
                     ">
                         {formatNumber(
                             totals.rejected
@@ -625,12 +629,12 @@ function PipelineStages({
 
                     <span className="
                         rounded-full
-                        bg-[#D92D20]/10
+                        bg-error/10
                         px-2
                         py-1
                         text-[11px]
                         font-semibold
-                        text-[#D92D20]
+                        text-error
                     ">
                         {formatPercentage(
                             rejectionRate

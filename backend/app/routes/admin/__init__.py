@@ -138,7 +138,7 @@ router.include_router(edit_application_router)
 router.include_router(shuffle_loans_router)
 router.include_router(duplicate_approval_router)
 router.include_router(team_chat_router)
-router.include_router(loan_assignment_routes)
+router.include_router(loan_assignment_router)
 router.include_router(reverted_loans_router)
 
 # ============================================================================
