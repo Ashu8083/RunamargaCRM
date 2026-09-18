@@ -13,7 +13,7 @@ from sqlalchemy.sql import func
 
 from app.models.base import Base
 
-
+    
 class EmployeeContext(Base):
     __tablename__ = "employee_contexts"
 

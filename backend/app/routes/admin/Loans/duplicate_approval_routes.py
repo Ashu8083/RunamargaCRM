@@ -49,7 +49,9 @@ def get_duplicate_approvals_route(
     applied_by_id: int | None = Query(
         default=None
     ),
-
+    context_id: int | None = Query(
+        default=None
+    ),
     db: Session = Depends(get_db),
 
     employee=Depends(
@@ -61,6 +63,7 @@ def get_duplicate_approvals_route(
         employee=employee,
         status=status,
         search=search,
+        context_id=context_id,
         loan_type_id=loan_type_id,
         applied_by_id=applied_by_id,
     )
@@ -79,6 +82,10 @@ def get_duplicate_approvals_route(
 def create_duplicate_approval_route(
     payload: DuplicateApprovalCreateRequest,
 
+    context_id: int | None = Query(
+        default=None
+    ),
+
     db: Session = Depends(get_db),
 
     employee=Depends(
@@ -89,7 +96,10 @@ def create_duplicate_approval_route(
         db=db,
         employee=employee,
         payload=payload,
+        context_id=context_id,
     )
+
+
 @router.patch("/{duplicate_approval_id}/approve")
 def approve_duplicate_application_route(
     duplicate_approval_id: int,
@@ -97,9 +107,13 @@ def approve_duplicate_application_route(
     employee=Depends(
         check_permission("loans:create")
     ),
+    context_id: int | None = Query(
+        default=None
+    ),
 ):
     return approve_duplicate_application(
         db=db,
         employee=employee,
         duplicate_approval_id=duplicate_approval_id,
+        context_id=context_id,
     )

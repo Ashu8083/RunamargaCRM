@@ -2,10 +2,12 @@
 
 from datetime import date
 from typing import Optional
-
+from app.core.access_control import AccessControl
 from sqlalchemy.orm import Session
-
+from fastapi import HTTPException
 from app.models.bank_processings import BankProcessing
+from app.models.loan_applications import LoanApplication
+
 
 
 MONTH_NAMES = [
@@ -23,9 +25,10 @@ MONTH_NAMES = [
     "December",
 ]
 
-
 def get_monthly_trend(
     db: Session,
+    employee,
+    context_id: Optional[int] = None,
     period: int = 3,
 ):
     """
@@ -79,15 +82,34 @@ def get_monthly_trend(
     # DISBURSED BANK PROCESSINGS
     # ---------------------------------------------------------
 
-    processings = (
+    if context_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="context_id is required.",
+        )
+
+    processing_query = (
         db.query(BankProcessing)
+        .join(
+            LoanApplication,
+            LoanApplication.id == BankProcessing.loan_id,
+        )
         .filter(
             BankProcessing.deleted_at.is_(None),
             BankProcessing.status == "disbursed",
             BankProcessing.disbursed_at.isnot(None),
+            LoanApplication.deleted_at.is_(None),
         )
-        .all()
     )
+
+    processing_query = AccessControl.apply_application_scope(
+        query=processing_query,
+        db=db,
+        employee=employee,
+        context_id=context_id,
+    )
+
+    processings = processing_query.all()
 
     # ---------------------------------------------------------
     # INITIALIZE MONTH DATA

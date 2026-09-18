@@ -1,4 +1,4 @@
-# app/models/loan_application.py
+# app/models/loan_applications.py
 
 from sqlalchemy import (
     Column,
@@ -10,10 +10,11 @@ from sqlalchemy import (
     ForeignKey,
     TIMESTAMP,
     Index,
-    Text
+    Text,
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+
 from app.models.base import Base
 
 import enum
@@ -145,7 +146,6 @@ class LoanApplication(Base):
         nullable=True,
     )
 
-    
     # =====================================================
     # LOAN TYPE
     # =====================================================
@@ -165,41 +165,74 @@ class LoanApplication(Base):
     # OWNERSHIP / ASSIGNMENT
     # =====================================================
 
-    applied_by_id = Column(
-        Integer,
-        ForeignKey("employees.id"),
-        nullable=True,
-    )
+    # -----------------------------------------------------
+    # Application created/performed by
+    #
+    # Points to the EmployeeContext that performed the
+    # operation, rather than directly to employees.id.
+    # -----------------------------------------------------
 
-    agent_id = Column(
+    applied_by_context_id = Column(
         Integer,
-        ForeignKey("employees.id"),
+        ForeignKey(
+            "employee_contexts.id",
+            ondelete="SET NULL",
+        ),
         nullable=True,
-    )
-
-    rm_id = Column(
-        Integer,
-        ForeignKey("employees.id"),
-        nullable=True,
+        index=True,
     )
 
     # -----------------------------------------------------
-    # Employee relationships
+    # Agent assignment
+    #
+    # Points to the EmployeeContext representing the
+    # employee operating as AGENT.
     # -----------------------------------------------------
 
-    applied_by = relationship(
-        "Employee",
-        foreign_keys=[applied_by_id],
+    agent_context_id = Column(
+        Integer,
+        ForeignKey(
+            "employee_contexts.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
     )
 
-    agent = relationship(
-        "Employee",
-        foreign_keys=[agent_id],
+    # -----------------------------------------------------
+    # RM assignment
+    #
+    # Points to the EmployeeContext representing the
+    # employee operating as RM.
+    # -----------------------------------------------------
+
+    rm_context_id = Column(
+        Integer,
+        ForeignKey(
+            "employee_contexts.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
     )
 
-    rm = relationship(
-        "Employee",
-        foreign_keys=[rm_id],
+    # -----------------------------------------------------
+    # Employee Context relationships
+    # -----------------------------------------------------
+
+    applied_by_context = relationship(
+        "EmployeeContext",
+        foreign_keys=[applied_by_context_id],
+    )
+
+    agent_context = relationship(
+        "EmployeeContext",
+        foreign_keys=[agent_context_id],
+    )
+
+    rm_context = relationship(
+        "EmployeeContext",
+        foreign_keys=[rm_context_id],
     )
 
     # =====================================================
@@ -265,7 +298,12 @@ class LoanApplication(Base):
         Integer,
         nullable=True,
     )
-    rejected_remarks = Column(Text, nullable=True)
+
+    rejected_remarks = Column(
+        Text,
+        nullable=True,
+    )
+
     # =====================================================
     # TIMESTAMPS
     # =====================================================
@@ -319,37 +357,62 @@ class LoanApplication(Base):
 
     __table_args__ = (
 
+        # -------------------------------------------------
+        # Application date
+        # -------------------------------------------------
+
         Index(
             "idx_loan_applied_date",
             "applied_date",
         ),
 
+        # -------------------------------------------------
+        # Assignment indexes
+        # -------------------------------------------------
+
         Index(
-            "idx_loan_agent_id",
-            "agent_id",
+            "idx_loan_agent_context_id",
+            "agent_context_id",
         ),
 
         Index(
-            "idx_loan_rm_id",
-            "rm_id",
+            "idx_loan_rm_context_id",
+            "rm_context_id",
         ),
+
+        Index(
+            "idx_loan_applied_by_context_id",
+            "applied_by_context_id",
+        ),
+
+        # -------------------------------------------------
+        # Loan type
+        # -------------------------------------------------
 
         Index(
             "idx_loan_type_id",
             "loan_type_id",
         ),
 
+        # -------------------------------------------------
+        # Soft deletion
+        # -------------------------------------------------
+
         Index(
             "idx_loan_deleted_at",
             "deleted_at",
         ),
 
+        # -------------------------------------------------
+        # Dashboard query optimization
+        # -------------------------------------------------
+
         Index(
             "idx_dashboard_main",
             "deleted_at",
             "applied_date",
-            "agent_id",
-            "rm_id",
+            "agent_context_id",
+            "rm_context_id",
             "loan_type_id",
         ),
     )

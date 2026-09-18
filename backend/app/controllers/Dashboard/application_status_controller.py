@@ -12,18 +12,22 @@ async def get_application_status(
     request: Request,
     db: Session,
     employee,
+    context_id=None,
     from_date=None,
     to_date=None,
     loan_type_id=None,
 ):
     """
     Controller for Application Status dashboard.
+
+    context_id refers to EmployeeContext.id.
     """
 
     try:
         return await get_application_status_data(
             db=db,
             employee=employee,
+            context_id=context_id,
             from_date=from_date,
             to_date=to_date,
             loan_type_id=loan_type_id,

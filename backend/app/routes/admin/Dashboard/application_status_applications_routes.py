@@ -20,13 +20,13 @@ router = APIRouter(
     tags=["Dashboard"],
 )
 
-
 @router.get("/application-status/applications")
 async def get_application_status_applications(
     from_date: Optional[date] = Query(default=None),
     to_date: Optional[date] = Query(default=None),
     loan_type_id: Optional[int] = Query(default=None),
     status: Optional[str] = Query(default=None),
+    context_id: Optional[int] = Query(default=None),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -34,6 +34,7 @@ async def get_application_status_applications(
         db=db,
         employee=employee,
         from_date=from_date,
+        context_id=context_id,
         to_date=to_date,
         loan_type_id=loan_type_id,
         status=status,

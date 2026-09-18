@@ -3,11 +3,16 @@
 import apiClient from "../../../../app/apiClient";
 
 export const getLoanTypeDistributionData = async ({
+    contextId,
     fromDate = "",
     toDate = "",
     status = "In Process",
 } = {}) => {
     const params = {};
+
+    if (contextId) {
+        params.context_id = Number(contextId);
+    }
 
     if (fromDate) {
         params.from_date = fromDate;

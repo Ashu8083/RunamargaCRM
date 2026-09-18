@@ -97,7 +97,7 @@ class AccessControl:
             return (
                 query
                 .filter(
-                    EmployeeContext.context_id == context_id
+                    EmployeeContext.id == context_id
                 )
                 .first()
             )
@@ -594,26 +594,26 @@ class AccessControl:
         db: Session,
         employee: Employee,
         context_id: Optional[int] = None,
-    ) -> list[Employee]:
+    ) -> list[EmployeeContext]:
         """
-        Determine which Relationship Managers the current
-        employee can use as an application filter.
+        Determine which RM EmployeeContexts the current employee
+        can use as an application filter.
 
         GLOBAL:
-            all active RMs.
+            all active RM contexts.
 
         RM:
             RM filter is hidden, therefore return [].
 
         AGENT:
-            return the RM referenced by reports_to_id.
+            return the RM context referenced by reports_to_id.
 
         TEAMLEAD:
-            return the RM referenced by reports_to_id.
+            return the RM context referenced by reports_to_id.
 
         MANAGER:
-            currently returns all active RMs because no more
-            specific manager hierarchy is established yet.
+            currently returns all active RM contexts because no
+            more specific manager hierarchy is established yet.
         """
 
         if not employee:
@@ -632,79 +632,97 @@ class AccessControl:
             context.context.code
         )
 
-        # -----------------------------------------------------
+        # ---------------------------------------------------------
         # GLOBAL
-        # -----------------------------------------------------
+        # ---------------------------------------------------------
 
         if family == "GLOBAL":
 
-            query = AccessControl._employee_query_by_family(
-                db=db,
-                family="RM",
-            )
-
-            if query is None:
-                return []
-
-            return (
-                query
+            rm_contexts = (
+                db.query(EmployeeContext)
+                .join(
+                    Context,
+                    EmployeeContext.context_id == Context.id,
+                )
+                .filter(
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    Employee.status == "active",
+                    or_(
+                        func.upper(Context.code) == "RM",
+                        func.upper(Context.code).like("RM_%"),
+                    ),
+                )
                 .order_by(Employee.name.asc())
                 .all()
             )
 
-        # -----------------------------------------------------
+            return rm_contexts
+
+        # ---------------------------------------------------------
         # RM
-        # -----------------------------------------------------
+        # ---------------------------------------------------------
 
         if family == "RM":
-
             return []
 
-        # -----------------------------------------------------
+        # ---------------------------------------------------------
         # AGENT / TEAM LEAD
-        # -----------------------------------------------------
+        # ---------------------------------------------------------
 
         if family in {"AGENT", "TEAMLEAD"}:
 
             if not context.reports_to_id:
                 return []
 
-            query = AccessControl._employee_query_by_family(
-                db=db,
-                family="RM",
+            rm_context = (
+                db.query(EmployeeContext)
+                .join(
+                    Context,
+                    EmployeeContext.context_id == Context.id,
+                )
+                .filter(
+                    EmployeeContext.id == context.reports_to_id,
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    or_(
+                        func.upper(Context.code) == "RM",
+                        func.upper(Context.code).like("RM_%"),
+                    ),
+                )
+                .first()
             )
 
-            if query is None:
+            if not rm_context:
                 return []
 
-            return (
-                query
+            return [rm_context]
+
+        # ---------------------------------------------------------
+        # MANAGER
+        # ---------------------------------------------------------
+
+        if family == "MANAGER":
+
+            rm_contexts = (
+                db.query(EmployeeContext)
+                .join(
+                    Context,
+                    EmployeeContext.context_id == Context.id,
+                )
                 .filter(
-                    Employee.id == context.reports_to_id
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    or_(
+                        func.upper(Context.code) == "RM",
+                        func.upper(Context.code).like("RM_%"),
+                    ),
                 )
                 .order_by(Employee.name.asc())
                 .all()
             )
 
-        # -----------------------------------------------------
-        # MANAGER
-        # -----------------------------------------------------
-
-        if family == "MANAGER":
-
-            query = AccessControl._employee_query_by_family(
-                db=db,
-                family="RM",
-            )
-
-            if query is None:
-                return []
-
-            return (
-                query
-                .order_by(Employee.name.asc())
-                .all()
-            )
+            return rm_contexts
 
         return []
 
@@ -717,27 +735,25 @@ class AccessControl:
         db: Session,
         employee: Employee,
         context_id: Optional[int] = None,
-    ) -> list[Employee]:
+    ) -> list[EmployeeContext]:
         """
-        Determine which Agents the current employee can use
-        as an application filter.
+        Determine which Agent EmployeeContexts the current employee
+        can use as an application filter.
 
         GLOBAL:
-            all active Agents.
+            all active Agent contexts.
 
         RM:
-            Agents whose EmployeeContext.reports_to_id is
-            the current RM.
+            Agent contexts whose reports_to_id is the current RM context.
 
         TEAMLEAD:
-            Agents whose EmployeeContext.reports_to_id is
-            the current Team Lead.
+            Agent contexts whose reports_to_id is the current Team Lead context.
 
         AGENT:
             Agent filter is hidden, therefore return [].
 
         MANAGER:
-            currently all active Agents because no specific
+            currently all active Agent contexts because no specific
             manager hierarchy has been established yet.
         """
 
@@ -757,77 +773,106 @@ class AccessControl:
             context.context.code
         )
 
-        # -----------------------------------------------------
+        # ---------------------------------------------------------
         # GLOBAL
-        # -----------------------------------------------------
+        # ---------------------------------------------------------
 
         if family == "GLOBAL":
 
-            query = AccessControl._employee_query_by_family(
-                db=db,
-                family="AGENT",
-            )
-
-            if query is None:
-                return []
-
-            return (
-                query
-                .order_by(Employee.name.asc())
-                .all()
-            )
-
-        # -----------------------------------------------------
-        # AGENT
-        # -----------------------------------------------------
-
-        if family == "AGENT":
-
-            return []
-
-        # -----------------------------------------------------
-        # RM / TEAM LEAD
-        # -----------------------------------------------------
-
-        if family in {"RM", "TEAMLEAD"}:
-
-            query = AccessControl._employee_query_by_family(
-                db=db,
-                family="AGENT",
-            )
-
-            if query is None:
-                return []
-
-            return (
-                query
+            agent_contexts = (
+                db.query(EmployeeContext)
+                .join(
+                    Employee,
+                    EmployeeContext.employee_id == Employee.id,
+                )
+                .join(
+                    Context,
+                    EmployeeContext.context_id == Context.id,
+                )
                 .filter(
-                    EmployeeContext.reports_to_id
-                    == employee.id
+                    Employee.status == "active",
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    or_(
+                        func.upper(Context.code) == "AGENT",
+                        func.upper(Context.code).like("AGENT_%"),
+                    ),
                 )
                 .order_by(Employee.name.asc())
                 .all()
             )
 
-        # -----------------------------------------------------
-        # MANAGER
-        # -----------------------------------------------------
+            return agent_contexts
 
-        if family == "MANAGER":
+        # ---------------------------------------------------------
+        # AGENT
+        # ---------------------------------------------------------
 
-            query = AccessControl._employee_query_by_family(
-                db=db,
-                family="AGENT",
-            )
+        if family == "AGENT":
+            return []
 
-            if query is None:
-                return []
+        # ---------------------------------------------------------
+        # RM / TEAM LEAD
+        # ---------------------------------------------------------
 
-            return (
-                query
+        if family in {"RM", "TEAMLEAD"}:
+
+            agent_contexts = (
+                db.query(EmployeeContext)
+                .join(
+                    Employee,
+                    EmployeeContext.employee_id == Employee.id,
+                )
+                .join(
+                    Context,
+                    EmployeeContext.context_id == Context.id,
+                )
+                .filter(
+                    Employee.status == "active",
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    or_(
+                        func.upper(Context.code) == "AGENT",
+                        func.upper(Context.code).like("AGENT_%"),
+                    ),
+                    EmployeeContext.reports_to_id == context.id,
+                )
                 .order_by(Employee.name.asc())
                 .all()
             )
+
+            return agent_contexts
+
+        # ---------------------------------------------------------
+        # MANAGER
+        # ---------------------------------------------------------
+
+        if family == "MANAGER":
+
+            agent_contexts = (
+                db.query(EmployeeContext)
+                .join(
+                    Employee,
+                    EmployeeContext.employee_id == Employee.id,
+                )
+                .join(
+                    Context,
+                    EmployeeContext.context_id == Context.id,
+                )
+                .filter(
+                    Employee.status == "active",
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    or_(
+                        func.upper(Context.code) == "AGENT",
+                        func.upper(Context.code).like("AGENT_%"),
+                    ),
+                )
+                .order_by(Employee.name.asc())
+                .all()
+            )
+
+            return agent_contexts
 
         return []
 
@@ -1055,7 +1100,8 @@ class AccessControl:
 
         return {
             "context": {
-                "id": context.context.id,
+                "id": context.id,
+                "context_id": context.context.id,
                 "code": context.context.code,
                 "name": context.context.name,
             },
@@ -1179,7 +1225,7 @@ class AccessControl:
             rm_ids = [
                 rm.id
                 for rm in rm_query.filter(
-                    EmployeeContext.reports_to_id == employee.id
+                    EmployeeContext.reports_to_id == context.id
                 ).all()
             ]
 
@@ -1295,7 +1341,7 @@ class AccessControl:
         rm_ids = [
             rm.id
             for rm in rm_query.filter(
-                EmployeeContext.reports_to_id == employee.id
+                EmployeeContext.reports_to_id == context.id
             ).all()
         ]
 
@@ -1354,16 +1400,17 @@ class AccessControl:
         if not employee:
             return query.filter(False)
 
-        context_code = (
-            AccessControl.get_active_context_code(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
+        context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
         )
 
+        if not context or not context.context:
+            return query.filter(False)
+
         family = AccessControl.get_context_family(
-            context_code
+            context.context.code
         )
 
         # -----------------------------------------------------
@@ -1371,7 +1418,7 @@ class AccessControl:
         # -----------------------------------------------------
 
         if family == "GLOBAL":
-
+            # print(query)
             return query
 
         # -----------------------------------------------------
@@ -1381,7 +1428,7 @@ class AccessControl:
         if family == "AGENT":
 
             return query.filter(
-                LoanApplication.agent_id == employee.id
+                LoanApplication.agent_context_id == context.id
             )
 
         # -----------------------------------------------------
@@ -1391,7 +1438,7 @@ class AccessControl:
         if family == "RM":
 
             return query.filter(
-                LoanApplication.rm_id == employee.id
+                LoanApplication.rm_context_id == context.id
             )
 
         # -----------------------------------------------------
@@ -1407,10 +1454,36 @@ class AccessControl:
 
         if family == "TEAMLEAD":
 
-            raise NotImplementedError(
-                "Team Lead application visibility is not "
-                "implemented yet because the Team Lead "
-                "hierarchy has not been established."
+            agent_context_ids = (
+                db.query(EmployeeContext.id)
+                .join(
+                    Context,
+                    EmployeeContext.context_id == Context.id,
+                )
+                .filter(
+                    EmployeeContext.reports_to_id == context.id,
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    or_(
+                        func.upper(Context.code) == "AGENT",
+                        func.upper(Context.code).like("AGENT_%"),
+                    ),
+                )
+                .all()
+            )
+
+            agent_context_ids = [
+                context_id
+                for (context_id,) in agent_context_ids
+            ]
+
+            if not agent_context_ids:
+                return query.filter(False)
+
+            return query.filter(
+                LoanApplication.agent_context_id.in_(
+                    agent_context_ids
+                )
             )
 
         # -----------------------------------------------------
@@ -1427,65 +1500,239 @@ class AccessControl:
 
         return query.filter(False)
 
+    # =========================================================
+    # DUPLICATE APPROVAL VISIBILITY
+    # =========================================================
 
-@staticmethod
-def can_assign_call_to_employee(
-    db: Session,
-    employee: Employee,
-    target_employee: Employee,
-    permission: str = "calls:number:assign",
-) -> bool:
-    """
-    Check whether the current employee has permission to assign/exchange
-    a call to the target employee.
+    @staticmethod
+    def apply_duplicate_approval_scope(
+        query: Query,
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+    ) -> Query:
+        """
+        Restrict DuplicateApproval records according to the
+        employee's active EmployeeContext.
 
-    Permission decides whether the action is allowed.
-    Context scope decides whether the target employee is allowed.
-    """
+        GLOBAL:
+            all duplicate approvals.
 
-    if not employee or not target_employee:
+        AGENT:
+            duplicate approvals created by the current Agent context.
+
+        RM:
+            duplicate approvals created by Agent contexts
+            reporting to the current RM context.
+
+        TEAMLEAD:
+            duplicate approvals created by subordinate
+            Agent contexts.
+
+        MANAGER:
+            all duplicate approvals.
+
+        Unknown:
+            no duplicate approvals.
+        """
+
+        if not employee:
+            return query.filter(False)
+
+        context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not context or not context.context:
+            return query.filter(False)
+
+        family = AccessControl.get_context_family(
+            context.context.code
+        )
+
+        # ---------------------------------------------------------
+        # GLOBAL
+        # ---------------------------------------------------------
+
+        if family == "GLOBAL":
+            return query
+
+        # ---------------------------------------------------------
+        # AGENT
+        # ---------------------------------------------------------
+
+        if family == "AGENT":
+
+            return query.filter(
+                DuplicateApproval.applied_by_context_id
+                == context.id
+            )
+
+        # ---------------------------------------------------------
+        # RM
+        # ---------------------------------------------------------
+
+        if family == "RM":
+
+            agent_context_ids = (
+                db.query(EmployeeContext.id)
+                .join(
+                    Context,
+                    EmployeeContext.context_id
+                    == Context.id,
+                )
+                .filter(
+                    EmployeeContext.reports_to_id
+                    == context.id,
+
+                    EmployeeContext.is_active.is_(True),
+
+                    Context.is_active.is_(True),
+
+                    or_(
+                        func.upper(Context.code)
+                        == "AGENT",
+
+                        func.upper(Context.code)
+                        .like("AGENT_%"),
+                    ),
+                )
+                .all()
+            )
+
+            agent_context_ids = [
+                agent_context_id
+                for (agent_context_id,) in agent_context_ids
+            ]
+
+            if not agent_context_ids:
+                return query.filter(False)
+
+            return query.filter(
+                DuplicateApproval.applied_by_context_id.in_(
+                    agent_context_ids
+                )
+            )
+
+        # ---------------------------------------------------------
+        # TEAM LEAD
+        # ---------------------------------------------------------
+
+        if family == "TEAMLEAD":
+
+            subordinate_context_ids = (
+                db.query(EmployeeContext.id)
+                .join(
+                    Context,
+                    EmployeeContext.context_id
+                    == Context.id,
+                )
+                .filter(
+                    EmployeeContext.reports_to_id
+                    == context.id,
+
+                    EmployeeContext.is_active.is_(True),
+
+                    Context.is_active.is_(True),
+
+                    or_(
+                        func.upper(Context.code)
+                        == "AGENT",
+
+                        func.upper(Context.code)
+                        .like("AGENT_%"),
+                    ),
+                )
+                .all()
+            )
+
+            subordinate_context_ids = [
+                subordinate_context_id
+                for (subordinate_context_id,)
+                in subordinate_context_ids
+            ]
+
+            if not subordinate_context_ids:
+                return query.filter(False)
+
+            return query.filter(
+                DuplicateApproval.applied_by_context_id.in_(
+                    subordinate_context_ids
+                )
+            )
+
+        # ---------------------------------------------------------
+        # MANAGER
+        # ---------------------------------------------------------
+
+        if family == "MANAGER":
+            return query
+
+        # ---------------------------------------------------------
+        # UNKNOWN
+        # ---------------------------------------------------------
+
+        return query.filter(False)
+    @staticmethod
+    def can_assign_call_to_employee(
+        db: Session,
+        employee: Employee,
+        target_employee: Employee,
+        permission: str = "calls:number:assign",
+    ) -> bool:
+        """
+        Check whether the current employee has permission to assign/exchange
+        a call to the target employee.
+
+        Permission decides whether the action is allowed.
+        Context scope decides whether the target employee is allowed.
+        """
+
+        if not employee or not target_employee:
+            return False
+
+        # ---------------------------------------------------------
+        # PERMISSION CHECK
+        # ---------------------------------------------------------
+
+        if not AccessControl.has_permission(
+            db=db,
+            employee=employee,
+            permission=permission,
+        ):
+            return False
+
+        # ---------------------------------------------------------
+        # TARGET SCOPE CHECK
+        # ---------------------------------------------------------
+
+        visible_rms = AccessControl.get_visible_rms(
+            db=db,
+            employee=employee,
+        )
+
+        visible_rm_ids = {
+            rm.id
+            for rm in visible_rms
+        }
+
+        context_family = AccessControl.get_active_context_family(
+            db=db,
+            employee=employee,
+        )
+
+        if context_family == "GLOBAL":
+            return True
+
+        if context_family == "RM":
+            return target_employee.id == employee.id
+
+        if context_family in {"AGENT", "TEAMLEAD"}:
+            return target_employee.id in visible_rm_ids
+
+        if context_family == "MANAGER":
+            return True
+
         return False
-
-    # ---------------------------------------------------------
-    # PERMISSION CHECK
-    # ---------------------------------------------------------
-
-    if not AccessControl.has_permission(
-        db=db,
-        employee=employee,
-        permission=permission,
-    ):
-        return False
-
-    # ---------------------------------------------------------
-    # TARGET SCOPE CHECK
-    # ---------------------------------------------------------
-
-    visible_rms = AccessControl.get_visible_rms(
-        db=db,
-        employee=employee,
-    )
-
-    visible_rm_ids = {
-        rm.id
-        for rm in visible_rms
-    }
-
-    context_family = AccessControl.get_active_context_family(
-        db=db,
-        employee=employee,
-    )
-
-    if context_family == "GLOBAL":
-        return True
-
-    if context_family == "RM":
-        return target_employee.id == employee.id
-
-    if context_family in {"AGENT", "TEAMLEAD"}:
-        return target_employee.id in visible_rm_ids
-
-    if context_family == "MANAGER":
-        return True
-
-    return False

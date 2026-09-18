@@ -34,11 +34,13 @@ def get_shuffle_loans_route(
         default=None
     ),
 
+    # EmployeeContext.id for AGENT context
     agent_id: Optional[int] = Query(
         default=None,
         gt=0,
     ),
 
+    # EmployeeContext.id for RM context
     rm_id: Optional[int] = Query(
         default=None,
         gt=0,

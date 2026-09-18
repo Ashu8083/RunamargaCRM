@@ -1,14 +1,18 @@
 // admin-react/src/pages/Loans/ApplicationStatus/API.js
 
 import apiClient from "../../../app/apiClient";
-
 export const getApplicationStatusApplications = async ({
+    contextId,
     fromDate = "",
     toDate = "",
     loanType = "",
     status = "",
 } = {}) => {
     const params = {};
+
+    if (contextId) {
+        params.context_id = Number(contextId);
+    }
 
     if (fromDate) {
         params.from_date = fromDate;

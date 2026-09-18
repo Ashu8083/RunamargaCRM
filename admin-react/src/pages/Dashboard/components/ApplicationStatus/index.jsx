@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import LoanTypeDropdown from "../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import { getApplicationStatusData } from "./API";
-
+import { getActiveContext, getStoredUser } from '../../../../app/auth'
 /* =============================================================
    STATUS CONFIGURATION
    ============================================================= */
@@ -221,7 +221,8 @@ function ApplicationStatus() {
     const [toDate, setToDate] = useState("");
     const [loanType, setLoanType] = useState("");
     const [hoveredStatus, setHoveredStatus] = useState(null);
-
+    const activeContext = getActiveContext();
+    const contextId = activeContext?.id;
     const [chartSize, setChartSize] = useState({
         width: 0,
         height: 0,
@@ -272,6 +273,11 @@ function ApplicationStatus() {
 
     useEffect(() => {
         let active = true;
+        if (!contextId) {
+            return () => {
+                active = false;
+            };
+        }
 
         const fetchData = async () => {
             setApiState((previous) => ({
@@ -286,6 +292,7 @@ function ApplicationStatus() {
                         fromDate,
                         toDate,
                         loanType,
+                        contextId,
                     });
 
                 if (!active) {
@@ -340,7 +347,7 @@ function ApplicationStatus() {
         return () => {
             active = false;
         };
-    }, [fromDate, toDate, loanType]);
+    }, [contextId, fromDate, toDate, loanType]);
 
     /* =========================================================
        DATA

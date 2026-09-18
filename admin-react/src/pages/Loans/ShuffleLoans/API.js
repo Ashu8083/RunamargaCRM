@@ -109,6 +109,12 @@ const normalizeApplication = (
             application.loanTypeId ??
             null,
 
+        // =================================================
+        // IMPORTANT:
+        // agentId / agent_id = EmployeeContext.id
+        // NOT employees.id
+        // =================================================
+
         agentId:
             application.agentId ??
             application.agent_id ??
@@ -123,6 +129,12 @@ const normalizeApplication = (
             application.agentName ??
             application.agent_name ??
             '',
+
+        // =================================================
+        // IMPORTANT:
+        // rmId / rm_id = EmployeeContext.id
+        // NOT employees.id
+        // =================================================
 
         rmId:
             application.rmId ??
@@ -177,7 +189,13 @@ const normalizeApplication = (
 //             ↓
 //       return current page
 //
-// Frontend only receives the requested page.
+// IMPORTANT:
+//
+// agent_id = EmployeeContext.id
+// rm_id    = EmployeeContext.id
+//
+// Frontend sends these IDs directly.
+// No employee_id -> context_id conversion here.
 //
 // =========================================================
 
@@ -216,6 +234,10 @@ export const getShuffleLoans = async (
     // =====================================================
     // AGENT
     // =====================================================
+    //
+    // agentId is EmployeeContext.id.
+    //
+    // =====================================================
 
     if (
         agentId !== '' &&
@@ -230,6 +252,10 @@ export const getShuffleLoans = async (
 
     // =====================================================
     // RM
+    // =====================================================
+    //
+    // rmId is EmployeeContext.id.
+    //
     // =====================================================
 
     if (
@@ -370,6 +396,8 @@ export const assignShuffleLoans = async ({
     // AGENT
     // =====================================================
     //
+    // agentId = EmployeeContext.id
+    //
     // Only include the field when the user selected it.
     //
     // =====================================================
@@ -387,6 +415,10 @@ export const assignShuffleLoans = async ({
 
     // =====================================================
     // RM
+    // =====================================================
+    //
+    // rmId = EmployeeContext.id
+    //
     // =====================================================
 
     if (

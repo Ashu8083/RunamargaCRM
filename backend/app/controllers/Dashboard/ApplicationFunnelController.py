@@ -17,6 +17,7 @@ class ApplicationFunnelController:
     async def get_application_funnel(
         db: Session,
         employee: Employee,
+        context_id: Optional[int] = None,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
         loan_type: Optional[int] = None,
@@ -24,6 +25,7 @@ class ApplicationFunnelController:
         return get_application_funnel(
             db=db,
             employee=employee,
+            context_id=context_id,
             from_date=from_date,
             to_date=to_date,
             loan_type=loan_type,

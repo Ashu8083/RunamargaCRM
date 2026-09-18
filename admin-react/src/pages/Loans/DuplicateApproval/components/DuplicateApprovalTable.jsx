@@ -177,9 +177,7 @@ const DuplicateApprovalTable = ({
                                 Status
                             </th>
 
-                            <th className="text-xs font-semibold text-base-content/60">
-                                Loan ID
-                            </th>
+                            
 
                         </tr>
 
@@ -317,23 +315,6 @@ const DuplicateApprovalTable = ({
                                         </td>
 
 
-                                        <td>
-
-                                            {loanId ? (
-
-                                                <span className="text-sm font-medium">
-                                                    {loanId}
-                                                </span>
-
-                                            ) : (
-
-                                                <span className="text-sm text-base-content/40">
-                                                    -
-                                                </span>
-
-                                            )}
-
-                                        </td>
 
                                     </tr>
                                 )

@@ -26,12 +26,15 @@ async def get_loan_type_distribution(
     from_date: Optional[date] = Query(default=None),
     to_date: Optional[date] = Query(default=None),
     status: str = Query(default="In Process"),
+    context_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
     return await LoanTypeDistributionController.get_loan_type_distribution(
         db=db,
         from_date=from_date,
+        context_id=context_id,
+        employee=employee,
         to_date=to_date,
         status=status,
     )

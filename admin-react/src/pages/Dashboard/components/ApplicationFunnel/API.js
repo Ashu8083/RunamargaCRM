@@ -3,11 +3,16 @@
 import apiClient from "../../../../app/apiClient";
 
 export const getApplicationFunnelData = async ({
+    contextId,
     fromDate = "",
     toDate = "",
     loanType = "",
 } = {}) => {
     const params = {};
+
+    if (contextId) {
+        params.context_id = Number(contextId);
+    }
 
     if (fromDate) {
         params.from_date = fromDate;

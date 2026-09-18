@@ -1,6 +1,5 @@
 # backend/app/routes/admin/Dashboard/application_status.py
 
-
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
@@ -25,6 +24,7 @@ async def get_application_status_route(
     from_date: str | None = Query(default=None),
     to_date: str | None = Query(default=None),
     loan_type_id: int | None = Query(default=None),
+    context_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -32,6 +32,7 @@ async def get_application_status_route(
         request=request,
         db=db,
         employee=employee,
+        context_id=context_id,
         from_date=from_date,
         to_date=to_date,
         loan_type_id=loan_type_id,

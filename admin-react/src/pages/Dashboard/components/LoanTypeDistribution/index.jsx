@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getLoanTypeDistributionData } from "./API";
-
+import { getActiveContext } from '../../../../app/auth'
 const STATUS_OPTIONS = [
     "In Process",
     "Login",
@@ -71,6 +71,8 @@ const createDonutGradient = (data, total) => {
 };
 
 function LoanTypeDistribution() {
+    const activeContext = getActiveContext();
+    const contextId = activeContext?.id;
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [status, setStatus] =
@@ -103,6 +105,7 @@ function LoanTypeDistribution() {
             try {
                 const result =
                     await getLoanTypeDistributionData({
+                        contextId: contextId,
                         fromDate,
                         toDate,
                         status,
@@ -151,7 +154,7 @@ function LoanTypeDistribution() {
         return () => {
             active = false;
         };
-    }, [fromDate, toDate, status]);
+    }, [contextId, fromDate, toDate, status]);
 
     const data = response.data;
 

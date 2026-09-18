@@ -164,22 +164,26 @@ function Applications() {
 
         const activeContext = getActiveContext()
 
+        console.log("ACTIVE CONTEXT:", activeContext)
+        console.log("CONTEXT ID SENT:", activeContext?.id)
+
         if (!activeContext?.id) {
             setApplications([])
             return
         }
 
         try {
-
             setLoading(true)
 
-            const response =
-                await getApplications(
-                    activeContext.id
-                )
+            const response = await getApplications(
+                activeContext.id
+            )
 
-            const data =
-                response?.data || []
+            console.log("APPLICATION RESPONSE:", response)
+
+            const data = response?.data || []
+
+
 
             const mappedApplications =
                 data.map((application) => ({

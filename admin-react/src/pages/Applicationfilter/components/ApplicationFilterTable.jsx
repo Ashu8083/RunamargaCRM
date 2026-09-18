@@ -743,9 +743,6 @@ function ApplicationFilterTable({
 
                                             <button
                                                 type="button"
-                                                disabled={
-                                                    !isDisbursed
-                                                }
                                                 onClick={() => {
 
                                                     if (

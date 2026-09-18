@@ -8,7 +8,7 @@ import {
     useLocation,
     useNavigate,
 } from "react-router-dom";
-
+import { getActiveContext, getStoredUser } from '../../../app/auth'
 import {
     getApplicationStatusApplications,
 } from "./API";
@@ -21,7 +21,11 @@ import ApplicationsTable from "./components/ApplicationsTable";
 // =============================================================
 
 const ApplicationStatus = () => {
-
+    // console.log("🔥 APPLICATION STATUS COMPONENT LOADED");
+    const activeContext = getActiveContext();
+    const contextId = activeContext?.id;
+    // console.log("Application Status activeContext:", activeContext);
+    // console.log("Application Status contextId:", contextId);
     const location = useLocation();
 
     const navigate = useNavigate();
@@ -135,7 +139,6 @@ const ApplicationStatus = () => {
 
                 setError(null);
 
-
                 const response =
                     await getApplicationStatusApplications({
                         fromDate,
@@ -148,6 +151,7 @@ const ApplicationStatus = () => {
                             dashboardStatus ||
                             selectedStatus ||
                             "",
+                        contextId,
                     });
 
 
@@ -186,9 +190,14 @@ const ApplicationStatus = () => {
 
     useEffect(() => {
 
+        if (!contextId) {
+            return;
+        }
+
         fetchApplications();
 
     }, [
+        contextId,
         fromDate,
         toDate,
         loanType,
