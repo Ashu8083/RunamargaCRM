@@ -90,15 +90,15 @@ class DuplicateApproval(Base):
     # OWNERSHIP
     # =====================================================
 
-    applied_by_id = Column(
+    applied_by_context_id = Column(
         Integer,
-        ForeignKey("employees.id"),
+        ForeignKey("employee_contexts.id"),
         nullable=True,
     )
 
-    applied_by = relationship(
-        "Employee",
-        foreign_keys=[applied_by_id],
+    applied_by_context = relationship(
+        "EmployeeContext",
+        foreign_keys=[applied_by_context_id],
     )
 
     # =====================================================
@@ -167,15 +167,15 @@ class DuplicateApproval(Base):
     # =====================================================
 
     # RM is optional.
-    rm_id = Column(
+    rm_context_id = Column(
         Integer,
-        ForeignKey("employees.id"),
+        ForeignKey("employee_contexts.id"),
         nullable=True,
     )
 
-    rm = relationship(
-        "Employee",
-        foreign_keys=[rm_id],
+    rm_context = relationship(
+        "EmployeeContext",
+        foreign_keys=[rm_context_id],
     )
 
     # =====================================================
@@ -209,8 +209,8 @@ class DuplicateApproval(Base):
         ),
 
         Index(
-            "idx_duplicate_approval_rm_id",
-            "rm_id",
+            "idx_duplicate_approval_rm_context_id",
+            "rm_context_id",
         ),
 
         Index(

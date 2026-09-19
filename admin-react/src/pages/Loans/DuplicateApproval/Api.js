@@ -6,34 +6,23 @@ export const getDuplicateApprovals = async (params = {}) => {
         const response = await apiClient.get(
             '/duplicate-approvals',
             {
-                params,
+                params: {
+                    ...params,
+                    context_id: params.contextId
+                        ? Number(params.contextId)
+                        : undefined,
+                },
             }
         )
 
         return response.data
     } catch (error) {
-        const detail =
-            error.response?.data?.detail
-
-        let message =
-            error.response?.data?.message
-
-        if (Array.isArray(detail)) {
-            message = detail
-                .map(
-                    (item) =>
-                        item?.msg ||
-                        'Validation error'
-                )
-                .join(', ')
-        } else if (typeof detail === 'string') {
-            message = detail
-        }
-
-        throw new Error(
-            message ||
-            'Unable to load duplicate approvals.'
+        console.error(
+            'Error fetching duplicate approvals:',
+            error
         )
+
+        throw error
     }
 }
 
@@ -77,15 +66,25 @@ export const submitDuplicateApprovalAction = async (
         )
     }
 }
-export const approveDuplicateApproval = async (id) => {
+
+
+export const approveDuplicateApproval = async (
+    id,
+    contextId
+) => {
     try {
         const response = await apiClient.patch(
-            `/duplicate-approvals/${id}/approve`
+            `/duplicate-approvals/${id}/approve`,
+            null,
+            {
+                params: {
+                    context_id: Number(contextId),
+                },
+            }
         )
 
         return response.data
     } catch (error) {
-
         const detail =
             error.response?.data?.detail
 
@@ -93,7 +92,6 @@ export const approveDuplicateApproval = async (id) => {
             error.response?.data?.message
 
         if (Array.isArray(detail)) {
-
             message = detail
                 .map(
                     (item) =>
@@ -101,11 +99,8 @@ export const approveDuplicateApproval = async (id) => {
                         'Validation error'
                 )
                 .join(', ')
-
         } else if (typeof detail === 'string') {
-
             message = detail
-
         }
 
         throw new Error(

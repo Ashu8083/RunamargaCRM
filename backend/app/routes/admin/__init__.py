@@ -112,6 +112,14 @@ from .CallAnalytics.overview_routes import router as call_analytics_overview_rou
 from .CallAnalytics.performance_routes import router as call_analytics_performance_router
 from .CallAnalytics.Trends.ad_number_trend_routes import router as call_analytics_trends_ad_number_trend_router
 
+
+# ============================================================================
+# Application Filter
+# ============================================================================
+from app.routes.admin.ApplicationFilter.application_filter_routes import (
+    router as application_filter_router,
+)
+
 # ============================================================================
 # MAIN ADMIN ROUTER
 # ============================================================================
@@ -205,3 +213,11 @@ router.include_router(loan_type_distribution_router)
 router.include_router(monthly_trend_router)
 router.include_router(application_funnel_router)
 router.include_router(application_status_applications_router)
+
+# ============================================================================
+# Application Filter 
+# ============================================================================
+
+router.include_router(
+    application_filter_router
+)

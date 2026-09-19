@@ -7,7 +7,7 @@ from app.models.reverted_loans import RevertedLoan
 from app.models.loan_applications import LoanApplication
 from app.models.loan_types import LoanType
 from app.models.employees import Employee
-
+from app.core.access_control import AccessControl
 
 # =========================================================
 # GET REVERTED APPLICATIONS
@@ -16,6 +16,7 @@ from app.models.employees import Employee
 def get_reverted_applications(
     db: Session,
     employee: Employee,
+    context_id: int | None = None,
     page: int = 1,
     page_size: int = 10,
     search: str | None = None,
@@ -89,7 +90,12 @@ def get_reverted_applications(
             LoanApplication.deleted_at.is_(None),
         )
     )
-
+    query = AccessControl.apply_application_scope(
+        query=query,
+        db=db,
+        employee=employee,
+        context_id=context_id,
+    )
     # -----------------------------------------------------
     # SEARCH
     # -----------------------------------------------------
@@ -292,16 +298,51 @@ def get_reverted_applications(
 # =========================================================
 # GET REVERT HISTORY
 # =========================================================
-
 def get_revert_history(
     db: Session,
     employee: Employee,
-    loan_id: int,
+    context_id: int | None = None,
+    loan_id: int = 0,
 ):
     """
     Get all revert records for a loan.
     """
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.id == loan_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
 
+    if not application:
+        return {
+            "success": True,
+            "loan_id": loan_id,
+            "history": [],
+        }
+        scoped_query = AccessControl.apply_application_scope(
+            query=db.query(LoanApplication),
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        accessible_application = (
+            scoped_query
+            .filter(
+                LoanApplication.id == loan_id
+            )
+            .first()
+        )
+
+        if not accessible_application:
+            return {
+                "success": True,
+                "loan_id": loan_id,
+                "history": [],
+            }
     history = (
         db.query(RevertedLoan)
         .filter(

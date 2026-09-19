@@ -11,7 +11,7 @@ import {
     ChevronDownIcon,
     ChartBarIcon,
 } from "@heroicons/react/24/outline";
-
+import { getActiveContext } from "../../../../app/auth";
 import { getMonthlyTrendData } from "./API";
 
 const STATUS_OPTIONS = [
@@ -89,7 +89,8 @@ const formatCount = (count) =>
 function MonthlyTrend() {
     const [status, setStatus] = useState("In Process");
     const [period, setPeriod] = useState(3);
-
+    const activeContext = getActiveContext();
+    const contextId = activeContext?.id;
     const [response, setResponse] = useState({
         data: [],
         status: "In Process",
@@ -123,7 +124,7 @@ function MonthlyTrend() {
             try {
                 const result =
                     await getMonthlyTrendData({
-                        status,
+                        contextId,
                         period,
                     });
 
@@ -267,18 +268,18 @@ function MonthlyTrend() {
                 const x =
                     data.length === 1
                         ? padding.left +
-                          chartWidth / 2
+                        chartWidth / 2
                         : padding.left +
-                          (index /
-                              (data.length - 1)) *
-                              chartWidth;
+                        (index /
+                            (data.length - 1)) *
+                        chartWidth;
 
                 const y =
                     padding.top +
                     chartHeight -
                     ((Number(item.amount) || 0) /
                         graphMax) *
-                        chartHeight;
+                    chartHeight;
 
                 return {
                     ...item,
@@ -319,7 +320,7 @@ function MonthlyTrend() {
             (_, index) =>
                 graphMax -
                 (graphMax / gridSteps) *
-                    index
+                index
         );
 
         return {
@@ -438,7 +439,7 @@ function MonthlyTrend() {
                             gap-2
                         "
                     >
-                       
+
 
                         {/* Period */}
                         <div className="relative">
@@ -682,7 +683,7 @@ function MonthlyTrend() {
                                                     .top +
                                                 (index /
                                                     4) *
-                                                    chart.chartHeight;
+                                                chart.chartHeight;
 
                                             return (
                                                 <g
@@ -898,7 +899,7 @@ function MonthlyTrend() {
                                                     Math.max(
                                                         (hoveredPoint.x /
                                                             chartSize.width) *
-                                                            100,
+                                                        100,
                                                         16
                                                     ),
                                                     84
@@ -909,21 +910,21 @@ function MonthlyTrend() {
                                                     Math.min(
                                                         (hoveredPoint.y /
                                                             chartSize.height) *
-                                                            100 -
-                                                            6,
+                                                        100 -
+                                                        6,
                                                         66
                                                     )
                                                 ) + "%",
                                             transform:
                                                 hoveredPoint.x >
-                                                chartSize.width *
+                                                    chartSize.width *
                                                     0.72
                                                     ? "translateX(-100%)"
                                                     : hoveredPoint.x <
-                                                      chartSize.width *
-                                                          0.28
-                                                    ? "translateX(0)"
-                                                    : "translateX(-50%)",
+                                                        chartSize.width *
+                                                        0.28
+                                                        ? "translateX(0)"
+                                                        : "translateX(-50%)",
                                         }}
                                     >
                                         <div

@@ -3,11 +3,13 @@
 from math import ceil
 from typing import Optional
 
-from sqlalchemy import or_
 from sqlalchemy.orm import Session, aliased
+from sqlalchemy import or_, func
 
 from app.models.loan_applications import LoanApplication
 from app.models.employees import Employee
+from app.models.employee_contexts import EmployeeContext
+from app.models.contexts import Context
 from app.models.loan_types import LoanType
 
 
@@ -45,6 +47,9 @@ class ShuffleLoansService:
         # ALIASES
         # =====================================================
 
+        AgentContext = aliased(EmployeeContext)
+        RMContext = aliased(EmployeeContext)
+
         Agent = aliased(Employee)
         RM = aliased(Employee)
 
@@ -59,18 +64,53 @@ class ShuffleLoansService:
                 RM.name.label("rm_name"),
                 LoanType.name.label("loan_type"),
             )
+
+            # -------------------------------------------------
+            # AGENT CONTEXT
+            # -------------------------------------------------
+
+            .outerjoin(
+                AgentContext,
+                AgentContext.id
+                == LoanApplication.agent_context_id,
+            )
+
             .outerjoin(
                 Agent,
-                Agent.id == LoanApplication.agent_id,
+                Agent.id
+                == AgentContext.employee_id,
             )
+
+            # -------------------------------------------------
+            # RM CONTEXT
+            # -------------------------------------------------
+
+            .outerjoin(
+                RMContext,
+                RMContext.id
+                == LoanApplication.rm_context_id,
+            )
+
             .outerjoin(
                 RM,
-                RM.id == LoanApplication.rm_id,
+                RM.id
+                == RMContext.employee_id,
             )
+
+            # -------------------------------------------------
+            # LOAN TYPE
+            # -------------------------------------------------
+
             .outerjoin(
                 LoanType,
-                LoanType.id == LoanApplication.loan_type_id,
+                LoanType.id
+                == LoanApplication.loan_type_id,
             )
+
+            # -------------------------------------------------
+            # ACTIVE APPLICATIONS
+            # -------------------------------------------------
+
             .filter(
                 LoanApplication.deleted_at.is_(None)
             )
@@ -83,9 +123,6 @@ class ShuffleLoansService:
         # IMPORTANT:
         #
         # Search is performed BEFORE pagination.
-        #
-        # This means searching for a loan that is beyond
-        # the currently displayed page will still find it.
         #
         # =====================================================
 
@@ -108,21 +145,103 @@ class ShuffleLoansService:
         # =====================================================
         # AGENT FILTER
         # =====================================================
+        #
+        # API receives:
+        #
+        #     agent_id = EmployeeContext.id
+        #
+        # Database stores:
+        #
+        #     LoanApplication.agent_context_id
+        #
+        # Therefore the context ID can be used directly.
+        #
+        # =====================================================
 
         if agent_id is not None:
 
+            agent_context = (
+                db.query(EmployeeContext)
+                .join(
+                    Context,
+                    EmployeeContext.context_id
+                    == Context.id,
+                )
+                .filter(
+                    EmployeeContext.id == agent_id,
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    or_(
+                        func.upper(Context.code) == "AGENT",
+                        func.upper(Context.code).like("AGENT_%"),
+                    ),
+                )
+                .first()
+            )
+
+            if not agent_context:
+                return {
+                    "items": [],
+                    "total": 0,
+                    "page": page,
+                    "limit": limit,
+                    "totalPages": 0,
+                }
+
             query = query.filter(
-                LoanApplication.agent_id == agent_id
+                LoanApplication.agent_context_id
+                == agent_context.id
             )
 
         # =====================================================
         # RM FILTER
         # =====================================================
+        #
+        # API receives:
+        #
+        #     rm_id = EmployeeContext.id
+        #
+        # Database stores:
+        #
+        #     LoanApplication.rm_context_id
+        #
+        # Therefore the context ID can be used directly.
+        #
+        # =====================================================
 
         if rm_id is not None:
 
+            rm_context = (
+                db.query(EmployeeContext)
+                .join(
+                    Context,
+                    EmployeeContext.context_id
+                    == Context.id,
+                )
+                .filter(
+                    EmployeeContext.id == rm_id,
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    or_(
+                        func.upper(Context.code) == "RM",
+                        func.upper(Context.code).like("RM_%"),
+                    ),
+                )
+                .first()
+            )
+
+            if not rm_context:
+                return {
+                    "items": [],
+                    "total": 0,
+                    "page": page,
+                    "limit": limit,
+                    "totalPages": 0,
+                }
+
             query = query.filter(
-                LoanApplication.rm_id == rm_id
+                LoanApplication.rm_context_id
+                == rm_context.id
             )
 
         # =====================================================
@@ -132,7 +251,8 @@ class ShuffleLoansService:
         if loan_type_id is not None:
 
             query = query.filter(
-                LoanApplication.loan_type_id == loan_type_id
+                LoanApplication.loan_type_id
+                == loan_type_id
             )
 
         # =====================================================
@@ -147,32 +267,6 @@ class ShuffleLoansService:
 
         # =====================================================
         # TOTAL COUNT
-        # =====================================================
-        #
-        # IMPORTANT:
-        #
-        # Count is performed AFTER all filters/search.
-        #
-        # Example:
-        #
-        # Database:
-        #     10,000 applications
-        #
-        # Search:
-        #     "ABC"
-        #
-        # Matching:
-        #     73 applications
-        #
-        # limit:
-        #     30
-        #
-        # total:
-        #     73
-        #
-        # totalPages:
-        #     3
-        #
         # =====================================================
 
         total = query.count()
@@ -189,13 +283,6 @@ class ShuffleLoansService:
 
         # =====================================================
         # HANDLE PAGE OUT OF RANGE
-        # =====================================================
-        #
-        # If the requested page is greater than the available
-        # pages, return an empty result for that page.
-        #
-        # The frontend can use totalPages to correct the page.
-        #
         # =====================================================
 
         if total_pages > 0 and page > total_pages:
@@ -219,20 +306,6 @@ class ShuffleLoansService:
 
         # =====================================================
         # PAGINATION
-        # =====================================================
-        #
-        # Only after:
-        #
-        #     search
-        #     filters
-        #     count
-        #     order
-        #
-        # do we apply:
-        #
-        #     offset
-        #     limit
-        #
         # =====================================================
 
         rows = (
@@ -273,7 +346,6 @@ class ShuffleLoansService:
             "totalPages": total_pages,
         }
 
-
     # =========================================================
     # ASSIGN / SHUFFLE LOANS
     # =========================================================
@@ -291,6 +363,7 @@ class ShuffleLoansService:
         # =====================================================
 
         if not application_ids:
+
             raise ValueError(
                 "At least one application must be selected."
             )
@@ -300,48 +373,95 @@ class ShuffleLoansService:
             and rm_id is None
             and loan_type_id is None
         ):
+
             raise ValueError(
                 "Select at least one value to update."
             )
 
         # =====================================================
-        # VALIDATE AGENT
+        # VALIDATE AGENT CONTEXT
         # =====================================================
+        #
+        # agent_id is EmployeeContext.id.
+        #
+        # We validate that the selected context:
+        #
+        #     1. exists
+        #     2. is active
+        #     3. belongs to an AGENT family
+        #
+        # =====================================================
+
+        agent_context = None
 
         if agent_id is not None:
 
-            agent = (
-                db.query(Employee)
+            agent_context = (
+                db.query(EmployeeContext)
+                .join(
+                    Context,
+                    EmployeeContext.context_id
+                    == Context.id,
+                )
                 .filter(
-                    Employee.id == agent_id,
-                    Employee.deleted_at.is_(None),
+                    EmployeeContext.id == agent_id,
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    or_(
+                        func.upper(Context.code) == "AGENT",
+                        func.upper(Context.code).like("AGENT_%"),
+                    ),
                 )
                 .first()
             )
 
-            if not agent:
+            if not agent_context:
+
                 raise ValueError(
-                    "Selected Agent was not found."
+                    "Selected Agent context was not found or is not an active AGENT context."
                 )
 
         # =====================================================
-        # VALIDATE RM
+        # VALIDATE RM CONTEXT
         # =====================================================
+        #
+        # rm_id is EmployeeContext.id.
+        #
+        # We validate that the selected context:
+        #
+        #     1. exists
+        #     2. is active
+        #     3. belongs to an RM family
+        #
+        # =====================================================
+
+        rm_context = None
 
         if rm_id is not None:
 
-            rm = (
-                db.query(Employee)
+            rm_context = (
+                db.query(EmployeeContext)
+                .join(
+                    Context,
+                    EmployeeContext.context_id
+                    == Context.id,
+                )
                 .filter(
-                    Employee.id == rm_id,
-                    Employee.deleted_at.is_(None),
+                    EmployeeContext.id == rm_id,
+                    EmployeeContext.is_active.is_(True),
+                    Context.is_active.is_(True),
+                    or_(
+                        func.upper(Context.code) == "RM",
+                        func.upper(Context.code).like("RM_%"),
+                    ),
                 )
                 .first()
             )
 
-            if not rm:
+            if not rm_context:
+
                 raise ValueError(
-                    "Selected RM was not found."
+                    "Selected RM context was not found or is not an active RM context."
                 )
 
         # =====================================================
@@ -359,6 +479,7 @@ class ShuffleLoansService:
             )
 
             if not loan_type:
+
                 raise ValueError(
                     "Selected Loan Type was not found."
                 )
@@ -379,6 +500,7 @@ class ShuffleLoansService:
         )
 
         if not applications:
+
             raise ValueError(
                 "No valid loan applications were found."
             )
@@ -399,6 +521,7 @@ class ShuffleLoansService:
         ]
 
         if missing_ids:
+
             raise ValueError(
                 "Some selected applications were not found."
             )
@@ -407,30 +530,45 @@ class ShuffleLoansService:
         # PARTIAL UPDATE
         # =====================================================
         #
-        # IMPORTANT:
-        #
         # Only a field that is NOT None is changed.
         #
         # None means:
         #
         #     "User did not select this field."
         #
-        # It does NOT mean:
-        #
-        #     "Set this database column to NULL."
-        #
         # =====================================================
 
         for application in applications:
 
-            if agent_id is not None:
-                application.agent_id = agent_id
+            # -------------------------------------------------
+            # AGENT
+            # -------------------------------------------------
 
-            if rm_id is not None:
-                application.rm_id = rm_id
+            if agent_context is not None:
+
+                application.agent_context_id = (
+                    agent_context.id
+                )
+
+            # -------------------------------------------------
+            # RM
+            # -------------------------------------------------
+
+            if rm_context is not None:
+
+                application.rm_context_id = (
+                    rm_context.id
+                )
+
+            # -------------------------------------------------
+            # LOAN TYPE
+            # -------------------------------------------------
 
             if loan_type_id is not None:
-                application.loan_type_id = loan_type_id
+
+                application.loan_type_id = (
+                    loan_type_id
+                )
 
         # =====================================================
         # SAVE
@@ -441,20 +579,11 @@ class ShuffleLoansService:
         # =====================================================
         # RETURN UPDATED DATA
         # =====================================================
-        #
-        # This intentionally returns the updated applications
-        # by their IDs, not a paginated response.
-        #
-        # The assign functionality therefore remains
-        # compatible with the existing frontend workflow.
-        #
-        # =====================================================
 
         return ShuffleLoansService.get_shuffle_loans_by_ids(
             db=db,
             application_ids=application_ids,
         )
-
 
     # =========================================================
     # GET UPDATED APPLICATIONS
@@ -466,8 +595,19 @@ class ShuffleLoansService:
         application_ids: list[int],
     ):
 
+        # =====================================================
+        # ALIASES
+        # =====================================================
+
+        AgentContext = aliased(EmployeeContext)
+        RMContext = aliased(EmployeeContext)
+
         Agent = aliased(Employee)
         RM = aliased(Employee)
+
+        # =====================================================
+        # QUERY
+        # =====================================================
 
         rows = (
             db.query(
@@ -476,27 +616,64 @@ class ShuffleLoansService:
                 RM.name.label("rm_name"),
                 LoanType.name.label("loan_type"),
             )
+
+            # -------------------------------------------------
+            # AGENT CONTEXT
+            # -------------------------------------------------
+
+            .outerjoin(
+                AgentContext,
+                AgentContext.id
+                == LoanApplication.agent_context_id,
+            )
+
             .outerjoin(
                 Agent,
-                Agent.id == LoanApplication.agent_id,
+                Agent.id
+                == AgentContext.employee_id,
             )
+
+            # -------------------------------------------------
+            # RM CONTEXT
+            # -------------------------------------------------
+
+            .outerjoin(
+                RMContext,
+                RMContext.id
+                == LoanApplication.rm_context_id,
+            )
+
             .outerjoin(
                 RM,
-                RM.id == LoanApplication.rm_id,
+                RM.id
+                == LoanApplication.rm_context_id,
             )
+
+            # -------------------------------------------------
+            # LOAN TYPE
+            # -------------------------------------------------
+
             .outerjoin(
                 LoanType,
-                LoanType.id == LoanApplication.loan_type_id,
+                LoanType.id
+                == LoanApplication.loan_type_id,
             )
+
+            # -------------------------------------------------
+            # FILTER
+            # -------------------------------------------------
+
             .filter(
                 LoanApplication.id.in_(
                     application_ids
                 ),
                 LoanApplication.deleted_at.is_(None),
             )
+
             .order_by(
                 LoanApplication.id.desc()
             )
+
             .all()
         )
 
@@ -515,7 +692,6 @@ class ShuffleLoansService:
             ) in rows
         ]
 
-
     # =========================================================
     # FORMAT APPLICATION
     # =========================================================
@@ -528,25 +704,75 @@ class ShuffleLoansService:
         loan_type,
     ):
 
+        # =====================================================
+        # STATUS
+        # =====================================================
+
         status = (
             application.status.value
             if application.status
             else None
         )
 
+        # =====================================================
+        # RESOLVE CONTEXT IDS
+        # =====================================================
+        #
+        # The API now exposes EmployeeContext.id.
+        #
+        # Employee.id is only used internally for employee
+        # identity/name resolution.
+        #
+        # =====================================================
+
+        agent_context_id = (
+            application.agent_context_id
+        )
+
+        rm_context_id = (
+            application.rm_context_id
+        )
+
+        # =====================================================
+        # RESPONSE
+        # =====================================================
+
         return {
-            "id": application.id,
 
-            "loanId": application.unique_id,
-            "unique_id": application.unique_id,
+            "id":
+                application.id,
 
-            "name": application.name,
-            "email": application.email,
-            "phone": application.phone,
+            "loanId":
+                application.unique_id,
 
-            "loanType": loan_type,
-            "loan_type": loan_type,
-            "loan_type_id": application.loan_type_id,
+            "unique_id":
+                application.unique_id,
+
+            "name":
+                application.name,
+
+            "email":
+                application.email,
+
+            "phone":
+                application.phone,
+
+            # -------------------------------------------------
+            # LOAN TYPE
+            # -------------------------------------------------
+
+            "loanType":
+                loan_type,
+
+            "loan_type":
+                loan_type,
+
+            "loan_type_id":
+                application.loan_type_id,
+
+            # -------------------------------------------------
+            # AMOUNT
+            # -------------------------------------------------
 
             "amount": (
                 float(application.loan_amt)
@@ -560,19 +786,64 @@ class ShuffleLoansService:
                 else None
             ),
 
-            "agentId": application.agent_id,
-            "agent_id": application.agent_id,
+            # -------------------------------------------------
+            # AGENT
+            # -------------------------------------------------
+            #
+            # API returns EmployeeContext.id.
+            #
+            # Database ownership:
+            #
+            #     LoanApplication.agent_context_id
+            #
+            # -------------------------------------------------
 
-            "agentName": agent_name,
-            "agent_name": agent_name,
+            "agentId":
+                agent_context_id,
 
-            "rmId": application.rm_id,
-            "rm_id": application.rm_id,
+            "agent_id":
+                agent_context_id,
 
-            "rmName": rm_name,
-            "rm_name": rm_name,
+            "agentName":
+                agent_name,
 
-            "status": status,
+            "agent_name":
+                agent_name,
+
+            # -------------------------------------------------
+            # RM
+            # -------------------------------------------------
+            #
+            # API returns EmployeeContext.id.
+            #
+            # Database ownership:
+            #
+            #     LoanApplication.rm_context_id
+            #
+            # -------------------------------------------------
+
+            "rmId":
+                rm_context_id,
+
+            "rm_id":
+                rm_context_id,
+
+            "rmName":
+                rm_name,
+
+            "rm_name":
+                rm_name,
+
+            # -------------------------------------------------
+            # STATUS
+            # -------------------------------------------------
+
+            "status":
+                status,
+
+            # -------------------------------------------------
+            # DATES
+            # -------------------------------------------------
 
             "appliedDate": (
                 application.applied_date.isoformat()

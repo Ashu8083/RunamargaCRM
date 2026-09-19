@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.config.database import get_db
 from app.core.security import get_current_employee
 from app.core.access_control import AccessControl
@@ -92,31 +93,6 @@ def get_common_employees(
             "name": emp.name,
         }
         for emp in employees
-    ]
-
-
-# ============================================================================
-# GET /common/relationship-managers
-# ============================================================================
-
-@router.get("/relationship-managers")
-def get_relationship_managers(
-    context_id: int | None = Query(default=None),
-    db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_employee),
-):
-    rms = AccessControl.get_visible_rms(
-        db=db,
-        employee=employee,
-        context_id=context_id,
-    )
-
-    return [
-        {
-            "id": rm.id,
-            "name": rm.name,
-        }
-        for rm in rms
     ]
 
 
@@ -544,10 +520,10 @@ def get_rms(
 
         return [
             {
-                "id": rm.id,
-                "name": rm.name,
+                "id": rm_context.id,
+                "name": rm_context.employee.name,
             }
-            for rm in rms
+            for rm_context in rms
         ]
 
     except Exception as exc:
@@ -555,8 +531,7 @@ def get_rms(
             status_code=500,
             detail="Failed to load RMs.",
         ) from exc
-
-
+  
 # ============================================================================
 # GET /common/agents
 # ============================================================================
@@ -576,10 +551,10 @@ def get_agents(
 
         return [
             {
-                "id": agent.id,
-                "name": agent.name,
+                "id": agent_context.id,
+                "name": agent_context.employee.name,
             }
-            for agent in agents
+            for agent_context in agents
         ]
 
     except Exception as exc:
@@ -587,8 +562,7 @@ def get_agents(
             status_code=500,
             detail="Failed to load agents.",
         ) from exc
-
-
+   
 # ============================================================================
 # GET /common/team-leads
 # ============================================================================

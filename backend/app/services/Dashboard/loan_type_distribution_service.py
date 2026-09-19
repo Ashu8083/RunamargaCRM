@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 from app.models.loan_applications import LoanApplication
 from app.models.bank_processings import BankProcessing
 from app.models.loan_types import LoanType
+from fastapi import HTTPException
 
+from app.core.access_control import AccessControl
 
 STATUS_PRIORITY = {
     "inprocess": 1,
@@ -43,6 +45,8 @@ BANK_STATUS_PRIORITY = {
 
 def get_loan_type_distribution(
     db: Session,
+    employee,
+    context_id: Optional[int] = None,
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
     status: str = "In Process",
@@ -66,6 +70,18 @@ def get_loan_type_distribution(
         LoanApplication.deleted_at.is_(None)
     )   
 
+    if context_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="context_id is required.",
+        )
+
+    query = AccessControl.apply_application_scope(
+        query=query,
+        db=db,
+        employee=employee,
+        context_id=context_id,
+    )
     if from_date:
         query = query.filter(
             LoanApplication.applied_date >= from_date

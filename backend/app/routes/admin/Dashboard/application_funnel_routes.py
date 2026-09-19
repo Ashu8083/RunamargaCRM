@@ -23,6 +23,7 @@ router = APIRouter(
 
 @router.get("/application-funnel")
 async def get_application_funnel(
+    context_id: int | None = Query(default=None),   
     from_date: Optional[date] = Query(default=None),
     to_date: Optional[date] = Query(default=None),
     loan_type: Optional[int] = Query(default=None),
@@ -32,6 +33,7 @@ async def get_application_funnel(
     return await ApplicationFunnelController.get_application_funnel(
         db=db,
         employee=employee,
+        context_id=context_id,
         from_date=from_date,
         to_date=to_date,
         loan_type=loan_type,

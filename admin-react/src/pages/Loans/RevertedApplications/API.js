@@ -215,6 +215,7 @@ const normalizeRevertedApplication = (
 
 export const getRevertedApplications = async (
     {
+        contextId,
         search = '',
         loanTypeId = '',
         revertedById = '',
@@ -223,10 +224,17 @@ export const getRevertedApplications = async (
         limit = 10,
     } = {}
 ) => {
-
     const params = {
         page,
         page_size: limit,
+    }
+    
+    if (
+        contextId !== '' &&
+        contextId !== null &&
+        contextId !== undefined
+    ) {
+        params.context_id = Number(contextId)
     }
 
 
@@ -366,7 +374,8 @@ export const getRevertedApplications = async (
 // =========================================================
 
 export const getRevertHistory = async (
-    loanId
+    loanId,
+    contextId
 ) => {
 
     if (
@@ -381,13 +390,14 @@ export const getRevertHistory = async (
     }
 
 
-    const response =
-        await apiClient.get(
-            `/reverted-applications/${Number(
-                loanId
-            )}/history`
-        )
-
+    const response = await apiClient.get(
+        `/reverted-applications/${Number(loanId)}/history`,
+        {
+            params: {
+                context_id: Number(contextId),
+            },
+        }
+    )
 
     const responseData =
         response?.data

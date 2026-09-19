@@ -21,10 +21,13 @@ router = APIRouter(
 @router.get("/monthly-trend")
 async def get_monthly_trend(
     period: int = Query(default=3),
+    context_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
     return await MonthlyTrendController.get_monthly_trend(
         db=db,
+        employee=employee,
+        context_id=context_id,
         period=period,
     )

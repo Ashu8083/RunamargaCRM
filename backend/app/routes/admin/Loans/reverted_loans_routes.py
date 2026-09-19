@@ -30,6 +30,7 @@ router = APIRouter(
 
 @router.get("")
 def get_reverted_applications_route(
+    context_id: int | None = Query(default=None),
     page: int = Query(
         default=1,
         ge=1,
@@ -68,6 +69,7 @@ def get_reverted_applications_route(
         db=db,
         employee=employee,
         page=page,
+        context_id=context_id,
         page_size=page_size,
         search=search,
         loan_type_id=loan_type_id,
@@ -85,7 +87,7 @@ def get_revert_history_route(
     loan_id: int,
 
     db=Depends(get_db),
-
+    context_id: int | None = Query(default=None),
     employee: Employee = Depends(
         get_current_employee
     ),
@@ -94,5 +96,6 @@ def get_revert_history_route(
     return get_revert_history(
         db=db,
         employee=employee,
+        context_id=context_id,
         loan_id=loan_id,
     )

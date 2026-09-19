@@ -51,10 +51,10 @@ FUNNEL_STATUSES = [
     "Rejected",
 ]
 
-
 def get_application_funnel(
     db: Session,
     employee: Employee,
+    context_id: Optional[int] = None,
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
     loan_type: Optional[int] = None,
@@ -95,10 +95,17 @@ def get_application_funnel(
     query = db.query(LoanApplication)
 
     # Apply the existing application visibility rules.
+    if context_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="context_id is required.",
+        )
+
     query = AccessControl.apply_application_scope(
         query=query,
         db=db,
         employee=employee,
+        context_id=context_id,
     )
 
     # Only active applications.

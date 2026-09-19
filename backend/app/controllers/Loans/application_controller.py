@@ -1,9 +1,13 @@
+# backend/app/controllers/Loans/application_controller.py
+
+
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from fastapi import HTTPException, Request
-from datetime import datetime,date
+from datetime import datetime, date
 
 from app.core.access_control import AccessControl
+
 from app.models.employees import Employee
 from app.models.loan_coapplicant import LoanCoApplicant
 from app.models.loan_addresses import LoanAddress
@@ -14,6 +18,8 @@ from app.models.loan_document import LoanDocument
 from app.models.bank_processings import BankProcessing
 from app.models.dsa_details import DSADetail
 from app.models.bank import Bank
+from app.models.employee_contexts import EmployeeContext
+from app.models.contexts import Context
 
 
 # =============================================================
@@ -27,13 +33,17 @@ def get_applications(
 ):
     query = db.query(LoanApplication)
 
+    # =========================================================
+    # RBAC / CONTEXT BASED APPLICATION SCOPE
+    # =========================================================
+
     query = AccessControl.apply_application_scope(
         query=query,
         db=db,
         employee=employee,
         context_id=context_id,
     )
-
+    # print(query)
     applications = (
         query
         .order_by(LoanApplication.id.desc())
@@ -59,6 +69,32 @@ def get_applications(
                 RevertedLoan.id.desc(),
             )
             .first()
+        )
+
+        # =====================================================
+        # EMPLOYEE IDs FOR FRONTEND
+        #
+        # DB stores EmployeeContext IDs.
+        # API continues returning Employee IDs.
+        # =====================================================
+
+        applied_by_id = (
+            application.applied_by_context.employee.id
+            if application.applied_by_context
+            and application.applied_by_context.employee
+            else None
+        )
+
+        agent_id = (
+            application.agent_context.id
+            if application.agent_context
+            else None
+        )
+
+        rm_id = (
+            application.rm_context.id
+            if application.rm_context
+            else None
         )
 
         data.append({
@@ -92,34 +128,27 @@ def get_applications(
             # ASSIGNMENTS
             # =================================================
 
-            "applied_by_id": application.applied_by_id,
-            "agent_id": application.agent_id,
-            "rm_id": application.rm_id,
-
-            "applied_by": (
-                {
-                    "id": application.applied_by.id,
-                    "name": application.applied_by.name,
-                }
-                if application.applied_by
-                else None
-            ),
+            "applied_by_id": applied_by_id,
+            "agent_id": agent_id,
+            "rm_id": rm_id,
 
             "agent": (
                 {
-                    "id": application.agent.id,
-                    "name": application.agent.name,
+                    "id": application.agent_context.id,
+                    "name": application.agent_context.employee.name,
                 }
-                if application.agent
+                if application.agent_context
+                and application.agent_context.employee
                 else None
             ),
 
             "rm": (
                 {
-                    "id": application.rm.id,
-                    "name": application.rm.name,
+                    "id": application.rm_context.id,
+                    "name": application.rm_context.employee.name,
                 }
-                if application.rm
+                if application.rm_context
+                and application.rm_context.employee
                 else None
             ),
 
@@ -176,7 +205,7 @@ def get_applications(
             "created_at": application.created_at,
             "updated_at": application.updated_at,
         })
-
+    
     return {
         "success": True,
         "count": len(data),
@@ -193,6 +222,10 @@ def view_application(
     employee: Employee,
     application_id: str,
 ):
+    # =========================================================
+    # FIND APPLICATION
+    # =========================================================
+
     application = (
         db.query(LoanApplication)
         .filter(
@@ -201,38 +234,9 @@ def view_application(
         )
         .first()
     )
-    addresses = (
-        db.query(LoanAddress)
-        .filter(
-            LoanAddress.loan_id == application.id,
-            LoanAddress.deleted_at.is_(None),
-        )
-        .all()
-    )
-    references = (
-        db.query(LoanReference)
-        .filter(
-            LoanReference.loan_id == application.id,
-            LoanReference.deleted_at.is_(None),
-        )
-        .all()
-    )
-    co_applicants = (
-        db.query(LoanCoApplicant)
-        .filter(
-            LoanCoApplicant.loan_id == application.id,
-            LoanCoApplicant.deleted_at.is_(None),
-        )
-        .all()
-    )
-    documents = (
-        db.query(LoanDocument)
-        .filter(
-            LoanDocument.loan_id == application.id,
-            LoanDocument.deleted_at.is_(None),
-        )
-        .all()
-    )
+
+    # IMPORTANT:
+    # Check this BEFORE using application.id.
     if not application:
         return None
 
@@ -258,6 +262,46 @@ def view_application(
         return None
 
     # =========================================================
+    # RELATED DATA
+    # =========================================================
+
+    addresses = (
+        db.query(LoanAddress)
+        .filter(
+            LoanAddress.loan_id == application.id,
+            LoanAddress.deleted_at.is_(None),
+        )
+        .all()
+    )
+
+    references = (
+        db.query(LoanReference)
+        .filter(
+            LoanReference.loan_id == application.id,
+            LoanReference.deleted_at.is_(None),
+        )
+        .all()
+    )
+
+    co_applicants = (
+        db.query(LoanCoApplicant)
+        .filter(
+            LoanCoApplicant.loan_id == application.id,
+            LoanCoApplicant.deleted_at.is_(None),
+        )
+        .all()
+    )
+
+    documents = (
+        db.query(LoanDocument)
+        .filter(
+            LoanDocument.loan_id == application.id,
+            LoanDocument.deleted_at.is_(None),
+        )
+        .all()
+    )
+
+    # =========================================================
     # LATEST ACTIVE REVERT
     # =========================================================
 
@@ -273,6 +317,43 @@ def view_application(
         )
         .first()
     )
+
+    # =========================================================
+    # EMPLOYEE IDs
+    #
+    # DB:
+    # applied_by_context_id
+    # agent_context_id
+    # rm_context_id
+    #
+    # API:
+    # applied_by_id
+    # agent_id
+    # rm_id
+    # =========================================================
+
+    applied_by_id = (
+        application.applied_by_context.employee.id
+        if application.applied_by_context
+        and application.applied_by_context.employee
+        else None
+    )
+
+    agent_id = (
+        application.agent_context.id
+        if application.agent_context
+        else None
+    )
+
+    rm_id = (
+        application.rm_context.id
+        if application.rm_context
+        else None
+    )
+
+    # =========================================================
+    # RETURN APPLICATION
+    # =========================================================
 
     return {
         "id": application.id,
@@ -302,6 +383,11 @@ def view_application(
             if application.loan_type
             else None
         ),
+
+        # =====================================================
+        # COMMON FIELDS
+        # =====================================================
+
         "common_fields": {
             "email": application.email,
             "gender": application.gender,
@@ -314,15 +400,20 @@ def view_application(
             "bank_account_number": application.bank_acc_no,
             "ifsc_code": application.ifsc_code,
         },
+
         "loan_amt": application.loan_amt,
         "loan_tenure": application.loan_tenure,
         "loan_purpose": application.loan_purpose,
         "credit_score": application.credit_score,
         "referral": application.referral,
 
-        "applied_by_id": application.applied_by_id,
-        "agent_id": application.agent_id,
-        "rm_id": application.rm_id,
+        # =====================================================
+        # ASSIGNMENTS
+        # =====================================================
+
+        "applied_by_id": applied_by_id,
+        "agent_id": agent_id,
+        "rm_id": rm_id,
 
         # =====================================================
         # STATUS
@@ -380,34 +471,52 @@ def view_application(
         "created_at": application.created_at,
         "updated_at": application.updated_at,
 
+        # =====================================================
+        # AGENT
+        # =====================================================
+
         "agent": (
             {
-                "id": application.agent.id,
-                "name": application.agent.name,
+                "id": application.agent_context.employee.id,
+                "name": application.agent_context.employee.name,
             }
-            if application.agent
+            if application.agent_context
+            and application.agent_context.employee
             else None
         ),
+
+        # =====================================================
+        # RM
+        # =====================================================
 
         "rm": (
             {
-                "id": application.rm.id,
-                "name": application.rm.name,
+                "id": application.rm_context.employee.id,
+                "name": application.rm_context.employee.name,
             }
-            if application.rm
+            if application.rm_context
+            and application.rm_context.employee
             else None
         ),
+
+        # =====================================================
+        # APPLIED BY
+        # =====================================================
 
         "applied_by": (
             {
-                "id": application.applied_by.id,
-                "name": application.applied_by.name,
+                "id": application.applied_by_context.employee.id,
+                "name": application.applied_by_context.employee.name,
             }
-            if application.applied_by
+            if application.applied_by_context
+            and application.applied_by_context.employee
             else None
         ),
 
-        # These models don't exist yet.
+        # =====================================================
+        # ADDRESSES
+        # =====================================================
+
         "addresses": [
             {
                 "id": address.id,
@@ -418,6 +527,11 @@ def view_application(
             }
             for address in addresses
         ],
+
+        # =====================================================
+        # REFERENCES
+        # =====================================================
+
         "references": [
             {
                 "id": reference.id,
@@ -430,6 +544,11 @@ def view_application(
             }
             for reference in references
         ],
+
+        # =====================================================
+        # DOCUMENTS
+        # =====================================================
+
         "documents": [
             {
                 "id": document.id,
@@ -447,6 +566,11 @@ def view_application(
             }
             for document in documents
         ],
+
+        # =====================================================
+        # CO-APPLICANTS
+        # =====================================================
+
         "co_applicants": [
             {
                 "id": co_applicant.id,
@@ -459,37 +583,85 @@ def view_application(
             }
             for co_applicant in co_applicants
         ],
+
         "bank_processing": [],
     }
+
+
+# =============================================================
+# CREATE APPLICATION
+# =============================================================
 
 def create_application(
     db: Session,
     employee: Employee,
     payload,
 ):
+    # =========================================================
+    # GET CURRENT EMPLOYEE CONTEXT
+    #
+    # The creator must be represented by an EmployeeContext,
+    # because LoanApplication now stores:
+    #
+    # applied_by_context_id -> employee_contexts.id
+    # =========================================================
+
+    current_context = AccessControl.get_active_context(
+        db=db,
+        employee=employee,
+        context_id=None,
+    )
+
+    if not current_context:
+        raise HTTPException(
+            status_code=400,
+            detail="No active employee context found",
+        )
 
     # =========================================================
     # VALIDATE RM IF PROVIDED
+    #
+    # payload.rm_id remains an EMPLOYEE ID.
+    #
+    # We resolve:
+    #
+    # Employee.id
+    #       ↓
+    # EmployeeContext.id
+    #
+    # and store EmployeeContext.id in rm_context_id.
     # =========================================================
+
+    rm_context = None
 
     if payload.rm_id is not None:
 
-        rm = (
-            db.query(Employee)
+        rm_context = (
+            db.query(EmployeeContext)
+            .join(
+                Employee,
+                Employee.id == EmployeeContext.employee_id,
+            )
+            .join(
+                Context,
+                Context.id == EmployeeContext.context_id,
+            )
             .filter(
-                Employee.id == payload.rm_id,
+                EmployeeContext.id == payload.rm_id,
+                EmployeeContext.is_active.is_(True),
                 Employee.status == "active",
                 Employee.deleted_at.is_(None),
+                Context.is_active.is_(True),
+                Context.code == "RM",
             )
             .first()
         )
 
-        if not rm:
+        if not rm_context:
             raise HTTPException(
                 status_code=404,
-                detail="Relationship Manager not found",
+                detail="Relationship Manager context not found",
             )
-
     # =========================================================
     # CHECK EXISTING APPLICATION BY PHONE
     # =========================================================
@@ -512,71 +684,52 @@ def create_application(
 
     if existing_application:
 
-        # -------------------------------------------------------
+        # -----------------------------------------------------
         # APPLIED BY
-        # -------------------------------------------------------
+        # -----------------------------------------------------
 
-        applied_by = None
-
-        if existing_application.applied_by_id:
-
-            applied_by = (
-                db.query(Employee)
-                .filter(
-                    Employee.id == existing_application.applied_by_id
-                )
-                .first()
-            )
-
-        # -------------------------------------------------------
-        # RM
-        # -------------------------------------------------------
-
-        rm = None
-
-        if existing_application.rm_id:
-
-            rm = (
-                db.query(Employee)
-                .filter(
-                    Employee.id == existing_application.rm_id
-                )
-                .first()
-            )
-
-        # -------------------------------------------------------
-        # AGENT
-        # -------------------------------------------------------
-
-        agent = None
-
-        agent_id = getattr(
-            existing_application,
-            "agent_id",
-            None,
+        applied_by = (
+            existing_application.applied_by_context.employee
+            if existing_application.applied_by_context
+            and existing_application.applied_by_context.employee
+            else None
         )
 
-        if agent_id:
+        # -----------------------------------------------------
+        # RM
+        # -----------------------------------------------------
 
-            agent = (
-                db.query(Employee)
-                .filter(
-                    Employee.id == agent_id
-                )
-                .first()
-            )
+        rm = (
+            existing_application.rm_context.employee
+            if existing_application.rm_context
+            and existing_application.rm_context.employee
+            else None
+        )
 
-        # -------------------------------------------------------
+        # -----------------------------------------------------
+        # AGENT
+        # -----------------------------------------------------
+
+        agent = (
+            existing_application.agent_context.employee
+            if existing_application.agent_context
+            and existing_application.agent_context.employee
+            else None
+        )
+
+        # -----------------------------------------------------
         # RETURN EXISTING APPLICATION
-        # -------------------------------------------------------
+        # -----------------------------------------------------
 
         return {
             "success": True,
             "existing_loan": True,
+
             "message": (
                 "An existing application was found "
                 "for this phone number."
             ),
+
             "data": {
 
                 "application_id":
@@ -622,8 +775,11 @@ def create_application(
                 # APPLIED BY
                 # ------------------------------------------------
 
-                "applied_by_id":
-                    existing_application.applied_by_id,
+                "applied_by_id": (
+                    applied_by.id
+                    if applied_by
+                    else None
+                ),
 
                 "applied_by_name": (
                     applied_by.name
@@ -635,8 +791,11 @@ def create_application(
                 # RM
                 # ------------------------------------------------
 
-                "rm_id":
-                    existing_application.rm_id,
+                "rm_id": (
+                    rm.id
+                    if rm
+                    else None
+                ),
 
                 "rm_name": (
                     rm.name
@@ -648,8 +807,11 @@ def create_application(
                 # AGENT
                 # ------------------------------------------------
 
-                "agent_id":
-                    agent_id,
+                "agent_id": (
+                    agent.id
+                    if agent
+                    else None
+                ),
 
                 "agent_name": (
                     agent.name
@@ -667,21 +829,39 @@ def create_application(
         name=payload.name,
         phone=payload.phone,
         gender=payload.gender,
+
         loan_type_id=payload.loan_type_id,
         loan_amt=payload.loan_amount,
         credit_score=payload.credit_score,
         loan_purpose=payload.loan_purpose,
+
         referral=payload.reference_name,
-        rm_id=payload.rm_id,
+
+        # =====================================================
+        # CONTEXT BASED OWNERSHIP
+        # =====================================================
+
+        rm_context_id=(
+            rm_context.id
+            if rm_context
+            else None
+        ),
+
+        applied_by_context_id=current_context.id,
+
         state_id=payload.state_id,
         city_id=payload.city_id,
-        applied_by_id=employee.id,
+
         status=LoanStatus.inprocess,
         applied_date=date.today(),
     )
 
     db.add(application)
     db.flush()
+
+    # =========================================================
+    # GENERATE UNIQUE ID
+    # =========================================================
 
     application.unique_id = f"LN{application.id}"
 
@@ -692,11 +872,17 @@ def create_application(
         "success": True,
         "existing_loan": False,
         "message": "Loan application created successfully.",
+
         "data": {
             "id": application.id,
             "status": application.status.value,
         },
     }
+
+
+# =============================================================
+# GET BANK PROCESSINGS
+# =============================================================
 
 def get_bank_processings(
     db: Session,
@@ -717,6 +903,34 @@ def get_bank_processings(
             status_code=404,
             detail="Application not found",
         )
+
+    # =========================================================
+    # RBAC CHECK
+    # =========================================================
+
+    scoped_query = AccessControl.apply_application_scope(
+        query=db.query(LoanApplication),
+        db=db,
+        employee=employee,
+    )
+
+    allowed_application = (
+        scoped_query
+        .filter(
+            LoanApplication.id == application.id
+        )
+        .first()
+    )
+
+    if not allowed_application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    # =========================================================
+    # BANK PROCESSINGS
+    # =========================================================
 
     bank_processings = (
         db.query(
@@ -740,6 +954,7 @@ def get_bank_processings(
     data = []
 
     for bp, bank_name in bank_processings:
+
         data.append({
             "id": bp.id,
             "loan_id": bp.loan_id,
@@ -836,9 +1051,15 @@ def get_bank_processings(
         "success": True,
         "data": data,
     }
+
+
+# =============================================================
+# GET DEFAULT DSA
+# =============================================================
+
 def get_default_dsa(
     db: Session,
-    employee,
+    employee: Employee,
     application_id: str,
     bank_id: int,
 ):
@@ -857,8 +1078,33 @@ def get_default_dsa(
             detail="Application not found",
         )
 
-    # KEEP THE SAME RBAC CHECK USED BY YOUR OTHER
-    # VIEW-APPLICATION CONTROLLERS
+    # =========================================================
+    # RBAC CHECK
+    # =========================================================
+
+    scoped_query = AccessControl.apply_application_scope(
+        query=db.query(LoanApplication),
+        db=db,
+        employee=employee,
+    )
+
+    allowed_application = (
+        scoped_query
+        .filter(
+            LoanApplication.id == application.id
+        )
+        .first()
+    )
+
+    if not allowed_application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    # =========================================================
+    # NO LOAN TYPE
+    # =========================================================
 
     if not application.loan_type_id:
         return {
@@ -870,6 +1116,10 @@ def get_default_dsa(
                 "dsa_name": None,
             },
         }
+
+    # =========================================================
+    # FIND DEFAULT DSA
+    # =========================================================
 
     dsa = (
         db.query(DSADetail)
@@ -886,8 +1136,21 @@ def get_default_dsa(
         "success": True,
         "data": {
             "found": bool(dsa),
-            "dsa_id": str(dsa.id) if dsa else None,
-            "dsa_code": dsa.dsa_code if dsa else None,
-            "dsa_name": dsa.dsa_name if dsa else None,
+
+            "dsa_id":
+                str(dsa.id)
+                if dsa
+                else None,
+
+            "dsa_code":
+                dsa.dsa_code
+                if dsa
+                else None,
+
+            "dsa_name":
+                dsa.dsa_name
+                if dsa
+                else None,
         },
     }
+

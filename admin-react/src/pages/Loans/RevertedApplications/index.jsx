@@ -10,6 +10,10 @@ import {
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 
+import {
+    getActiveContext,
+} from '../../../app/auth'
+
 import AgentDropdown from '../../../components/GlobalModels/Filters/AgentDropdown'
 import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
@@ -22,7 +26,6 @@ import {
     getRevertHistory,
     getApiErrorMessage,
 } from './API'
-
 function RevertedApplications() {
 
     // =========================================================
@@ -202,32 +205,76 @@ function RevertedApplications() {
         async (
             page = pagination.page
         ) => {
-
             try {
-
                 setLoading(true)
                 setError('')
 
+                // =====================================================
+                // ACTIVE EMPLOYEE CONTEXT
+                // =====================================================
+
+                const activeContext =
+                    getActiveContext()
+
+                if (!activeContext?.id) {
+                    setApplications([])
+
+                    setPagination((previous) => ({
+                        ...previous,
+                        total: 0,
+                        totalPages: 0,
+                    }))
+
+                    return
+                }
+
+                console.log(
+                    'REVERTED APPLICATION ACTIVE CONTEXT:',
+                    activeContext
+                )
+
+                console.log(
+                    'REVERTED APPLICATION CONTEXT ID SENT:',
+                    activeContext.id
+                )
+
+                // =====================================================
+                // API
+                // =====================================================
 
                 const result =
                     await getRevertedApplications({
+                        contextId:
+                            activeContext.id,
+
                         search,
+
                         loanTypeId:
                             selectedLoanType,
+
                         revertedById:
                             selectedAgent,
+
                         revertedDate:
                             selectedDate,
+
                         page,
+
                         limit:
                             pagination.limit,
                     })
 
+                // =====================================================
+                // APPLICATION DATA
+                // =====================================================
 
                 setApplications(
                     result.items
                 )
 
+                // =====================================================
+                // PAGINATION
+                // =====================================================
 
                 setPagination({
                     page:
@@ -242,17 +289,13 @@ function RevertedApplications() {
                     totalPages:
                         result.totalPages,
                 })
-
             } catch (error) {
-
                 console.error(
                     'Failed to fetch reverted applications:',
                     error
                 )
 
-
                 setApplications([])
-
 
                 setError(
                     getApiErrorMessage(
@@ -260,13 +303,9 @@ function RevertedApplications() {
                         'Failed to load reverted applications.'
                     )
                 )
-
             } finally {
-
                 setLoading(false)
-
             }
-
         },
         [
             search,
@@ -276,7 +315,6 @@ function RevertedApplications() {
             pagination.limit,
         ]
     )
-
     // =========================================================
     // CLEAR FILTERS
     // =========================================================
@@ -394,21 +432,52 @@ function RevertedApplications() {
     // VIEW CHANGE HISTORY
     // =========================================================
 
+
     const handleViewHistory = async (
         application
     ) => {
-
         try {
-
             setLoading(true)
             setError('')
 
+            // =====================================================
+            // ACTIVE EMPLOYEE CONTEXT
+            // =====================================================
+
+            const activeContext =
+                getActiveContext()
+
+            if (!activeContext?.id) {
+                setError(
+                    'No active context found.'
+                )
+
+                return
+            }
+
+            console.log(
+                'REVERT HISTORY ACTIVE CONTEXT:',
+                activeContext
+            )
+
+            console.log(
+                'REVERT HISTORY CONTEXT ID SENT:',
+                activeContext.id
+            )
+
+            // =====================================================
+            // API
+            // =====================================================
 
             const history =
                 await getRevertHistory(
-                    application.loanId
+                    application.loanId,
+                    activeContext.id
                 )
 
+            // =====================================================
+            // SET HISTORY
+            // =====================================================
 
             setSelectedApplication({
                 ...application,
@@ -416,18 +485,14 @@ function RevertedApplications() {
                     history,
             })
 
-
             setShowRevertHistoryModal(
                 true
             )
-
         } catch (error) {
-
             console.error(
                 'Failed to fetch revert history:',
                 error
             )
-
 
             setError(
                 getApiErrorMessage(
@@ -435,13 +500,9 @@ function RevertedApplications() {
                     'Failed to load revert history.'
                 )
             )
-
         } finally {
-
             setLoading(false)
-
         }
-
     }
 
 

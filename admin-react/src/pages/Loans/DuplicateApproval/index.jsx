@@ -13,6 +13,7 @@ import {
     approveDuplicateApproval,
 } from '../DuplicateApproval/Api';
 
+import { getStoredUser,getActiveContext } from '../../../app/auth'
 
 const DuplicateApproval = () => {
 
@@ -302,9 +303,23 @@ const DuplicateApproval = () => {
         try {
             setLoading(true);
 
+            const user = getStoredUser();
+            const activeContext = getActiveContext(user);
+
+            const contextId = activeContext?.id;
+
+            if (!contextId) {
+                throw new Error(
+                    'Active context not found.'
+                );
+            }
+
             if (action === 'approve') {
                 for (const application of selectedApplications) {
-                    await approveDuplicateApproval(application.id);
+                    await approveDuplicateApproval(
+                        application.id,
+                        contextId
+                    );
                 }
             }
 
@@ -314,8 +329,15 @@ const DuplicateApproval = () => {
             await loadApplications();
 
         } catch (error) {
-            console.error('Duplicate approval action failed:', error);
-            setError(error.message || 'Unable to process approval.');
+            console.error(
+                'Duplicate approval action failed:',
+                error
+            );
+
+            setError(
+                error.message ||
+                'Unable to process approval.'
+            );
         } finally {
             setLoading(false);
         }

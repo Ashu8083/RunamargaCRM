@@ -18,6 +18,7 @@ class ApplicationStatusApplicationsController:
     async def get_application_status_applications(
         db: Session,
         employee: Employee,
+        context_id: Optional[int] = None,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
         loan_type_id: Optional[int] = None,
@@ -26,6 +27,7 @@ class ApplicationStatusApplicationsController:
         return get_application_status_applications(
             db=db,
             employee=employee,
+            context_id=context_id,
             from_date=from_date,
             to_date=to_date,
             loan_type_id=loan_type_id,

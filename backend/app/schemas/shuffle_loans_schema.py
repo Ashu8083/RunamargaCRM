@@ -1,3 +1,5 @@
+# backend/app/schemas/shuffle_loans_schema.py
+
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -11,11 +13,13 @@ class ShuffleLoansFilters(BaseModel):
 
     search: Optional[str] = None
 
+    # EmployeeContext.id for AGENT context
     agent_id: Optional[int] = Field(
         default=None,
         gt=0,
     )
 
+    # EmployeeContext.id for RM context
     rm_id: Optional[int] = Field(
         default=None,
         gt=0,
@@ -55,11 +59,13 @@ class ShuffleLoansAssign(BaseModel):
         min_length=1,
     )
 
+    # EmployeeContext.id for AGENT context
     agent_id: Optional[int] = Field(
         default=None,
         gt=0,
     )
 
+    # EmployeeContext.id for RM context
     rm_id: Optional[int] = Field(
         default=None,
         gt=0,

@@ -302,7 +302,7 @@ const getLoanId = (application) =>
 
 const getAgentId = (application) =>
     application.agentId ??
-    application.agent_id ??
+    application.agent_context_id ??
     application.processingAgentId ??
     application.processing_agent_id ??
     application.agent?.id ??
@@ -1769,7 +1769,7 @@ function ApplicationsTable({
                                                 py-4
                                                 align-middle
                                             "><AgentDropdown
-                                                        value={application.agentId ?? application.agent_id ?? ''}
+                                                        value={application.agentId ?? application.agent_context_id ?? ''}
                                                         onChange={(value) =>
                                                             handleAgentChange(application, value)
                                                         }

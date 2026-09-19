@@ -1,20 +1,17 @@
 # backend/app/services/Dashboard/application_status_service.py
 
-from sqlalchemy import func
-from sqlalchemy.orm import Session
 from datetime import datetime
+
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
+
+from app.core.access_control import AccessControl
 from app.models.loan_applications import LoanApplication
 from app.models.bank_processings import BankProcessing
 
+
 # =========================================================
 # STATUS PRIORITY
-# =========================================================
-#
-# Higher priority means the application has progressed
-# further in the loan process.
-#
-# This prevents one loan with multiple bank processings
-# from being counted multiple times.
 # =========================================================
 
 STATUS_PRIORITY = {
@@ -42,6 +39,7 @@ STATUS_LABELS = {
     "disbursed": "Disbursed",
 }
 
+
 # =========================================================
 # BANK PROCESSING STATUSES
 # =========================================================
@@ -61,6 +59,7 @@ BANK_STATUS_PRIORITY = {
 async def get_application_status_data(
     db: Session,
     employee,
+    context_id=None,
     from_date=None,
     to_date=None,
     loan_type_id=None,
@@ -74,9 +73,20 @@ async def get_application_status_data(
         - loan_applications
         - bank_processings
 
-    The highest/current stage of the application is used
-    when multiple bank-processing records exist.
+    Access scope is handled centrally by AccessControl.
+
+    context_id refers to EmployeeContext.id.
     """
+
+    # =====================================================
+    # CONTEXT VALIDATION
+    # =====================================================
+
+    if context_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="context_id is required.",
+        )
 
     # =====================================================
     # DATE CONVERSION
@@ -106,6 +116,34 @@ async def get_application_status_data(
     )
 
     # =====================================================
+    # APPLY CENTRAL ACCESS CONTROL SCOPE
+    # =====================================================
+    #
+    # IMPORTANT:
+    #
+    # Do NOT determine AGENT/RM/TEAMLEAD/GLOBAL here.
+    #
+    # AccessControl is responsible for:
+    #
+    #   - validating the EmployeeContext
+    #   - resolving context family
+    #   - applying Agent scope
+    #   - applying RM scope
+    #   - applying Team Lead scope
+    #   - applying Global scope
+    #
+    # context_id is EmployeeContext.id.
+    #
+    # =====================================================
+
+    loan_query = AccessControl.apply_application_scope(
+        query=loan_query,
+        db=db,
+        employee=employee,
+        context_id=context_id,
+    )
+
+    # =====================================================
     # DATE FILTER
     # =====================================================
 
@@ -127,6 +165,10 @@ async def get_application_status_data(
         loan_query = loan_query.filter(
             LoanApplication.loan_type_id == loan_type_id
         )
+
+    # =====================================================
+    # GET LOANS
+    # =====================================================
 
     loans = loan_query.all()
 
@@ -158,7 +200,6 @@ async def get_application_status_data(
     processing_by_loan = {}
 
     for processing in bank_processings:
-
         if not processing.loan_id:
             continue
 
@@ -209,6 +250,13 @@ async def get_application_status_data(
             if loan.status
             else None
         )
+
+        if loan_status:
+            loan_status = (
+                loan_status
+                .lower()
+                .strip()
+            )
 
         selected_status = loan_status
 
@@ -275,6 +323,10 @@ async def get_application_status_data(
 
         if selected_processing:
 
+            # ---------------------------------------------
+            # DISBURSED
+            # ---------------------------------------------
+
             if selected_status == "disbursed":
 
                 amount = float(
@@ -283,6 +335,10 @@ async def get_application_status_data(
                     or loan.loan_amt
                     or 0
                 )
+
+            # ---------------------------------------------
+            # SANCTIONED / LOGIN / REJECTED
+            # ---------------------------------------------
 
             elif selected_status in {
                 "sanctioned",

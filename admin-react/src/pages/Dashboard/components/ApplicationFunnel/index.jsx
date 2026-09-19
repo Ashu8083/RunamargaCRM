@@ -10,7 +10,7 @@ import {
     ChartBarIcon,
     ChevronDownIcon,
 } from "@heroicons/react/24/outline";
-
+import { getActiveContext } from "../../../../app/auth";
 import LoanTypeDropdown from "../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import { getApplicationFunnelData } from "./API";
 
@@ -81,6 +81,8 @@ const formatAmount = (amount) => {
 };
 
 function ApplicationFunnel() {
+    const activeContext = getActiveContext();
+    const contextId = activeContext?.id;
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [loanType, setLoanType] = useState("");
@@ -106,6 +108,7 @@ function ApplicationFunnel() {
             try {
                 const result =
                     await getApplicationFunnelData({
+                        contextId,
                         fromDate,
                         toDate,
                         loanType,
@@ -150,7 +153,7 @@ function ApplicationFunnel() {
         return () => {
             active = false;
         };
-    }, [fromDate, toDate, loanType]);
+    }, [contextId, fromDate, toDate, loanType]);
 
     const data = response.data || [];
 

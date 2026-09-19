@@ -164,7 +164,8 @@ def get_employee_contexts(
 
         result.append(
             {
-                "id": employee_context.context.id,
+                "id": employee_context.id,
+                "context_id": employee_context.context.id,
                 "code": employee_context.context.code,
                 "name": employee_context.context.name,
                 "is_default": employee_context.is_default,

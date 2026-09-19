@@ -7,8 +7,6 @@ from app.config.database import get_db
 from app.core.security import get_current_employee
 from app.models.employees import Employee
 from app.controllers.Loans.edit_controller import (
-    get_applications,
-    view_application,
     update_application_loan_type,assign_bank,
     update_application_status,update_application_header,update_application_loan_details,add_application_address,add_application_reference,add_application_co_applicant,upload_application_document,delete_application_document,update_bank_processing_workflow
 )
@@ -23,42 +21,6 @@ router = APIRouter(
     tags=["Applications"],
 )
 
-
-@router.get("")
-def get_applications_route(
-    context_id: int | None = Query(default=None),
-    db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_employee),
-):
-    return get_applications(
-        db=db,
-        employee=employee,
-        context_id=context_id,
-    )
-
-
-@router.get("/{application_id}")
-def view_application_route(
-    application_id: str,
-    db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_employee),
-):
-    application = view_application(
-        db=db,
-        employee=employee,
-        application_id=application_id,
-    )
-
-    if not application:
-        raise HTTPException(
-            status_code=404,
-            detail="Application not found",
-        )
-
-    return {
-        "success": True,
-        "data": application,
-    }
 
 
 @router.patch("/{application_id}/loan-type")
