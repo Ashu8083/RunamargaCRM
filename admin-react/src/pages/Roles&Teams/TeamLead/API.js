@@ -81,6 +81,7 @@ const normalizeTeamLead = (teamLead) => {
         // --------------------------------------------------------------------
 
         employee_id: employeeId,
+
         employeeId: employeeId,
 
 
@@ -89,11 +90,14 @@ const normalizeTeamLead = (teamLead) => {
         // --------------------------------------------------------------------
 
         context_id: contextId,
+
         contextId: contextId,
+
 
         role:
             teamLead.role ||
             '',
+
 
         roleId:
             contextId,
@@ -150,6 +154,178 @@ const normalizeTeamLead = (teamLead) => {
             teamLead.updated_at ||
             teamLead.updatedAt ||
             'N/A',
+    }
+}
+
+
+// ============================================================================
+// NORMALIZE ASSIGNED EMPLOYEE
+// ============================================================================
+//
+// Backend response:
+//
+// [
+//     {
+//         id: 73,
+//         employee_id: 33,
+//         context_id: 3,
+//         name: "Lokesh A",
+//         email: "...",
+//         phone: "...",
+//         role: "Relationship Manager",
+//         status: "Active",
+//         reports_to_id: 89
+//     }
+// ]
+//
+// IMPORTANT:
+//
+// id
+//     = EmployeeContext.id
+//
+// employee_id
+//     = employees.id
+//
+// context_id
+//     = contexts.id
+//
+// reports_to_id
+//     = Team Lead / reporting EmployeeContext ID
+//
+// We preserve the original backend fields and also provide
+// camelCase aliases for the frontend.
+//
+// ============================================================================
+
+const normalizeAssignedEmployee = (
+    employee
+) => {
+
+    if (!employee) {
+        return null
+    }
+
+
+    const employeeContextId =
+        employee.id !== null &&
+        employee.id !== undefined
+            ? Number(employee.id)
+            : null
+
+
+    const employeeId =
+        employee.employee_id !== null &&
+        employee.employee_id !== undefined
+            ? Number(employee.employee_id)
+            : null
+
+
+    const contextId =
+        employee.context_id !== null &&
+        employee.context_id !== undefined
+            ? Number(employee.context_id)
+            : null
+
+
+    const reportsToId =
+        employee.reports_to_id !== null &&
+        employee.reports_to_id !== undefined
+            ? Number(employee.reports_to_id)
+            : null
+
+
+    return {
+        ...employee,
+
+
+        // --------------------------------------------------------------------
+        // EmployeeContext ID
+        // --------------------------------------------------------------------
+
+        id:
+            employeeContextId,
+
+
+        employeeContextId:
+            employeeContextId,
+
+
+        // --------------------------------------------------------------------
+        // Employee ID
+        // --------------------------------------------------------------------
+
+        employee_id:
+            employeeId,
+
+
+        employeeId:
+            employeeId,
+
+
+        // --------------------------------------------------------------------
+        // Context
+        // --------------------------------------------------------------------
+
+        context_id:
+            contextId,
+
+
+        contextId:
+            contextId,
+
+
+        // --------------------------------------------------------------------
+        // Reporting Team Lead
+        // --------------------------------------------------------------------
+
+        reports_to_id:
+            reportsToId,
+
+
+        reportsToId:
+            reportsToId,
+
+
+        // --------------------------------------------------------------------
+        // Display fields
+        // --------------------------------------------------------------------
+
+        name:
+            employee.name ||
+            'N/A',
+
+
+        email:
+            employee.email ||
+            'N/A',
+
+
+        phone:
+            employee.phone ||
+            employee.mobile ||
+            employee.phone_number ||
+            'N/A',
+
+
+        role:
+            employee.role ||
+            '',
+
+
+        // --------------------------------------------------------------------
+        // Status
+        // --------------------------------------------------------------------
+
+        is_active:
+            employee.is_active !== undefined
+                ? Boolean(employee.is_active)
+                : employee.status !== 'Inactive',
+
+
+        status:
+            employee.status === 'Inactive'
+                ? 'Inactive'
+                : 'Active',
     }
 }
 
@@ -254,17 +430,109 @@ export const updateTeamLeadStatus = async (
 // ============================================================================
 // ASSIGNED AGENTS - VIEW ONLY
 // ============================================================================
+//
+// GET
+// /team-leads/{teamLeadId}/agents
+//
+// The backend returns the employees assigned to the selected Team Lead.
+//
+// Example:
+//
+// [
+//     {
+//         id: 73,
+//         employee_id: 33,
+//         context_id: 3,
+//         name: "Lokesh A",
+//         email: "...",
+//         phone: "...",
+//         role: "Relationship Manager",
+//         status: "Active",
+//         reports_to_id: 89
+//     }
+// ]
+//
+// ============================================================================
 
 export const getAssignedAgents = async (
     teamLeadId
 ) => {
+
+    if (
+        teamLeadId === null ||
+        teamLeadId === undefined ||
+        teamLeadId === ''
+    ) {
+        return []
+    }
+
 
     const response = await apiClient.get(
         `/team-leads/${teamLeadId}/agents`
     )
 
 
-    return response.data
+    const data = response.data
+
+
+    // ------------------------------------------------------------------------
+    // Support direct array response
+    // ------------------------------------------------------------------------
+
+    if (Array.isArray(data)) {
+
+        return data
+            .map(normalizeAssignedEmployee)
+            .filter(Boolean)
+
+    }
+
+
+    // ------------------------------------------------------------------------
+    // Support wrapped response
+    //
+    // In case backend later returns:
+    //
+    // {
+    //     employees: [...]
+    // }
+    // ------------------------------------------------------------------------
+
+    if (
+        data &&
+        Array.isArray(data.employees)
+    ) {
+
+        return data.employees
+            .map(normalizeAssignedEmployee)
+            .filter(Boolean)
+
+    }
+
+
+    // ------------------------------------------------------------------------
+    // Support assigned_agents response
+    //
+    // In case backend later returns:
+    //
+    // {
+    //     assigned_agents: [...]
+    // }
+    // ------------------------------------------------------------------------
+
+    if (
+        data &&
+        Array.isArray(data.assigned_agents)
+    ) {
+
+        return data.assigned_agents
+            .map(normalizeAssignedEmployee)
+            .filter(Boolean)
+
+    }
+
+
+    return []
 }
 
 

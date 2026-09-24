@@ -508,6 +508,7 @@ def delete_employee_context_permission(
 @router.get("/rms")
 def get_rms(
     context_id: int | None = Query(default=None),
+    team_lead_context_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -516,6 +517,7 @@ def get_rms(
             db=db,
             employee=employee,
             context_id=context_id,
+            team_lead_context_id=team_lead_context_id,
         )
 
         return [
@@ -531,7 +533,8 @@ def get_rms(
             status_code=500,
             detail="Failed to load RMs.",
         ) from exc
-  
+
+
 # ============================================================================
 # GET /common/agents
 # ============================================================================
@@ -539,6 +542,7 @@ def get_rms(
 @router.get("/agents")
 def get_agents(
     context_id: int | None = Query(default=None),
+    team_lead_context_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -547,6 +551,7 @@ def get_agents(
             db=db,
             employee=employee,
             context_id=context_id,
+            team_lead_context_id=team_lead_context_id,
         )
 
         return [
@@ -566,7 +571,6 @@ def get_agents(
 # ============================================================================
 # GET /common/team-leads
 # ============================================================================
-
 @router.get("/team-leads")
 def get_team_leads(
     context_id: int | None = Query(default=None),
@@ -583,15 +587,16 @@ def get_team_leads(
         return [
             {
                 "id": team_lead.id,
-                "name": team_lead.name,
+                "name": team_lead.employee.name,
             }
             for team_lead in team_leads
         ]
 
     except Exception as exc:
+        print("TEAM LEADS ERROR:", repr(exc))
         raise HTTPException(
             status_code=500,
-            detail="Failed to load team leads.",
+            detail=str(exc),
         ) from exc
 # ============================================================================
 # GET /common/states

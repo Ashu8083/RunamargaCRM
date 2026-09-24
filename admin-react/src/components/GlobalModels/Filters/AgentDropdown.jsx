@@ -1,5 +1,4 @@
-// admin-react/src/components/GlobalModels/Filters/AgentDropdown.jsx
-
+// admin-react\src\components\GlobalModels\Filters\AgentDropdown.jsx
 import { useEffect, useState } from 'react'
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'
@@ -15,6 +14,9 @@ const AgentDropdown = ({
   label = '',
   error = '',
   required = false,
+
+  // Optional Team Lead Context ID
+  teamLeadContextId = null,
 }) => {
 
   const [agents, setAgents] = useState([])
@@ -23,6 +25,10 @@ const AgentDropdown = ({
 
   const [fetchError, setFetchError] = useState('')
 
+
+  // =========================================================
+  // FETCH AGENTS
+  // =========================================================
 
   useEffect(() => {
 
@@ -41,12 +47,38 @@ const AgentDropdown = ({
         /*
          * Authentication, cookies, token refresh,
          * retry and baseURL are handled by apiClient.
+         *
+         * If teamLeadContextId is provided:
+         *
+         * GET /common/agents?team_lead_context_id=123
+         *
+         * Otherwise:
+         *
+         * GET /common/agents
          */
+
+        const params = {}
+
+
+        if (
+          teamLeadContextId !== null &&
+          teamLeadContextId !== undefined &&
+          teamLeadContextId !== ''
+        ) {
+
+          params.team_lead_context_id =
+            teamLeadContextId
+
+        }
+
+
         const response = await apiClient({
 
           method: 'GET',
 
           url: '/common/agents',
+
+          params,
 
         })
 
@@ -130,7 +162,7 @@ const AgentDropdown = ({
 
     }
 
-  }, [])
+  }, [teamLeadContextId])
 
 
   /*
@@ -174,7 +206,13 @@ const AgentDropdown = ({
       {label && (
 
         <label
-          className="mb-1.5 block text-sm font-medium text-base-content"
+          className="
+            mb-1.5
+            block
+            text-sm
+            font-medium
+            text-base-content
+          "
         >
 
           {label}
@@ -195,7 +233,7 @@ const AgentDropdown = ({
       )}
 
 
-      <SearchableFilterDropdown   
+      <SearchableFilterDropdown
 
         value={value}
 
