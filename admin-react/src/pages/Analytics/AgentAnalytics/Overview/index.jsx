@@ -5,12 +5,17 @@ import { useEffect, useMemo, useState } from 'react'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 
 import AgentDropdown from '../../../../components/GlobalModels/Filters/AgentDropdown'
+
 import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
+
 import TeamLeadDropdown from '../../../../components/GlobalModels/Filters/TeamLeadDropdown'
+
 import LoanTypeDropdown from '../../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
 import PipelineStages from './components/PipelineStages'
+
 import PipelineInsights from './components/PipelineInsights'
+
 import OverallSuccessRate from './components/OverallSuccessRate'
 
 
@@ -34,17 +39,24 @@ const fetchAgentAnalytics = async () => {
                     date: '2026-08-28',
 
                     agentId: 101,
+
                     rmId: 201,
+
                     teamLeadId: 301,
 
                     loanTypeId: 401,
 
                     leadReceived: 42,
+
                     loggedIn: 31,
+
                     rejected: 5,
+
                     sanctioned: 18,
+
                     disbursed: 12,
                 },
+
 
                 {
                     id: 2,
@@ -52,17 +64,24 @@ const fetchAgentAnalytics = async () => {
                     date: '2026-08-27',
 
                     agentId: 102,
+
                     rmId: 202,
+
                     teamLeadId: 302,
 
                     loanTypeId: 402,
 
                     leadReceived: 36,
+
                     loggedIn: 27,
+
                     rejected: 4,
+
                     sanctioned: 15,
+
                     disbursed: 10,
                 },
+
 
                 {
                     id: 3,
@@ -70,17 +89,24 @@ const fetchAgentAnalytics = async () => {
                     date: '2026-08-26',
 
                     agentId: 103,
+
                     rmId: 201,
+
                     teamLeadId: 301,
 
                     loanTypeId: 403,
 
                     leadReceived: 51,
+
                     loggedIn: 39,
+
                     rejected: 7,
+
                     sanctioned: 24,
+
                     disbursed: 17,
                 },
+
 
                 {
                     id: 4,
@@ -88,17 +114,24 @@ const fetchAgentAnalytics = async () => {
                     date: '2026-08-25',
 
                     agentId: 101,
+
                     rmId: 201,
+
                     teamLeadId: 301,
 
                     loanTypeId: 401,
 
                     leadReceived: 47,
+
                     loggedIn: 35,
+
                     rejected: 6,
+
                     sanctioned: 21,
+
                     disbursed: 15,
                 },
+
 
                 {
                     id: 5,
@@ -106,17 +139,24 @@ const fetchAgentAnalytics = async () => {
                     date: '2026-08-24',
 
                     agentId: 104,
+
                     rmId: 202,
+
                     teamLeadId: 302,
 
                     loanTypeId: 404,
 
                     leadReceived: 29,
+
                     loggedIn: 21,
+
                     rejected: 3,
+
                     sanctioned: 12,
+
                     disbursed: 8,
                 },
+
 
                 {
                     id: 6,
@@ -124,17 +164,24 @@ const fetchAgentAnalytics = async () => {
                     date: '2026-08-23',
 
                     agentId: 105,
+
                     rmId: 201,
+
                     teamLeadId: 301,
 
                     loanTypeId: 405,
 
                     leadReceived: 33,
+
                     loggedIn: 24,
+
                     rejected: 5,
+
                     sanctioned: 14,
+
                     disbursed: 9,
                 },
+
 
                 {
                     id: 7,
@@ -142,15 +189,21 @@ const fetchAgentAnalytics = async () => {
                     date: '2026-08-22',
 
                     agentId: 106,
+
                     rmId: 202,
+
                     teamLeadId: 302,
 
                     loanTypeId: 406,
 
                     leadReceived: 38,
+
                     loggedIn: 29,
+
                     rejected: 4,
+
                     sanctioned: 17,
+
                     disbursed: 11,
                 },
             ])
@@ -223,9 +276,13 @@ function Overview() {
         try {
 
             if (isRefresh) {
+
                 setRefreshing(true)
+
             } else {
+
                 setLoading(true)
+
             }
 
 
@@ -239,6 +296,7 @@ function Overview() {
                     : []
             )
 
+
         } catch (error) {
 
             console.error(
@@ -246,11 +304,14 @@ function Overview() {
                 error
             )
 
+
             setAnalytics([])
+
 
         } finally {
 
             setLoading(false)
+
             setRefreshing(false)
 
         }
@@ -283,6 +344,7 @@ function Overview() {
 
             const matchesTeamLead =
                 !teamLead ||
+
                 String(
                     item.teamLeadId
                 ) === String(teamLead)
@@ -294,6 +356,7 @@ function Overview() {
 
             const matchesAgent =
                 !agent ||
+
                 String(
                     item.agentId
                 ) === String(agent)
@@ -305,6 +368,7 @@ function Overview() {
 
             const matchesRm =
                 !rm ||
+
                 String(
                     item.rmId
                 ) === String(rm)
@@ -316,6 +380,7 @@ function Overview() {
 
             const matchesLoanType =
                 !loanType ||
+
                 String(
                     item.loanTypeId
                 ) === String(loanType)
@@ -327,6 +392,7 @@ function Overview() {
 
             const matchesFromDate =
                 !fromDate ||
+
                 String(
                     item.date || ''
                 ) >= String(fromDate)
@@ -338,6 +404,7 @@ function Overview() {
 
             const matchesToDate =
                 !toDate ||
+
                 String(
                     item.date || ''
                 ) <= String(toDate)
@@ -356,13 +423,32 @@ function Overview() {
 
     }, [
         analytics,
+
         teamLead,
+
         agent,
+
         rm,
+
         loanType,
+
         fromDate,
+
         toDate,
     ])
+
+
+    // =========================================================
+    // TEAM LEAD CHANGE
+    // =========================================================
+
+    const handleTeamLeadChange = (
+        selectedTeamLead
+    ) => {
+
+        setTeamLead(selectedTeamLead)
+
+    }
 
 
     // =========================================================
@@ -372,10 +458,15 @@ function Overview() {
     const handleReset = () => {
 
         setTeamLead('')
+
         setAgent('')
+
         setRm('')
+
         setLoanType('')
+
         setFromDate('')
+
         setToDate('')
 
     }
@@ -512,13 +603,23 @@ function Overview() {
                     ">
 
                         <TeamLeadDropdown
+
                             label="Team Lead"
+
                             value={teamLead}
-                            onChange={setTeamLead}
+
+                            onChange={
+                                handleTeamLeadChange
+                            }
+
                             allLabel="All Team Leads"
+
                             placeholder="All Team Leads"
+
                             searchPlaceholder="Search team lead"
+
                             emptyMessage="No team leads found"
+
                         />
 
                     </div>
@@ -534,9 +635,15 @@ function Overview() {
                     ">
 
                         <AgentDropdown
-                        label='Agent'
+
+                            label='Agent'
+
                             value={agent}
+
                             onChange={setAgent}
+
+                            teamLeadContextId={teamLead}
+
                         />
 
                     </div>
@@ -552,9 +659,15 @@ function Overview() {
                     ">
 
                         <RmDropdown
-                        label='RM'
+
+                            label='RM'
+
                             value={rm}
+
                             onChange={setRm}
+
+                            teamLeadContextId={teamLead}
+
                         />
 
                     </div>
@@ -570,9 +683,13 @@ function Overview() {
                     ">
 
                         <LoanTypeDropdown
-                        label='Loan Type'
+
+                            label='Loan Type'
+
                             value={loanType}
+
                             onChange={setLoanType}
+
                         />
 
                     </div>
@@ -594,17 +711,24 @@ function Overview() {
                             font-medium
                             text-base-content/60
                         ">
+
                             From
+
                         </label>
 
+
                         <input
+
                             type="date"
+
                             value={fromDate}
+
                             onChange={(event) =>
                                 setFromDate(
                                     event.target.value
                                 )
                             }
+
                             className="
                                 input
                                 input-bordered
@@ -614,6 +738,7 @@ function Overview() {
                                 min-w-0
                                 text-sm
                             "
+
                         />
 
                     </div>
@@ -635,17 +760,24 @@ function Overview() {
                             font-medium
                             text-base-content/60
                         ">
+
                             To
+
                         </label>
 
+
                         <input
+
                             type="date"
+
                             value={toDate}
+
                             onChange={(event) =>
                                 setToDate(
                                     event.target.value
                                 )
                             }
+
                             className="
                                 input
                                 input-bordered
@@ -655,6 +787,7 @@ function Overview() {
                                 min-w-0
                                 text-sm
                             "
+
                         />
 
                     </div>
@@ -678,8 +811,11 @@ function Overview() {
                         {/* RESET */}
 
                         <button
+
                             type="button"
+
                             onClick={handleReset}
+
                             className="
                                 h-10
                                 min-w-0
@@ -696,19 +832,26 @@ function Overview() {
                                 hover:bg-base-200
                                 hover:text-base-content
                             "
+
                         >
+
                             Reset
+
                         </button>
 
 
                         {/* REFRESH */}
 
                         <button
+
                             type="button"
+
                             onClick={() =>
                                 loadData(true)
                             }
+
                             disabled={refreshing}
+
                             className="
                                 inline-flex
                                 h-10
@@ -728,9 +871,11 @@ function Overview() {
                                 disabled:cursor-not-allowed
                                 disabled:opacity-60
                             "
+
                         >
 
                             <ArrowPathIcon
+
                                 className={`
                                     h-4
                                     w-4
@@ -741,12 +886,15 @@ function Overview() {
                                             : ''
                                     }
                                 `}
+
                             />
 
                             <span>
+
                                 {refreshing
                                     ? 'Loading...'
                                     : 'Refresh'}
+
                             </span>
 
                         </button>
@@ -781,15 +929,20 @@ function Overview() {
                         font-medium
                         text-base-content/55
                     ">
+
                         No analytics data found
+
                     </p>
+
 
                     <p className="
                         mt-1
                         text-xs
                         text-base-content/35
                     ">
+
                         Try changing the selected filters.
+
                     </p>
 
                 </section>
@@ -821,14 +974,18 @@ function Overview() {
                         {/* PIPELINE INSIGHTS */}
 
                         <PipelineInsights
+
                             analytics={filteredAnalytics}
+
                         />
 
 
                         {/* SUCCESS RATE */}
 
                         <OverallSuccessRate
+
                             analytics={filteredAnalytics}
+
                         />
 
                     </div>
@@ -839,7 +996,9 @@ function Overview() {
                     ================================================= */}
 
                     <PipelineStages
+
                         analytics={filteredAnalytics}
+
                     />
 
                 </>

@@ -92,7 +92,10 @@ class DuplicateApproval(Base):
 
     applied_by_context_id = Column(
         Integer,
-        ForeignKey("employee_contexts.id"),
+        ForeignKey(
+            "employee_contexts.id",
+            ondelete="SET NULL",
+        ),
         nullable=True,
     )
 
@@ -169,7 +172,10 @@ class DuplicateApproval(Base):
     # RM is optional.
     rm_context_id = Column(
         Integer,
-        ForeignKey("employee_contexts.id"),
+        ForeignKey(
+            "employee_contexts.id",
+            ondelete="SET NULL",
+        ),
         nullable=True,
     )
 

@@ -1,75 +1,69 @@
-// admin-react/src/pages/Login/Login.js
+// src/pages/Login/Login.js
 
-import { useState } from 'react'
+import {
+    useEffect,
+    useRef,
+    useState,
+} from 'react'
+
 import { useNavigate } from 'react-router-dom'
 
 import {
-    MapPinIcon,
-    DevicePhoneMobileIcon,
     ArrowLeftIcon,
     ArrowPathIcon,
+    MapPinIcon,
 } from '@heroicons/react/24/outline'
+
 import {
     requestLoginOtp,
     verifyLoginOtp,
 } from '../app/auth'
+
 import { APP_LOGO } from '../constants/assets'
 
+const DEVICE_ID_KEY =
+    'runamarga_crm_device_id'
 
-// =============================================================
-// CONSTANTS
-// =============================================================
+const LOCATION_ATTEMPTS = 2
 
-const DEVICE_ID_KEY = 'runamarga_crm_device_id'
-// const MOCK_OTP = process.env.REACT_APP_MOCK_OTP || '123456'
+const RESEND_COOLDOWN = 90
 
-
-// =============================================================
-// GET / CREATE DEVICE ID
-// =============================================================
+// =========================================================
+// DEVICE ID
+// =========================================================
 
 const getDeviceId = () => {
-
     let deviceId =
         localStorage.getItem(
             DEVICE_ID_KEY
         )
 
-
     if (!deviceId) {
-
         deviceId =
-            typeof crypto !== 'undefined' &&
+            typeof crypto !==
+                'undefined' &&
             crypto.randomUUID
                 ? crypto.randomUUID()
                 : `${Date.now()}-${Math.random()
-                    .toString(36)
-                    .substring(2, 12)}`
-
+                      .toString(36)
+                      .substring(2, 12)}`
 
         localStorage.setItem(
             DEVICE_ID_KEY,
             deviceId
         )
-
     }
 
-
     return deviceId
-
 }
 
-
-// =============================================================
-// GET DEVICE TYPE
-// =============================================================
+// =========================================================
+// DEVICE TYPE
+// =========================================================
 
 const getDeviceType = () => {
-
     const userAgent =
-        navigator.userAgent ||
-        ''
-
+        navigator.userAgent || ''
 
     if (
         /tablet|ipad|playbook|silk/i.test(
@@ -79,7 +73,6 @@ const getDeviceType = () => {
         return 'tablet'
     }
 
-
     if (
         /mobile|iphone|ipod|android/i.test(
             userAgent
@@ -88,82 +81,46 @@ const getDeviceType = () => {
         return 'mobile'
     }
 
-
     return 'desktop'
-
 }
 
-
-// =============================================================
-// GET CLIENT IP
-// =============================================================
-//
-// In production, this should preferably come from your backend.
-//
-// The browser should NOT be trusted as the source of the user's
-// actual public IP address.
-//
-// The request below allows your backend to return:
-//
-// {
-//     "ipAddress": "xxx.xxx.xxx.xxx"
-// }
-//
-// If the endpoint is unavailable, we keep it null for the mock.
-// =============================================================
+// =========================================================
+// CLIENT IP
+// =========================================================
 
 const getClientIp = async () => {
-
     try {
-
-        const response =
-            await fetch(
-                '/api/auth/client-ip'
-            )
-
+        const response = await fetch(
+            '/api/auth/client-ip'
+        )
 
         if (!response.ok) {
             return null
         }
 
-
         const data =
             await response.json()
-
 
         return (
             data?.ipAddress ||
             data?.ip ||
             null
         )
-
-    } catch (error) {
-
-        console.warn(
-            'Unable to determine client IP.',
-            error
-        )
-
+    } catch {
         return null
-
     }
-
 }
 
+// =========================================================
+// LOCATION
+// =========================================================
 
-// =============================================================
-// GET LOCATION
-// =============================================================
-
-const getLocation = () => {
-
-    return new Promise(
+const getLocation = () =>
+    new Promise(
         (resolve, reject) => {
-
             if (
                 !navigator.geolocation
             ) {
-
                 reject(
                     new Error(
                         'Location services are not supported by this browser.'
@@ -171,69 +128,25 @@ const getLocation = () => {
                 )
 
                 return
-
             }
-
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-
                     resolve({
                         latitude:
-                            position.coords.latitude,
+                            position
+                                .coords
+                                .latitude,
 
                         longitude:
-                            position.coords.longitude,
+                            position
+                                .coords
+                                .longitude,
                     })
-
                 },
 
                 (error) => {
-
-                    let message =
-                        'Unable to access your location.'
-
-
-                    switch (
-                        error.code
-                    ) {
-
-                        case error.PERMISSION_DENIED:
-
-                            message =
-                                'Location permission is required to continue.'
-
-                            break
-
-
-                        case error.POSITION_UNAVAILABLE:
-
-                            message =
-                                'Your current location could not be determined.'
-
-                            break
-
-
-                        case error.TIMEOUT:
-
-                            message =
-                                'Location request timed out. Please try again.'
-
-                            break
-
-
-                        default:
-
-                            message =
-                                'Unable to access your location.'
-
-                    }
-
-
-                    reject(
-                        new Error(message)
-                    )
-
+                    reject(error)
                 },
 
                 {
@@ -242,194 +155,99 @@ const getLocation = () => {
                     maximumAge: 0,
                 }
             )
-
         }
     )
 
-}
+// =========================================================
+// LOCATION WITH FALLBACK
+// =========================================================
+//
+// Try twice.
+// If both attempts fail,
+// continue with location = null.
+//
 
+const getLocationWithFallback =
+    async () => {
+        for (
+            let attempt = 0;
+            attempt <
+            LOCATION_ATTEMPTS;
+            attempt++
+        ) {
+            try {
+                return await getLocation()
+            } catch {
+                // Try again.
+            }
+        }
 
-// =============================================================
-// LOGIN COMPONENT
-// =============================================================
+        return null
+    }
+
+// =========================================================
+// LOGIN
+// =========================================================
 
 function Login({ onLogin }) {
-
-    const navigate =
-        useNavigate()
-
-
-    // =========================================================
-    // LOGIN STEP
-    // =========================================================
+    const navigate = useNavigate()
 
     const [step, setStep] =
         useState('email')
 
-
-    // =========================================================
-    // FORM
-    // =========================================================
-
     const [emailId, setEmailId] =
         useState('')
-
 
     const [otp, setOtp] =
         useState('')
 
-
-    // =========================================================
-    // DEVICE / LOCATION
-    // =========================================================
-
     const [deviceInfo, setDeviceInfo] =
         useState(null)
-
-
-    // =========================================================
-    // UI STATE
-    // =========================================================
 
     const [loading, setLoading] =
         useState(false)
 
+    const [resending, setResending] =
+        useState(false)
 
     const [errorMessage, setErrorMessage] =
         useState('')
 
-
     const [successMessage, setSuccessMessage] =
         useState('')
 
+    const [
+        resendSeconds,
+        setResendSeconds,
+    ] = useState(RESEND_COOLDOWN)
 
-    // =========================================================
-    // PERMISSION / INFORMATION STATE
-    // =========================================================
+    const otpRefs = useRef([])
 
-    const [showPermissionInfo, setShowPermissionInfo] =
-        useState(false)
-
-
-    // =========================================================
+    // =====================================================
     // EMAIL VALIDATION
-    // =========================================================
+    // =====================================================
 
-    const isValidEmail = (value) => {
-
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+    const isValidEmail = (value) =>
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
             value
         )
 
-    }
+    // =====================================================
+    // CREATE DEVICE INFORMATION
+    // =====================================================
 
-
-    // =========================================================
-    // CONTINUE FROM EMAIL
-    // =========================================================
-
-    const handleContinue = (event) => {
-
-        event.preventDefault()
-
-        setErrorMessage('')
-        setSuccessMessage('')
-
-
-        const email =
-            emailId.trim()
-
-
-        // -----------------------------------------------------
-        // REQUIRED
-        // -----------------------------------------------------
-
-        if (!email) {
-
-            setErrorMessage(
-                'Email address is required.'
-            )
-
-            return
-
-        }
-
-
-        // -----------------------------------------------------
-        // EMAIL FORMAT
-        // -----------------------------------------------------
-
-        if (!isValidEmail(email)) {
-
-            setErrorMessage(
-                'Please enter a valid email address.'
-            )
-
-            return
-
-        }
-
-
-        // -----------------------------------------------------
-        // SHOW PERMISSION INFORMATION
-        // -----------------------------------------------------
-
-        setShowPermissionInfo(true)
-
-    }
-
-
-    // =========================================================
-    // REQUEST PERMISSION + SEND OTP
-    // =========================================================
-
-    const handleAllowAndContinue = async () => {
-
-        setErrorMessage('')
-        setSuccessMessage('')
-        setLoading(true)
-
-
-        try {
-
-            // -------------------------------------------------
-            // REQUEST LOCATION
-            // -------------------------------------------------
-
-            const location =
-                await getLocation()
-
-
-            // -------------------------------------------------
-            // DEVICE ID
-            // -------------------------------------------------
-
+    const createDeviceInfo =
+        async (location) => {
             const deviceId =
                 getDeviceId()
-
-
-            // -------------------------------------------------
-            // DEVICE TYPE
-            // -------------------------------------------------
 
             const deviceType =
                 getDeviceType()
 
-
-            // -------------------------------------------------
-            // IP ADDRESS
-            // -------------------------------------------------
-
             const ipAddress =
                 await getClientIp()
 
-
-            // -------------------------------------------------
-            // DEVICE INFORMATION
-            // -------------------------------------------------
-
-            const collectedDeviceInfo = {
-
+            const device = {
                 type: deviceType,
 
                 id: deviceId,
@@ -441,973 +259,910 @@ function Login({ onLogin }) {
                 platform:
                     navigator.platform ||
                     '',
-
             }
 
+            return {
+                device,
 
-            // -------------------------------------------------
-            // FINAL PAYLOAD
-            // -------------------------------------------------
+                deviceInfo: {
+                    ...device,
 
-            const payload = {
+                    ipAddress,
 
-                emailId:
-                    emailId.trim(),
+                    latitude:
+                        location?.latitude ??
+                        null,
 
-                device:
-                    collectedDeviceInfo,
+                    longitude:
+                        location?.longitude ??
+                        null,
+                },
 
                 ipAddress,
 
-                location: {
-
-                    latitude:
-                        location.latitude,
-
-                    longitude:
-                        location.longitude,
-
-                },
-
+                location,
             }
+        }
 
+    // =====================================================
+    // SEND OTP
+    // =====================================================
 
-            console.log(
-                'LOGIN DEVICE PAYLOAD:',
+    const sendOtp = async ({
+        location,
+        isResend = false,
+    }) => {
+        const email =
+            emailId.trim()
+
+        const {
+            device,
+            deviceInfo:
+                collectedDeviceInfo,
+            ipAddress,
+        } = await createDeviceInfo(
+            location
+        )
+
+        const payload = {
+            emailId: email,
+
+            device,
+
+            ipAddress,
+
+            location,
+        }
+
+        console.log(
+            'LOGIN DEVICE PAYLOAD:',
+            payload
+        )
+
+        const response =
+            await requestLoginOtp(
                 payload
             )
 
-
-            // -------------------------------------------------
-            // REQUEST OTP
-            // -------------------------------------------------
-
-            const response =
-                await requestLoginOtp(
-                    payload
-                )
-
-
-            if (!response?.success) {
-
-                throw new Error(
-                    response?.message ||
+        if (!response?.success) {
+            throw new Error(
+                response?.message ||
                     'Unable to send OTP.'
-                )
-
-            }
-
-
-            // -------------------------------------------------
-            // SAVE DEVICE INFO
-            // -------------------------------------------------
-
-            setDeviceInfo({
-                ...collectedDeviceInfo,
-
-                ipAddress,
-
-                latitude:
-                    location.latitude,
-
-                longitude:
-                    location.longitude,
-
-            })
-
-
-            // -------------------------------------------------
-            // MOVE TO OTP SCREEN
-            // -------------------------------------------------
-
-            setShowPermissionInfo(false)
-
-            setSuccessMessage(
-                response.message ||
-                'OTP sent successfully.'
             )
-
-            setStep('otp')
-
-        } catch (error) {
-
-            setErrorMessage(
-                error?.message ||
-                'Unable to continue. Please try again.'
-            )
-
-        } finally {
-
-            setLoading(false)
-
         }
 
-    }
-
-
-    // =========================================================
-    // VERIFY OTP
-    // =========================================================
-
-    const handleVerifyOtp = async (
-        event
-    ) => {
-
-        event.preventDefault()
-
-        setErrorMessage('')
-        setSuccessMessage('')
-
-
-        const enteredOtp =
-            otp.trim()
-
-
-        // -----------------------------------------------------
-        // OTP VALIDATION
-        // -----------------------------------------------------
-
-        if (!enteredOtp) {
-
-            setErrorMessage(
-                'Please enter the OTP.'
-            )
-
-            return
-
-        }
-
-
-        if (!/^\d{4}$/.test(enteredOtp)) {
-
-            setErrorMessage(
-                'OTP must contain 4 digits.'
-            )
-
-            return
-
-        }
-
-
-        setLoading(true)
-
-
-        try {
-
-            const response =
-                await verifyLoginOtp({
-
-                    emailId:
-                        emailId.trim(),
-
-                    otp:
-                        enteredOtp,
-
-                    deviceId:
-                        deviceInfo?.id,
-
-                    device:
-                        deviceInfo,
-
-                    ipAddress:
-                        deviceInfo?.ipAddress,
-
-                    location:
-                        deviceInfo
-                            ? {
-                                latitude:
-                                    deviceInfo.latitude,
-                                longitude:
-                                    deviceInfo.longitude,
-                            }
-                            : null,
-
-                })
-
-
-            if (!response?.success) {
-
-                throw new Error(
-                    response?.message ||
-                    'Invalid OTP.'
-                )
-
-            }
-
-
-            // -------------------------------------------------
-            // LOGIN SUCCESS
-            // -------------------------------------------------
-
-            onLogin?.()
-
-
-            navigate(
-                '/crm/dashboard',
-                {
-                    replace: true,
-                }
-            )
-
-        } catch (error) {
-
-            setErrorMessage(
-                error?.message ||
-                'Unable to verify OTP.'
-            )
-
-        } finally {
-
-            setLoading(false)
-
-        }
-
-    }
-
-
-    // =========================================================
-    // BACK TO EMAIL
-    // =========================================================
-
-    const handleBackToEmail = () => {
-
-        setStep('email')
+        setDeviceInfo(
+            collectedDeviceInfo
+        )
 
         setOtp('')
 
-        setDeviceInfo(null)
+        setErrorMessage('')
+
+        setSuccessMessage(
+            response.message ||
+                (isResend
+                    ? 'OTP resent successfully.'
+                    : 'OTP sent successfully.')
+        )
+
+        setResendSeconds(
+            RESEND_COOLDOWN
+        )
+
+        setStep('otp')
+
+        setTimeout(() => {
+            otpRefs.current[0]?.focus()
+        }, 50)
+
+        return response
+    }
+
+    // =====================================================
+    // EMAIL → LOCATION → OTP
+    // =====================================================
+
+    const handleContinue = async (
+        event
+    ) => {
+        event.preventDefault()
+
+        if (loading) {
+            return
+        }
+
+        setErrorMessage('')
+        setSuccessMessage('')
+
+        const email =
+            emailId.trim()
+
+        if (!email) {
+            setErrorMessage(
+                'Email address is required.'
+            )
+
+            return
+        }
+
+        if (!isValidEmail(email)) {
+            setErrorMessage(
+                'Please enter a valid email address.'
+            )
+
+            return
+        }
+
+        setLoading(true)
+
+        try {
+            // Ask for location permission.
+            //
+            // If location fails twice,
+            // getLocationWithFallback()
+            // returns null and OTP
+            // continues normally.
+
+            const location =
+                await getLocationWithFallback()
+
+            await sendOtp({
+                location,
+                isResend: false,
+            })
+        } catch (error) {
+            setErrorMessage(
+                error?.message ||
+                    'Unable to continue. Please try again.'
+            )
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // =====================================================
+    // RESEND COUNTDOWN
+    // =====================================================
+
+    useEffect(() => {
+        if (
+            step !== 'otp' ||
+            resendSeconds <= 0
+        ) {
+            return
+        }
+
+        const timer =
+            setInterval(() => {
+                setResendSeconds(
+                    (seconds) =>
+                        Math.max(
+                            seconds - 1,
+                            0
+                        )
+                )
+            }, 1000)
+
+        return () =>
+            clearInterval(timer)
+    }, [
+        step,
+        resendSeconds,
+    ])
+
+    // =====================================================
+    // FORMAT TIMER
+    // =====================================================
+
+    const formatTimer = (
+        seconds
+    ) => {
+        const minutes =
+            Math.floor(
+                seconds / 60
+            )
+
+        const remainingSeconds =
+            seconds % 60
+
+        return `${String(
+            minutes
+        ).padStart(2, '0')}:${String(
+            remainingSeconds
+        ).padStart(2, '0')}`
+    }
+
+    // =====================================================
+    // RESEND OTP
+    // =====================================================
+
+    const handleResendOtp =
+        async () => {
+            if (
+                resendSeconds > 0 ||
+                resending ||
+                loading
+            ) {
+                return
+            }
+
+            setResending(true)
+
+            setErrorMessage('')
+            setSuccessMessage('')
+
+            try {
+                /*
+                 * IMPORTANT:
+                 *
+                 * We don't request location again
+                 * during resend.
+                 *
+                 * We reuse the location/device
+                 * information already collected
+                 * during the first OTP request.
+                 */
+
+                const location =
+                    deviceInfo
+                        ? {
+                              latitude:
+                                  deviceInfo.latitude,
+                              longitude:
+                                  deviceInfo.longitude,
+                          }
+                        : null
+
+                await sendOtp({
+                    location,
+                    isResend: true,
+                })
+            } catch (error) {
+                setErrorMessage(
+                    error?.message ||
+                        'Unable to resend OTP. Please try again.'
+                )
+
+                // Allow another resend attempt.
+                setResendSeconds(0)
+            } finally {
+                setResending(false)
+            }
+        }
+
+    // =====================================================
+    // OTP CHANGE
+    // =====================================================
+
+    const handleOtpChange = (
+        index,
+        value
+    ) => {
+        const digits =
+            value.replace(
+                /\D/g,
+                ''
+            )
+
+        // ---------------------------------------------
+        // PASTE OTP
+        // ---------------------------------------------
+
+        if (digits.length > 1) {
+            const pasted =
+                digits.slice(0, 4)
+
+            setOtp(pasted)
+
+            pasted
+                .split('')
+                .forEach(
+                    (
+                        digit,
+                        i
+                    ) => {
+                        if (
+                            otpRefs.current[
+                                i
+                            ]
+                        ) {
+                            otpRefs.current[
+                                i
+                            ].value =
+                                digit
+                        }
+                    }
+                )
+
+            const focusIndex =
+                Math.min(
+                    pasted.length,
+                    3
+                )
+
+            otpRefs.current[
+                focusIndex
+            ]?.focus()
+
+            setErrorMessage('')
+
+            return
+        }
+
+        const currentOtp =
+            otp.split('')
+
+        currentOtp[index] =
+            digits
+
+        const nextOtp =
+            currentOtp
+                .join('')
+                .slice(0, 4)
+
+        setOtp(nextOtp)
 
         setErrorMessage('')
 
-        setSuccessMessage('')
-
+        // Move to next box.
+        if (digits) {
+            otpRefs.current[
+                Math.min(
+                    index + 1,
+                    3
+                )
+            ]?.focus()
+        }
     }
 
+    // =====================================================
+    // OTP KEYBOARD
+    // =====================================================
 
-    // =========================================================
-    // RENDER
-    // =========================================================
+    const handleOtpKeyDown = (
+        index,
+        event
+    ) => {
+        // ---------------------------------------------
+        // BACKSPACE
+        // ---------------------------------------------
+
+        if (
+            event.key ===
+                'Backspace' &&
+            !event.currentTarget
+                .value &&
+            index > 0
+        ) {
+            const currentOtp =
+                otp.split('')
+
+            currentOtp[
+                index - 1
+            ] = ''
+
+            const nextOtp =
+                currentOtp
+                    .join('')
+                    .slice(0, 4)
+
+            setOtp(nextOtp)
+
+            otpRefs.current[
+                index - 1
+            ]?.focus()
+
+            return
+        }
+
+        // ---------------------------------------------
+        // ARROW LEFT
+        // ---------------------------------------------
+
+        if (
+            event.key ===
+                'ArrowLeft' &&
+            index > 0
+        ) {
+            otpRefs.current[
+                index - 1
+            ]?.focus()
+        }
+
+        // ---------------------------------------------
+        // ARROW RIGHT
+        // ---------------------------------------------
+
+        if (
+            event.key ===
+                'ArrowRight' &&
+            index < 3
+        ) {
+            otpRefs.current[
+                index + 1
+            ]?.focus()
+        }
+    }
+
+    // =====================================================
+    // AUTO VERIFY
+    // =====================================================
+
+    useEffect(() => {
+        if (
+            step !== 'otp' ||
+            otp.length !== 4 ||
+            loading ||
+            resending
+        ) {
+            return
+        }
+
+        handleVerifyOtp()
+    }, [
+        otp,
+        step,
+    ])
+
+    // =====================================================
+    // VERIFY OTP
+    // =====================================================
+
+    const handleVerifyOtp =
+        async () => {
+            if (
+                otp.length !== 4 ||
+                loading
+            ) {
+                return
+            }
+
+            setErrorMessage('')
+            setSuccessMessage('')
+            setLoading(true)
+
+            try {
+                const response =
+                    await verifyLoginOtp({
+                        emailId:
+                            emailId.trim(),
+
+                        otp,
+
+                        deviceId:
+                            deviceInfo?.id,
+
+                        device:
+                            deviceInfo,
+
+                        ipAddress:
+                            deviceInfo?.ipAddress,
+
+                        location:
+                            deviceInfo
+                                ? {
+                                      latitude:
+                                          deviceInfo.latitude,
+                                      longitude:
+                                          deviceInfo.longitude,
+                                  }
+                                : null,
+                    })
+
+                if (
+                    !response?.success
+                ) {
+                    throw new Error(
+                        response?.message ||
+                            'Invalid OTP.'
+                    )
+                }
+
+                onLogin?.()
+
+                navigate(
+                    '/crm/dashboard',
+                    {
+                        replace: true,
+                    }
+                )
+            } catch (error) {
+                setErrorMessage(
+                    error?.message ||
+                        'Unable to verify OTP.'
+                )
+
+                // Clear OTP so user
+                // can enter it again.
+                setOtp('')
+
+                setTimeout(() => {
+                    otpRefs.current[
+                        0
+                    ]?.focus()
+                }, 50)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+    // =====================================================
+    // BACK TO EMAIL
+    // =====================================================
+
+    const handleBackToEmail =
+        () => {
+            setStep('email')
+
+            setOtp('')
+
+            setDeviceInfo(null)
+
+            setErrorMessage('')
+
+            setSuccessMessage('')
+
+            setResendSeconds(
+                RESEND_COOLDOWN
+            )
+
+            setTimeout(() => {
+                document
+                    .querySelector(
+                        '#login-email'
+                    )
+                    ?.focus()
+            }, 50)
+        }
+
+    // =====================================================
+    // UI
+    // =====================================================
 
     return (
+        <div className="min-h-screen bg-base-200 px-4">
+            <div className="flex min-h-screen items-center justify-center">
+                <div className="w-full max-w-sm rounded-2xl border border-base-300 bg-base-100 shadow-lg">
 
-        <div className="
-            min-h-screen
-            bg-base-200
-            px-4
-            py-8
-            sm:px-6
-        ">
+                    {/* HEADER */}
 
-            <div className="
-                flex
-                min-h-[calc(100vh-4rem)]
-                items-center
-                justify-center
-            ">
-
-                <div className="
-                    w-full
-                    max-w-md
-                    rounded-2xl
-                    border
-                    border-base-300
-                    bg-base-100
-                    shadow-lg
-                ">
-
-                    {/* =================================================
-                        HEADER
-                    ================================================= */}
-
-                    <div className="
-                        px-6
-                        pt-8
-                        text-center
-                        sm:px-8
-                    ">
-
+                    <div className="px-6 pt-7 text-center">
                         <img
                             src={APP_LOGO}
                             alt="Runamarga"
-                            className="
-                                mx-auto
-                                h-20
-                                w-20
-                                object-contain
-                            "
+                            className="mx-auto h-16 w-16 object-contain"
                         />
 
-
-                        <h1 className="
-                            mt-4
-                            text-2xl
-                            font-semibold
-                            tracking-tight
-                            text-base-content
-                        ">
+                        <h1 className="mt-3 text-xl font-semibold tracking-tight text-base-content">
                             Runamarga Loan CRM
                         </h1>
 
-
-                        <p className="
-                            mt-1.5
-                            text-sm
-                            text-base-content/55
-                        ">
+                        <p className="mt-1 text-xs text-base-content/50">
                             Secure CRM access
                         </p>
-
                     </div>
 
+                    {/* CONTENT */}
 
-                    {/* =================================================
-                        CONTENT
-                    ================================================= */}
-
-                    <div className="
-                        px-6
-                        pb-7
-                        pt-7
-                        sm:px-8
-                    ">
+                    <div className="px-6 pb-6 pt-6">
 
                         {/* =================================================
-                            EMAIL STEP
+                            EMAIL
                         ================================================= */}
 
-                        {step === 'email' && (
-
+                        {step ===
+                            'email' && (
                             <form
                                 onSubmit={
                                     handleContinue
                                 }
                             >
+                                <label
+                                    htmlFor="login-email"
+                                    className="mb-1.5 block text-xs font-medium text-base-content/70"
+                                >
+                                    Email address
+                                </label>
 
-                                <div>
+                                <input
+                                    id="login-email"
+                                    type="email"
+                                    value={
+                                        emailId
+                                    }
+                                    onChange={(
+                                        event
+                                    ) => {
+                                        setEmailId(
+                                            event
+                                                .target
+                                                .value
+                                        )
 
-                                    <label className="
-                                        mb-2
-                                        block
-                                        text-sm
-                                        font-medium
-                                        text-base-content/75
-                                    ">
-                                        Email address
-                                    </label>
+                                        setErrorMessage(
+                                            ''
+                                        )
 
-
-                                    <input
-                                        type="email"
-                                        value={emailId}
-                                        onChange={(event) => {
-
-                                            setEmailId(
-                                                event.target.value
-                                            )
-
-                                            setErrorMessage('')
-                                            setSuccessMessage('')
-
-                                        }}
-                                        placeholder="Enter your registered email"
-                                        autoComplete="email"
-                                        autoFocus
-                                        className="
-                                            input
-                                            input-bordered
-                                            h-11
-                                            min-h-11
-                                            w-full
-                                        "
-                                    />
-
-                                </div>
-
-
-                                {/* ERROR */}
+                                        setSuccessMessage(
+                                            ''
+                                        )
+                                    }}
+                                    placeholder="Enter your registered email"
+                                    autoComplete="email"
+                                    autoFocus
+                                    disabled={
+                                        loading
+                                    }
+                                    className="input input-bordered h-10 min-h-10 w-full text-sm"
+                                />
 
                                 {errorMessage && (
-
-                                    <div className="
-                                        mt-3
-                                        rounded-lg
-                                        border
-                                        border-error/20
-                                        bg-error/5
-                                        px-3
-                                        py-2.5
-                                        text-sm
-                                        text-error
-                                    ">
-                                        {errorMessage}
-                                    </div>
-
+                                    <Message
+                                        type="error"
+                                        text={
+                                            errorMessage
+                                        }
+                                    />
                                 )}
-
 
                                 <button
                                     type="submit"
-                                    className="
-                                        mt-5
-                                        h-11
-                                        w-full
-                                        rounded-lg
-                                        bg-[#8BCF00]
-                                        text-sm
-                                        font-semibold
-                                        text-white
-                                        transition
-                                        hover:bg-[#78B300]
-                                        focus:outline-none
-                                        focus:ring-2
-                                        focus:ring-[#8BCF00]/30
-                                        disabled:cursor-not-allowed
-                                        disabled:opacity-60
-                                    "
+                                    disabled={
+                                        loading
+                                    }
+                                    className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#8BCF00] text-sm font-semibold text-white transition hover:bg-[#78B300] focus:outline-none focus:ring-2 focus:ring-[#8BCF00]/30 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                    Continue
+                                    {loading && (
+                                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                                    )}
+
+                                    {loading
+                                        ? 'Checking...'
+                                        : 'Continue'}
                                 </button>
 
-
-                                <p className="
-                                    mt-4
-                                    text-center
-                                    text-xs
-                                    leading-5
-                                    text-base-content/45
-                                ">
-                                    You will receive a one-time
-                                    password on your registered
-                                    email address.
+                                <p className="mt-3 text-center text-[11px] leading-4 text-base-content/40">
+                                    A one-time password
+                                    will be sent to your
+                                    registered email.
                                 </p>
-
                             </form>
-
                         )}
 
-
                         {/* =================================================
-                            OTP STEP
+                            OTP
                         ================================================= */}
 
-                        {step === 'otp' && (
+                        {step ===
+                            'otp' && (
+                            <div>
 
-                            <form
-                                onSubmit={
-                                    handleVerifyOtp
-                                }
-                            >
+                                {/* BACK */}
 
                                 <button
                                     type="button"
                                     onClick={
                                         handleBackToEmail
                                     }
-                                    className="
-                                        mb-5
-                                        flex
-                                        items-center
-                                        gap-1.5
-                                        text-sm
-                                        font-medium
-                                        text-base-content/55
-                                        transition
-                                        hover:text-base-content
-                                    "
+                                    disabled={
+                                        loading ||
+                                        resending
+                                    }
+                                    className="mb-4 flex items-center gap-1 text-xs font-medium text-base-content/50 transition hover:text-base-content disabled:opacity-50"
                                 >
-
-                                    <ArrowLeftIcon className="
-                                        h-4
-                                        w-4
-                                    " />
+                                    <ArrowLeftIcon className="h-3.5 w-3.5" />
 
                                     Back
-
                                 </button>
 
+                                {/* OTP SENT */}
 
-                                <div>
+                                <div className="mb-4 flex items-center gap-2.5 rounded-lg bg-base-200/60 px-3 py-2.5">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#8BCF00]/10">
+                                        <MapPinIcon className="h-4 w-4 text-[#6FA800]" />
+                                    </div>
 
-                                    <p className="
-                                        text-sm
-                                        text-base-content/60
-                                    ">
-                                        OTP sent to
-                                    </p>
+                                    <div className="min-w-0">
+                                        <p className="text-[11px] text-base-content/50">
+                                            OTP sent to
+                                        </p>
 
-
-                                    <p className="
-                                        mt-0.5
-                                        truncate
-                                        text-sm
-                                        font-semibold
-                                        text-base-content
-                                    ">
-                                        {emailId}
-                                    </p>
-
+                                        <p className="truncate text-xs font-semibold text-base-content">
+                                            {
+                                                emailId
+                                            }
+                                        </p>
+                                    </div>
                                 </div>
 
+                                {/* OTP */}
 
-                                <div className="
-                                    mt-5
-                                ">
+                                <label className="mb-2 block text-xs font-medium text-base-content/70">
+                                    Enter OTP
+                                </label>
 
-                                    <label className="
-                                        mb-2
-                                        block
-                                        text-sm
-                                        font-medium
-                                        text-base-content/75
-                                    ">
-                                        Enter OTP
-                                    </label>
-
-
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        autoComplete="one-time-code"
-                                        maxLength={4}
-                                        value={otp}
-                                        onChange={(event) => {
-
-                                            const value =
-                                                event.target.value
-                                                    .replace(
-                                                        /\D/g,
-                                                        ''
+                                <div className="flex justify-center gap-2">
+                                    {[
+                                        0,
+                                        1,
+                                        2,
+                                        3,
+                                    ].map(
+                                        (
+                                            index
+                                        ) => (
+                                            <input
+                                                key={
+                                                    index
+                                                }
+                                                ref={(
+                                                    element
+                                                ) => {
+                                                    otpRefs.current[
+                                                        index
+                                                    ] =
+                                                        element
+                                                }}
+                                                type="text"
+                                                inputMode="numeric"
+                                                autoComplete={
+                                                    index ===
+                                                    0
+                                                        ? 'one-time-code'
+                                                        : 'off'
+                                                }
+                                                maxLength={
+                                                    1
+                                                }
+                                                value={
+                                                    otp[
+                                                        index
+                                                    ] ||
+                                                    ''
+                                                }
+                                                disabled={
+                                                    loading ||
+                                                    resending
+                                                }
+                                                onChange={(
+                                                    event
+                                                ) =>
+                                                    handleOtpChange(
+                                                        index,
+                                                        event
+                                                            .target
+                                                            .value
                                                     )
-                                                    .slice(
-                                                        0,
-                                                        4
+                                                }
+                                                onKeyDown={(
+                                                    event
+                                                ) =>
+                                                    handleOtpKeyDown(
+                                                        index,
+                                                        event
                                                     )
-
-                                            setOtp(value)
-                                            setErrorMessage('')
-
-                                        }}
-                                        placeholder="Enter 4-digit OTP"
-                                        autoFocus
-                                        className="
-                                            input
-                                            input-bordered
-                                            h-12
-                                            min-h-12
-                                            w-full
-                                            text-center
-                                            text-lg
-                                            font-semibold
-                                            tracking-[0.35em]
-                                        "
-                                    />
-
+                                                }
+                                                onFocus={(
+                                                    event
+                                                ) =>
+                                                    event
+                                                        .target
+                                                        .select()
+                                                }
+                                                className="h-12 w-12 rounded-lg border border-base-300 bg-base-100 text-center text-lg font-semibold outline-none transition focus:border-[#8BCF00] focus:ring-2 focus:ring-[#8BCF00]/20 disabled:opacity-60"
+                                            />
+                                        )
+                                    )}
                                 </div>
-
 
                                 {/* SUCCESS */}
 
                                 {successMessage && (
-
-                                    <div className="
-                                        mt-3
-                                        rounded-lg
-                                        border
-                                        border-[#8BCF00]/30
-                                        bg-[#8BCF00]/5
-                                        px-3
-                                        py-2.5
-                                        text-sm
-                                        text-[#5f9000]
-                                    ">
-                                        {successMessage}
-                                    </div>
-
+                                    <Message
+                                        type="success"
+                                        text={
+                                            successMessage
+                                        }
+                                    />
                                 )}
-
 
                                 {/* ERROR */}
 
                                 {errorMessage && (
-
-                                    <div className="
-                                        mt-3
-                                        rounded-lg
-                                        border
-                                        border-error/20
-                                        bg-error/5
-                                        px-3
-                                        py-2.5
-                                        text-sm
-                                        text-error
-                                    ">
-                                        {errorMessage}
-                                    </div>
-
+                                    <Message
+                                        type="error"
+                                        text={
+                                            errorMessage
+                                        }
+                                    />
                                 )}
 
+                                {/* VERIFYING */}
 
-                                <button
-                                    type="submit"
-                                    disabled={
-                                        loading ||
-                                        otp.length !== 4
-                                    }
-                                    className="
-                                        mt-5
-                                        flex
-                                        h-11
-                                        w-full
-                                        items-center
-                                        justify-center
-                                        gap-2
-                                        rounded-lg
-                                        bg-[#8BCF00]
-                                        text-sm
-                                        font-semibold
-                                        text-white
-                                        transition
-                                        hover:bg-[#78B300]
-                                        focus:outline-none
-                                        focus:ring-2
-                                        focus:ring-[#8BCF00]/30
-                                        disabled:cursor-not-allowed
-                                        disabled:opacity-60
-                                    "
-                                >
+                                {loading && (
+                                    <div className="mt-4 flex items-center justify-center gap-2 text-xs text-base-content/50">
+                                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
 
-                                    {loading && (
+                                        Verifying...
+                                    </div>
+                                )}
 
-                                        <ArrowPathIcon className="
-                                            h-4
-                                            w-4
-                                            animate-spin
-                                        " />
+                                {/* =================================================
+                                    RESEND
+                                ================================================= */}
 
+                                <div className="mt-5 text-center">
+
+                                    {resendSeconds >
+                                        0 ? (
+                                        <p className="text-[11px] text-base-content/45">
+                                            Resend OTP in{' '}
+                                            <span className="font-semibold text-base-content/65">
+                                                {formatTimer(
+                                                    resendSeconds
+                                                )}
+                                            </span>
+                                        </p>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                handleResendOtp
+                                            }
+                                            disabled={
+                                                resending ||
+                                                loading
+                                            }
+                                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6FA800] transition hover:text-[#578500] disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {resending && (
+                                                <ArrowPathIcon className="h-3.5 w-3.5 animate-spin" />
+                                            )}
+
+                                            {resending
+                                                ? 'Sending...'
+                                                : 'Resend OTP'}
+                                        </button>
                                     )}
+                                </div>
 
-                                    {loading
-                                        ? 'Verifying...'
-                                        : 'Verify & Login'}
-
-                                </button>
-
-                            </form>
-
+                                <p className="mt-3 text-center text-[11px] leading-4 text-base-content/40">
+                                    Enter all 4 digits
+                                    to verify
+                                    automatically.
+                                </p>
+                            </div>
                         )}
-
                     </div>
-
                 </div>
-
             </div>
-
-
-            {/* =========================================================
-                PERMISSION MODAL
-            ========================================================= */}
-
-            {showPermissionInfo && (
-
-                <div className="
-                    fixed
-                    inset-0
-                    z-[100]
-                    flex
-                    items-center
-                    justify-center
-                    bg-black/40
-                    p-4
-                ">
-
-                    <div className="
-                        w-full
-                        max-w-md
-                        rounded-2xl
-                        border
-                        border-base-300
-                        bg-base-100
-                        shadow-2xl
-                    ">
-
-                        <div className="
-                            p-6
-                            sm:p-7
-                        ">
-
-                            {/* ICONS */}
-
-                            <div className="
-                                flex
-                                items-center
-                                gap-3
-                            ">
-
-                                <div className="
-                                    flex
-                                    h-10
-                                    w-10
-                                    shrink-0
-                                    items-center
-                                    justify-center
-                                    rounded-full
-                                    bg-[#8BCF00]/10
-                                ">
-
-                                    <MapPinIcon className="
-                                        h-5
-                                        w-5
-                                        text-[#6FA800]
-                                    " />
-
-                                </div>
-
-
-                                <div>
-
-                                    <h2 className="
-                                        text-base
-                                        font-semibold
-                                        text-base-content
-                                    ">
-                                        Verify your device
-                                    </h2>
-
-                                    <p className="
-                                        mt-0.5
-                                        text-xs
-                                        text-base-content/50
-                                    ">
-                                        One-time security check
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-
-                            {/* DESCRIPTION */}
-
-                            <p className="
-                                mt-5
-                                text-sm
-                                leading-6
-                                text-base-content/65
-                            ">
-                                Before sending the OTP, we need
-                                to verify this login attempt.
-                                Your device information and
-                                current location will be sent
-                                securely with the OTP request.
-                            </p>
-
-
-                            {/* INFORMATION */}
-
-                            <div className="
-                                mt-4
-                                space-y-2
-                            ">
-
-                                <div className="
-                                    flex
-                                    items-center
-                                    gap-3
-                                    rounded-lg
-                                    bg-base-200/60
-                                    px-3
-                                    py-2.5
-                                ">
-
-                                    <DevicePhoneMobileIcon className="
-                                        h-4
-                                        w-4
-                                        shrink-0
-                                        text-base-content/45
-                                    " />
-
-                                    <div>
-
-                                        <p className="
-                                            text-xs
-                                            font-medium
-                                            text-base-content
-                                        ">
-                                            Device verification
-                                        </p>
-
-                                        <p className="
-                                            text-[11px]
-                                            text-base-content/45
-                                        ">
-                                            A secure device ID will
-                                            be associated with this login.
-                                        </p>
-
-                                    </div>
-
-                                </div>
-
-
-                                <div className="
-                                    flex
-                                    items-center
-                                    gap-3
-                                    rounded-lg
-                                    bg-base-200/60
-                                    px-3
-                                    py-2.5
-                                ">
-
-                                    <MapPinIcon className="
-                                        h-4
-                                        w-4
-                                        shrink-0
-                                        text-base-content/45
-                                    " />
-
-                                    <div>
-
-                                        <p className="
-                                            text-xs
-                                            font-medium
-                                            text-base-content
-                                        ">
-                                            Location
-                                        </p>
-
-                                        <p className="
-                                            text-[11px]
-                                            text-base-content/45
-                                        ">
-                                            Your latitude and longitude
-                                            will be included in the request.
-                                        </p>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-
-                            {/* ERROR */}
-
-                            {errorMessage && (
-
-                                <div className="
-                                    mt-4
-                                    rounded-lg
-                                    border
-                                    border-error/20
-                                    bg-error/5
-                                    px-3
-                                    py-2.5
-                                    text-sm
-                                    text-error
-                                ">
-                                    {errorMessage}
-                                </div>
-
-                            )}
-
-
-                            {/* ACTIONS */}
-
-                            <div className="
-                                mt-6
-                                flex
-                                flex-col-reverse
-                                gap-2
-                                sm:flex-row
-                                sm:justify-end
-                            ">
-
-                                <button
-                                    type="button"
-                                    disabled={loading}
-                                    onClick={() => {
-
-                                        setShowPermissionInfo(false)
-                                        setErrorMessage('')
-
-                                    }}
-                                    className="
-                                        h-10
-                                        rounded-lg
-                                        px-4
-                                        text-sm
-                                        font-medium
-                                        text-base-content/60
-                                        transition
-                                        hover:bg-base-200
-                                        hover:text-base-content
-                                        disabled:opacity-50
-                                    "
-                                >
-                                    Cancel
-                                </button>
-
-
-                                <button
-                                    type="button"
-                                    disabled={loading}
-                                    onClick={
-                                        handleAllowAndContinue
-                                    }
-                                    className="
-                                        flex
-                                        h-10
-                                        items-center
-                                        justify-center
-                                        gap-2
-                                        rounded-lg
-                                        bg-[#8BCF00]
-                                        px-5
-                                        text-sm
-                                        font-semibold
-                                        text-white
-                                        transition
-                                        hover:bg-[#78B300]
-                                        focus:outline-none
-                                        focus:ring-2
-                                        focus:ring-[#8BCF00]/30
-                                        disabled:cursor-not-allowed
-                                        disabled:opacity-60
-                                    "
-                                >
-
-                                    {loading && (
-
-                                        <ArrowPathIcon className="
-                                            h-4
-                                            w-4
-                                            animate-spin
-                                        " />
-
-                                    )}
-
-                                    {loading
-                                        ? 'Verifying...'
-                                        : 'Allow & Continue'}
-
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            )}
-
         </div>
-
     )
-
 }
 
+// =========================================================
+// MESSAGE
+// =========================================================
+
+const Message = ({
+    type,
+    text,
+}) => {
+    const success =
+        type === 'success'
+
+    return (
+        <div
+            className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+                success
+                    ? 'border-[#8BCF00]/30 bg-[#8BCF00]/5 text-[#5f9000]'
+                    : 'border-error/20 bg-error/5 text-error'
+            }`}
+        >
+            {text}
+        </div>
+    )
+}
 
 export default Login

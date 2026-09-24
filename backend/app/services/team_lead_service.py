@@ -127,19 +127,9 @@ class TeamLeadService:
             .all()
         )
 
-
-        # ========================================================================
+        # ====================================================================
         # FORMAT DATETIME
-        # ========================================================================
-        # Keeps the original datetime value unchanged in the database.
-        # Only formats it for the API response.
-        #
-        # Example:
-        # 2026-09-05T13:42:20.608232+05:30
-        #
-        # becomes:
-        # 05 Sep 2026, 01:42 PM
-        # ========================================================================
+        # ====================================================================
 
         def format_datetime(value):
 
@@ -150,10 +140,9 @@ class TeamLeadService:
                 "%d %b %Y, %I:%M %p"
             )
 
-
-        # ========================================================================
+        # ====================================================================
         # BUILD RESPONSE
-        # ========================================================================
+        # ====================================================================
 
         result = []
 
@@ -161,40 +150,40 @@ class TeamLeadService:
 
             result.append(
                 {
-                    # IMPORTANT:
-                    # id = EmployeeContext.id
-                    "id": employee_context.id,
+                    # EmployeeContext.id
+                    "id":
+                        employee_context.id,
 
-                    # IMPORTANT:
-                    # These are the exact values required by
-                    # the existing PermissionsModal.
-                    "employee_id": employee_context.employee_id,
+                    "employee_id":
+                        employee_context.employee_id,
 
-                    "context_id": employee_context.context_id,
+                    "context_id":
+                        employee_context.context_id,
 
-                    # Employee details
-                    "name": getattr(
-                        employee,
-                        "name",
-                        None,
-                    ),
+                    "name":
+                        getattr(
+                            employee,
+                            "name",
+                            None,
+                        ),
 
-                    "email": getattr(
-                        employee,
-                        "email",
-                        None,
-                    ),
+                    "email":
+                        getattr(
+                            employee,
+                            "email",
+                            None,
+                        ),
 
-                    "phone": getattr(
-                        employee,
-                        "phone",
-                        None,
-                    ),
+                    "phone":
+                        getattr(
+                            employee,
+                            "phone",
+                            None,
+                        ),
 
-                    # Role / Context
-                    "role": context.name,
+                    "role":
+                        context.name,
 
-                    # Status
                     "status": (
                         "Active"
                         if employee_context.is_active
@@ -209,10 +198,6 @@ class TeamLeadService:
 
                     "reports_to_id":
                         employee_context.reports_to_id,
-
-                    # =================================================================
-                    # CREATED / UPDATED
-                    # =================================================================
 
                     "created_at":
                         format_datetime(
@@ -291,9 +276,9 @@ class TeamLeadService:
                     "Employee already has this Team Lead role"
                 )
 
-            # ---------------------------------------------------------------
+            # ----------------------------------------------------------------
             # RESTORE SOFT-DELETED TEAM LEAD
-            # ---------------------------------------------------------------
+            # ----------------------------------------------------------------
 
             existing.deleted_at = None
             existing.is_active = is_active
@@ -301,15 +286,23 @@ class TeamLeadService:
             db.flush()
 
             return {
-                "id": existing.id,
-                "employee_id": existing.employee_id,
-                "context_id": existing.context_id,
+                "id":
+                    existing.id,
+
+                "employee_id":
+                    existing.employee_id,
+
+                "context_id":
+                    existing.context_id,
+
                 "status": (
                     "Active"
                     if existing.is_active
                     else "Inactive"
                 ),
-                "is_active": existing.is_active,
+
+                "is_active":
+                    existing.is_active,
             }
 
         # --------------------------------------------------------------------
@@ -328,15 +321,23 @@ class TeamLeadService:
         db.flush()
 
         return {
-            "id": team_lead.id,
-            "employee_id": team_lead.employee_id,
-            "context_id": team_lead.context_id,
+            "id":
+                team_lead.id,
+
+            "employee_id":
+                team_lead.employee_id,
+
+            "context_id":
+                team_lead.context_id,
+
             "status": (
                 "Active"
                 if team_lead.is_active
                 else "Inactive"
             ),
-            "is_active": team_lead.is_active,
+
+            "is_active":
+                team_lead.is_active,
         }
 
     # ========================================================================
@@ -412,15 +413,23 @@ class TeamLeadService:
         db.flush()
 
         return {
-            "id": team_lead.id,
-            "employee_id": team_lead.employee_id,
-            "context_id": team_lead.context_id,
+            "id":
+                team_lead.id,
+
+            "employee_id":
+                team_lead.employee_id,
+
+            "context_id":
+                team_lead.context_id,
+
             "status": (
                 "Active"
                 if team_lead.is_active
                 else "Inactive"
             ),
-            "is_active": team_lead.is_active,
+
+            "is_active":
+                team_lead.is_active,
         }
 
     # ========================================================================
@@ -494,7 +503,8 @@ class TeamLeadService:
         db.flush()
 
         return {
-            "id": team_lead.id,
+            "id":
+                team_lead.id,
 
             "employee_id":
                 team_lead.employee_id,
@@ -521,6 +531,45 @@ class TeamLeadService:
         db: Session,
         team_lead_id: int,
     ):
+        """
+        Get all RM and Agent EmployeeContexts assigned under a Team Lead.
+
+        Hierarchy is determined entirely by:
+
+            EmployeeContext.id
+            EmployeeContext.reports_to_id
+
+        Example:
+
+            TEAMLEAD
+            EmployeeContext.id = 89
+                    |
+                    +---- RM
+                    |     EmployeeContext.id = 73
+                    |             |
+                    |             +---- AGENT
+                    |             +---- AGENT
+                    |
+                    +---- RM
+                    |     EmployeeContext.id = 74
+                    |             |
+                    |             +---- AGENT
+                    |
+                    +---- RM
+                        EmployeeContext.id = 88
+                                |
+                                +---- AGENT
+
+        The method returns both RM and Agent descendants.
+
+        Important:
+            reports_to_id references EmployeeContext.id in the
+            hierarchy shown by the current database structure.
+        """
+
+        # ====================================================================
+        # VALIDATE TEAM LEAD
+        # ====================================================================
 
         team_lead = (
             TeamLeadService._get_team_lead_context(
@@ -529,12 +578,158 @@ class TeamLeadService:
             )
         )
 
+        # ====================================================================
+        # TEAM LEAD CONTEXT ID
+        # ====================================================================
+
+        root_context_id = team_lead.id
+
+        # ====================================================================
+        # GET ALL ACTIVE RM / AGENT EMPLOYEE CONTEXTS
+        # ====================================================================
+        #
         # IMPORTANT:
-        # reports_to_id references employees.id,
-        # NOT employee_contexts.id.
-        team_lead_employee_id = (
-            team_lead.employee_id
+        #
+        # Do NOT join Employee here.
+        #
+        # The hierarchy is determined by:
+        #
+        #     EmployeeContext.id
+        #     EmployeeContext.reports_to_id
+        #
+        # Employee details are only needed when building the response.
+        #
+        # ====================================================================
+
+        hierarchy_rows = (
+            db.query(
+                EmployeeContext.id,
+                EmployeeContext.employee_id,
+                EmployeeContext.context_id,
+                EmployeeContext.reports_to_id,
+            )
+            .join(
+                Context,
+                EmployeeContext.context_id == Context.id,
+            )
+            .filter(
+                EmployeeContext.deleted_at.is_(None),
+                EmployeeContext.is_active.is_(True),
+                Context.is_active.is_(True),
+                or_(
+                    Context.code == "RM",
+                    Context.code.like("RM_%"),
+                    Context.code == "AGENT",
+                    Context.code.like("AGENT_%"),
+                ),
+            )
+            .all()
         )
+
+        # ====================================================================
+        # BUILD CHILDREN MAP
+        # ====================================================================
+        #
+        # Example result:
+        #
+        # {
+        #     89: [73, 69, 74, 88],
+        #     73: [101, 102],
+        #     74: [103],
+        #     88: [104],
+        # }
+        #
+        # Key:
+        #     Parent EmployeeContext.id
+        #
+        # Value:
+        #     Child EmployeeContext IDs
+        #
+        # ====================================================================
+
+        children_map = {}
+
+        for (
+            context_id,
+            employee_id,
+            child_context_id,
+            reports_to_id,
+        ) in hierarchy_rows:
+
+            if reports_to_id is None:
+                continue
+
+            children_map.setdefault(
+                reports_to_id,
+                []
+            ).append(
+                context_id
+            )
+
+        # ====================================================================
+        # WALK THE HIERARCHY
+        # ====================================================================
+        #
+        # Start:
+        #
+        #     89
+        #
+        # Then:
+        #
+        #     89 -> 73, 69, 74, 88
+        #
+        # Then:
+        #
+        #     73 -> Agents under RM 73
+        #     69 -> Agents under RM 69
+        #     74 -> Agents under RM 74
+        #     88 -> Agents under RM 88
+        #
+        # ====================================================================
+
+        assigned_context_ids = []
+
+        pending_ids = [root_context_id]
+
+        visited_ids = set()
+
+        while pending_ids:
+
+            parent_id = pending_ids.pop(0)
+
+            if parent_id in visited_ids:
+                continue
+
+            visited_ids.add(parent_id)
+
+            child_ids = children_map.get(
+                parent_id,
+                []
+            )
+
+            for child_id in child_ids:
+
+                if child_id in visited_ids:
+                    continue
+
+                assigned_context_ids.append(
+                    child_id
+                )
+
+                pending_ids.append(
+                    child_id
+                )
+
+        # ====================================================================
+        # NO CHILDREN
+        # ====================================================================
+
+        if not assigned_context_ids:
+            return []
+
+        # ====================================================================
+        # GET COMPLETE DATA FOR RESULT
+        # ====================================================================
 
         rows = (
             db.query(
@@ -544,17 +739,16 @@ class TeamLeadService:
             )
             .join(
                 Employee,
-                EmployeeContext.employee_id
-                == Employee.id,
+                EmployeeContext.employee_id == Employee.id,
             )
             .join(
                 Context,
-                EmployeeContext.context_id
-                == Context.id,
+                EmployeeContext.context_id == Context.id,
             )
             .filter(
-                EmployeeContext.reports_to_id
-                == team_lead_employee_id,
+                EmployeeContext.id.in_(
+                    assigned_context_ids
+                ),
 
                 EmployeeContext.deleted_at.is_(None),
 
@@ -563,19 +757,52 @@ class TeamLeadService:
                 Context.is_active.is_(True),
 
                 or_(
+                    Context.code == "RM",
+                    Context.code.like("RM_%"),
                     Context.code == "AGENT",
                     Context.code.like("AGENT_%"),
                 ),
             )
-            .order_by(
-                EmployeeContext.id.desc()
-            )
             .all()
         )
 
+        # ====================================================================
+        # KEEP HIERARCHY ORDER
+        # ====================================================================
+
+        rows_by_context_id = {
+            employee_context.id: (
+                employee_context,
+                employee,
+                context,
+            )
+            for (
+                employee_context,
+                employee,
+                context,
+            ) in rows
+        }
+
+        # ====================================================================
+        # BUILD RESPONSE
+        # ====================================================================
+
         result = []
 
-        for employee_context, employee, context in rows:
+        for context_id in assigned_context_ids:
+
+            row = rows_by_context_id.get(
+                context_id
+            )
+
+            if not row:
+                continue
+
+            (
+                employee_context,
+                employee,
+                context,
+            ) = row
 
             result.append(
                 {
@@ -619,5 +846,5 @@ class TeamLeadService:
                         employee_context.reports_to_id,
                 }
             )
-
+        print(result)
         return result
