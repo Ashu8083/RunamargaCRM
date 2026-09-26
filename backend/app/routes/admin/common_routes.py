@@ -553,7 +553,6 @@ def get_agents(
             context_id=context_id,
             team_lead_context_id=team_lead_context_id,
         )
-
         return [
             {
                 "id": agent_context.id,

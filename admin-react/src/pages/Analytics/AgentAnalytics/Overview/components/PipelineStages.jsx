@@ -1,44 +1,25 @@
 // admin-react/src/pages/Analytics/AgentAnalytics/Overview/components/PipelineStages.jsx
 
-import ArrowRightIcon from '@heroicons/react/24/outline/ArrowRightIcon'
-import CheckCircleIcon from '@heroicons/react/24/outline/CheckCircleIcon'
-import XCircleIcon from '@heroicons/react/24/outline/XCircleIcon'
 import DocumentTextIcon from '@heroicons/react/24/outline/DocumentTextIcon'
+import ClockIcon from '@heroicons/react/24/outline/ClockIcon'
+import ArrowRightOnRectangleIcon from '@heroicons/react/24/outline/ArrowRightOnRectangleIcon'
+import CheckCircleIcon from '@heroicons/react/24/outline/CheckCircleIcon'
 import CurrencyRupeeIcon from '@heroicons/react/24/outline/CurrencyRupeeIcon'
+import XCircleIcon from '@heroicons/react/24/outline/XCircleIcon'
+import ArrowRightIcon from '@heroicons/react/24/outline/ArrowRightIcon'
 
 
 // =============================================================
 // HELPERS
 // =============================================================
 
-const formatNumber = (value) => {
-
-    return Number(value || 0).toLocaleString('en-IN')
-
-}
-
-
-const getPercentage = (
-    value,
-    total
+const formatNumber = (
+    value
 ) => {
 
-    if (!total) {
-        return 0
-    }
-
-    return (
-        (Number(value || 0) /
-            Number(total || 0)) *
-        100
-    )
-
-}
-
-
-const formatPercentage = (value) => {
-
-    return `${Number(value || 0).toFixed(1)}%`
+    return Number(
+        value || 0
+    ).toLocaleString('en-IN')
 
 }
 
@@ -48,123 +29,171 @@ const formatPercentage = (value) => {
 // =============================================================
 
 function PipelineStage({
+    number,
     title,
+    description,
     value,
-    percentage,
     icon: Icon,
     iconClass,
-    valueClass,
+    numberClass,
+    borderClass,
 }) {
 
     return (
 
-        <div className="
-            min-w-[150px]
-            flex-1
-            rounded-xl
-            border
-            border-base-300
-            bg-base-100
-            p-4
-        ">
+        <div
+            className={`
+                relative
+                min-w-0
+                flex-1
+                rounded-2xl
+                border
+                bg-base-100
+                p-4
+                shadow-sm
+                transition-all
+                duration-200
+                hover:-translate-y-0.5
+                hover:shadow-md
+                ${borderClass}
+            `}
+        >
 
-            <div className="
-                flex
-                items-center
-                justify-between
-                gap-3
-            ">
+            {/* =================================================
+                STAGE NUMBER
+            ================================================= */}
 
-                <div className="
+            <div
+                className="
+                    absolute
+                    right-3
+                    top-3
                     flex
-                    min-w-0
+                    h-6
+                    min-w-6
                     items-center
-                    gap-2
-                ">
-
-                    <div className={`
-                        flex
-                        h-8
-                        w-8
-                        shrink-0
-                        items-center
-                        justify-center
-                        rounded-lg
-                        ${iconClass}
-                    `}>
-
-                        <Icon className="
-                            h-4
-                            w-4
-                        " />
-
-                    </div>
-
-
-                    <p className="
-                        truncate
-                        text-xs
-                        font-medium
-                        text-base-content/60
-                    ">
-                        {title}
-                    </p>
-
-                </div>
-
-
-                <span className="
-                    shrink-0
-                    text-[11px]
-                    font-medium
-                    text-base-content/50
-                ">
-                    {formatPercentage(percentage)}
-                </span>
-
+                    justify-center
+                    rounded-full
+                    bg-base-200
+                    px-1.5
+                    text-[10px]
+                    font-bold
+                    text-base-content/40
+                "
+            >
+                {number}
             </div>
 
 
-            <p className={`
-                mt-4
-                text-2xl
-                font-bold
-                tracking-tight
-                ${valueClass}
-            `}>
-                {formatNumber(value)}
-            </p>
+            {/* =================================================
+                ICON
+            ================================================= */}
 
+            <div
+                className={`
+                    flex
+                    h-10
+                    w-10
+                    items-center
+                    justify-center
+                    rounded-xl
+                    ${iconClass}
+                `}
+            >
 
-            <div className="
-                mt-3
-                h-1.5
-                w-full
-                overflow-hidden
-                rounded-full
-                bg-base-200
-            ">
-
-                <div
-                    className={`
-                        h-full
-                        rounded-full
-                        transition-all
-                        duration-500
-                        ${valueClass}
-                    `}
-                    style={{
-                        width: `${Math.min(
-                            Math.max(
-                                percentage || 0,
-                                0
-                            ),
-                            100
-                        )}%`,
-                    }}
+                <Icon
+                    className="
+                        h-5
+                        w-5
+                    "
                 />
 
             </div>
+
+
+            {/* =================================================
+                COUNT
+            ================================================= */}
+
+            <div
+                className="
+                    mt-4
+                "
+            >
+
+                <p
+                    className={`
+                        text-2xl
+                        font-bold
+                        tracking-tight
+                        sm:text-3xl
+                        ${numberClass}
+                    `}
+                >
+                    {formatNumber(
+                        value
+                    )}
+                </p>
+
+
+                <p
+                    className="
+                        mt-1
+                        text-sm
+                        font-semibold
+                        text-base-content
+                    "
+                >
+                    {title}
+                </p>
+
+
+                <p
+                    className="
+                        mt-1
+                        min-h-[32px]
+                        text-[11px]
+                        leading-4
+                        text-base-content/50
+                    "
+                >
+                    {description}
+                </p>
+
+            </div>
+
+        </div>
+
+    )
+
+}
+
+
+// =============================================================
+// CONNECTOR
+// =============================================================
+
+function PipelineConnector() {
+
+    return (
+
+        <div
+            className="
+                hidden
+                shrink-0
+                items-center
+                justify-center
+                text-base-content/20
+                xl:flex
+            "
+        >
+
+            <ArrowRightIcon
+                className="
+                    h-5
+                    w-5
+                "
+            />
 
         </div>
 
@@ -178,468 +207,636 @@ function PipelineStage({
 // =============================================================
 
 function PipelineStages({
-    analytics = [],
+    pipeline = {},
 }) {
 
     // =========================================================
-    // TOTALS
+    // CURRENT STATUS COUNTS
     // =========================================================
 
-    const totals = analytics.reduce(
-        (result, item) => {
-
-            result.leadReceived +=
-                Number(
-                    item.leadReceived || 0
-                )
-
-            result.loggedIn +=
-                Number(
-                    item.loggedIn || 0
-                )
-
-            result.rejected +=
-                Number(
-                    item.rejected || 0
-                )
-
-            result.sanctioned +=
-                Number(
-                    item.sanctioned || 0
-                )
-
-            result.disbursed +=
-                Number(
-                    item.disbursed || 0
-                )
-
-            return result
-
-        },
-        {
-            leadReceived: 0,
-            loggedIn: 0,
-            rejected: 0,
-            sanctioned: 0,
-            disbursed: 0,
-        }
-    )
-
-
-    // =========================================================
-    // STAGE RATES
-    // =========================================================
-
-    const loginRate =
-        getPercentage(
-            totals.loggedIn,
-            totals.leadReceived
+    const totalLeads =
+        Number(
+            pipeline?.totalLeads || 0
         )
 
 
-    const rejectionRate =
-        getPercentage(
-            totals.rejected,
-            totals.leadReceived
+    const inProcess =
+        Number(
+            pipeline?.inProcess || 0
         )
 
 
-    const sanctionRate =
-        getPercentage(
-            totals.sanctioned,
-            totals.loggedIn
+    const login =
+        Number(
+            pipeline?.login || 0
         )
 
 
-    const disbursementRate =
-        getPercentage(
-            totals.disbursed,
-            totals.sanctioned
+    const sanctioned =
+        Number(
+            pipeline?.sanctioned || 0
         )
 
 
-    // =========================================================
-    // EMPTY STATE
-    // =========================================================
-
-    if (!analytics.length) {
-
-        return (
-
-            <section className="
-                w-full
-                min-w-0
-                rounded-2xl
-                border
-                border-base-300
-                bg-base-100
-                p-5
-                shadow-sm
-            ">
-
-                <div className="
-                    flex
-                    items-center
-                    justify-between
-                    gap-3
-                ">
-
-                    <div>
-
-                        <h3 className="
-                            text-sm
-                            font-semibold
-                            text-base-content
-                        ">
-                            Application Pipeline
-                        </h3>
-
-                        <p className="
-                            mt-1
-                            text-xs
-                            text-base-content/50
-                        ">
-                            Lead movement across application stages
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <div className="
-                    mt-8
-                    rounded-xl
-                    bg-base-200/60
-                    px-4
-                    py-8
-                    text-center
-                ">
-
-                    <p className="
-                        text-sm
-                        text-base-content/50
-                    ">
-                        No pipeline data available
-                    </p>
-
-                </div>
-
-            </section>
-
+    const disbursed =
+        Number(
+            pipeline?.disbursed || 0
         )
 
-    }
+
+    const rejected =
+        Number(
+            pipeline?.rejected || 0
+        )
 
 
     // =========================================================
     // RENDER
-    // =============================================================
+    // =========================================================
 
     return (
 
-        <section className="
-            w-full
-            min-w-0
-            rounded-2xl
-            border
-            border-base-300
-            bg-base-100
-            p-5
-            shadow-sm
-        ">
+        <section
+            className="
+                w-full
+                min-w-0
+            "
+        >
 
             {/* =================================================
-                HEADER
+                SECTION HEADER
             ================================================= */}
 
-            <div className="
-                flex
-                flex-wrap
-                items-start
-                justify-between
-                gap-3
-            ">
+            <div
+                className="
+                    mb-4
+                    flex
+                    min-w-0
+                    flex-wrap
+                    items-end
+                    justify-between
+                    gap-3
+                "
+            >
 
-                <div>
+                <div
+                    className="
+                        min-w-0
+                    "
+                >
 
-                    <h3 className="
-                        text-sm
-                        font-semibold
-                        text-base-content
-                    ">
-                        Application Pipeline
-                    </h3>
+                    <div
+                        className="
+                            flex
+                            items-center
+                            gap-2
+                        "
+                    >
 
-                    <p className="
-                        mt-1
-                        text-xs
-                        text-base-content/50
-                    ">
-                        Lead movement across application stages
+                        <div
+                            className="
+                                h-1.5
+                                w-1.5
+                                shrink-0
+                                rounded-full
+                                bg-primary
+                            "
+                        />
+
+
+                        <h2
+                            className="
+                                text-sm
+                                font-semibold
+                                text-base-content
+                                sm:text-base
+                            "
+                        >
+                            Application Pipeline
+                        </h2>
+
+                    </div>
+
+
+                    <p
+                        className="
+                            mt-1
+                            text-xs
+                            leading-5
+                            text-base-content/50
+                        "
+                    >
+                        Current status of applications from the selected
+                        application cohort
                     </p>
 
                 </div>
 
 
-                <div className="
-                    rounded-lg
-                    bg-success/10
-                    px-3
-                    py-1.5
-                ">
+                {/* =================================================
+                    STATUS NOTE
+                ================================================= */}
 
-                    <span className="
-                        text-xs
-                        font-medium
-                        text-success
-                    ">
-                        {formatNumber(
-                            totals.leadReceived
-                        )}{' '}
-                        Total Leads
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            {/* =================================================
-                PIPELINE
-            ================================================= */}
-
-            <div className="
-                mt-6
-                flex
-                w-full
-                items-stretch
-                gap-2
-                overflow-x-auto
-                pb-2
-            ">
-
-                {/* LEADS */}
-
-                <PipelineStage
-                    title="Leads"
-                    value={totals.leadReceived}
-                    percentage={100}
-                    icon={DocumentTextIcon}
-                    iconClass="
-                        bg-success/10
-                        text-success
-                    "
-                    valueClass="
-                        text-success
-                        bg-success
-                    "
-                />
-
-
-                <div className="
-                    flex
-                    shrink-0
-                    items-center
-                    justify-center
-                ">
-
-                    <ArrowRightIcon className="
-                        h-4
-                        w-4
-                        text-base-content/30
-                    " />
-
-                </div>
-
-
-                {/* LOGIN */}
-
-                <PipelineStage
-                    title="Logged In"
-                    value={totals.loggedIn}
-                    percentage={loginRate}
-                    icon={CheckCircleIcon}
-                    iconClass="
-                        bg-info/10
-                        text-info
-                    "
-                    valueClass="
-                        text-info
-                        bg-info
-                    "
-                />
-
-
-                <div className="
-                    flex
-                    shrink-0
-                    items-center
-                    justify-center
-                ">
-
-                    <ArrowRightIcon className="
-                        h-4
-                        w-4
-                        text-base-content/30
-                    " />
-
-                </div>
-
-
-                {/* SANCTION */}
-
-                <PipelineStage
-                    title="Sanctioned"
-                    value={totals.sanctioned}
-                    percentage={sanctionRate}
-                    icon={CheckCircleIcon}
-                    iconClass="
-                        bg-warning/10
-                        text-warning
-                    "
-                    valueClass="
-                        text-warning
-                        bg-warning
-                    "
-                />
-
-
-                <div className="
-                    flex
-                    shrink-0
-                    items-center
-                    justify-center
-                ">
-
-                    <ArrowRightIcon className="
-                        h-4
-                        w-4
-                        text-base-content/30
-                    " />
-
-                </div>
-
-
-                {/* DISBURSED */}
-
-                <PipelineStage
-                    title="Disbursed"
-                    value={totals.disbursed}
-                    percentage={disbursementRate}
-                    icon={CurrencyRupeeIcon}
-                    iconClass="
-                        bg-success/10
-                        text-success
-                    "
-                    valueClass="
-                        text-success
-                        bg-success
-                    "
-                />
-
-            </div>
-
-
-            {/* =================================================
-                REJECTION SUMMARY
-            ================================================= */}
-
-            <div className="
-                mt-4
-                flex
-                flex-wrap
-                items-center
-                justify-between
-                gap-3
-                rounded-xl
-                border
-                border-error/20
-                bg-error/5
-                px-4
-                py-3
-            ">
-
-                <div className="
-                    flex
-                    min-w-0
-                    items-center
-                    gap-2
-                ">
-
-                    <div className="
+                <div
+                    className="
                         flex
-                        h-8
-                        w-8
                         shrink-0
                         items-center
-                        justify-center
-                        rounded-lg
-                        bg-error/10
-                    ">
+                        gap-2
+                        rounded-xl
+                        border
+                        border-base-300
+                        bg-base-100
+                        px-3
+                        py-2
+                    "
+                >
 
-                        <XCircleIcon className="
-                            h-4
-                            w-4
-                            text-error
-                        " />
+                    <span
+                        className="
+                            h-2
+                            w-2
+                            rounded-full
+                            bg-primary
+                        "
+                    />
+
+
+                    <span
+                        className="
+                            text-[10px]
+                            font-medium
+                            uppercase
+                            tracking-wide
+                            text-base-content/50
+                        "
+                    >
+                        Current Status
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            {/* =================================================
+                PIPELINE CONTAINER
+            ================================================= */}
+
+            <div
+                className="
+                    rounded-2xl
+                    border
+                    border-base-300
+                    bg-base-200/20
+                    p-3
+                    sm:p-4
+                    lg:p-5
+                "
+            >
+
+                {/* =================================================
+                    COHORT TOTAL
+                ================================================= */}
+
+                <div
+                    className="
+                        mb-4
+                        flex
+                        flex-col
+                        gap-3
+                        rounded-2xl
+                        border
+                        border-primary/10
+                        bg-primary/5
+                        p-4
+                        sm:flex-row
+                        sm:items-center
+                        sm:justify-between
+                    "
+                >
+
+                    <div
+                        className="
+                            flex
+                            min-w-0
+                            items-center
+                            gap-3
+                        "
+                    >
+
+                        <div
+                            className="
+                                flex
+                                h-10
+                                w-10
+                                shrink-0
+                                items-center
+                                justify-center
+                                rounded-xl
+                                bg-primary/10
+                                text-primary
+                            "
+                        >
+
+                            <DocumentTextIcon
+                                className="
+                                    h-5
+                                    w-5
+                                "
+                            />
+
+                        </div>
+
+
+                        <div
+                            className="
+                                min-w-0
+                            "
+                        >
+
+                            <p
+                                className="
+                                    text-sm
+                                    font-semibold
+                                    text-base-content
+                                "
+                            >
+                                Selected Application Cohort
+                            </p>
+
+
+                            <p
+                                className="
+                                    mt-0.5
+                                    text-[11px]
+                                    leading-4
+                                    text-base-content/50
+                                "
+                            >
+                                Applications whose applied date falls within
+                                the selected period.
+                            </p>
+
+                        </div>
 
                     </div>
 
 
-                    <div>
+                    <div
+                        className="
+                            flex
+                            items-center
+                            justify-between
+                            gap-4
+                            rounded-xl
+                            bg-base-100
+                            px-4
+                            py-2.5
+                            sm:min-w-[150px]
+                        "
+                    >
 
-                        <p className="
-                            text-xs
-                            font-medium
-                            text-base-content/70
-                        ">
-                            Rejected
-                        </p>
+                        <span
+                            className="
+                                text-[10px]
+                                font-semibold
+                                uppercase
+                                tracking-wide
+                                text-base-content/45
+                            "
+                        >
+                            Total
+                        </span>
 
-                        <p className="
-                            mt-0.5
-                            text-[11px]
-                            text-base-content/50
-                        ">
-                            Leads rejected during processing
-                        </p>
+
+                        <span
+                            className="
+                                text-xl
+                                font-bold
+                                tracking-tight
+                                text-primary
+                            "
+                        >
+                            {formatNumber(
+                                totalLeads
+                            )}
+                        </span>
 
                     </div>
 
                 </div>
 
 
-                <div className="
-                    flex
-                    items-center
-                    gap-3
-                ">
+                {/* =================================================
+                    CURRENT STATUS GRID
+                ================================================= */}
 
-                    <span className="
-                        text-lg
-                        font-bold
-                        text-error
-                    ">
-                        {formatNumber(
-                            totals.rejected
-                        )}
-                    </span>
+                <div
+                    className="
+                        flex
+                        min-w-0
+                        flex-col
+                        gap-3
+                        xl:flex-row
+                        xl:items-stretch
+                        xl:gap-2
+                    "
+                >
+
+                    {/* =================================================
+                        IN PROCESS
+                    ================================================= */}
+
+                    <PipelineStage
+                        number="01"
+                        title="In Process"
+                        description="No later login, sanction, disbursement, or rejection status."
+                        value={
+                            inProcess
+                        }
+                        icon={
+                            ClockIcon
+                        }
+                        iconClass="
+                            bg-warning/10
+                            text-warning
+                        "
+                        numberClass="
+                            text-warning
+                        "
+                        borderClass="
+                            border-warning/15
+                        "
+                    />
 
 
-                    <span className="
-                        rounded-full
-                        bg-error/10
-                        px-2
-                        py-1
-                        text-[11px]
-                        font-semibold
-                        text-error
-                    ">
-                        {formatPercentage(
-                            rejectionRate
-                        )}
-                    </span>
+                    <PipelineConnector />
+
+
+                    {/* =================================================
+                        LOGIN
+                    ================================================= */}
+
+                    <PipelineStage
+                        number="02"
+                        title="Login"
+                        description="Login is the latest reached status for the application."
+                        value={
+                            login
+                        }
+                        icon={
+                            ArrowRightOnRectangleIcon
+                        }
+                        iconClass="
+                            bg-info/10
+                            text-info
+                        "
+                        numberClass="
+                            text-info
+                        "
+                        borderClass="
+                            border-info/15
+                        "
+                    />
+
+
+                    <PipelineConnector />
+
+
+                    {/* =================================================
+                        SANCTIONED
+                    ================================================= */}
+
+                    <PipelineStage
+                        number="03"
+                        title="Sanctioned"
+                        description="Sanction is the latest reached status for the application."
+                        value={
+                            sanctioned
+                        }
+                        icon={
+                            CheckCircleIcon
+                        }
+                        iconClass="
+                            bg-success/10
+                            text-success
+                        "
+                        numberClass="
+                            text-success
+                        "
+                        borderClass="
+                            border-success/15
+                        "
+                    />
+
+
+                    <PipelineConnector />
+
+
+                    {/* =================================================
+                        DISBURSED
+                    ================================================= */}
+
+                    <PipelineStage
+                        number="04"
+                        title="Disbursed"
+                        description="Disbursement is the latest reached status for the application."
+                        value={
+                            disbursed
+                        }
+                        icon={
+                            CurrencyRupeeIcon
+                        }
+                        iconClass="
+                            bg-secondary/10
+                            text-secondary
+                        "
+                        numberClass="
+                            text-secondary
+                        "
+                        borderClass="
+                            border-secondary/15
+                        "
+                    />
+
+                </div>
+
+
+                {/* =================================================
+                    REJECTED
+                ================================================= */}
+
+                <div
+                    className="
+                        mt-3
+                        border-t
+                        border-base-300
+                        pt-3
+                    "
+                >
+
+                    <div
+                        className="
+                            flex
+                            flex-col
+                            gap-3
+                            sm:flex-row
+                            sm:items-center
+                            sm:justify-between
+                        "
+                    >
+
+                        {/* =================================================
+                            REJECTED LABEL
+                        ================================================= */}
+
+                        <div
+                            className="
+                                flex
+                                min-w-0
+                                items-center
+                                gap-3
+                            "
+                        >
+
+                            <div
+                                className="
+                                    flex
+                                    h-9
+                                    w-9
+                                    shrink-0
+                                    items-center
+                                    justify-center
+                                    rounded-xl
+                                    bg-error/10
+                                    text-error
+                                "
+                            >
+
+                                <XCircleIcon
+                                    className="
+                                        h-5
+                                        w-5
+                                    "
+                                />
+
+                            </div>
+
+
+                            <div
+                                className="
+                                    min-w-0
+                                "
+                            >
+
+                                <p
+                                    className="
+                                        text-sm
+                                        font-semibold
+                                        text-base-content
+                                    "
+                                >
+                                    Rejected
+                                </p>
+
+
+                                <p
+                                    className="
+                                        mt-0.5
+                                        text-[11px]
+                                        leading-4
+                                        text-base-content/50
+                                    "
+                                >
+                                    Rejection is the current status for these
+                                    applications.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        {/* =================================================
+                            REJECTED COUNT
+                        ================================================= */}
+
+                        <div
+                            className="
+                                flex
+                                items-center
+                                justify-between
+                                gap-4
+                                rounded-xl
+                                border
+                                border-error/15
+                                bg-error/5
+                                px-4
+                                py-2.5
+                                sm:min-w-[150px]
+                            "
+                        >
+
+                            <span
+                                className="
+                                    text-[10px]
+                                    font-semibold
+                                    uppercase
+                                    tracking-wide
+                                    text-error/70
+                                "
+                            >
+                                Applications
+                            </span>
+
+
+                            <span
+                                className="
+                                    text-xl
+                                    font-bold
+                                    tracking-tight
+                                    text-error
+                                "
+                            >
+                                {formatNumber(
+                                    rejected
+                                )}
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                {/* =================================================
+                    STATUS SEMANTICS
+                ================================================= */}
+
+                <div
+                    className="
+                        mt-4
+                        rounded-xl
+                        bg-base-100
+                        px-4
+                        py-3
+                    "
+                >
+
+                    <p
+                        className="
+                            text-[11px]
+                            leading-5
+                            text-base-content/50
+                        "
+                    >
+                        Each application is counted in only one current-status
+                        bucket. For example, an application with Login,
+                        Sanctioned, and Disbursed records is counted only under
+                        Disbursed.
+                    </p>
 
                 </div>
 

@@ -112,6 +112,10 @@ from .CallAnalytics.overview_routes import router as call_analytics_overview_rou
 from .CallAnalytics.performance_routes import router as call_analytics_performance_router
 from .CallAnalytics.Trends.ad_number_trend_routes import router as call_analytics_trends_ad_number_trend_router
 
+# ============================================================================
+# Agent Analytics
+# ============================================================================
+from .AgentAnalytics.overview_routes import router as agent_analytics_overview
 
 # ============================================================================
 # Application Filter
@@ -203,6 +207,10 @@ router.include_router(call_analytics_overview_router)
 router.include_router(call_analytics_performance_router)
 router.include_router(call_analytics_trends_ad_number_trend_router)
 
+# ============================================================================
+# Agent Analytics
+# ============================================================================
+router.include_router(agent_analytics_overview)
 
 # ============================================================================
 # Dashboard 

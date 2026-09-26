@@ -1,217 +1,56 @@
 // admin-react/src/pages/Analytics/AgentAnalytics/Overview/index.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
+import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 
 import AgentDropdown from '../../../../components/GlobalModels/Filters/AgentDropdown'
-
 import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
-
 import TeamLeadDropdown from '../../../../components/GlobalModels/Filters/TeamLeadDropdown'
-
 import LoanTypeDropdown from '../../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
 import PipelineStages from './components/PipelineStages'
-
 import PipelineInsights from './components/PipelineInsights'
 
-import OverallSuccessRate from './components/OverallSuccessRate'
+import API from './API'
 
 
 // =============================================================
-// MOCK API
-//
-// Replace only this function when backend API is ready.
-// The filters below work against the same API response.
+// DEFAULT COUNTS
 // =============================================================
 
-const fetchAgentAnalytics = async () => {
-
-    return new Promise((resolve) => {
-
-        setTimeout(() => {
-
-            resolve([
-                {
-                    id: 1,
-
-                    date: '2026-08-28',
-
-                    agentId: 101,
-
-                    rmId: 201,
-
-                    teamLeadId: 301,
-
-                    loanTypeId: 401,
-
-                    leadReceived: 42,
-
-                    loggedIn: 31,
-
-                    rejected: 5,
-
-                    sanctioned: 18,
-
-                    disbursed: 12,
-                },
-
-
-                {
-                    id: 2,
-
-                    date: '2026-08-27',
-
-                    agentId: 102,
-
-                    rmId: 202,
-
-                    teamLeadId: 302,
-
-                    loanTypeId: 402,
-
-                    leadReceived: 36,
-
-                    loggedIn: 27,
-
-                    rejected: 4,
-
-                    sanctioned: 15,
-
-                    disbursed: 10,
-                },
-
-
-                {
-                    id: 3,
-
-                    date: '2026-08-26',
-
-                    agentId: 103,
-
-                    rmId: 201,
-
-                    teamLeadId: 301,
-
-                    loanTypeId: 403,
-
-                    leadReceived: 51,
-
-                    loggedIn: 39,
-
-                    rejected: 7,
-
-                    sanctioned: 24,
-
-                    disbursed: 17,
-                },
-
-
-                {
-                    id: 4,
-
-                    date: '2026-08-25',
-
-                    agentId: 101,
-
-                    rmId: 201,
-
-                    teamLeadId: 301,
-
-                    loanTypeId: 401,
-
-                    leadReceived: 47,
-
-                    loggedIn: 35,
-
-                    rejected: 6,
-
-                    sanctioned: 21,
-
-                    disbursed: 15,
-                },
-
-
-                {
-                    id: 5,
-
-                    date: '2026-08-24',
-
-                    agentId: 104,
-
-                    rmId: 202,
-
-                    teamLeadId: 302,
-
-                    loanTypeId: 404,
-
-                    leadReceived: 29,
-
-                    loggedIn: 21,
-
-                    rejected: 3,
-
-                    sanctioned: 12,
-
-                    disbursed: 8,
-                },
-
-
-                {
-                    id: 6,
-
-                    date: '2026-08-23',
-
-                    agentId: 105,
-
-                    rmId: 201,
-
-                    teamLeadId: 301,
-
-                    loanTypeId: 405,
-
-                    leadReceived: 33,
-
-                    loggedIn: 24,
-
-                    rejected: 5,
-
-                    sanctioned: 14,
-
-                    disbursed: 9,
-                },
-
-
-                {
-                    id: 7,
-
-                    date: '2026-08-22',
-
-                    agentId: 106,
-
-                    rmId: 202,
-
-                    teamLeadId: 302,
-
-                    loanTypeId: 406,
-
-                    leadReceived: 38,
-
-                    loggedIn: 29,
-
-                    rejected: 4,
-
-                    sanctioned: 17,
-
-                    disbursed: 11,
-                },
-            ])
-
-        }, 400)
-
-    })
-
+const DEFAULT_COUNTS = {
+    totalLeads: 0,
+    inProcess: 0,
+    login: 0,
+    sanctioned: 0,
+    disbursed: 0,
+    rejected: 0,
+}
+
+
+// =============================================================
+// DEFAULT PIPELINE
+// =============================================================
+
+const DEFAULT_PIPELINE = {
+    totalLeads: 0,
+    inProcess: 0,
+    login: 0,
+    sanctioned: 0,
+    disbursed: 0,
+    rejected: 0,
+}
+
+
+// =============================================================
+// DEFAULT VISIBILITY
+// =============================================================
+
+const DEFAULT_VISIBILITY = {
+    teamLeadContextIds: [],
+    agentContextIds: [],
+    rmContextIds: [],
 }
 
 
@@ -222,12 +61,28 @@ const fetchAgentAnalytics = async () => {
 function Overview() {
 
     // =========================================================
-    // DATA
+    // PIPELINE INSIGHTS COUNTS
     // =========================================================
 
-    const [analytics, setAnalytics] =
-        useState([])
+    const [counts, setCounts] =
+        useState(
+            DEFAULT_COUNTS
+        )
 
+
+    // =========================================================
+    // APPLICATION PIPELINE COUNTS
+    // =========================================================
+
+    const [pipeline, setPipeline] =
+        useState(
+            DEFAULT_PIPELINE
+        )
+
+
+    // =========================================================
+    // LOADING
+    // =========================================================
 
     const [loading, setLoading] =
         useState(true)
@@ -235,6 +90,10 @@ function Overview() {
 
     const [refreshing, setRefreshing] =
         useState(false)
+
+
+    const [error, setError] =
+        useState('')
 
 
     // =========================================================
@@ -266,6 +125,16 @@ function Overview() {
 
 
     // =========================================================
+    // VISIBILITY
+    // =========================================================
+
+    const [visibility, setVisibility] =
+        useState(
+            DEFAULT_VISIBILITY
+        )
+
+
+    // =========================================================
     // LOAD DATA
     // =========================================================
 
@@ -286,16 +155,65 @@ function Overview() {
             }
 
 
+            setError('')
+
+
+            // -------------------------------------------------
+            // API REQUEST
+            // -------------------------------------------------
+
             const response =
-                await fetchAgentAnalytics()
+                await API.getOverview({
+
+                    teamLeadContextId:
+                        teamLead || null,
+
+                    agentContextId:
+                        agent || null,
+
+                    rmContextId:
+                        rm || null,
+
+                    loanTypeId:
+                        loanType || null,
+
+                    fromDate:
+                        fromDate || null,
+
+                    toDate:
+                        toDate || null,
+
+                })
 
 
-            setAnalytics(
-                Array.isArray(response)
-                    ? response
-                    : []
+            // -------------------------------------------------
+            // PIPELINE INSIGHTS
+            // -------------------------------------------------
+
+            setCounts(
+                response?.counts ||
+                DEFAULT_COUNTS
             )
 
+
+            // -------------------------------------------------
+            // APPLICATION PIPELINE
+            // -------------------------------------------------
+
+            setPipeline(
+                response?.pipeline ||
+                DEFAULT_PIPELINE
+            )
+
+
+            // -------------------------------------------------
+            // VISIBILITY
+            // -------------------------------------------------
+
+            setVisibility(
+                response?.visibility ||
+                DEFAULT_VISIBILITY
+            )
 
         } catch (error) {
 
@@ -305,8 +223,26 @@ function Overview() {
             )
 
 
-            setAnalytics([])
+            setCounts(
+                DEFAULT_COUNTS
+            )
 
+
+            setPipeline(
+                DEFAULT_PIPELINE
+            )
+
+
+            setVisibility(
+                DEFAULT_VISIBILITY
+            )
+
+
+            setError(
+                error?.response?.data?.detail ||
+                error?.message ||
+                'Failed to load agent analytics.'
+            )
 
         } finally {
 
@@ -331,109 +267,24 @@ function Overview() {
 
 
     // =========================================================
-    // FILTER DATA
+    // FILTER CHANGE
     // =========================================================
 
-    const filteredAnalytics = useMemo(() => {
+    useEffect(() => {
 
-        return analytics.filter((item) => {
-
-            // -------------------------------------------------
-            // TEAM LEAD
-            // -------------------------------------------------
-
-            const matchesTeamLead =
-                !teamLead ||
-
-                String(
-                    item.teamLeadId
-                ) === String(teamLead)
+        if (loading) {
+            return
+        }
 
 
-            // -------------------------------------------------
-            // AGENT
-            // -------------------------------------------------
-
-            const matchesAgent =
-                !agent ||
-
-                String(
-                    item.agentId
-                ) === String(agent)
-
-
-            // -------------------------------------------------
-            // RM
-            // -------------------------------------------------
-
-            const matchesRm =
-                !rm ||
-
-                String(
-                    item.rmId
-                ) === String(rm)
-
-
-            // -------------------------------------------------
-            // LOAN TYPE
-            // -------------------------------------------------
-
-            const matchesLoanType =
-                !loanType ||
-
-                String(
-                    item.loanTypeId
-                ) === String(loanType)
-
-
-            // -------------------------------------------------
-            // FROM DATE
-            // -------------------------------------------------
-
-            const matchesFromDate =
-                !fromDate ||
-
-                String(
-                    item.date || ''
-                ) >= String(fromDate)
-
-
-            // -------------------------------------------------
-            // TO DATE
-            // -------------------------------------------------
-
-            const matchesToDate =
-                !toDate ||
-
-                String(
-                    item.date || ''
-                ) <= String(toDate)
-
-
-            return (
-                matchesTeamLead &&
-                matchesAgent &&
-                matchesRm &&
-                matchesLoanType &&
-                matchesFromDate &&
-                matchesToDate
-            )
-
-        })
+        loadData()
 
     }, [
-        analytics,
-
         teamLead,
-
         agent,
-
         rm,
-
         loanType,
-
         fromDate,
-
         toDate,
     ])
 
@@ -446,7 +297,58 @@ function Overview() {
         selectedTeamLead
     ) => {
 
-        setTeamLead(selectedTeamLead)
+        setTeamLead(
+            selectedTeamLead || ''
+        )
+
+        setAgent('')
+
+        setRm('')
+
+    }
+
+
+    // =========================================================
+    // AGENT CHANGE
+    // =========================================================
+
+    const handleAgentChange = (
+        selectedAgent
+    ) => {
+
+        setAgent(
+            selectedAgent || ''
+        )
+
+    }
+
+
+    // =========================================================
+    // RM CHANGE
+    // =========================================================
+
+    const handleRmChange = (
+        selectedRm
+    ) => {
+
+        setRm(
+            selectedRm || ''
+        )
+
+    }
+
+
+    // =========================================================
+    // LOAN TYPE CHANGE
+    // =========================================================
+
+    const handleLoanTypeChange = (
+        selectedLoanType
+    ) => {
+
+        setLoanType(
+            selectedLoanType || ''
+        )
 
     }
 
@@ -473,78 +375,136 @@ function Overview() {
 
 
     // =========================================================
-    // LOADING
+    // LOADING SCREEN
     // =========================================================
 
     if (loading) {
 
         return (
 
-            <div className="
-                w-full
-                max-w-full
-                space-y-5
-                overflow-x-hidden
-                p-4
-                sm:p-6
-            ">
-
-                {/* FILTER SKELETON */}
-
-                <div className="
-                    h-40
+            <div
+                className="
                     w-full
-                    animate-pulse
-                    rounded-xl
-                    border
-                    border-base-300
-                    bg-base-100
-                " />
+                    min-w-0
+                    max-w-full
+                    space-y-5
+                    overflow-x-hidden
+                    p-4
+                    sm:p-5
+                    lg:p-6
+                "
+            >
+
+                {/* =================================================
+                    MAIN CARD SKELETON
+                ================================================= */}
+
+                <div
+                    className="
+                        w-full
+                        animate-pulse
+                        rounded-2xl
+                        bg-base-200
+                        p-4
+                        sm:p-5
+                    "
+                >
+
+                    {/* -------------------------------------------------
+                        FILTER HEADER
+                    ------------------------------------------------- */}
+
+                    <div
+                        className="
+                            mb-5
+                            h-12
+                            w-full
+                            rounded-xl
+                            bg-base-300/60
+                        "
+                    />
 
 
-                {/* TOP CONTENT SKELETON */}
+                    {/* -------------------------------------------------
+                        FILTERS
+                    ------------------------------------------------- */}
 
-                <div className="
-                    grid
-                    w-full
-                    grid-cols-1
-                    gap-5
-                    xl:grid-cols-2
-                ">
+                    <div
+                        className="
+                            grid
+                            grid-cols-1
+                            gap-4
+                            sm:grid-cols-2
+                            lg:grid-cols-4
+                        "
+                    >
 
-                    {Array.from({
-                        length: 2,
-                    }).map((_, index) => (
+                        {Array.from({
+                            length: 8,
+                        }).map((_, index) => (
 
-                        <div
-                            key={index}
-                            className="
-                                h-[280px]
-                                w-full
-                                animate-pulse
-                                rounded-2xl
-                                border
-                                border-base-300
-                                bg-base-100
-                            "
-                        />
+                            <div
+                                key={index}
+                                className="
+                                    h-10
+                                    rounded-xl
+                                    bg-base-300/60
+                                "
+                            />
 
-                    ))}
+                        ))}
+
+                    </div>
+
+
+                    {/* -------------------------------------------------
+                        INSIGHTS
+                    ------------------------------------------------- */}
+
+                    <div
+                        className="
+                            mt-6
+                            grid
+                            grid-cols-1
+                            gap-4
+                            sm:grid-cols-2
+                            xl:grid-cols-3
+                        "
+                    >
+
+                        {Array.from({
+                            length: 6,
+                        }).map((_, index) => (
+
+                            <div
+                                key={index}
+                                className="
+                                    h-36
+                                    rounded-2xl
+                                    bg-base-300/60
+                                "
+                            />
+
+                        ))}
+
+                    </div>
+
+
+                    {/* -------------------------------------------------
+                        PIPELINE
+                    ------------------------------------------------- */}
+
+                    <div
+                        className="
+                            mt-6
+                            h-80
+                            w-full
+                            rounded-2xl
+                            bg-base-300/60
+                        "
+                    />
 
                 </div>
-
-
-                {/* PIPELINE SKELETON */}
-
-                <div className="
-                    h-[280px]
-                    w-full
-                    animate-pulse
-                    rounded-2xl
-                    border
-                    border-base-300
-                    bg-base-100
-                " />
 
             </div>
 
@@ -559,48 +519,214 @@ function Overview() {
 
     return (
 
-        <div className="
-            w-full
-            max-w-full
-            space-y-5
-            overflow-x-hidden
-            p-4
-            sm:p-6
-        ">
-
-            {/* =================================================
-                FILTERS
-            ================================================= */}
-
-            <section className="
+        <div
+            className="
                 w-full
                 min-w-0
-                rounded-xl
-                border
-                border-base-300
-                bg-base-100
+                max-w-full
+                space-y-5
+                overflow-x-hidden
                 p-4
-                shadow-sm
-            ">
+                sm:p-5
+                lg:p-6
+            "
+        >
 
-                <div className="
-                    grid
+            {/* =================================================
+                MAIN ANALYTICS CARD
+            ================================================= */}
+
+            <section
+                className="
                     w-full
                     min-w-0
-                    grid-cols-1
-                    gap-4
-                    sm:grid-cols-2
-                    lg:grid-cols-4
-                ">
+                    rounded-2xl
+                    border
+                    border-base-300
+                    bg-base-100
+                    p-4
+                    shadow-sm
+                    sm:p-5
+                "
+            >
+
+                {/* =================================================
+                    FILTER HEADER + REFRESH
+                ================================================= */}
+
+                <div
+                    className="
+                        mb-5
+                        flex
+                        min-w-0
+                        flex-wrap
+                        items-center
+                        justify-between
+                        gap-3
+                    "
+                >
+
+                    {/* -------------------------------------------------
+                        FILTER TITLE
+                    ------------------------------------------------- */}
+
+                    <div
+                        className="
+                            min-w-0
+                        "
+                    >
+
+                        <h2
+                            className="
+                                text-sm
+                                font-semibold
+                                text-base-content
+                            "
+                        >
+                            Filters
+                        </h2>
+
+
+                        <p
+                            className="
+                                mt-0.5
+                                text-[11px]
+                                text-base-content/45
+                            "
+                        >
+                            Filter the analytics by hierarchy, loan type,
+                            and application period.
+                        </p>
+
+                    </div>
+
+
+                    {/* -------------------------------------------------
+                        ACTIONS
+                    ------------------------------------------------- */}
+
+                    <div
+                        className="
+                            flex
+                            shrink-0
+                            items-center
+                            gap-2
+                        "
+                    >
+
+                        {/* -------------------------------------------------
+                            RESET
+                        ------------------------------------------------- */}
+
+                        <button
+                            type="button"
+                            onClick={
+                                handleReset
+                            }
+                            className="
+                                rounded-lg
+                                px-3
+                                py-1.5
+                                text-xs
+                                font-medium
+                                text-base-content/55
+                                transition
+                                hover:bg-base-200
+                                hover:text-base-content
+                            "
+                        >
+                            Reset filters
+                        </button>
+
+
+                        {/* -------------------------------------------------
+                            REFRESH
+                        ------------------------------------------------- */}
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                loadData(true)
+                            }
+                            disabled={refreshing}
+                            className="
+                                inline-flex
+                                h-10
+                                shrink-0
+                                items-center
+                                justify-center
+                                gap-2
+                                rounded-xl
+                                border
+                                border-base-300
+                                bg-base-100
+                                px-4
+                                text-xs
+                                font-medium
+                                text-base-content/70
+                                transition
+                                hover:bg-base-200
+                                hover:text-base-content
+                                disabled:cursor-not-allowed
+                                disabled:opacity-60
+                                sm:text-sm
+                            "
+                        >
+
+                            {/* -------------------------------------------------
+                                Refresh icon replaced with text symbol
+                                to avoid SVG/icon overlap.
+                            ------------------------------------------------- */}
+
+                            <span
+                                className="
+                                    text-sm
+                                    leading-none
+                                "
+                            >
+                                ↻
+                            </span>
+
+
+                            <span>
+                                {refreshing
+                                    ? 'Refreshing...'
+                                    : 'Refresh'}
+                            </span>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                {/* =================================================
+                    FILTER GRID
+                ================================================= */}
+
+                <div
+                    className="
+                        grid
+                        w-full
+                        min-w-0
+                        grid-cols-1
+                        gap-4
+                        sm:grid-cols-2
+                        lg:grid-cols-4
+                    "
+                >
 
                     {/* =================================================
-                        ROW 1 — TEAM LEAD
+                        TEAM LEAD
                     ================================================= */}
 
-                    <div className="
-                        min-w-0
-                        w-full
-                    ">
+                    <div
+                        className="
+                            min-w-0
+                            w-full
+                        "
+                    >
 
                         <TeamLeadDropdown
 
@@ -626,23 +752,29 @@ function Overview() {
 
 
                     {/* =================================================
-                        ROW 1 — AGENT
+                        AGENT
                     ================================================= */}
 
-                    <div className="
-                        min-w-0
-                        w-full
-                    ">
+                    <div
+                        className="
+                            min-w-0
+                            w-full
+                        "
+                    >
 
                         <AgentDropdown
 
-                            label='Agent'
+                            label="Agent"
 
                             value={agent}
 
-                            onChange={setAgent}
+                            onChange={
+                                handleAgentChange
+                            }
 
-                            teamLeadContextId={teamLead}
+                            teamLeadContextId={
+                                teamLead || null
+                            }
 
                         />
 
@@ -650,23 +782,29 @@ function Overview() {
 
 
                     {/* =================================================
-                        ROW 1 — RM
+                        RM
                     ================================================= */}
 
-                    <div className="
-                        min-w-0
-                        w-full
-                    ">
+                    <div
+                        className="
+                            min-w-0
+                            w-full
+                        "
+                    >
 
                         <RmDropdown
 
-                            label='RM'
+                            label="RM"
 
                             value={rm}
 
-                            onChange={setRm}
+                            onChange={
+                                handleRmChange
+                            }
 
-                            teamLeadContextId={teamLead}
+                            teamLeadContextId={
+                                teamLead || null
+                            }
 
                         />
 
@@ -674,336 +812,389 @@ function Overview() {
 
 
                     {/* =================================================
-                        ROW 1 — LOAN TYPE
+                        LOAN TYPE
                     ================================================= */}
 
-                    <div className="
-                        min-w-0
-                        w-full
-                    ">
+                    <div
+                        className="
+                            min-w-0
+                            w-full
+                        "
+                    >
 
                         <LoanTypeDropdown
 
-                            label='Loan Type'
+                            label="Loan Type"
 
                             value={loanType}
 
-                            onChange={setLoanType}
-
-                        />
-
-                    </div>
-
-
-                    {/* =================================================
-                        ROW 2 — FROM DATE
-                    ================================================= */}
-
-                    <div className="
-                        min-w-0
-                        w-full
-                    ">
-
-                        <label className="
-                            mb-1.5
-                            block
-                            text-xs
-                            font-medium
-                            text-base-content/60
-                        ">
-
-                            From
-
-                        </label>
-
-
-                        <input
-
-                            type="date"
-
-                            value={fromDate}
-
-                            onChange={(event) =>
-                                setFromDate(
-                                    event.target.value
-                                )
+                            onChange={
+                                handleLoanTypeChange
                             }
 
-                            className="
-                                input
-                                input-bordered
-                                h-10
-                                min-h-10
-                                w-full
-                                min-w-0
-                                text-sm
-                            "
-
                         />
 
                     </div>
 
 
                     {/* =================================================
-                        ROW 2 — TO DATE
+                        FROM DATE
                     ================================================= */}
 
-                    <div className="
-                        min-w-0
-                        w-full
-                    ">
+                    <div
+                        className="
+                            min-w-0
+                            w-full
+                        "
+                    >
 
-                        <label className="
-                            mb-1.5
-                            block
-                            text-xs
-                            font-medium
-                            text-base-content/60
-                        ">
-
-                            To
-
-                        </label>
-
-
-                        <input
-
-                            type="date"
-
-                            value={toDate}
-
-                            onChange={(event) =>
-                                setToDate(
-                                    event.target.value
-                                )
-                            }
-
+                        <label
                             className="
-                                input
-                                input-bordered
-                                h-10
-                                min-h-10
-                                w-full
-                                min-w-0
-                                text-sm
-                            "
-
-                        />
-
-                    </div>
-
-
-                    {/* =================================================
-                        ROW 2 — ACTIONS
-                    ================================================= */}
-
-                    <div className="
-                        col-span-1
-                        flex
-                        min-w-0
-                        w-full
-                        items-end
-                        gap-2
-                        sm:col-span-2
-                        lg:col-span-2
-                    ">
-
-                        {/* RESET */}
-
-                        <button
-
-                            type="button"
-
-                            onClick={handleReset}
-
-                            className="
-                                h-10
-                                min-w-0
-                                flex-1
-                                rounded-lg
-                                border
-                                border-base-300
-                                bg-base-100
-                                px-3
+                                mb-1.5
+                                block
                                 text-xs
                                 font-medium
                                 text-base-content/60
-                                transition
-                                hover:bg-base-200
-                                hover:text-base-content
                             "
-
                         >
-
-                            Reset
-
-                        </button>
+                            From Date
+                        </label>
 
 
-                        {/* REFRESH */}
-
-                        <button
-
-                            type="button"
-
-                            onClick={() =>
-                                loadData(true)
-                            }
-
-                            disabled={refreshing}
-
+                        <div
                             className="
-                                inline-flex
-                                h-10
-                                min-w-0
-                                flex-1
-                                items-center
-                                justify-center
-                                gap-1.5
-                                rounded-lg
-                                bg-[#8BCF00]
-                                px-3
-                                text-xs
-                                font-medium
-                                text-white
-                                transition
-                                hover:bg-[#78B300]
-                                disabled:cursor-not-allowed
-                                disabled:opacity-60
+                                relative
+                                w-full
                             "
-
                         >
 
-                            <ArrowPathIcon
-
-                                className={`
+                            <CalendarDaysIcon
+                                className="
+                                    pointer-events-none
+                                    absolute
+                                    left-3
+                                    top-1/2
+                                    z-0
                                     h-4
                                     w-4
-                                    shrink-0
-                                    ${
-                                        refreshing
-                                            ? 'animate-spin'
-                                            : ''
-                                    }
-                                `}
-
+                                    -translate-y-1/2
+                                    text-base-content/35
+                                "
                             />
 
-                            <span>
 
-                                {refreshing
-                                    ? 'Loading...'
-                                    : 'Refresh'}
+                            <input
+                                type="date"
+                                value={
+                                    fromDate
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    setFromDate(
+                                        event.target.value
+                                    )
+                                }
+                                max={
+                                    toDate || undefined
+                                }
+                                className="
+                                    input
+                                    input-bordered
+                                    relative
+                                    z-10
+                                    h-10
+                                    min-h-10
+                                    w-full
+                                    min-w-0
+                                    pl-9
+                                    text-sm
+                                    bg-base-100
+                                "
+                            />
 
+                        </div>
+
+                    </div>
+
+
+                    {/* =================================================
+                        TO DATE
+                    ================================================= */}
+
+                    <div
+                        className="
+                            min-w-0
+                            w-full
+                        "
+                    >
+
+                        <label
+                            className="
+                                mb-1.5
+                                block
+                                text-xs
+                                font-medium
+                                text-base-content/60
+                            "
+                        >
+                            To Date
+                        </label>
+
+
+                        <div
+                            className="
+                                relative
+                                w-full
+                            "
+                        >
+
+                            <CalendarDaysIcon
+                                className="
+                                    pointer-events-none
+                                    absolute
+                                    left-3
+                                    top-1/2
+                                    z-0
+                                    h-4
+                                    w-4
+                                    -translate-y-1/2
+                                    text-base-content/35
+                                "
+                            />
+
+
+                            <input
+                                type="date"
+                                value={
+                                    toDate
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    setToDate(
+                                        event.target.value
+                                    )
+                                }
+                                min={
+                                    fromDate || undefined
+                                }
+                                className="
+                                    input
+                                    input-bordered
+                                    relative
+                                    z-10
+                                    h-10
+                                    min-h-10
+                                    w-full
+                                    min-w-0
+                                    pl-9
+                                    text-sm
+                                    bg-base-100
+                                "
+                            />
+
+                        </div>
+
+                    </div>
+
+
+                    {/* =================================================
+                        FILTER STATUS
+                    ================================================= */}
+
+                    <div
+                        className="
+                            flex
+                            min-w-0
+                            items-end
+                            lg:col-span-2
+                        "
+                    >
+
+                        <div
+                            className="
+                                flex
+                                min-h-10
+                                w-full
+                                items-center
+                                justify-between
+                                gap-3
+                                rounded-xl
+                                bg-base-200/60
+                                px-3
+                            "
+                        >
+
+                            <div
+                                className="
+                                    flex
+                                    min-w-0
+                                    items-center
+                                    gap-2
+                                "
+                            >
+
+                                <CalendarDaysIcon
+                                    className="
+                                        h-4
+                                        w-4
+                                        shrink-0
+                                        text-base-content/40
+                                    "
+                                />
+
+
+                                <span
+                                    className="
+                                        truncate
+                                        text-xs
+                                        text-base-content/55
+                                    "
+                                >
+                                    Application period
+                                </span>
+
+                            </div>
+
+
+                            <span
+                                className="
+                                    shrink-0
+                                    rounded-full
+                                    bg-primary/10
+                                    px-2.5
+                                    py-1
+                                    text-[11px]
+                                    font-semibold
+                                    text-primary
+                                "
+                            >
+                                {fromDate || toDate
+                                    ? 'Filtered'
+                                    : 'Today'}
                             </span>
 
-                        </button>
+                        </div>
 
                     </div>
 
                 </div>
 
-            </section>
+
+                {/* =================================================
+                    ERROR
+                ================================================= */}
+
+                {error && (
+
+                    <section
+                        className="
+                            mt-5
+                            w-full
+                            rounded-2xl
+                            border
+                            border-error/20
+                            bg-error/5
+                            px-4
+                            py-3
+                        "
+                    >
+
+                        <div
+                            className="
+                                flex
+                                flex-wrap
+                                items-center
+                                justify-between
+                                gap-3
+                            "
+                        >
+
+                            <p
+                                className="
+                                    min-w-0
+                                    text-xs
+                                    font-medium
+                                    text-error
+                                "
+                            >
+                                {error}
+                            </p>
 
 
-            {/* =================================================
-                EMPTY STATE
-            ================================================= */}
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    loadData(true)
+                                }
+                                className="
+                                    shrink-0
+                                    rounded-lg
+                                    bg-error/10
+                                    px-3
+                                    py-1.5
+                                    text-xs
+                                    font-medium
+                                    text-error
+                                    transition
+                                    hover:bg-error/20
+                                "
+                            >
+                                Retry
+                            </button>
 
-            {!filteredAnalytics.length && (
+                        </div>
 
-                <section className="
-                    w-full
-                    rounded-2xl
-                    border
-                    border-base-300
-                    bg-base-100
-                    px-5
-                    py-12
-                    text-center
-                    shadow-sm
-                ">
+                    </section>
 
-                    <p className="
-                        text-sm
-                        font-medium
-                        text-base-content/55
-                    ">
-
-                        No analytics data found
-
-                    </p>
-
-
-                    <p className="
-                        mt-1
-                        text-xs
-                        text-base-content/35
-                    ">
-
-                        Try changing the selected filters.
-
-                    </p>
-
-                </section>
-
-            )}
+                )}
 
 
-            {/* =================================================
-                ANALYTICS CONTENT
-            ================================================= */}
+                {/* =================================================
+                    ANALYTICS
+                ================================================= */}
 
-            {filteredAnalytics.length > 0 && (
+                {!error && (
 
-                <>
+                    <div
+                        className="
+                            mt-6
+                            min-w-0
+                        "
+                    >
 
-                    {/* =================================================
-                        TOP ANALYTICS
-                    ================================================= */}
-
-                    <div className="
-                        grid
-                        w-full
-                        min-w-0
-                        grid-cols-1
-                        gap-5
-                        xl:grid-cols-2
-                    ">
-
-                        {/* PIPELINE INSIGHTS */}
+                        {/* =================================================
+                            PIPELINE INSIGHTS
+                        ================================================= */}
 
                         <PipelineInsights
-
-                            analytics={filteredAnalytics}
-
+                            counts={counts}
                         />
 
 
-                        {/* SUCCESS RATE */}
+                        {/* =================================================
+                            APPLICATION PIPELINE
+                        ================================================= */}
 
-                        <OverallSuccessRate
+                        <div
+                            className="
+                                mt-6
+                                min-w-0
+                            "
+                        >
 
-                            analytics={filteredAnalytics}
+                            <PipelineStages
+                                pipeline={pipeline}
+                            />
 
-                        />
+                        </div>
 
                     </div>
 
+                )}
 
-                    {/* =================================================
-                        PIPELINE STAGES
-                    ================================================= */}
-
-                    <PipelineStages
-
-                        analytics={filteredAnalytics}
-
-                    />
-
-                </>
-
-            )}
+            </section>
 
         </div>
 
