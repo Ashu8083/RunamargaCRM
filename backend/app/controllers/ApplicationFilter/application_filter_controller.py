@@ -2,12 +2,14 @@
 
 from app.services.ApplicationFilter.application_filter_service import (
     get_application_filter_data,
+    get_application_filter_options as get_application_filter_options_service,
 )
-from app.core.access_control import AccessControl
+
 
 # =========================================================
 # APPLICATION FILTER
 # =========================================================
+
 def get_application_filter(
     db,
     employee,
@@ -33,22 +35,18 @@ def get_application_filter(
         employee=employee,
         context_id=context_id,
         search=search,
-
         agent_context_id=agent_context_id,
         rm_context_id=rm_context_id,
         loan_type_id=loan_type_id,
-
         status=status,
-
         month=month,
         year=year,
-
         from_date=from_date,
         to_date=to_date,
-
         page=page,
         limit=limit,
     )
+
 
 # =========================================================
 # APPLICATION FILTER OPTIONS
@@ -64,7 +62,7 @@ def get_application_filter_options(
     employee options based on the active context.
     """
 
-    return AccessControl.get_application_filter_options(
+    return get_application_filter_options_service(
         db=db,
         employee=employee,
         context_id=context_id,

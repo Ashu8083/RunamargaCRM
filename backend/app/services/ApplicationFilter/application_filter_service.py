@@ -774,3 +774,112 @@ def get_application_filter_data(
                 total_pages,
         },
     }
+
+
+# =========================================================
+# APPLICATION FILTER OPTIONS
+# =========================================================
+
+def get_application_filter_options(
+    db: Session,
+    employee: Employee,
+    context_id: int | None = None,
+):
+    """
+    Return application filter visibility and
+    employee options based on the active context.
+    """
+
+    context = AccessControl.get_active_context(
+        db=db,
+        employee=employee,
+        context_id=context_id,
+    )
+
+    if not context or not context.context:
+        return {
+            "context": None,
+            "visibility": {
+                "show_rm": False,
+                "show_agent": False,
+                "show_team_lead": False,
+            },
+            "rms": [],
+            "agents": [],
+            "team_leads": [],
+        }
+
+    family = AccessControl.get_context_family(
+        context.context.code
+    )
+
+    # ---------------------------------------------------------
+    # VISIBILITY
+    # ---------------------------------------------------------
+
+    visibility = {
+        "show_rm": family != "RM",
+        "show_agent": family != "AGENT",
+        "show_team_lead": family != "TEAMLEAD",
+    }
+
+    # ---------------------------------------------------------
+    # VISIBLE EMPLOYEES
+    # ---------------------------------------------------------
+
+    rms = AccessControl.get_visible_rms(
+        db=db,
+        employee=employee,
+        context_id=context_id,
+    )
+
+    agents = AccessControl.get_visible_agents(
+        db=db,
+        employee=employee,
+        context_id=context_id,
+    )
+
+    team_leads = AccessControl.get_visible_team_leads(
+        db=db,
+        employee=employee,
+        context_id=context_id,
+    )
+
+    # ---------------------------------------------------------
+    # RESPONSE
+    # ---------------------------------------------------------
+
+    return {
+        "context": {
+            "id": context.id,
+            "context_id": context.context.id,
+            "code": context.context.code,
+            "name": context.context.name,
+        },
+
+        "visibility": visibility,
+
+        "rms": [
+            {
+                "id": item.id,
+                "name": item.name,
+            }
+            for item in rms
+        ],
+
+        "agents": [
+            {
+                "id": item.id,
+                "name": item.name,
+            }
+            for item in agents
+        ],
+
+        "team_leads": [
+            {
+                "id": item.id,
+                "name": item.name,
+            }
+            for item in team_leads
+        ],
+    }

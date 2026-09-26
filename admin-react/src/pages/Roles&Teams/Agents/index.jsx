@@ -153,10 +153,17 @@ const Agents = () => {
 
             } catch (error) {
 
-                console.error(
-                    'Failed to load employees:',
-                    error
-                )
+                console.error('Failed to load employees:', error)
+
+                console.error('Error message:', error.message)
+
+                console.error('Response:', error.response)
+
+                console.error('Response status:', error.response?.status)
+
+                console.error('Response data:', error.response?.data)
+
+                console.error('Request:', error.request)
 
                 showFeedback(
                     'error',
@@ -437,8 +444,7 @@ const Agents = () => {
 
         const confirmed =
             window.confirm(
-                `Are you sure you want to delete ${
-                    agent.name || 'this agent'
+                `Are you sure you want to delete ${agent.name || 'this agent'
                 }?`
             )
 

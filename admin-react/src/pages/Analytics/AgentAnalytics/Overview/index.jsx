@@ -293,9 +293,8 @@ function Overview() {
     // TEAM LEAD CHANGE
     // =========================================================
 
-    const handleTeamLeadChange = (
-        selectedTeamLead
-    ) => {
+    const handleTeamLeadChange = (selectedTeamLead) => {
+        console.log('TEAM LEAD VALUE:', selectedTeamLead)
 
         setTeamLead(
             selectedTeamLead || ''

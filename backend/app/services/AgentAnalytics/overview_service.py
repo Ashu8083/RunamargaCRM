@@ -1784,8 +1784,7 @@ class AgentAnalyticsOverviewService:
         # =====================================================
 
         active_context = (
-            AgentAnalyticsOverviewService
-            ._get_active_context(
+            AgentAnalyticsOverviewService._get_active_context(
                 db=db,
                 employee=employee,
                 context_id=context_id,
