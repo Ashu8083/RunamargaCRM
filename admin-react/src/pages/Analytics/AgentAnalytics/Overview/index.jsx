@@ -442,12 +442,12 @@ function Overview() {
     // TEAM LEAD CHANGE
     // =========================================================
 
-    const handleTeamLeadChange = (
-        selectedTeamLead
-    ) => {
+    const handleTeamLeadChange = (selectedTeamLead) => {
+        console.log('TEAM LEAD VALUE:', selectedTeamLead)
 
         setTeamLead(selectedTeamLead)
-
+        setRm('')
+        setAgent('')
     }
 
 
@@ -880,10 +880,9 @@ function Overview() {
                                     h-4
                                     w-4
                                     shrink-0
-                                    ${
-                                        refreshing
-                                            ? 'animate-spin'
-                                            : ''
+                                    ${refreshing
+                                        ? 'animate-spin'
+                                        : ''
                                     }
                                 `}
 
