@@ -7,7 +7,7 @@ import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 
 const EMPTY_FORM = {
     name: '',
-    status: 'active',
+    is_active: true,
 }
 
 
@@ -38,10 +38,10 @@ function BankModal({
 
         if (bank) {
 
-            setForm({
-                name: bank.name || '',
-                status: bank.status || 'active',
-            })
+           setForm({
+                             name: bank.name || '',
+                             is_active: bank.is_active ?? true,
+                    })
 
         } else {
 
@@ -114,33 +114,24 @@ function BankModal({
     // SUBMIT
     // =========================================================
 
-    const handleSubmit = (event) => {
+   const handleSubmit = (event) => {
 
-        event.preventDefault()
+    event.preventDefault()
 
-
-        if (!validate()) {
-            return
-        }
-
-
-        const payload = {
-
-            ...(bank || {}),
-
-            name:
-                form.name.trim(),
-
-            status:
-                form.status,
-
-        }
-
-
-        onSubmit?.(payload)
-
+    if (!validate()) {
+        return
     }
 
+    const payload = {
+        ...(bank || {}),
+        name: form.name.trim(),
+        is_active: form.is_active,
+    }
+
+    console.log('SUBMIT PAYLOAD:', payload)
+
+    onSubmit?.(payload)
+}
 
     // =========================================================
     // CLOSE
@@ -381,25 +372,30 @@ function BankModal({
 
 
                             <select
-                                name="status"
-                                value={form.status}
-                                onChange={handleChange}
-                                className="
-                                    select
-                                    select-bordered
-                                    w-full
-                                "
-                            >
 
-                                <option value="active">
-                                    Active
-                                </option>
+    name="is_active"
 
-                                <option value="inactive">
-                                    Inactive
-                                </option>
+    value={String(form.is_active)}
+    onChange={(event) =>
+        setForm((previous) => ({
+            ...previous,
+            is_active: event.target.value === 'true',
 
-                            </select>
+        }))
+    }
+    className="
+        select
+        select-bordered
+        w-full
+    "
+>
+    <option value="true">
+        Active
+    </option>
+    <option value="false">
+        Inactive
+    </option>
+</select>
 
 
                             <p className="

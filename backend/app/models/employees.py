@@ -22,6 +22,13 @@ class Employee(Base):
 
     name = Column(String, nullable=False)
 
+    employee_code = Column(
+        String,
+        unique=True,
+        nullable=True,
+        index=True,
+    )
+
     phone = Column(
         String,
         unique=True,

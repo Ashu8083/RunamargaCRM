@@ -2,10 +2,11 @@ import os
 from datetime import datetime, timedelta, timezone
 import hashlib  
 import jwt
-from fastapi import Cookie, Depends, HTTPException
+from fastapi import Cookie, Depends, HTTPException,Request
 from sqlalchemy.orm import Session
 from app.models.employees import Employee
 from app.config.database import get_db
+from app.services.employee_face_profile_service import logger
 
 JWT_SECRET_KEY = os.getenv(
     "JWT_SECRET_KEY",
@@ -24,7 +25,7 @@ def create_access_token(employee_id: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
-
+    logger.info("access_token called for {}".format(employee_id))
     payload = {
         "sub": str(employee_id),
         "type": "access",
@@ -67,6 +68,8 @@ def decode_token(token: str) -> dict:
         raise ValueError("Invalid token")
 
     return payload
+
+
 def get_employee_id_from_token(token: str) -> int:
     payload = decode_token(token)
 
@@ -83,11 +86,12 @@ def get_employee_id_from_token(token: str) -> int:
     except (TypeError, ValueError):
         raise ValueError("Invalid employee ID in token")
 
-    
 def get_current_employee(
+    request: Request,
     db: Session = Depends(get_db),
     access_token: str | None = Cookie(default=None),
 ) -> Employee:
+    print(access_token)
 
     if not access_token:
         raise HTTPException(
@@ -129,5 +133,14 @@ def get_current_employee(
             status_code=401,
             detail="Account is inactive",
         )
+    request.state.employee = employee
+
+    # Check for x-employee-context-id or x-context-id header
+    context_header = request.headers.get("x-employee-context-id") or request.headers.get("x-context-id")
+    if context_header and context_header.isdigit():
+        request.state.employee_context_id = int(context_header)
+    else:
+        default_context = next((ctx for ctx in getattr(employee, "contexts", []) if getattr(ctx, "is_default", False)), None)
+        request.state.employee_context_id = default_context.id if default_context else None
 
     return employee

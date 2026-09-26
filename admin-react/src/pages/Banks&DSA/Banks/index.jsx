@@ -1,6 +1,10 @@
 // admin-react/src/pages/BanksAndDSA/Banks/index.jsx
 
-import { useMemo, useState } from 'react'
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
@@ -8,6 +12,12 @@ import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 
 import BanksTable from './components/BanksTable'
 import BankModal from './components/BankModal'
+import {
+    getBanks,
+    createBank,
+    updateBank,
+    deleteBank,
+} from './Api'
 
 
 function Banks() {
@@ -16,54 +26,79 @@ function Banks() {
     // BANK DATA
     // =========================================================
 
-    const [banks, setBanks] = useState([
-        {
-            id: 1,
-            name: 'HDFC Bank',
-            status: 'active',
-        },
-        {
-            id: 2,
-            name: 'ICICI Bank',
-            status: 'active',
-        },
-        {
-            id: 3,
-            name: 'Axis Bank',
-            status: 'active',
-        },
-        {
-            id: 4,
-            name: 'State Bank of India',
-            status: 'active',
-        },
-        {
-            id: 5,
-            name: 'Kotak Mahindra Bank',
-            status: 'inactive',
-        },
-    ])
+    // const [banks, setBanks] = useState([
+    //     {
+    //         id: 1,
+    //         name: 'HDFC Bank',
+    //         status: 'active',
+    //     },
+    //     {
+    //         id: 2,
+    //         name: 'ICICI Bank',
+    //         status: 'active',
+    //     },
+    //     {
+    //         id: 3,
+    //         name: 'Axis Bank',
+    //         status: 'active',
+    //     },
+    //     {
+    //         id: 4,
+    //         name: 'State Bank of India',
+    //         status: 'active',
+    //     },
+    //     {
+    //         id: 5,
+    //         name: 'Kotak Mahindra Bank',
+    //         status: 'inactive',
+    //     },
+    // ])
 
 
     // =========================================================
     // FILTER STATE
     // =========================================================
 
-    const [search, setSearch] = useState('')
+    // const [search, setSearch] = useState('')
+    //
+    // const [selectedStatus, setSelectedStatus] =
+    //     useState('')
 
+    const [banks, setBanks] = useState([])
+    const [search, setSearch] =
+        useState('')
     const [selectedStatus, setSelectedStatus] =
         useState('')
 
-
-    // =========================================================
-    // MODAL STATE
-    // =========================================================
-
     const [selectedBank, setSelectedBank] =
         useState(null)
-
     const [showBankModal, setShowBankModal] =
         useState(false)
+
+    // =========================================================
+    // MODAL STAT
+    // ========================================================
+    const fetchBanks = async () => {
+    try {
+        const data = await getBanks()
+
+        console.log(
+            'BANK API DATA:',
+            data
+        )
+
+        setBanks(data)
+
+    } catch (error) {
+        console.error(
+            'Failed to fetch banks:',
+            error
+        )
+    }
+}
+     useEffect(() => {
+        fetchBanks()
+    }, [])
 
 
     // =========================================================
@@ -73,57 +108,89 @@ function Banks() {
     const filteredBanks = useMemo(() => {
 
         const searchValue =
-            search
-                .trim()
-                .toLowerCase()
 
+            search
+
+                .trim()
+
+                .toLowerCase()
 
         return banks.filter((bank) => {
 
             // -----------------------------------------------------
+
             // SEARCH BY BANK NAME
+
             // -----------------------------------------------------
 
             if (searchValue) {
 
                 const bankName =
+
                     String(
+
                         bank.name || ''
+
                     ).toLowerCase()
 
-
                 if (
+
                     !bankName.includes(
+
                         searchValue
+
                     )
+
                 ) {
+
                     return false
+
                 }
 
             }
 
-
             // -----------------------------------------------------
+
             // STATUS FILTER
+
             // -----------------------------------------------------
 
-            if (
-                selectedStatus &&
-                bank.status !== selectedStatus
-            ) {
-                return false
-            }
+            if (selectedStatus) {
 
+                const status =
+
+                    bank.is_active
+
+                        ? 'active'
+
+                        : 'inactive'
+
+                if (
+
+                    status !== selectedStatus
+
+                ) {
+
+                    return false
+
+                }
+
+            }
 
             return true
 
         })
 
     }, [
+
         banks,
+
         search,
+
         selectedStatus,
+
     ])
+
 
 
     // =========================================================
@@ -142,11 +209,9 @@ function Banks() {
     // OPEN ADD BANK MODAL
     // =========================================================
 
-    const handleAddBank = () => {
-
+   const handleAddBank = () => {
         setSelectedBank(null)
         setShowBankModal(true)
-
     }
 
 
@@ -157,6 +222,7 @@ function Banks() {
     const handleEditBank = (bank) => {
 
         setSelectedBank(bank)
+
         setShowBankModal(true)
 
     }
@@ -169,6 +235,7 @@ function Banks() {
     const handleCloseModal = () => {
 
         setShowBankModal(false)
+
         setSelectedBank(null)
 
     }
@@ -179,77 +246,65 @@ function Banks() {
     // ADD / EDIT
     // =========================================================
 
-    const handleSaveBank = (bankData) => {
+    const handleSaveBank = async (bankData) => {
 
-        // -----------------------------------------------------
-        // EDIT EXISTING BANK
-        // -----------------------------------------------------
+    try {
 
         if (bankData.id) {
 
-            setBanks((previous) =>
-                previous.map((bank) =>
-                    bank.id === bankData.id
-                        ? {
-                            ...bank,
-                            ...bankData,
-                        }
-                        : bank
-                )
-            )
+            await updateBank(bankData)
+
+        } else {
+
+            await createBank(bankData)
 
         }
 
-        // -----------------------------------------------------
-        // ADD NEW BANK
-        // -----------------------------------------------------
-
-        else {
-
-            const newBank = {
-                ...bankData,
-                id: Date.now(),
-            }
-
-
-            setBanks((previous) => [
-                ...previous,
-                newBank,
-            ])
-
-        }
-
+        await fetchBanks()
 
         handleCloseModal()
 
+    } catch (error) {
+
+        console.error(
+
+            'Failed to save bank:',
+
+            error
+
+        )
+
     }
+
+}
 
 
     // =========================================================
     // DELETE BANK
     // =========================================================
 
-    const handleDeleteBank = (bank) => {
+    const handleDeleteBank = async (bank) => {
 
-        const confirmed =
-            window.confirm(
-                `Are you sure you want to delete ${bank.name}?`
-            )
+    const confirmed = window.confirm(
+        `Are you sure you want to delete ${bank.name}?`
+    )
 
-
-        if (!confirmed) {
-            return
-        }
-
-
-        setBanks((previous) =>
-            previous.filter(
-                (item) =>
-                    item.id !== bank.id
-            )
-        )
-
+    if (!confirmed) {
+        return
     }
+
+    try {
+        await deleteBank(bank.id)
+
+        await fetchBanks()
+
+    } catch (error) {
+        console.error(
+            'Failed to delete bank:',
+            error
+        )
+    }
+}
 
 
     // =========================================================

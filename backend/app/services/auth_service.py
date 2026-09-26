@@ -5,6 +5,7 @@ import resend
 from datetime import datetime, timedelta, timezone
 from app.config.settings import settings
 from app.models.auth_tokens import AuthToken
+from fastapi.requests import  Request
 from app.core.security import hash_token
 from sqlalchemy.orm import Session
 from app.models.employees import Employee
@@ -19,6 +20,8 @@ from app.models.employee_contexts import EmployeeContext
 from app.models.employee_context_permissions import EmployeeContextPermission
 from app.models.permissions import Permission
 from app.models.contexts import Context
+from app.services.employee_face_profile_service import logger
+
 OTP_EXPIRY_MINUTES = 5
 
 
@@ -161,6 +164,8 @@ def get_employee_contexts(
             )
             .all()
         )
+        # logger.info(
+        #     f"Employee context {employee_context.id} add to request {request.state} ")
 
         result.append(
             {

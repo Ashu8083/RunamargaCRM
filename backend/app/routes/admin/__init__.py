@@ -38,6 +38,7 @@ from .admins_routes import router as admins_router
 from app.routes.admin.bank_routes import router as bank_router
 from app.routes.admin.dsa_routes import router as dsa_router
 from app.routes.admin.banker_directory_routes import router as banker_directory_router
+from app.routes.admin.profile_routes import profile_router
 
 from .Loans.duplicate_approval_routes import router as duplicate_approval_router
 from .Loans.reverted_loans_routes import router as reverted_loans_router
@@ -123,6 +124,7 @@ from app.routes.admin.ApplicationFilter.application_filter_routes import (
 # ============================================================================
 # MAIN ADMIN ROUTER
 # ============================================================================
+
 
 router = APIRouter()
 

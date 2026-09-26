@@ -1,5 +1,5 @@
 # backend/app/routes/employee_routes.py
-from fastapi import APIRouter, Depends, HTTPException, Query,File,UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query,File,UploadFile,Request
 from sqlalchemy.orm import Session
 from app.core.access_control import AccessControl
 from app.schemas.employee import (
@@ -34,14 +34,13 @@ def get_employees(
     )
 @router.post("")
 async def create_employee(
+    request: Request,
     data: str = Form(...),
-
     profile_image: UploadFile | None = File(None),
     aadhaar_card: UploadFile | None = File(None),
     pan_card: UploadFile | None = File(None),
     bank_passbook: UploadFile | None = File(None),
     salary_slips: list[UploadFile] | None = File(None),
-
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -56,6 +55,7 @@ async def create_employee(
     return create_employee_controller(
         db=db,
         employee=employee,
+        employee_context_id=getattr(request.state, "employee_context_id", None),
         data=employee_data,
         profile_image=profile_image,
         aadhaar_card=aadhaar_card,

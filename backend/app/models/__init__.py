@@ -37,4 +37,5 @@ from app.models.duplicate_approvals import DuplicateApproval
 from app.models.phone_numbers import PhoneNumber
 
 
+from app.models.audit_logs import AuditLog
 
