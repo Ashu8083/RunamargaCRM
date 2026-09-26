@@ -607,6 +607,9 @@ function StateCityDropdown({
     states,
     cities,
 
+    stateLabel = 'State',
+    cityLabel = 'City',
+
     allStatesLabel = 'All States',
     allCitiesLabel = 'All Cities',
 
@@ -823,6 +826,7 @@ function StateCityDropdown({
             cancelled = true
         }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [states])
 
 
@@ -985,6 +989,7 @@ function StateCityDropdown({
             cancelled = true
         }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         selectedState,
         cities,
@@ -1125,96 +1130,66 @@ function StateCityDropdown({
         >
 
             {/* STATE */}
-
-            <LocationDropdown
-
-                value={
-                    selectedState
-                }
-
-                options={
-                    stateOptions
-                }
-
-                onChange={
-                    handleStateChange
-                }
-
-                placeholder={
-                    statesLoading
-                        ? 'Loading States...'
-                        : statePlaceholder
-                }
-
-                searchPlaceholder={
-                    stateSearchPlaceholder
-                }
-
-                allLabel={
-                    allStatesLabel
-                }
-
-                emptyMessage={
-                    statesLoading
-                        ? 'Loading states...'
-                        : stateEmptyMessage
-                }
-
-                disabled={
-                    disabled ||
-                    statesLoading
-                }
-
-            />
-
+            <div>
+                {stateLabel && (
+                    <label className="mb-1.5 block text-xs font-medium text-base-content/60">
+                        {stateLabel}
+                    </label>
+                )}
+                <LocationDropdown
+                    value={selectedState}
+                    options={stateOptions}
+                    onChange={handleStateChange}
+                    placeholder={
+                        statesLoading
+                            ? 'Loading States...'
+                            : statePlaceholder
+                    }
+                    searchPlaceholder={stateSearchPlaceholder}
+                    allLabel={allStatesLabel}
+                    emptyMessage={
+                        statesLoading
+                            ? 'Loading states...'
+                            : stateEmptyMessage
+                    }
+                    disabled={disabled || statesLoading}
+                />
+            </div>
 
             {/* CITY */}
-
-            <LocationDropdown
-
-                value={
-                    selectedCity
-                }
-
-                options={
-                    filteredCities
-                }
-
-                onChange={
-                    handleCityChange
-                }
-
-                placeholder={
-                    !selectedState
-                        ? 'Select State First'
-                        : citiesLoading
-                            ? 'Loading Cities...'
-                            : cityPlaceholder
-                }
-
-                searchPlaceholder={
-                    citySearchPlaceholder
-                }
-
-                allLabel={
-                    allCitiesLabel
-                }
-
-                emptyMessage={
-                    !selectedState
-                        ? 'Select State First'
-                        : citiesLoading
-                            ? 'Loading cities...'
-                            : cityEmptyMessage
-                }
-
-                disabled={
-                    disabled ||
-                    !selectedState ||
-                    citiesLoading
-                }
-
-            />
+            <div>
+                {cityLabel && (
+                    <label className="mb-1.5 block text-xs font-medium text-base-content/60">
+                        {cityLabel}
+                    </label>
+                )}
+                <LocationDropdown
+                    value={selectedCity}
+                    options={filteredCities}
+                    onChange={handleCityChange}
+                    placeholder={
+                        !selectedState
+                            ? 'Select State First'
+                            : citiesLoading
+                                ? 'Loading Cities...'
+                                : cityPlaceholder
+                    }
+                    searchPlaceholder={citySearchPlaceholder}
+                    allLabel={allCitiesLabel}
+                    emptyMessage={
+                        !selectedState
+                            ? 'Select State First'
+                            : citiesLoading
+                                ? 'Loading cities...'
+                                : cityEmptyMessage
+                    }
+                    disabled={
+                        disabled ||
+                        !selectedState ||
+                        citiesLoading
+                    }
+                />
+            </div>
 
         </div>
     )

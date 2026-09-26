@@ -71,11 +71,62 @@ def create_banker_directory(
 
         db.rollback()
         raise e
+# =========================================================
+# GET ALL BANKER DIRECTORY
+# =========================================================
+
+def get_all_banker_directory(
+    db: Session,
+    page: int = 1,
+    limit: int = 15,
+):
+    query = (
+        db.query(BankerDirectory)
+        .options(
+            joinedload(BankerDirectory.bank),
+            joinedload(BankerDirectory.loan_type),
+            joinedload(BankerDirectory.state),
+            joinedload(BankerDirectory.city),
+            joinedload(BankerDirectory.asms),
+            joinedload(BankerDirectory.sms),
+        )
+        .filter(
+            BankerDirectory.deleted_at.is_(None)
+        )
+        .order_by(
+            BankerDirectory.id.desc()
+        )
+    )
+
+    total = query.count()
+
+    offset = (page - 1) * limit
+
+    items = (
+        query
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
+    }
+
+
+
 
 
 # =========================================================
 # GET BY ID
 # =========================================================
+
+
+
 
 def get_banker_directory(
     db: Session,
@@ -85,6 +136,10 @@ def get_banker_directory(
     banker_directory = (
         db.query(BankerDirectory)
         .options(
+            joinedload(BankerDirectory.bank),
+            joinedload(BankerDirectory.loan_type),
+            joinedload(BankerDirectory.state),
+            joinedload(BankerDirectory.city),
             joinedload(BankerDirectory.asms),
             joinedload(BankerDirectory.sms),
         )
@@ -94,15 +149,15 @@ def get_banker_directory(
         )
         .first()
     )
-
     if not banker_directory:
         raise HTTPException(
             status_code=404,
             detail="Banker directory not found"
         )
 
-    return banker_directory
-
+    return banker_directory_to_response(
+        banker_directory
+    )
 
 # =========================================================
 # UPDATE
@@ -254,7 +309,7 @@ def delete_banker_directory(
 
 def filter_search_banker_directory(
     db: Session,
-    filter_data: BankerFilterSearchRequest
+    filter_data: BankerFilterSearchRequest,
 ):
     query = (
         db.query(BankerDirectory)
@@ -270,13 +325,11 @@ def filter_search_banker_directory(
             BankerDirectory.deleted_at.is_(None)
         )
     )
-    # =====================================================
-    # 1. SEARCH
 
-    # Bank / ASM / SM / Contact / Email
-    # =====================================================
+    # SEARCH
     if filter_data.search:
         search = f"%{filter_data.search}%"
+
         query = (
             query
             .outerjoin(
@@ -295,65 +348,53 @@ def filter_search_banker_directory(
             )
             .filter(
                 (Bank.name.ilike(search))
-                |
-                (BankerDirectoryASM.name.ilike(search))
-                |
-                (BankerDirectoryASM.contact.ilike(search))
-                |
-                (BankerDirectoryASM.email.ilike(search))
-                |
-                (BankerDirectorySM.name.ilike(search))
-                |
-                (BankerDirectorySM.contact.ilike(search))
-                |
-                (BankerDirectorySM.email.ilike(search))
+                | (BankerDirectoryASM.name.ilike(search))
+                | (BankerDirectoryASM.contact.ilike(search))
+                | (BankerDirectoryASM.email.ilike(search))
+                | (BankerDirectorySM.name.ilike(search))
+                | (BankerDirectorySM.contact.ilike(search))
+                | (BankerDirectorySM.email.ilike(search))
             )
             .distinct()
         )
-    # =====================================================
-    # 2. STATE
-    # =====================================================
+
+    # STATE
     if filter_data.state_id is not None:
         query = query.filter(
-            BankerDirectory.state_id
-            == filter_data.state_id
+            BankerDirectory.state_id == filter_data.state_id
         )
-    # =====================================================
-    # 3. CITY
-    # =====================================================
 
+    # CITY
     if filter_data.city_id is not None:
-
         query = query.filter(
-            BankerDirectory.city_id
-            == filter_data.city_id
+            BankerDirectory.city_id == filter_data.city_id
         )
-    # =====================================================
-    # 4. BANK
-    # =====================================================
+
+    # BANK
     if filter_data.bank_id is not None:
         query = query.filter(
-            BankerDirectory.bank_id
-            == filter_data.bank_id
+            BankerDirectory.bank_id == filter_data.bank_id
         )
-    # =====================================================
-    # 5. LOAN TYPE
-    # =====================================================
+
+    # LOAN TYPE
     if filter_data.loan_type_id is not None:
         query = query.filter(
             BankerDirectory.loan_type_id
             == filter_data.loan_type_id
         )
-    # =====================================================
+
+    # TOTAL
+    total = query.count()
+
     # PAGINATION
-    # =====================================================
-    offset = (
-        (filter_data.page - 1)
-        * filter_data.limit
-    )
-    query = (
+    offset = (filter_data.page - 1) * filter_data.limit
+
+    data = (
         query
+        .order_by(BankerDirectory.id.desc())
         .offset(offset)
         .limit(filter_data.limit)
+        .all()
     )
-    return query.all()
+
+    return data, total

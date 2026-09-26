@@ -1,6 +1,7 @@
 // admin-react/src/pages/Banks&DSA/BankersDirectory/components/BankerModal.jsx
 
 import { useEffect, useMemo, useState } from 'react'
+import apiClient from '../../../../app/apiClient'
 
 
 // =============================================================
@@ -20,13 +21,265 @@ const createPerson = () => ({
 // =============================================================
 
 const EMPTY_FORM = {
+    state_id: '',
     state: '',
+    city_id: '',
     city: '',
+    bank_id: '',
     bank: '',
+    loan_type_id: '',
     loanType: '',
     status: 'active',
     sms: [],
     asms: [],
+}
+
+
+// =============================================================
+// SEARCH DROPDOWN COMPONENT (MODULE SCOPE)
+// =============================================================
+
+const SearchDropdown = ({
+    label,
+    value,
+    placeholder,
+    searchValue,
+    onSearchChange,
+    options = [],
+    onSelect,
+    disabled = false,
+    error,
+    isOpen = false,
+    onToggle,
+}) => {
+    return (
+        <div className="relative">
+            <label className="mb-1.5 block text-xs font-medium text-base-content/70">
+                {label}
+                <span className="text-error"> *</span>
+            </label>
+
+            <button
+                type="button"
+                disabled={disabled}
+                onClick={onToggle}
+                className={[
+                    'flex h-10 w-full items-center justify-between rounded-lg border bg-base-100 px-3 text-left text-sm transition focus:outline-none focus:ring-2 focus:ring-[#8BCF00]/20',
+                    error ? 'border-error' : 'border-base-300',
+                    disabled ? 'cursor-not-allowed bg-base-200 text-base-content/35' : 'text-base-content',
+                ].join(' ')}
+            >
+                <span className="truncate">
+                    {value || placeholder}
+                </span>
+
+                <span className="ml-2 shrink-0 text-xs text-base-content/40">
+                    {isOpen ? '▲' : '▼'}
+                </span>
+            </button>
+
+            {isOpen && !disabled && (
+                <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-[120] overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-xl">
+                    <div className="border-b border-base-300 p-2">
+                        <input
+                            type="text"
+                            value={searchValue}
+                            onChange={(event) => onSearchChange(event.target.value)}
+                            onClick={(event) => event.stopPropagation()}
+                            placeholder={`Search ${label.toLowerCase()}...`}
+                            className="input input-bordered h-9 min-h-9 w-full text-sm"
+                            autoFocus
+                        />
+                    </div>
+
+                    <div className="max-h-52 overflow-y-auto p-1">
+                        {options.length > 0 ? (
+                            options.map((option, idx) => {
+                                const optionId = typeof option === 'object' ? (option.id ?? idx) : option
+                                const optionName = typeof option === 'object' ? (option.name ?? String(option)) : String(option)
+
+                                return (
+                                    <button
+                                        key={`${optionId}-${idx}`}
+                                        type="button"
+                                        onClick={() => onSelect(option)}
+                                        className={[
+                                            'flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition hover:bg-base-200',
+                                            String(value) === String(optionName) || String(value) === String(optionId)
+                                                ? 'bg-[#8BCF00]/10 font-medium text-[#6FA800]'
+                                                : 'text-base-content/80',
+                                        ].join(' ')}
+                                    >
+                                        {optionName}
+                                    </button>
+                                )
+                            })
+                        ) : (
+                            <div className="px-3 py-3 text-center text-xs text-base-content/45">
+                                No options found
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {error && (
+                <p className="mt-1 text-xs text-error">
+                    {error}
+                </p>
+            )}
+        </div>
+    )
+}
+
+
+// =============================================================
+// PERSON SECTION COMPONENT (MODULE SCOPE)
+// =============================================================
+
+const PersonSection = ({
+    title,
+    people = [],
+    role,
+    errors = {},
+    onAdd,
+    onRemove,
+    onChange,
+}) => {
+    return (
+        <div className="rounded-xl border border-base-300 bg-base-100">
+            <div className="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-3">
+                <div>
+                    <p className="text-sm font-semibold text-base-content">{title}</p>
+                    <p className="mt-0.5 text-xs text-base-content/45">
+                        {people.length} {people.length === 1 ? 'person' : 'people'} added
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={onAdd}
+                    className="h-9 rounded-lg border border-[#8BCF00]/40 bg-[#8BCF00]/10 px-3 text-xs font-semibold text-[#6FA800] transition hover:bg-[#8BCF00]/20"
+                >
+                    + Add {role}
+                </button>
+            </div>
+
+            <div className="space-y-3 p-4">
+                {people.length === 0 && (
+                    <div className="rounded-lg border border-dashed border-base-300 px-4 py-6 text-center">
+                        <p className="text-xs text-base-content/45">
+                            No {role}s added yet.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={onAdd}
+                            className="mt-2 text-xs font-medium text-[#6FA800] hover:underline"
+                        >
+                            Add {role}
+                        </button>
+                    </div>
+                )}
+
+                {people.map((person, index) => {
+                    const personErrors = errors[`${role.toLowerCase()}_${person.id}`] || {}
+
+                    return (
+                        <div
+                            key={person.id}
+                            className="rounded-lg border border-base-300 bg-base-200/20 p-3"
+                        >
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                                <p className="text-xs font-semibold text-base-content/65">
+                                    {role} {index + 1}
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => onRemove(person.id)}
+                                    className="text-xs font-medium text-error/70 transition hover:text-error"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <div>
+                                    <label className="mb-1 block text-[11px] font-medium text-base-content/55">
+                                        Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={person.name}
+                                        onChange={(event) => onChange(person.id, 'name', event.target.value)}
+                                        placeholder={`${role} name`}
+                                        className={[
+                                            'input input-bordered h-10 min-h-10 w-full text-sm',
+                                            personErrors.name ? 'input-error' : '',
+                                        ].join(' ')}
+                                    />
+                                    {personErrors.name && (
+                                        <p className="mt-1 text-[11px] text-error">
+                                            {personErrors.name}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-[11px] font-medium text-base-content/55">
+                                        Phone
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={person.phone}
+                                        onChange={(event) =>
+                                            onChange(
+                                                person.id,
+                                                'phone',
+                                                event.target.value.replace(/\D/g, '').slice(0, 10)
+                                            )
+                                        }
+                                        placeholder="10-digit phone"
+                                        inputMode="numeric"
+                                        maxLength={10}
+                                        className={[
+                                            'input input-bordered h-10 min-h-10 w-full text-sm',
+                                            personErrors.phone ? 'input-error' : '',
+                                        ].join(' ')}
+                                    />
+                                    {personErrors.phone && (
+                                        <p className="mt-1 text-[11px] text-error">
+                                            {personErrors.phone}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-[11px] font-medium text-base-content/55">
+                                        Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={person.email}
+                                        onChange={(event) => onChange(person.id, 'email', event.target.value)}
+                                        placeholder={`${role.toLowerCase()}@example.com`}
+                                        className={[
+                                            'input input-bordered h-10 min-h-10 w-full text-sm',
+                                            personErrors.email ? 'input-error' : '',
+                                        ].join(' ')}
+                                    />
+                                    {personErrors.email && (
+                                        <p className="mt-1 text-[11px] text-error">
+                                            {personErrors.email}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+        </div>
+    )
 }
 
 
@@ -48,32 +301,97 @@ function BankerModal({
     // FORM STATE
     // =========================================================
 
-    const [form, setForm] =
-        useState(EMPTY_FORM)
+    const [form, setForm] = useState(EMPTY_FORM)
+    const [errors, setErrors] = useState({})
 
-
-    const [errors, setErrors] =
-        useState({})
+    // API DROPDOWN DATA
+    const [apiStates, setApiStates] = useState([])
+    const [apiCities, setApiCities] = useState([])
+    const [apiBanks, setApiBanks] = useState([])
+    const [apiLoanTypes, setApiLoanTypes] = useState([])
 
 
     // =========================================================
     // DROPDOWN STATE
     // =========================================================
 
-    const [openDropdown, setOpenDropdown] =
-        useState(null)
+    const [openDropdown, setOpenDropdown] = useState(null)
+    const [stateSearch, setStateSearch] = useState('')
+    const [citySearch, setCitySearch] = useState('')
+    const [bankSearch, setBankSearch] = useState('')
 
 
-    const [stateSearch, setStateSearch] =
-        useState('')
+    // =========================================================
+    // FETCH API DROPDOWNS
+    // =========================================================
+
+    useEffect(() => {
+        if (!open) return
+
+        let isMounted = true
+
+        const fetchDropdowns = async () => {
+            try {
+                const [statesRes, loanTypesRes, banksRes] = await Promise.allSettled([
+                    apiClient.get('/states'),
+                    apiClient.get('/common/loan-types'),
+                    apiClient.get('/admin/banks/'),
+                ])
+
+                if (!isMounted) return
+
+                if (statesRes.status === 'fulfilled') {
+                    const sData = statesRes.value.data
+                    setApiStates(Array.isArray(sData) ? sData : [])
+                }
+                if (loanTypesRes.status === 'fulfilled') {
+                    const lData = loanTypesRes.value.data
+                    setApiLoanTypes(Array.isArray(lData) ? lData : [])
+                }
+                if (banksRes.status === 'fulfilled') {
+                    const bData = banksRes.value.data?.data || banksRes.value.data
+                    setApiBanks(Array.isArray(bData) ? bData.map((b) => ({ id: b.id, name: b.name })) : [])
+                }
+            } catch (error) {
+                console.error('Failed to fetch modal dropdowns:', error)
+            }
+        }
+
+        fetchDropdowns()
+
+        return () => {
+            isMounted = false
+        }
+    }, [open])
 
 
-    const [citySearch, setCitySearch] =
-        useState('')
+    // FETCH CITIES ON STATE CHANGE
+    useEffect(() => {
+        if (!open || !form.state_id) {
+            setApiCities([])
+            return
+        }
 
+        let isMounted = true
 
-    const [bankSearch, setBankSearch] =
-        useState('')
+        const fetchCities = async () => {
+            try {
+                const res = await apiClient.get(`/cities?state_id=${form.state_id}`)
+                if (isMounted) {
+                    setApiCities(Array.isArray(res.data) ? res.data : [])
+                }
+            } catch (error) {
+                console.error('Failed to fetch cities:', error)
+                if (isMounted) setApiCities([])
+            }
+        }
+
+        fetchCities()
+
+        return () => {
+            isMounted = false
+        }
+    }, [open, form.state_id])
 
 
     // =========================================================
@@ -81,172 +399,105 @@ function BankerModal({
     // =========================================================
 
     useEffect(() => {
-
         if (!open) {
             return
         }
 
-
         if (entry) {
-
             setForm({
-                state: entry.state || '',
-                city: entry.city || '',
-                bank: entry.bank || '',
-                loanType: entry.loanType || '',
-                status: entry.status || 'active',
+                state_id: entry.state_id || '',
+                state: entry.state_name || entry.state || '',
+                city_id: entry.city_id || '',
+                city: entry.city_name || entry.city || '',
+                bank_id: entry.bank_id || '',
+                bank: entry.bank_name || entry.bank || '',
+                loan_type_id: entry.loan_type_id || '',
+                loanType: entry.loan_type_name || entry.loanType || '',
+                status: entry.status === '1' || entry.status === 'active' ? 'active' : 'inactive',
 
                 sms: Array.isArray(entry.sms)
                     ? entry.sms.map((person) => ({
-                        ...person,
+                        id: person.id || Math.random(),
+                        name: person.name || '',
+                        phone: person.contact || person.phone || '',
+                        contact: person.contact || person.phone || '',
+                        email: person.email || '',
                     }))
                     : [],
 
                 asms: Array.isArray(entry.asms)
                     ? entry.asms.map((person) => ({
-                        ...person,
+                        id: person.id || Math.random(),
+                        name: person.name || '',
+                        phone: person.contact || person.phone || '',
+                        contact: person.contact || person.phone || '',
+                        email: person.email || '',
                     }))
                     : [],
             })
-
         } else {
-
             setForm({
                 ...EMPTY_FORM,
                 sms: [],
                 asms: [],
             })
-
         }
 
-
         setErrors({})
-
         setOpenDropdown(null)
 
         setStateSearch('')
         setCitySearch('')
         setBankSearch('')
-
     }, [open, entry])
-
-
-    // =========================================================
-    // CITY OPTIONS
-    // =========================================================
-
-    const cityOptions = useMemo(() => {
-
-        /*
-         * Cities are derived from the available entries
-         * through the parent component.
-         *
-         * If the parent later provides a dedicated city
-         * list, this component can use it directly.
-         */
-
-        if (!form.state) {
-            return []
-        }
-
-        /*
-         * Current parent structure does not directly provide
-         * city options, so keep the existing city value
-         * available during edit.
-         */
-
-        if (form.city) {
-            return [form.city]
-        }
-
-        return []
-
-    }, [
-        form.state,
-        form.city,
-    ])
 
 
     // =========================================================
     // FILTER DROPDOWN OPTIONS
     // =========================================================
 
+    const stateList = useMemo(() => {
+        if (apiStates.length) return apiStates
+        if (Array.isArray(states) && states.length && typeof states[0] === 'object') return states
+        return states.map((s, idx) => ({ id: idx + 1, name: String(s) }))
+    }, [apiStates, states])
+
+    const cityList = useMemo(() => {
+        return apiCities
+    }, [apiCities])
+
+    const bankList = useMemo(() => {
+        if (Array.isArray(banks) && banks.length && typeof banks[0] === 'object') return banks
+        if (apiBanks.length) return apiBanks
+        return banks.map((b, idx) => ({ id: idx + 1, name: String(b) }))
+    }, [banks, apiBanks])
+
+
     const filteredStates = useMemo(() => {
-
-        const search =
-            stateSearch
-                .trim()
-                .toLowerCase()
-
-
-        if (!search) {
-            return states
-        }
-
-
-        return states.filter(
-            (state) =>
-                String(state)
-                    .toLowerCase()
-                    .includes(search)
+        const query = stateSearch.trim().toLowerCase()
+        if (!query) return stateList
+        return stateList.filter((item) =>
+            String(item.name || item).toLowerCase().includes(query)
         )
-
-    }, [
-        states,
-        stateSearch,
-    ])
+    }, [stateList, stateSearch])
 
 
     const filteredCities = useMemo(() => {
-
-        const search =
-            citySearch
-                .trim()
-                .toLowerCase()
-
-
-        if (!search) {
-            return cityOptions
-        }
-
-
-        return cityOptions.filter(
-            (city) =>
-                String(city)
-                    .toLowerCase()
-                    .includes(search)
+        const query = citySearch.trim().toLowerCase()
+        if (!query) return cityList
+        return cityList.filter((item) =>
+            String(item.name || item).toLowerCase().includes(query)
         )
-
-    }, [
-        cityOptions,
-        citySearch,
-    ])
+    }, [cityList, citySearch])
 
 
     const filteredBanks = useMemo(() => {
-
-        const search =
-            bankSearch
-                .trim()
-                .toLowerCase()
-
-
-        if (!search) {
-            return banks
-        }
-
-
-        return banks.filter(
-            (bank) =>
-                String(bank)
-                    .toLowerCase()
-                    .includes(search)
+        const query = bankSearch.trim().toLowerCase()
+        if (!query) return bankList
+        return bankList.filter((item) =>
+            String(item.name || item).toLowerCase().includes(query)
         )
-
-    }, [
-        banks,
-        bankSearch,
-    ])
+    }, [bankList, bankSearch])
 
 
     // =========================================================
@@ -254,24 +505,17 @@ function BankerModal({
     // =========================================================
 
     const handleChange = (event) => {
-
-        const {
-            name,
-            value,
-        } = event.target
-
+        const { name, value } = event.target
 
         setForm((previous) => ({
             ...previous,
             [name]: value,
         }))
 
-
         setErrors((previous) => ({
             ...previous,
             [name]: '',
         }))
-
     }
 
 
@@ -279,15 +523,20 @@ function BankerModal({
     // STATE SELECT
     // =========================================================
 
-    const handleStateSelect = (state) => {
+    const handleStateSelect = (selected) => {
+        const isObj = typeof selected === 'object' && selected !== null
+        const stateId = isObj ? selected.id : ''
+        const stateName = isObj ? selected.name : String(selected)
 
         setForm((previous) => ({
             ...previous,
-            state,
+            state_id: stateId,
+            state: stateName,
+            city_id: '',
             city: '',
+            bank_id: '',
             bank: '',
         }))
-
 
         setErrors((previous) => ({
             ...previous,
@@ -296,15 +545,10 @@ function BankerModal({
             bank: '',
         }))
 
-
         setOpenDropdown(null)
-
         setStateSearch('')
-
         setCitySearch('')
-
         setBankSearch('')
-
     }
 
 
@@ -312,14 +556,18 @@ function BankerModal({
     // CITY SELECT
     // =========================================================
 
-    const handleCitySelect = (city) => {
+    const handleCitySelect = (selected) => {
+        const isObj = typeof selected === 'object' && selected !== null
+        const cityId = isObj ? selected.id : ''
+        const cityName = isObj ? selected.name : String(selected)
 
         setForm((previous) => ({
             ...previous,
-            city,
+            city_id: cityId,
+            city: cityName,
+            bank_id: '',
             bank: '',
         }))
-
 
         setErrors((previous) => ({
             ...previous,
@@ -327,13 +575,9 @@ function BankerModal({
             bank: '',
         }))
 
-
         setOpenDropdown(null)
-
         setCitySearch('')
-
         setBankSearch('')
-
     }
 
 
@@ -341,24 +585,24 @@ function BankerModal({
     // BANK SELECT
     // =========================================================
 
-    const handleBankSelect = (bank) => {
+    const handleBankSelect = (selected) => {
+        const isObj = typeof selected === 'object' && selected !== null
+        const bankId = isObj ? selected.id : ''
+        const bankName = isObj ? selected.name : String(selected)
 
         setForm((previous) => ({
             ...previous,
-            bank,
+            bank_id: bankId,
+            bank: bankName,
         }))
-
 
         setErrors((previous) => ({
             ...previous,
             bank: '',
         }))
 
-
         setOpenDropdown(null)
-
         setBankSearch('')
-
     }
 
 
@@ -569,39 +813,22 @@ function BankerModal({
     // =========================================================
 
     const validate = () => {
-
         const nextErrors = {}
 
-
-        if (!form.state.trim()) {
-
-            nextErrors.state =
-                'State is required.'
-
+        if (!form.state_id && !form.state) {
+            nextErrors.state = 'State is required.'
         }
 
-
-        if (!form.city.trim()) {
-
-            nextErrors.city =
-                'City is required.'
-
+        if (!form.city_id && !form.city) {
+            nextErrors.city = 'City is required.'
         }
 
-
-        if (!form.bank.trim()) {
-
-            nextErrors.bank =
-                'Bank is required.'
-
+        if (!form.bank_id && !form.bank) {
+            nextErrors.bank = 'Bank is required.'
         }
 
-
-        if (!form.loanType.trim()) {
-
-            nextErrors.loanType =
-                'Loan type is required.'
-
+        if (!form.loan_type_id && !form.loanType) {
+            nextErrors.loanType = 'Loan type is required.'
         }
 
 
@@ -609,73 +836,31 @@ function BankerModal({
         // SM VALIDATION
         // -----------------------------------------------------
 
-        form.sms.forEach(
-            (person, index) => {
+        form.sms.forEach((person, index) => {
+            const personErrors = validatePerson(person, 'SM', index)
 
-                const personErrors =
-                    validatePerson(
-                        person,
-                        'SM',
-                        index
-                    )
-
-
-                if (
-                    Object.keys(
-                        personErrors
-                    ).length
-                ) {
-
-                    nextErrors[
-                        `sm_${person.id}`
-                    ] = personErrors
-
-                }
-
+            if (Object.keys(personErrors).length) {
+                nextErrors[`sm_${person.id}`] = personErrors
             }
-        )
+        })
 
 
         // -----------------------------------------------------
         // ASM VALIDATION
         // -----------------------------------------------------
 
-        form.asms.forEach(
-            (person, index) => {
+        form.asms.forEach((person, index) => {
+            const personErrors = validatePerson(person, 'ASM', index)
 
-                const personErrors =
-                    validatePerson(
-                        person,
-                        'ASM',
-                        index
-                    )
-
-
-                if (
-                    Object.keys(
-                        personErrors
-                    ).length
-                ) {
-
-                    nextErrors[
-                        `asm_${person.id}`
-                    ] = personErrors
-
-                }
-
+            if (Object.keys(personErrors).length) {
+                nextErrors[`asm_${person.id}`] = personErrors
             }
-        )
+        })
 
 
         setErrors(nextErrors)
 
-
-        return (
-            Object.keys(
-                nextErrors
-            ).length === 0
-        )
-
+        return Object.keys(nextErrors).length === 0
     }
 
 
@@ -684,71 +869,43 @@ function BankerModal({
     // =========================================================
 
     const handleSubmit = (event) => {
-
         event.preventDefault()
-
 
         if (!validate()) {
             return
         }
 
-
         const payload = {
+            id: entry?.id || entry?.banker_directory_id,
+            banker_directory_id: entry?.id || entry?.banker_directory_id,
+            state_id: form.state_id,
+            state: form.state,
+            city_id: form.city_id,
+            city: form.city,
+            bank_id: form.bank_id,
+            bank: form.bank,
+            loan_type_id: form.loan_type_id,
+            loanType: form.loanType,
+            status: form.status === 'active' || form.status === '1' ? '1' : '0',
 
-            ...(entry || {}),
+            sms: form.sms.map((person) => ({
+                ...person,
+                name: person.name.trim(),
+                contact: (person.contact || person.phone || '').trim(),
+                phone: (person.contact || person.phone || '').trim(),
+                email: person.email.trim(),
+            })),
 
-            state:
-                form.state.trim(),
-
-            city:
-                form.city.trim(),
-
-            bank:
-                form.bank.trim(),
-
-            loanType:
-                form.loanType.trim(),
-
-            status:
-                form.status,
-
-            sms:
-                form.sms.map(
-                    (person) => ({
-                        ...person,
-
-                        name:
-                            person.name.trim(),
-
-                        phone:
-                            person.phone.trim(),
-
-                        email:
-                            person.email.trim(),
-                    })
-                ),
-
-            asms:
-                form.asms.map(
-                    (person) => ({
-                        ...person,
-
-                        name:
-                            person.name.trim(),
-
-                        phone:
-                            person.phone.trim(),
-
-                        email:
-                            person.email.trim(),
-                    })
-                ),
-
+            asms: form.asms.map((person) => ({
+                ...person,
+                name: person.name.trim(),
+                contact: (person.contact || person.phone || '').trim(),
+                phone: (person.contact || person.phone || '').trim(),
+                email: person.email.trim(),
+            })),
         }
 
-
         onSubmit?.(payload)
-
     }
 
 
@@ -774,650 +931,6 @@ function BankerModal({
         setBankSearch('')
 
         onClose?.()
-
-    }
-
-
-    // =========================================================
-    // DROPDOWN COMPONENT
-    // =========================================================
-
-    const SearchDropdown = ({
-        type,
-        label,
-        value,
-        placeholder,
-        searchValue,
-        onSearchChange,
-        options,
-        onSelect,
-        disabled = false,
-        error,
-    }) => {
-
-        const isOpen =
-            openDropdown === type
-
-
-        return (
-
-            <div className="relative">
-
-                <label className="
-                    mb-1.5
-                    block
-                    text-xs
-                    font-medium
-                    text-base-content/70
-                ">
-
-                    {label}
-
-                    <span className="text-error">
-                        {' '}*
-                    </span>
-
-                </label>
-
-
-                <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => {
-
-                        if (disabled) {
-                            return
-                        }
-
-                        setOpenDropdown(
-                            isOpen
-                                ? null
-                                : type
-                        )
-
-                    }}
-                    className={[
-                        'flex',
-                        'h-10',
-                        'w-full',
-                        'items-center',
-                        'justify-between',
-                        'rounded-lg',
-                        'border',
-                        'bg-base-100',
-                        'px-3',
-                        'text-left',
-                        'text-sm',
-                        'transition',
-                        'focus:outline-none',
-                        'focus:ring-2',
-                        'focus:ring-[#8BCF00]/20',
-
-                        error
-                            ? 'border-error'
-                            : 'border-base-300',
-
-                        disabled
-                            ? 'cursor-not-allowed bg-base-200 text-base-content/35'
-                            : 'text-base-content',
-                    ].join(' ')}
-                >
-
-                    <span className="
-                        truncate
-                    ">
-                        {value || placeholder}
-                    </span>
-
-
-                    <span className="
-                        ml-2
-                        shrink-0
-                        text-xs
-                        text-base-content/40
-                    ">
-                        {isOpen ? '▲' : '▼'}
-                    </span>
-
-                </button>
-
-
-                {isOpen && !disabled && (
-
-                    <div className="
-                        absolute
-                        left-0
-                        right-0
-                        top-[calc(100%+4px)]
-                        z-[120]
-                        overflow-hidden
-                        rounded-lg
-                        border
-                        border-base-300
-                        bg-base-100
-                        shadow-xl
-                    ">
-
-                        <div className="
-                            border-b
-                            border-base-300
-                            p-2
-                        ">
-
-                            <input
-                                type="text"
-                                value={searchValue}
-                                onChange={(event) =>
-                                    onSearchChange(
-                                        event.target.value
-                                    )
-                                }
-                                onClick={(event) =>
-                                    event.stopPropagation()
-                                }
-                                placeholder={`Search ${label.toLowerCase()}...`}
-                                className="
-                                    input
-                                    input-bordered
-                                    h-9
-                                    min-h-9
-                                    w-full
-                                    text-sm
-                                "
-                                autoFocus
-                            />
-
-                        </div>
-
-
-                        <div className="
-                            max-h-52
-                            overflow-y-auto
-                            p-1
-                        ">
-
-                            {options.length > 0 ? (
-
-                                options.map(
-                                    (option) => (
-
-                                        <button
-                                            key={option}
-                                            type="button"
-                                            onClick={() =>
-                                                onSelect(
-                                                    option
-                                                )
-                                            }
-                                            className={[
-                                                'flex',
-                                                'w-full',
-                                                'items-center',
-                                                'rounded-md',
-                                                'px-3',
-                                                'py-2',
-                                                'text-left',
-                                                'text-sm',
-                                                'transition',
-                                                'hover:bg-base-200',
-
-                                                value === option
-                                                    ? 'bg-[#8BCF00]/10 font-medium text-[#6FA800]'
-                                                    : 'text-base-content/80',
-                                            ].join(' ')}
-                                        >
-                                            {option}
-                                        </button>
-
-                                    )
-                                )
-
-                            ) : (
-
-                                <div className="
-                                    px-3
-                                    py-3
-                                    text-center
-                                    text-xs
-                                    text-base-content/45
-                                ">
-                                    No options found
-                                </div>
-
-                            )}
-
-                        </div>
-
-                    </div>
-
-                )}
-
-
-                {error && (
-
-                    <p className="
-                        mt-1
-                        text-xs
-                        text-error
-                    ">
-                        {error}
-                    </p>
-
-                )}
-
-            </div>
-
-        )
-
-    }
-
-
-    // =========================================================
-    // PERSON INPUT
-    // =========================================================
-
-    const PersonSection = ({
-        title,
-        people,
-        role,
-        onAdd,
-        onRemove,
-        onChange,
-    }) => {
-
-        return (
-
-            <div className="
-                rounded-xl
-                border
-                border-base-300
-                bg-base-100
-            ">
-
-                {/* ===============================================
-                    SECTION HEADER
-                =============================================== */}
-
-                <div className="
-                    flex
-                    items-center
-                    justify-between
-                    gap-3
-                    border-b
-                    border-base-300
-                    px-4
-                    py-3
-                ">
-
-                    <div>
-
-                        <p className="
-                            text-sm
-                            font-semibold
-                            text-base-content
-                        ">
-                            {title}
-                        </p>
-
-                        <p className="
-                            mt-0.5
-                            text-xs
-                            text-base-content/45
-                        ">
-                            {people.length}{' '}
-
-                            {people.length === 1
-                                ? 'person'
-                                : 'people'} added
-                        </p>
-
-                    </div>
-
-
-                    <button
-                        type="button"
-                        onClick={onAdd}
-                        className="
-                            h-9
-                            rounded-lg
-                            border
-                            border-[#8BCF00]/40
-                            bg-[#8BCF00]/10
-                            px-3
-                            text-xs
-                            font-semibold
-                            text-[#6FA800]
-                            transition
-                            hover:bg-[#8BCF00]/20
-                        "
-                    >
-                        + Add {role}
-                    </button>
-
-                </div>
-
-
-                {/* ===============================================
-                    PEOPLE
-                =============================================== */}
-
-                <div className="
-                    space-y-3
-                    p-4
-                ">
-
-                    {people.length === 0 && (
-
-                        <div className="
-                            rounded-lg
-                            border
-                            border-dashed
-                            border-base-300
-                            px-4
-                            py-6
-                            text-center
-                        ">
-
-                            <p className="
-                                text-xs
-                                text-base-content/45
-                            ">
-                                No {role}s added yet.
-                            </p>
-
-                            <button
-                                type="button"
-                                onClick={onAdd}
-                                className="
-                                    mt-2
-                                    text-xs
-                                    font-medium
-                                    text-[#6FA800]
-                                    hover:underline
-                                "
-                            >
-                                Add {role}
-                            </button>
-
-                        </div>
-
-                    )}
-
-
-                    {people.map(
-                        (person, index) => {
-
-                            const personErrors =
-                                errors[
-                                    `${role.toLowerCase()}_${person.id}`
-                                ] || {}
-
-
-                            return (
-
-                                <div
-                                    key={
-                                        person.id
-                                    }
-                                    className="
-                                        rounded-lg
-                                        border
-                                        border-base-300
-                                        bg-base-200/20
-                                        p-3
-                                    "
-                                >
-
-                                    {/* =================================
-                                        PERSON HEADER
-                                    ================================= */}
-
-                                    <div className="
-                                        mb-3
-                                        flex
-                                        items-center
-                                        justify-between
-                                        gap-3
-                                    ">
-
-                                        <p className="
-                                            text-xs
-                                            font-semibold
-                                            text-base-content/65
-                                        ">
-                                            {role} {index + 1}
-                                        </p>
-
-
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                onRemove(
-                                                    person.id
-                                                )
-                                            }
-                                            className="
-                                                text-xs
-                                                font-medium
-                                                text-error/70
-                                                transition
-                                                hover:text-error
-                                            "
-                                        >
-                                            Remove
-                                        </button>
-
-                                    </div>
-
-
-                                    {/* =================================
-                                        PERSON FORM
-                                    ================================= */}
-
-                                    <div className="
-                                        grid
-                                        grid-cols-1
-                                        gap-3
-                                        sm:grid-cols-3
-                                    ">
-
-                                        {/* NAME */}
-
-                                        <div>
-
-                                            <label className="
-                                                mb-1
-                                                block
-                                                text-[11px]
-                                                font-medium
-                                                text-base-content/55
-                                            ">
-                                                Name
-                                            </label>
-
-                                            <input
-                                                type="text"
-                                                value={
-                                                    person.name
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    onChange(
-                                                        person.id,
-                                                        'name',
-                                                        event.target.value
-                                                    )
-                                                }
-                                                placeholder={`${role} name`}
-                                                className={[
-                                                    'input',
-                                                    'input-bordered',
-                                                    'h-10',
-                                                    'min-h-10',
-                                                    'w-full',
-                                                    'text-sm',
-
-                                                    personErrors.name
-                                                        ? 'input-error'
-                                                        : '',
-                                                ].join(' ')}
-                                            />
-
-                                            {personErrors.name && (
-
-                                                <p className="
-                                                    mt-1
-                                                    text-[11px]
-                                                    text-error
-                                                ">
-                                                    {personErrors.name}
-                                                </p>
-
-                                            )}
-
-                                        </div>
-
-
-                                        {/* PHONE */}
-
-                                        <div>
-
-                                            <label className="
-                                                mb-1
-                                                block
-                                                text-[11px]
-                                                font-medium
-                                                text-base-content/55
-                                            ">
-                                                Phone
-                                            </label>
-
-                                            <input
-                                                type="tel"
-                                                value={
-                                                    person.phone
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    onChange(
-                                                        person.id,
-                                                        'phone',
-                                                        event.target.value
-                                                            .replace(
-                                                                /\D/g,
-                                                                ''
-                                                            )
-                                                            .slice(
-                                                                0,
-                                                                10
-                                                            )
-                                                    )
-                                                }
-                                                placeholder="10-digit phone"
-                                                inputMode="numeric"
-                                                maxLength={10}
-                                                className={[
-                                                    'input',
-                                                    'input-bordered',
-                                                    'h-10',
-                                                    'min-h-10',
-                                                    'w-full',
-                                                    'text-sm',
-
-                                                    personErrors.phone
-                                                        ? 'input-error'
-                                                        : '',
-                                                ].join(' ')}
-                                            />
-
-                                            {personErrors.phone && (
-
-                                                <p className="
-                                                    mt-1
-                                                    text-[11px]
-                                                    text-error
-                                                ">
-                                                    {personErrors.phone}
-                                                </p>
-
-                                            )}
-
-                                        </div>
-
-
-                                        {/* EMAIL */}
-
-                                        <div>
-
-                                            <label className="
-                                                mb-1
-                                                block
-                                                text-[11px]
-                                                font-medium
-                                                text-base-content/55
-                                            ">
-                                                Email
-                                            </label>
-
-                                            <input
-                                                type="email"
-                                                value={
-                                                    person.email
-                                                }
-                                                onChange={(
-                                                    event
-                                                ) =>
-                                                    onChange(
-                                                        person.id,
-                                                        'email',
-                                                        event.target.value
-                                                    )
-                                                }
-                                                placeholder={`${role.toLowerCase()}@example.com`}
-                                                className={[
-                                                    'input',
-                                                    'input-bordered',
-                                                    'h-10',
-                                                    'min-h-10',
-                                                    'w-full',
-                                                    'text-sm',
-
-                                                    personErrors.email
-                                                        ? 'input-error'
-                                                        : '',
-                                                ].join(' ')}
-                                            />
-
-                                            {personErrors.email && (
-
-                                                <p className="
-                                                    mt-1
-                                                    text-[11px]
-                                                    text-error
-                                                ">
-                                                    {personErrors.email}
-                                                </p>
-
-                                            )}
-
-                                        </div>
-
-                                    </div>
-
-                                </div>
-
-                            )
-
-                        }
-                    )}
-
-                </div>
-
-            </div>
-
-        )
 
     }
 
@@ -1620,25 +1133,15 @@ function BankerModal({
                                 <SearchDropdown
                                     type="state"
                                     label="State"
-                                    value={
-                                        form.state
-                                    }
+                                    value={form.state}
                                     placeholder="Select state"
-                                    searchValue={
-                                        stateSearch
-                                    }
-                                    onSearchChange={
-                                        setStateSearch
-                                    }
-                                    options={
-                                        filteredStates
-                                    }
-                                    onSelect={
-                                        handleStateSelect
-                                    }
-                                    error={
-                                        errors.state
-                                    }
+                                    searchValue={stateSearch}
+                                    onSearchChange={setStateSearch}
+                                    options={filteredStates}
+                                    onSelect={handleStateSelect}
+                                    error={errors.state}
+                                    isOpen={openDropdown === 'state'}
+                                    onToggle={() => setOpenDropdown(openDropdown === 'state' ? null : 'state')}
                                 />
 
 
@@ -1647,32 +1150,20 @@ function BankerModal({
                                 <SearchDropdown
                                     type="city"
                                     label="City"
-                                    value={
-                                        form.city
-                                    }
+                                    value={form.city}
                                     placeholder={
                                         form.state
                                             ? 'Select city'
                                             : 'Select state first'
                                     }
-                                    searchValue={
-                                        citySearch
-                                    }
-                                    onSearchChange={
-                                        setCitySearch
-                                    }
-                                    options={
-                                        filteredCities
-                                    }
-                                    onSelect={
-                                        handleCitySelect
-                                    }
-                                    disabled={
-                                        !form.state
-                                    }
-                                    error={
-                                        errors.city
-                                    }
+                                    searchValue={citySearch}
+                                    onSearchChange={setCitySearch}
+                                    options={filteredCities}
+                                    onSelect={handleCitySelect}
+                                    disabled={!form.state}
+                                    error={errors.city}
+                                    isOpen={openDropdown === 'city'}
+                                    onToggle={() => setOpenDropdown(openDropdown === 'city' ? null : 'city')}
                                 />
 
 
@@ -1681,32 +1172,20 @@ function BankerModal({
                                 <SearchDropdown
                                     type="bank"
                                     label="Bank"
-                                    value={
-                                        form.bank
-                                    }
+                                    value={form.bank}
                                     placeholder={
                                         form.state
                                             ? 'Select bank'
                                             : 'Select state first'
                                     }
-                                    searchValue={
-                                        bankSearch
-                                    }
-                                    onSearchChange={
-                                        setBankSearch
-                                    }
-                                    options={
-                                        filteredBanks
-                                    }
-                                    onSelect={
-                                        handleBankSelect
-                                    }
-                                    disabled={
-                                        !form.state
-                                    }
-                                    error={
-                                        errors.bank
-                                    }
+                                    searchValue={bankSearch}
+                                    onSearchChange={setBankSearch}
+                                    options={filteredBanks}
+                                    onSelect={handleBankSelect}
+                                    disabled={!form.state}
+                                    error={errors.bank}
+                                    isOpen={openDropdown === 'bank'}
+                                    onToggle={() => setOpenDropdown(openDropdown === 'bank' ? null : 'bank')}
                                 />
 
 
@@ -1732,13 +1211,20 @@ function BankerModal({
 
 
                                     <select
-                                        name="loanType"
-                                        value={
-                                            form.loanType
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
+                                        name="loan_type_id"
+                                        value={form.loan_type_id || ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value
+                                            const list = apiLoanTypes.length ? apiLoanTypes : (Array.isArray(loanTypes) ? loanTypes : [])
+                                            const found = list.find((lt) => String(typeof lt === 'object' ? lt.id : lt) === String(val))
+                                            const foundName = typeof found === 'object' ? found.name : (found || '')
+                                            setForm((prev) => ({
+                                                ...prev,
+                                                loan_type_id: val ? Number(val) : '',
+                                                loanType: foundName,
+                                            }))
+                                            setErrors((prev) => ({ ...prev, loanType: '' }))
+                                        }}
                                         className={[
                                             'select',
                                             'select-bordered',
@@ -1751,32 +1237,19 @@ function BankerModal({
                                                 : '',
                                         ].join(' ')}
                                     >
-
                                         <option value="">
                                             Select loan type
                                         </option>
 
-                                        {loanTypes.map(
-                                            (
-                                                loanType
-                                            ) => (
-
-                                                <option
-                                                    key={
-                                                        loanType
-                                                    }
-                                                    value={
-                                                        loanType
-                                                    }
-                                                >
-                                                    {
-                                                        loanType
-                                                    }
+                                        {(apiLoanTypes.length ? apiLoanTypes : (Array.isArray(loanTypes) ? loanTypes : [])).map((lt) => {
+                                            const ltId = typeof lt === 'object' ? lt.id : lt
+                                            const ltName = typeof lt === 'object' ? lt.name : lt
+                                            return (
+                                                <option key={ltId} value={ltId}>
+                                                    {ltName}
                                                 </option>
-
                                             )
-                                        )}
-
+                                        })}
                                     </select>
 
 
@@ -1858,18 +1331,11 @@ function BankerModal({
                             <PersonSection
                                 title="Sales Managers"
                                 role="SM"
-                                people={
-                                    form.sms
-                                }
-                                onAdd={
-                                    handleAddSM
-                                }
-                                onRemove={
-                                    handleRemoveSM
-                                }
-                                onChange={
-                                    handleSMChange
-                                }
+                                people={form.sms}
+                                errors={errors}
+                                onAdd={handleAddSM}
+                                onRemove={handleRemoveSM}
+                                onChange={handleSMChange}
                             />
 
                         </div>
@@ -1884,18 +1350,11 @@ function BankerModal({
                             <PersonSection
                                 title="Area Sales Managers"
                                 role="ASM"
-                                people={
-                                    form.asms
-                                }
-                                onAdd={
-                                    handleAddASM
-                                }
-                                onRemove={
-                                    handleRemoveASM
-                                }
-                                onChange={
-                                    handleASMChange
-                                }
+                                people={form.asms}
+                                errors={errors}
+                                onAdd={handleAddASM}
+                                onRemove={handleRemoveASM}
+                                onChange={handleASMChange}
                             />
 
                         </div>

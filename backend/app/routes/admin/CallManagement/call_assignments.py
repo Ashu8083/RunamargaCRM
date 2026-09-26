@@ -13,10 +13,7 @@ from app.controllers.CallManagement.call_assignment_controller import (
     delete_call_assignment,
 )
 
-from app.dependency.get_access_control_dependency import (
-    get_current_employee,
-)
-
+from app.core.security import get_current_employee
 
 router = APIRouter(
     prefix="/call-assignments",

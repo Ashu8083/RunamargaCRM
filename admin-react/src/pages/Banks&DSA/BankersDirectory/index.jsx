@@ -1,182 +1,33 @@
 // admin-react/src/pages/Banks&DSA/BankersDirectory/index.jsx
 
 import {
+    useCallback,
     useEffect,
     useMemo,
     useRef,
     useState,
 } from 'react'
 
+import {
+    searchBankerDirectory,
+    createBankerDirectory,
+    updateBankerDirectory,
+    deleteBankerDirectory,
+} from './API'
+
+import {
+    getBanks,
+} from '../Banks/Api'
+
 import BankersDirectoryTable from './components/BankersDirectoryTable'
 import BankerModal from './components/BankerModal'
 import BankerViewModal from './components/BankerViewModal'
 import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeDropdown'
-
-
-// =============================================================
-// INITIAL DATA
-// =============================================================
-
-const INITIAL_ENTRIES = [
-    {
-        id: 1,
-        state: 'Andhra Pradesh',
-        city: 'Vijayawada',
-        bank: 'IDFC',
-        loanType: 'Education Loan',
-        status: 'active',
-
-        asms: [
-            {
-                id: 101,
-                name: 'Ramesh Kumar',
-                phone: '9876543210',
-                email: 'ramesh@example.com',
-            },
-            {
-                id: 102,
-                name: 'Priya Sharma',
-                phone: '9876543211',
-                email: 'priya@example.com',
-            },
-        ],
-
-        sms: [
-            {
-                id: 201,
-                name: 'Suresh Kumar',
-                phone: '9876543220',
-                email: 'suresh@example.com',
-            },
-            {
-                id: 202,
-                name: 'Manoj Rao',
-                phone: '9876543221',
-                email: 'manoj@example.com',
-            },
-        ],
-    },
-
-    {
-        id: 2,
-        state: 'Andhra Pradesh',
-        city: 'Vijayawada',
-        bank: 'Incred',
-        loanType: 'Education Loan',
-        status: 'active',
-
-        asms: [
-            {
-                id: 103,
-                name: 'Nayana',
-                phone: '9876543230',
-                email: 'nayana@example.com',
-            },
-            {
-                id: 104,
-                name: 'Kasturi',
-                phone: '9876543231',
-                email: 'kasturi@example.com',
-            },
-        ],
-
-        sms: [
-            {
-                id: 203,
-                name: 'Prashanth',
-                phone: '9876543240',
-                email: 'prashanth@example.com',
-            },
-        ],
-    },
-
-    {
-        id: 3,
-        state: 'Karnataka',
-        city: 'Bengaluru',
-        bank: 'Propelld Finance',
-        loanType: 'Personal Loan',
-        status: 'active',
-
-        asms: [
-            {
-                id: 105,
-                name: 'Asma Banu',
-                phone: '9876543250',
-                email: 'asma@example.com',
-            },
-        ],
-
-        sms: [
-            {
-                id: 204,
-                name: 'Lokesh A',
-                phone: '9876543260',
-                email: 'lokesh@example.com',
-            },
-            {
-                id: 205,
-                name: 'Nayana',
-                phone: '9876543261',
-                email: 'nayana.sm@example.com',
-            },
-        ],
-    },
-
-    {
-        id: 4,
-        state: 'Karnataka',
-        city: 'Mysuru',
-        bank: 'Poonawalla',
-        loanType: 'Home Loan',
-        status: 'inactive',
-
-        asms: [
-            {
-                id: 106,
-                name: 'Arun Kumar',
-                phone: '9876543270',
-                email: 'arun@example.com',
-            },
-        ],
-
-        sms: [
-            {
-                id: 206,
-                name: 'Prasanna Y R',
-                phone: '9876543280',
-                email: 'prasanna@example.com',
-            },
-        ],
-    },
-]
-
-
-// =============================================================
-// FILTER OPTIONS
-// =============================================================
-
-const LOAN_TYPES = [
-    'Personal Loan',
-    'Business Loan',
-    'Home Loan',
-    'Loan Against Property',
-    'Car Loan',
-    'Education Loan',
-    'Gold Loan',
-    'Agricultural Loan',
-    'Credit Card',
-]
+import StateCityDropdown  from '../../../components/GlobalModels/Filters/StateCityDropdown'
 
 
 // =============================================================
 // SEARCHABLE FILTER DROPDOWN
-//
-// Used for:
-// State
-// City
-// Bank
-//
 // =============================================================
 
 function SearchableFilterDropdown({
@@ -187,15 +38,9 @@ function SearchableFilterDropdown({
     onChange,
     disabled = false,
 }) {
-
-    const [open, setOpen] =
-        useState(false)
-
-    const [searchValue, setSearchValue] =
-        useState('')
-
-    const dropdownRef =
-        useRef(null)
+    const [open, setOpen] = useState(false)
+    const [searchValue, setSearchValue] = useState('')
+    const dropdownRef = useRef(null)
 
 
     // =========================================================
@@ -203,51 +48,22 @@ function SearchableFilterDropdown({
     // =========================================================
 
     useEffect(() => {
-
         const handleOutsideClick = (event) => {
-
             if (
                 dropdownRef.current &&
-                !dropdownRef.current.contains(
-                    event.target
-                )
+                !dropdownRef.current.contains(event.target)
             ) {
                 setOpen(false)
                 setSearchValue('')
             }
-
         }
 
-
-        document.addEventListener(
-            'mousedown',
-            handleOutsideClick
-        )
-
+        document.addEventListener('mousedown', handleOutsideClick)
 
         return () => {
-
-            document.removeEventListener(
-                'mousedown',
-                handleOutsideClick
-            )
-
+            document.removeEventListener('mousedown', handleOutsideClick)
         }
-
     }, [])
-
-
-    // =========================================================
-    // RESET SEARCH WHEN CLOSED
-    // =========================================================
-
-    useEffect(() => {
-
-        if (!open) {
-            setSearchValue('')
-        }
-
-    }, [open])
 
 
     // =========================================================
@@ -255,58 +71,42 @@ function SearchableFilterDropdown({
     // =========================================================
 
     const filteredOptions = useMemo(() => {
+        const normalizedSearch = searchValue.trim().toLowerCase()
 
-        const search =
-            searchValue
-                .trim()
-                .toLowerCase()
-
-
-        if (!search) {
+        if (!normalizedSearch) {
             return options
         }
 
+        return options.filter((option) => {
+            const label = typeof option === 'object' ? option.name : option
 
-        return options.filter(
-            (option) =>
-                String(option)
-                    .toLowerCase()
-                    .includes(search)
-        )
-
-    }, [
-        options,
-        searchValue,
-    ])
+            return String(label)
+                .toLowerCase()
+                .includes(normalizedSearch)
+        })
+    }, [options, searchValue])
 
 
     // =========================================================
-    // SELECT OPTION
+    // SELECT
     // =========================================================
 
     const handleSelect = (option) => {
-
         onChange?.(option)
-
         setOpen(false)
         setSearchValue('')
-
     }
 
 
     // =========================================================
-    // CLEAR SELECTION
+    // CLEAR
     // =========================================================
 
     const handleClear = (event) => {
-
         event.stopPropagation()
-
         onChange?.('')
-
         setOpen(false)
         setSearchValue('')
-
     }
 
 
@@ -315,13 +115,8 @@ function SearchableFilterDropdown({
     // =========================================================
 
     if (disabled) {
-
         return (
-            <div className="
-                relative
-                w-full
-            ">
-
+            <div className="relative w-full">
                 <button
                     type="button"
                     disabled
@@ -342,19 +137,9 @@ function SearchableFilterDropdown({
                         text-base-content/35
                     "
                 >
-
-                    <span>
-                        {placeholder}
-                    </span>
-
-                    <span className="
-                        text-base-content/30
-                    ">
-                        ▾
-                    </span>
-
+                    <span>{placeholder}</span>
+                    <span className="text-base-content/30">▾</span>
                 </button>
-
             </div>
         )
     }
@@ -365,26 +150,10 @@ function SearchableFilterDropdown({
     // =========================================================
 
     return (
-        <div
-            ref={dropdownRef}
-            className="
-                relative
-                w-full
-            "
-        >
-
-            {/* =================================================
-                TRIGGER
-            ================================================= */}
-
+        <div ref={dropdownRef} className="relative w-full">
             <button
                 type="button"
-                onClick={() =>
-                    setOpen(
-                        (previous) =>
-                            !previous
-                    )
-                }
+                onClick={() => setOpen((previous) => !previous)}
                 className={[
                     'flex',
                     'h-10',
@@ -398,13 +167,11 @@ function SearchableFilterDropdown({
                     'text-left',
                     'text-sm',
                     'transition',
-
                     open
                         ? 'border-[#8BCF00] ring-2 ring-[#8BCF00]/15'
                         : 'border-base-300 hover:border-base-content/25',
                 ].join(' ')}
             >
-
                 <span
                     className={
                         value
@@ -412,67 +179,40 @@ function SearchableFilterDropdown({
                             : 'truncate text-base-content/45'
                     }
                 >
-                    {value || placeholder}
+                    {value
+                        ? options.find((option) => option.id === Number(value))?.name ?? placeholder
+                        : placeholder}
                 </span>
 
-
-                <span className="
-                    ml-2
-                    shrink-0
-                    text-xs
-                    text-base-content/45
-                ">
+                <span className="ml-2 shrink-0 text-xs text-base-content/45">
                     ▾
                 </span>
-
             </button>
 
-
-            {/* =================================================
-                DROPDOWN
-            ================================================= */}
-
             {open && (
-
-                <div className="
-                    absolute
-                    left-0
-                    right-0
-                    z-[80]
-                    mt-1.5
-                    overflow-hidden
-                    rounded-xl
-                    border
-                    border-base-300
-                    bg-base-100
-                    shadow-xl
-                ">
-
-                    {/* =========================================
-                        SEARCH
-                    ========================================= */}
-
-                    <div className="
-                        border-b
+                <div
+                    className="
+                        absolute
+                        left-0
+                        right-0
+                        z-[80]
+                        mt-1.5
+                        overflow-hidden
+                        rounded-xl
+                        border
                         border-base-300
-                        p-2
-                    ">
-
+                        bg-base-100
+                        shadow-xl
+                    "
+                >
+                    <div className="border-b border-base-300 p-2">
                         <input
                             type="text"
                             autoFocus
                             value={searchValue}
-                            onChange={(event) =>
-                                setSearchValue(
-                                    event.target.value
-                                )
-                            }
-                            onClick={(event) =>
-                                event.stopPropagation()
-                            }
-                            placeholder={
-                                searchPlaceholder
-                            }
+                            onChange={(event) => setSearchValue(event.target.value)}
+                            onClick={(event) => event.stopPropagation()}
+                            placeholder={searchPlaceholder}
                             className="
                                 h-9
                                 w-full
@@ -490,27 +230,12 @@ function SearchableFilterDropdown({
                                 focus:ring-[#8BCF00]/10
                             "
                         />
-
                     </div>
 
-
-                    {/* =========================================
-                        OPTIONS
-                    ========================================= */}
-
-                    <div className="
-                        max-h-56
-                        overflow-y-auto
-                        p-1
-                    ">
-
-                        {/* ALL OPTION */}
-
+                    <div className="max-h-56 overflow-y-auto p-1">
                         <button
                             type="button"
-                            onClick={() =>
-                                handleSelect('')
-                            }
+                            onClick={() => handleSelect('')}
                             className={[
                                 'flex',
                                 'w-full',
@@ -521,7 +246,6 @@ function SearchableFilterDropdown({
                                 'text-left',
                                 'text-sm',
                                 'transition',
-
                                 !value
                                     ? 'bg-[#8BCF00]/10 font-medium text-[#6FA800]'
                                     : 'text-base-content/70 hover:bg-base-200',
@@ -530,20 +254,15 @@ function SearchableFilterDropdown({
                             {placeholder}
                         </button>
 
+                        {filteredOptions.map((option) => {
+                            const optionId = option.id
+                            const optionName = option.name
 
-                        {/* OPTIONS */}
-
-                        {filteredOptions.map(
-                            (option) => (
-
+                            return (
                                 <button
                                     type="button"
-                                    key={option}
-                                    onClick={() =>
-                                        handleSelect(
-                                            option
-                                        )
-                                    }
+                                    key={optionId}
+                                    onClick={() => handleSelect(option)}
                                     className={[
                                         'flex',
                                         'w-full',
@@ -554,60 +273,30 @@ function SearchableFilterDropdown({
                                         'text-left',
                                         'text-sm',
                                         'transition',
-
-                                        value === option
+                                        Number(value) === optionId
                                             ? 'bg-[#8BCF00]/10 font-medium text-[#6FA800]'
                                             : 'text-base-content hover:bg-base-200',
                                     ].join(' ')}
                                 >
-                                    {option}
+                                    {optionName}
                                 </button>
-
                             )
-                        )}
-
-
-                        {/* NO RESULTS */}
+                        })}
 
                         {!filteredOptions.length && (
-
-                            <div className="
-                                px-3
-                                py-5
-                                text-center
-                            ">
-
-                                <p className="
-                                    text-xs
-                                    text-base-content/45
-                                ">
+                            <div className="px-3 py-5 text-center">
+                                <p className="text-xs text-base-content/45">
                                     No options found
                                 </p>
-
                             </div>
-
                         )}
-
                     </div>
 
-
-                    {/* =========================================
-                        CLEAR SELECTED VALUE
-                    ========================================= */}
-
                     {value && (
-
-                        <div className="
-                            border-t
-                            border-base-300
-                            p-1
-                        ">
-
+                        <div className="border-t border-base-300 p-1">
                             <button
                                 type="button"
-                                onClick={
-                                    handleClear
-                                }
+                                onClick={handleClear}
                                 className="
                                     w-full
                                     rounded-lg
@@ -624,15 +313,10 @@ function SearchableFilterDropdown({
                             >
                                 Clear selection
                             </button>
-
                         </div>
-
                     )}
-
                 </div>
-
             )}
-
         </div>
     )
 }
@@ -643,797 +327,489 @@ function SearchableFilterDropdown({
 // =============================================================
 
 function BankersDirectory() {
-
     // =========================================================
     // DATA
     // =========================================================
+    const [entries, setEntries] = useState([])
+    const [loading, setLoading] = useState(false)
+    const [search, setSearch] = useState('')
 
-    const [entries, setEntries] =
-        useState(INITIAL_ENTRIES)
+    const [banks, setBanks] = useState([])
+    const [, setBanksLoading] = useState(false)
+
+    const [page, setPage] = useState(1)
+    const [limit] = useState(15)
+    const [total, setTotal] = useState(0)
+
+    // =========================================================
+    // FILTER VALUES
+    // =========================================================
+    const [selectedStateId, setSelectedStateId] = useState(null)
+    const [selectedCityId, setSelectedCityId] = useState(null)
+    const [selectedBankId, setSelectedBankId] = useState(null)
+    const [selectedLoanTypeId, setSelectedLoanTypeId] = useState(null)
+
+    // =========================================================
+    // MODALS
+    // =========================================================
+    const [showBankerModal, setShowBankerModal] = useState(false)
+    const [showViewModal, setShowViewModal] = useState(false)
+    const [selectedEntry, setSelectedEntry] = useState(null)
 
 
     // =========================================================
-    // FILTER STATE
+    // GET FIELD VALUE
     // =========================================================
-
-    const [search, setSearch] =
-        useState('')
-
-    const [selectedState, setSelectedState] =
-        useState('')
-
-    const [selectedCity, setSelectedCity] =
-        useState('')
-
-    const [selectedBank, setSelectedBank] =
-        useState('')
-
-    const [selectedLoanType, setSelectedLoanType] =
-        useState('')
+    const getStateName = (entry) => entry?.state ?? entry?.state_name ?? ''
+    const getCityName = (entry) => entry?.city ?? entry?.city_name ?? ''
 
 
     // =========================================================
-    // MODAL STATE
+    // UNIQUE STATES
     // =========================================================
-
-    const [showBankerModal, setShowBankerModal] =
-        useState(false)
-
-    const [showViewModal, setShowViewModal] =
-        useState(false)
-
-    const [selectedEntry, setSelectedEntry] =
-        useState(null)
-
-
-    // =========================================================
-    // GET UNIQUE STATES
-    // =========================================================
-
     const states = useMemo(() => {
-
-        return [
-            ...new Set(
-                entries
-                    .map(
-                        (entry) =>
-                            entry.state
-                    )
-                    .filter(Boolean)
-            ),
-        ].sort()
-
+        return [...new Set(entries.map(getStateName).filter(Boolean))].sort()
     }, [entries])
 
 
     // =========================================================
-    // GET CITIES
-    //
-    // City options depend on selected state.
+    // CITIES
     // =========================================================
-
-    const cities = useMemo(() => {
-
-        const source =
-            selectedState
-                ? entries.filter(
-                    (entry) =>
-                        entry.state ===
-                        selectedState
-                )
-                : entries
-
-
-        return [
-            ...new Set(
-                source
-                    .map(
-                        (entry) =>
-                            entry.city
-                    )
-                    .filter(Boolean)
-            ),
-        ].sort()
-
-    }, [
-        entries,
-        selectedState,
-    ])
-
-
-    // =========================================================
-    // GET ALL CITIES FOR MODAL
-    //
-    // The add/edit modal needs access to city options.
-    // =========================================================
-
     const allCities = useMemo(() => {
-
-        return [
-            ...new Set(
-                entries
-                    .map(
-                        (entry) =>
-                            entry.city
-                    )
-                    .filter(Boolean)
-            ),
-        ].sort()
-
+        return [...new Set(entries.map(getCityName).filter(Boolean))].sort()
     }, [entries])
 
 
     // =========================================================
-    // GET BANKS
-    //
-    // Bank options depend on selected state and city.
+    // BANKS
     // =========================================================
+    const loadBanks = useCallback(async () => {
+        try {
+            setBanksLoading(true)
+            const response = await getBanks({ is_active: true })
+            const responseData = response?.data
 
-    const banks = useMemo(() => {
+            const bankData = Array.isArray(responseData)
+                ? responseData
+                : responseData?.data ?? (Array.isArray(response) ? response : [])
 
-        const source =
-            entries.filter(
-                (entry) => {
+            const formattedBanks = bankData
+                .map((bank) => ({
+                    id: bank.id,
+                    name: bank.name,
+                }))
+                .filter(
+                    (bank) =>
+                        bank.id !== null &&
+                        bank.id !== undefined &&
+                        bank.name
+                )
+                .sort((a, b) => a.name.localeCompare(b.name))
 
-                    if (
-                        selectedState &&
-                        entry.state !==
-                            selectedState
-                    ) {
-                        return false
-                    }
-
-
-                    if (
-                        selectedCity &&
-                        entry.city !==
-                            selectedCity
-                    ) {
-                        return false
-                    }
-
-
-                    return true
-
-                }
-            )
-
-
-        return [
-            ...new Set(
-                source
-                    .map(
-                        (entry) =>
-                            entry.bank
-                    )
-                    .filter(Boolean)
-            ),
-        ].sort()
-
-    }, [
-        entries,
-        selectedState,
-        selectedCity,
-    ])
+            setBanks(formattedBanks)
+        } catch (error) {
+            console.error('Failed to load banks:', error)
+            setBanks([])
+        } finally {
+            setBanksLoading(false)
+        }
+    }, [])
 
 
     // =========================================================
-    // ALL BANKS FOR MODAL
+    // LOAD DATA FROM SERVER
     // =========================================================
+    const loadBankerDirectory = useCallback(
+        async (pageNumber = 1) => {
+            try {
+                setLoading(true)
 
-    const allBanks = useMemo(() => {
+                const response = await searchBankerDirectory({
+                    search: search.trim() || null,
+                    state_id: selectedStateId || null,
+                    city_id: selectedCityId || null,
+                    bank_id: selectedBankId || null,
+                    loan_type_id: selectedLoanTypeId || null,
+                    page: pageNumber,
+                    limit,
+                })
 
-        return [
-            ...new Set(
-                entries
-                    .map(
-                        (entry) =>
-                            entry.bank
-                    )
-                    .filter(Boolean)
-            ),
-        ].sort()
+                const resData = response?.data || response
 
-    }, [entries])
+                const rawItems = resData?.items || resData?.data || (Array.isArray(resData) ? resData : [])
+                const totalCount = resData?.total ?? resData?.count ?? (Array.isArray(rawItems) ? rawItems.length : 0)
 
+                const formattedEntries = rawItems.map((entry) => ({
+                    id: entry.banker_directory_id || entry.id,
+                    banker_directory_id: entry.banker_directory_id || entry.id,
+                    bank_id: entry.bank_id,
+                    bank: entry.bank_name || entry.bank || '',
+                    bank_name: entry.bank_name || entry.bank || '',
+                    loan_type_id: entry.loan_type_id,
+                    loanType: entry.loan_type_name || entry.loanType || '',
+                    loan_type_name: entry.loan_type_name || entry.loanType || '',
+                    state_id: entry.state_id,
+                    state: entry.state_name || entry.state || '',
+                    state_name: entry.state_name || entry.state || '',
+                    city_id: entry.city_id,
+                    city: entry.city_name || entry.city || '',
+                    city_name: entry.city_name || entry.city || '',
+                    status: entry.status === '1' || entry.status === 'active' ? 'active' : 'inactive',
+                    asms: (entry.asms || []).map((asm) => ({
+                        id: asm.id || Math.random(),
+                        name: asm.name || '',
+                        contact: asm.contact || asm.phone || '',
+                        phone: asm.contact || asm.phone || '',
+                        email: asm.email || '',
+                    })),
+                    sms: (entry.sms || []).map((sm) => ({
+                        id: sm.id || Math.random(),
+                        name: sm.name || '',
+                        contact: sm.contact || sm.phone || '',
+                        phone: sm.contact || sm.phone || '',
+                        email: sm.email || '',
+                    })),
+                }))
 
-    // =========================================================
-    // FILTER ENTRIES
-    // =========================================================
-
-    const filteredEntries = useMemo(() => {
-
-        const searchValue =
-            search
-                .trim()
-                .toLowerCase()
-
-
-        return entries.filter(
-            (entry) => {
-
-                // ---------------------------------------------
-                // STATE
-                // ---------------------------------------------
-
-                if (
-                    selectedState &&
-                    entry.state !==
-                        selectedState
-                ) {
-                    return false
-                }
-
-
-                // ---------------------------------------------
-                // CITY
-                // ---------------------------------------------
-
-                if (
-                    selectedCity &&
-                    entry.city !==
-                        selectedCity
-                ) {
-                    return false
-                }
-
-
-                // ---------------------------------------------
-                // BANK
-                // ---------------------------------------------
-
-                if (
-                    selectedBank &&
-                    entry.bank !==
-                        selectedBank
-                ) {
-                    return false
-                }
-
-
-                // ---------------------------------------------
-                // LOAN TYPE
-                // ---------------------------------------------
-
-                if (
-                    selectedLoanType &&
-                    entry.loanType !==
-                        selectedLoanType
-                ) {
-                    return false
-                }
-
-
-                // ---------------------------------------------
-                // GENERAL SEARCH
-                //
-                // Searches:
-                // Bank
-                // SM name
-                // SM phone
-                // SM email
-                // ASM name
-                // ASM phone
-                // ASM email
-                // ---------------------------------------------
-
-                if (searchValue) {
-
-                    const values = [
-
-                        entry.bank,
-
-                        ...(entry.sms || [])
-                            .flatMap(
-                                (sm) => [
-                                    sm.name,
-                                    sm.phone,
-                                    sm.email,
-                                ]
-                            ),
-
-                        ...(entry.asms || [])
-                            .flatMap(
-                                (asm) => [
-                                    asm.name,
-                                    asm.phone,
-                                    asm.email,
-                                ]
-                            ),
-
-                    ]
-
-
-                    const matchesSearch =
-                        values.some(
-                            (value) =>
-                                value !==
-                                    null &&
-                                value !==
-                                    undefined &&
-                                String(value)
-                                    .toLowerCase()
-                                    .includes(
-                                        searchValue
-                                    )
-                        )
-
-
-                    if (!matchesSearch) {
-                        return false
-                    }
-
-                }
-
-
-                return true
-
+                setEntries(formattedEntries)
+                setTotal(totalCount)
+                setPage(pageNumber)
+            } catch (error) {
+                console.error('Failed to load banker directory:', error)
+                setEntries([])
+                setTotal(0)
+            } finally {
+                setLoading(false)
             }
-        )
-
-    }, [
-        entries,
-        search,
-        selectedState,
-        selectedCity,
-        selectedBank,
-        selectedLoanType,
-    ])
+        },
+        [
+            search,
+            selectedStateId,
+            selectedCityId,
+            selectedBankId,
+            selectedLoanTypeId,
+            limit,
+        ]
+    )
 
 
     // =========================================================
-    // CLEAR FILTERS
+    // LOAD / FILTER DATA
     // =========================================================
+    useEffect(() => {
+        loadBanks()
+    }, [loadBanks])
 
-    const handleClearFilters = () => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            loadBankerDirectory(1)
+        }, 300)
 
-        setSearch('')
-        setSelectedState('')
-        setSelectedCity('')
-        setSelectedBank('')
-        setSelectedLoanType('')
-
-    }
+        return () => {
+            clearTimeout(timer)
+        }
+    }, [loadBankerDirectory])
 
 
     // =========================================================
     // STATE CHANGE
     // =========================================================
-
-    const handleStateChange = (
-        value
-    ) => {
-
-        setSelectedState(value)
-
-        // State changes invalidate city and bank.
-
-        setSelectedCity('')
-        setSelectedBank('')
-
+    const handleStateChange = (value) => {
+        setSelectedStateId(value ? Number(value) : null)
+        setSelectedCityId(null)
     }
 
 
     // =========================================================
     // CITY CHANGE
     // =========================================================
+    const handleCityChange = (value) => {
+        setSelectedCityId(value ? Number(value) : null)
+    }
 
-    const handleCityChange = (
-        value
-    ) => {
 
-        setSelectedCity(value)
+    // =========================================================
+    // BANK CHANGE
+    // =========================================================
+    const handleBankChange = (bank) => {
+        if (typeof bank === 'object' && bank !== null) {
+            setSelectedBankId(bank.id ? Number(bank.id) : null)
+        } else if (bank) {
+            setSelectedBankId(Number(bank))
+        } else {
+            setSelectedBankId(null)
+        }
+    }
 
-        // City changes invalidate bank.
 
-        setSelectedBank('')
+    // =========================================================
+    // LOAN TYPE CHANGE
+    // =========================================================
+    const handleLoanTypeChange = (value) => {
+        setSelectedLoanTypeId(value ? Number(value) : null)
+    }
 
+
+    // =========================================================
+    // CLEAR FILTERS
+    // =========================================================
+    const handleClearFilters = () => {
+        setSearch('')
+        setSelectedStateId(null)
+        setSelectedCityId(null)
+        setSelectedBankId(null)
+        setSelectedLoanTypeId(null)
+        setPage(1)
     }
 
 
     // =========================================================
     // ADD ENTRY
     // =========================================================
-
     const handleAddEntry = () => {
-
         setSelectedEntry(null)
-
         setShowViewModal(false)
         setShowBankerModal(true)
-
     }
 
 
     // =========================================================
     // EDIT ENTRY
     // =========================================================
-
-    const handleEditEntry = (
-        entry
-    ) => {
-
+    const handleEditEntry = (entry) => {
         setSelectedEntry(entry)
-
         setShowViewModal(false)
         setShowBankerModal(true)
-
     }
 
 
     // =========================================================
     // VIEW ENTRY
     // =========================================================
-
-    const handleViewEntry = (
-        entry
-    ) => {
-
+    const handleViewEntry = (entry) => {
         setSelectedEntry(entry)
-
         setShowBankerModal(false)
         setShowViewModal(true)
-
     }
 
 
     // =========================================================
-    // CLOSE ADD / EDIT MODAL
+    // DELETE ENTRY
     // =========================================================
+    const handleDeleteEntry = async (entry) => {
+        const bankerId = entry?.id || entry?.banker_directory_id
+        if (!bankerId) return
 
+        if (!window.confirm('Are you sure you want to delete this banker directory entry?')) {
+            return
+        }
+
+        try {
+            setLoading(true)
+            await deleteBankerDirectory(bankerId)
+            await loadBankerDirectory(page)
+        } catch (error) {
+            console.error('Failed to delete banker entry:', error)
+            alert(error?.response?.data?.detail || 'Failed to delete banker entry.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+
+    // =========================================================
+    // CLOSE BANKER MODAL
+    // =========================================================
     const handleCloseBankerModal = () => {
-
         setShowBankerModal(false)
-
         setSelectedEntry(null)
-
     }
 
 
     // =========================================================
     // CLOSE VIEW MODAL
     // =========================================================
-
     const handleCloseViewModal = () => {
-
         setShowViewModal(false)
-
         setSelectedEntry(null)
-
     }
 
 
     // =========================================================
-    // SAVE ENTRY
-    // ADD / EDIT
+    // SAVE ENTRY (CREATE / UPDATE)
     // =========================================================
+    const handleSaveEntry = async (payload) => {
+        try {
+            setLoading(true)
 
-    const handleSaveEntry = (
-        entryData
-    ) => {
+            const bankerId = payload.banker_directory_id || payload.id
 
-        // ---------------------------------------------
-        // EDIT
-        // ---------------------------------------------
-
-        if (entryData.id) {
-
-            setEntries(
-                (previous) =>
-                    previous.map(
-                        (entry) =>
-                            entry.id ===
-                            entryData.id
-                                ? {
-                                    ...entry,
-                                    ...entryData,
-                                }
-                                : entry
-                    )
-            )
-
-        }
-
-        // ---------------------------------------------
-        // ADD
-        // ---------------------------------------------
-
-        else {
-
-            const newEntry = {
-                ...entryData,
-                id: Date.now(),
+            const apiData = {
+                bank_id: Number(payload.bank_id),
+                loan_type_id: Number(payload.loan_type_id),
+                state_id: Number(payload.state_id),
+                city_id: Number(payload.city_id),
+                status: payload.status === 'active' || payload.status === '1' ? '1' : '0',
+                asms: (payload.asms || []).map((asm) => ({
+                    name: asm.name?.trim() || '',
+                    contact: (asm.contact || asm.phone || '').trim() || null,
+                    email: (asm.email || '').trim() || null,
+                })),
+                sms: (payload.sms || []).map((sm) => ({
+                    name: sm.name?.trim() || '',
+                    contact: (sm.contact || sm.phone || '').trim() || null,
+                    email: (sm.email || '').trim() || null,
+                })),
             }
 
+            if (bankerId) {
+                await updateBankerDirectory(bankerId, apiData)
+            } else {
+                await createBankerDirectory(apiData)
+            }
 
-            setEntries(
-                (previous) => [
-                    ...previous,
-                    newEntry,
-                ]
-            )
-
+            handleCloseBankerModal()
+            await loadBankerDirectory(page)
+        } catch (error) {
+            console.error('Failed to save banker entry:', error)
+            alert(error?.response?.data?.detail || 'Failed to save banker directory entry.')
+        } finally {
+            setLoading(false)
         }
-
-
-        handleCloseBankerModal()
-
     }
 
 
     // =========================================================
     // REFRESH
     // =========================================================
-
-    const handleRefresh = () => {
-
-        /*
-         * API refresh will be connected later.
-         */
-
-        console.log(
-            'Refresh Bankers Directory'
-        )
-
+    const handleRefresh = async () => {
+        await loadBankerDirectory(page)
     }
 
 
     // =========================================================
-    // ACTIVE FILTER CHECK
+    // PAGE CHANGE
     // =========================================================
+    const handlePageChange = async (nextPage) => {
+        if (
+            nextPage < 1 ||
+            (total > 0 && nextPage > Math.ceil(total / limit))
+        ) {
+            return
+        }
 
-    const hasActiveFilters =
-        Boolean(
-            search ||
-            selectedState ||
-            selectedCity ||
-            selectedBank ||
-            selectedLoanType
-        )
+        await loadBankerDirectory(nextPage)
+    }
+
+
+    // =========================================================
+    // ACTIVE FILTER
+    // =========================================================
+    const hasActiveFilters = Boolean(
+        search.trim() ||
+        selectedStateId ||
+        selectedCityId ||
+        selectedBankId ||
+        selectedLoanTypeId
+    )
 
 
     // =========================================================
     // RENDER
     // =========================================================
-
     return (
-
-        <div className="
-            space-y-5
-            p-4
-            sm:p-6
-        ">
-
+        <div className="space-y-5 p-4 sm:p-6">
             {/* =====================================================
                 FILTER CARD
             ===================================================== */}
+            <div className="rounded-xl border border-base-300 bg-base-100 shadow-sm">
+                <div className="p-4 sm:p-5">
+                    {/* =================================================
+                        FILTER HEADER
+                    ================================================= */}
+                    <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-base-content/60">
+                            Filter Banker Directory
+                        </h3>
 
-            <div className="
-                rounded-xl
-                border
-                border-base-300
-                bg-base-100
-                shadow-sm
-            ">
-
-                <div className="
-                    p-4
-                    sm:p-5
-                ">
+                        {hasActiveFilters && (
+                            <button
+                                type="button"
+                                onClick={handleClearFilters}
+                                className="text-xs font-medium text-error hover:underline transition"
+                            >
+                                Clear Filters
+                            </button>
+                        )}
+                    </div>
 
                     {/* =================================================
-                        FIRST FILTER ROW
+                        FILTERS GRID (5 COLUMNS)
                     ================================================= */}
-
-                    <div className="
-                        grid
-                        grid-cols-1
-                        gap-3
-                        lg:grid-cols-[minmax(260px,1.7fr)_minmax(170px,1fr)_minmax(170px,1fr)_auto]
-                    ">
-
-                        {/* GENERAL SEARCH */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
+                    <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-5">
+                        {/* SEARCH */}
+                        <div className="lg:col-span-1">
+                            <label className="mb-1.5 block text-xs font-medium text-base-content/60">
                                 Search
                             </label>
-
 
                             <input
                                 type="text"
                                 value={search}
-                                onChange={(event) =>
-                                    setSearch(
-                                        event.target.value
-                                    )
-                                }
-                                placeholder="Search bank, SM, ASM, phone or email..."
-                                className="
-                                    input
-                                    input-bordered
-                                    h-10
-                                    min-h-10
-                                    w-full
-                                "
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Search bank, SM, ASM..."
+                                className="input input-bordered h-10 min-h-10 w-full text-sm"
                             />
-
                         </div>
 
-
-                        {/* STATE */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                State
-                            </label>
-
-
-                            <SearchableFilterDropdown
-                                value={
-                                    selectedState
-                                }
-                                options={states}
-                                placeholder="All States"
-                                searchPlaceholder="Search state..."
-                                onChange={
-                                    handleStateChange
-                                }
+                        {/* STATE & CITY */}
+                        <div className="lg:col-span-2">
+                            <StateCityDropdown
+                                stateValue={selectedStateId}
+                                cityValue={selectedCityId}
+                                onStateChange={handleStateChange}
+                                onCityChange={handleCityChange}
+                                stateLabel="State"
+                                cityLabel="City"
+                                allStatesLabel="All States"
+                                allCitiesLabel="All Cities"
+                                statePlaceholder="Select State"
+                                cityPlaceholder="Select City"
+                                stateSearchPlaceholder="Search State"
+                                citySearchPlaceholder="Search City"
                             />
-
                         </div>
-
-
-                        {/* CITY */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
-                                City
-                            </label>
-
-
-                            <SearchableFilterDropdown
-                                value={
-                                    selectedCity
-                                }
-                                options={cities}
-                                placeholder="All Cities"
-                                searchPlaceholder="Search city..."
-                                onChange={
-                                    handleCityChange
-                                }
-                                disabled={
-                                    !selectedState &&
-                                    !cities.length
-                                }
-                            />
-
-                        </div>
-
-
-                        {/* CLEAR */}
-
-                        <div className="
-                            flex
-                            items-end
-                        ">
-
-                            {hasActiveFilters && (
-
-                                <button
-                                    type="button"
-                                    onClick={
-                                        handleClearFilters
-                                    }
-                                    className="
-                                        h-10
-                                        w-full
-                                        rounded-lg
-                                        border
-                                        border-base-300
-                                        bg-base-100
-                                        px-4
-                                        text-sm
-                                        font-medium
-                                        text-base-content/60
-                                        transition
-                                        hover:bg-base-200
-                                        hover:text-base-content
-                                    "
-                                >
-                                    Clear Filters
-                                </button>
-
-                            )}
-
-                        </div>
-
-                    </div>
-
-
-                    {/* =================================================
-                        SECOND FILTER ROW
-                    ================================================= */}
-
-                    <div className="
-                        mt-3
-                        grid
-                        grid-cols-1
-                        gap-3
-                        lg:grid-cols-2
-                    ">
 
                         {/* BANK */}
-
-                        <div>
-
-                            <label className="
-                                mb-1.5
-                                block
-                                text-xs
-                                font-medium
-                                text-base-content/60
-                            ">
+                        <div className="lg:col-span-1">
+                            <label className="mb-1.5 block text-xs font-medium text-base-content/60">
                                 Bank
                             </label>
 
-
                             <SearchableFilterDropdown
-                                value={
-                                    selectedBank
-                                }
+                                value={selectedBankId}
                                 options={banks}
                                 placeholder="All Banks"
                                 searchPlaceholder="Search bank..."
-                                onChange={
-                                    setSelectedBank
-                                }
+                                onChange={handleBankChange}
                             />
-
                         </div>
 
-
                         {/* LOAN TYPE */}
-
-                        <LoanTypeDropdown
-                            value={
-                                selectedLoanType
-                            }
-                            onChange={
-                                setSelectedLoanType
-                            }
-                            options={LOAN_TYPES}
-                            className="min-w-0"
-                        />
-
+                        <div className="lg:col-span-1">
+                            <LoanTypeDropdown
+                                label="Loan Type"
+                                value={selectedLoanTypeId}
+                                onChange={handleLoanTypeChange}
+                                className="min-w-0"
+                            />
+                        </div>
                     </div>
 
 
                     {/* =================================================
-                        FILTER FOOTER
+                        FOOTER
                     ================================================= */}
-
                     <div className="
                         mt-4
                         flex
@@ -1446,40 +822,22 @@ function BankersDirectory() {
                         sm:items-center
                         sm:justify-between
                     ">
-
-                        {/* RESULT COUNT */}
-
-                        <p className="
-                            text-xs
-                            font-medium
-                            text-base-content/55
-                        ">
-
+                        <p className="text-xs font-medium text-base-content/55">
                             Showing{' '}
-
-                            <span className="
-                                font-semibold
-                                text-base-content/75
-                            ">
-                                {filteredEntries.length}
+                            <span className="font-semibold text-base-content/75">
+                                {entries.length}
                             </span>
-
+                            {' '}of{' '}
+                            <span className="font-semibold text-base-content/75">
+                                {total}
+                            </span>
                             {' '}
-
-                            {filteredEntries.length === 1
-                                ? 'entry'
-                                : 'entries'}
-
+                            {total === 1 ? 'entry' : 'entries'}
                         </p>
-
-
-                        {/* ADD BUTTON */}
 
                         <button
                             type="button"
-                            onClick={
-                                handleAddEntry
-                            }
+                            onClick={handleAddEntry}
                             className="
                                 h-10
                                 rounded-lg
@@ -1497,89 +855,53 @@ function BankersDirectory() {
                         >
                             Add Banker Entry
                         </button>
-
                     </div>
-
                 </div>
-
             </div>
 
 
             {/* =====================================================
                 TABLE
             ===================================================== */}
-
             <BankersDirectoryTable
-                entries={
-                    filteredEntries
-                }
-                onView={
-                    handleViewEntry
-                }
-                onEdit={
-                    handleEditEntry
-                }
-                onRefresh={
-                    handleRefresh
-                }
+                entries={entries}
+                loading={loading}
+                onView={handleViewEntry}
+                onEdit={handleEditEntry}
+                onDelete={handleDeleteEntry}
+                onRefresh={handleRefresh}
+                page={page}
+                limit={limit}
+                total={total}
+                onPageChange={handlePageChange}
             />
 
 
             {/* =====================================================
                 ADD / EDIT MODAL
             ===================================================== */}
-
             <BankerModal
-                open={
-                    showBankerModal
-                }
-                entry={
-                    selectedEntry
-                }
-                states={
-                    states
-                }
-                cities={
-                    allCities
-                }
-                banks={
-                    allBanks
-                }
-                loanTypes={
-                    LOAN_TYPES
-                }
-                onClose={
-                    handleCloseBankerModal
-                }
-                onSubmit={
-                    handleSaveEntry
-                }
+                open={showBankerModal}
+                entry={selectedEntry}
+                states={states}
+                cities={allCities}
+                banks={banks}
+                onClose={handleCloseBankerModal}
+                onSubmit={handleSaveEntry}
             />
 
 
             {/* =====================================================
                 VIEW MODAL
             ===================================================== */}
-
             <BankerViewModal
-                open={
-                    showViewModal
-                }
-                entry={
-                    selectedEntry
-                }
-                onClose={
-                    handleCloseViewModal
-                }
-                onEdit={
-                    handleEditEntry
-                }
+                open={showViewModal}
+                entry={selectedEntry}
+                onClose={handleCloseViewModal}
+                onEdit={handleEditEntry}
             />
-
         </div>
-
     )
 }
-
 
 export default BankersDirectory
