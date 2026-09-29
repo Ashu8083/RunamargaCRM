@@ -4,7 +4,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-
+from app.services.team_lead_aduit_log_service import TeamLeadLogs, TeamLeadAuditLogService
 from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
 from app.models.contexts import Context
@@ -220,6 +220,7 @@ class TeamLeadService:
     @staticmethod
     def create_team_lead(
         db: Session,
+        action_by_ctx :int,
         employee_id: int,
         context_id: int,
         status: str = "Active",
@@ -317,6 +318,13 @@ class TeamLeadService:
             is_active=is_active,
         )
 
+        team_lead_service = TeamLeadAuditLogService.log_audit_log(
+            db = db,
+            action = "create",
+            action_by= action_by_ctx,
+            action_on = team_lead.id,
+        )
+
         db.add(team_lead)
         db.flush()
 
@@ -347,6 +355,7 @@ class TeamLeadService:
     @staticmethod
     def update_team_lead(
         db: Session,
+        action_by_ctx :int,
         team_lead_id: int,
         context_id: int,
     ):
@@ -407,8 +416,13 @@ class TeamLeadService:
         # --------------------------------------------------------------------
         # UPDATE ONLY CONTEXT
         # --------------------------------------------------------------------
-
         team_lead.context_id = context_id
+        team_lead_service = TeamLeadAuditLogService.log_audit_log(
+            db=db,
+            action="update",
+            action_by=action_by_ctx,
+            action_on=team_lead_id,
+        )
 
         db.flush()
 
@@ -439,6 +453,7 @@ class TeamLeadService:
     @staticmethod
     def delete_team_lead(
         db: Session,
+        action_by_ctx: int,
         team_lead_id: int,
     ):
 
@@ -458,6 +473,12 @@ class TeamLeadService:
 
         team_lead.deleted_at = datetime.utcnow()
         team_lead.is_active = False
+        team_lead_service = TeamLeadAuditLogService.log_audit_log(
+            db=db,
+            action="delete",
+            action_by=action_by_ctx,
+            action_on=team_lead_id,
+        )
 
         db.flush()
 
@@ -476,8 +497,10 @@ class TeamLeadService:
     @staticmethod
     def update_team_lead_status(
         db: Session,
+        action_by_ctx : int,
         team_lead_id: int,
         status: str,
+
     ):
 
         is_active = TeamLeadService._validate_status(
@@ -499,6 +522,13 @@ class TeamLeadService:
             )
 
         team_lead.is_active = is_active
+
+        team_lead_service = TeamLeadAuditLogService.log_audit_log(
+            db=db,
+            action="delete",
+            action_by=action_by_ctx,
+            action_on=team_lead_id
+        )
 
         db.flush()
 

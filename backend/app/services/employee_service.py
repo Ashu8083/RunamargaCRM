@@ -22,6 +22,10 @@ from app.services.employee_face_profile_service import (
 from app.models.contexts import Context
 from app.models.permissions import Permission
 from app.models.roles import Role
+from app.services.employee_audit_log_service import log_employee_action
+from app.Enums.LogAction import LogAction
+
+
 
 from app.schemas.employee import (
     CreateEmployeeRequest,
@@ -599,8 +603,16 @@ def create_employee(
                 )
 
         # =====================================================
-        # 10. Commit
+        # 10. Employee Audit Log + Commit
         # =====================================================
+        log_employee_action(
+            db=db,
+            action=LogAction.create,
+            action_by=employee.id,
+            action_on=new_employee.id,
+            report_to=data.reports_to_id,
+        )
+
         audit_logs = AuditService.log(
             db=db,
             action= "employee create",
@@ -611,7 +623,10 @@ def create_employee(
         )
 
         db.commit()
+
         db.refresh(new_employee)
+
+
 
         return {
             "success": True,
@@ -1080,8 +1095,15 @@ def update_employee(
                     )
 
         # =====================================================
-        # 17. Commit
+        # 17. Employee Audit Log + Commit
         # =====================================================
+        log_employee_action(
+            db=db,
+            action="create",
+            action_by=employee.id,
+            action_on=target.id,
+            report_to=data.reports_to_id
+        )
 
         db.commit()
         db.refresh(target)
@@ -1208,6 +1230,7 @@ def delete_employee(
             status_code=403,
             detail="Permission denied",
         )
+    reports_to_id = employee.contexts.reports_to_id
 
     target = (
         db.query(Employee)
@@ -1225,6 +1248,14 @@ def delete_employee(
         )
 
     target.deleted_at = datetime.utcnow()
+
+    log_employee_action(
+        db=db,
+        action="delete",
+        action_by=employee.id,
+        action_on=target.id,
+        report_to= reports_to_id
+    )
 
     db.commit()
 

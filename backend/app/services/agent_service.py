@@ -1,13 +1,15 @@
 # app/services/agent_service.py
-
+from argparse import Action
 from datetime import datetime
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from app.models.agent_audit_logs import AgentAuditLog
 from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
 from app.models.contexts import Context
+from app.services.agent_audit_logs_service import AgentAuditLogService
 
 
 class AgentService:
@@ -185,11 +187,8 @@ class AgentService:
 
         return {
             "id": employee_context.id,
-
             "employee_id": employee_context.employee_id,
-
             "context_id": employee_context.context_id,
-
             "name": getattr(
                 employee,
                 "name",
@@ -296,6 +295,7 @@ class AgentService:
         db: Session,
         employee_id: int,
         context_id: int,
+        action_by_ctx: int,
         team_lead_id=None,
         status: str = "Active",
     ):
@@ -401,6 +401,15 @@ class AgentService:
             is_active=is_active,
         )
 
+        log_service = AgentAuditLogService.log_audit_log(
+            db=db,
+            action="update",
+            action_by=action_by_ctx,
+            action_on=agent.id,
+            date_and_time=datetime.now(),
+        )
+
+
         db.add(agent)
 
         db.flush()
@@ -425,6 +434,7 @@ class AgentService:
     @staticmethod
     def update_agent(
         db: Session,
+        action_by_ctx  :int,
         agent_id: int,
         context_id: int,
     ):
@@ -466,6 +476,14 @@ class AgentService:
 
         agent.context_id = context_id
 
+        log_service = AgentAuditLogService.log_audit_log(
+            db = db,
+            action= "update",
+            action_by= action_by_ctx,
+            action_on= agent.id,
+            date_and_time=datetime.now(),
+        )
+
         db.flush()
 
         return {
@@ -488,6 +506,7 @@ class AgentService:
     @staticmethod
     def delete_agent(
         db: Session,
+        action_by_ctx :int,
         agent_id: int,
     ):
 
@@ -510,6 +529,13 @@ class AgentService:
         agent.is_active = False
 
         agent.reports_to_id = None
+        log_service = AgentAuditLogService.log_audit_log(
+            db=db,
+            action="update",
+            action_by=action_by_ctx,
+            action_on=agent.id,
+            date_and_time=datetime.now(),
+        )
 
         db.flush()
 
@@ -525,6 +551,7 @@ class AgentService:
     @staticmethod
     def update_agent_status(
         db: Session,
+        action_by_ctx :int,
         agent_id: int,
         status: str,
     ):
@@ -548,6 +575,14 @@ class AgentService:
             )
 
         agent.is_active = is_active
+
+        log_service = AgentAuditLogService.log_audit_log(
+            db=db,
+            action="update",
+            action_by=action_by_ctx,
+            action_on=agent.id,
+            date_and_time=datetime.now(),
+        )
 
         db.flush()
 

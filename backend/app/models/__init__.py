@@ -33,7 +33,8 @@ from app.models.call_logs import CallLog
 from app.models.call_assignments import CallAssignment
 from app.models.duplicate_approvals import DuplicateApproval
 from app.models.phone_numbers import PhoneNumber
-
+from app.models.admin_logs import  AdminLog
+from app.models.employee_audit_logs import EmployeeAuditLog
 
 from app.models.audit_logs import AuditLog
 from app.models.loan_shuffle_history import LoanShuffleHistory
