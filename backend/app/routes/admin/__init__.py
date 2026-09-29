@@ -32,6 +32,9 @@ from .context_routes import router as context_router
 from .team_leads_routes import router as team_leads_router
 from .agents_routes import router as agents_router
 from .admins_routes import router as admins_router
+from .admin_log_routes import router as admin_log_router
+from .employee_audit_log_routes import router as employee_audit_log_router
+
 
 
 
@@ -159,6 +162,9 @@ router.include_router(context_router)
 router.include_router(team_leads_router)
 router.include_router(agents_router)
 router.include_router(admins_router)
+router.include_router(admin_log_router)
+router.include_router(employee_audit_log_router)
+
 
 
 # ============================================================================

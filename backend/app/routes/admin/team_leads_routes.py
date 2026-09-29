@@ -1,6 +1,6 @@
 # app/routes/team_leads_routes.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,Request
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
@@ -48,6 +48,7 @@ def get_team_leads(
 @router.post("")
 def create_team_lead(
     payload: TeamLeadCreate,
+    request: Request,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -55,6 +56,7 @@ def create_team_lead(
         result = TeamLeadController.create_team_lead(
             db=db,
             payload=payload,
+            action_by_ctx=request.state.employee_context_id
         )
 
         db.commit()
@@ -80,6 +82,7 @@ def create_team_lead(
 @router.put("/{team_lead_id}")
 def update_team_lead(
     team_lead_id: int,
+    request: Request,
     payload: TeamLeadUpdate,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
@@ -88,6 +91,7 @@ def update_team_lead(
         result = TeamLeadController.update_team_lead(
             db=db,
             team_lead_id=team_lead_id,
+            action_by_ctx=request.state.employee_context_id,
             payload=payload,
         )
 
@@ -114,6 +118,7 @@ def update_team_lead(
 @router.delete("/{team_lead_id}")
 def delete_team_lead(
     team_lead_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -121,6 +126,7 @@ def delete_team_lead(
         result = TeamLeadController.delete_team_lead(
             db=db,
             team_lead_id=team_lead_id,
+            action_by_ctx=request.state.employee_context_id,
         )
 
         db.commit()
@@ -146,6 +152,7 @@ def delete_team_lead(
 @router.patch("/{team_lead_id}/status")
 def update_team_lead_status(
     team_lead_id: int,
+    request: Request,
     payload: TeamLeadStatusUpdate,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
@@ -155,6 +162,7 @@ def update_team_lead_status(
             db=db,
             team_lead_id=team_lead_id,
             payload=payload,
+            action_by_ctx=request.state.employee_context_id,
         )
 
         db.commit()

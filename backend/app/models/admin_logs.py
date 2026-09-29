@@ -30,7 +30,7 @@ class AdminLogs(Base):
     )
 
     # Admin (employee_context_id) who performed the action
-    action_by = Column(
+    action_by_id = Column(
         Integer,
         ForeignKey("employee_contexts.id", ondelete="SET NULL"),
         nullable=True,
@@ -38,7 +38,7 @@ class AdminLogs(Base):
     )
 
     # Admin (employee_context_id) on whom the action was taken
-    action_on = Column(
+    admin_id = Column(
         Integer,
         ForeignKey("employee_contexts.id", ondelete="SET NULL"),
         nullable=True,
@@ -56,13 +56,13 @@ class AdminLogs(Base):
     # Relationships to EmployeeContext
     performer = relationship(
         "EmployeeContext",
-        foreign_keys=[action_by],
+        foreign_keys=[action_by_id],
         lazy="select",
     )
 
     target = relationship(
         "EmployeeContext",
-        foreign_keys=[action_on],
+        foreign_keys=[admin_id],
         lazy="select",
     )
 
