@@ -1,7 +1,7 @@
 # backend/app/schemas/AgentAnalytics/overview_schema.py
 
 from datetime import date
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,6 +13,14 @@ from pydantic import BaseModel, ConfigDict, Field
 class AgentAnalyticsFilters(BaseModel):
     """
     Filters accepted by the Agent Analytics Overview API.
+
+    type:
+
+        agent
+            Analytics scoped using visible Agent contexts.
+
+        rm
+            Analytics scoped using visible RM contexts.
 
     Hierarchy IDs refer to EmployeeContext.id.
 
@@ -26,13 +34,37 @@ class AgentAnalyticsFilters(BaseModel):
             -> LoanApplication.applied_date cohort
     """
 
+    # =========================================================
+    # ANALYTICS TYPE
+    # =========================================================
+
+    type: Literal["agent", "rm"] = Field(
+        description=(
+            "Analytics scope: "
+            "'agent' for Agent analytics or "
+            "'rm' for RM analytics."
+        ),
+    )
+
+    # =========================================================
+    # HIERARCHY FILTERS
+    # =========================================================
+
     team_lead_context_id: Optional[int] = None
 
     agent_context_id: Optional[int] = None
 
     rm_context_id: Optional[int] = None
 
+    # =========================================================
+    # LOAN TYPE
+    # =========================================================
+
     loan_type_id: Optional[int] = None
+
+    # =========================================================
+    # DATE FILTERS
+    # =========================================================
 
     from_date: Optional[date] = None
 
@@ -71,6 +103,9 @@ class AgentAnalyticsCounts(BaseModel):
 
         rejected
             -> LoanApplication.rejection_date
+
+    Bank-processing metrics count individual
+    BankProcessing rows.
     """
 
     total_leads: int = Field(
@@ -111,7 +146,8 @@ class AgentAnalyticsCounts(BaseModel):
 
 class AgentAnalyticsPipelineCounts(BaseModel):
     """
-    Current-status counts for the selected APPLICATION COHORT.
+    Application Pipeline counts for the selected
+    application cohort.
 
     First:
 
@@ -119,42 +155,32 @@ class AgentAnalyticsPipelineCounts(BaseModel):
 
     selects the applications.
 
-    Then the current/latest status of those applications is
-    evaluated.
+    Then the application status and BankProcessing
+    rows are evaluated.
 
-    IMPORTANT:
+    Categories are NOT mutually exclusive.
 
-        These are mutually exclusive current-status buckets.
-
-    Therefore one application is counted in ONLY ONE of:
-
-        In Process
-        Login
-        Sanctioned
-        Disbursed
-        Rejected
+    An application may contribute to multiple
+    BankProcessing categories.
 
     Example:
 
-        Bank A -> Login
-        Bank B -> Sanctioned
-        Bank C -> Disbursed
+        One application has:
 
-    Result:
+            Login row
+            Sanctioned row
+            Disbursed row
 
-        Disbursed = 1
+        Result:
 
-        Login = 0
-        Sanctioned = 0
+            login      = 1
+            sanctioned = 1
+            disbursed  = 1
 
-    Another example:
+    Bank-processing categories count individual rows.
 
-        Bank A -> Login
-        Bank B -> Sanctioned
-
-    Result:
-
-        Sanctioned = 1
+    Application status categories count individual
+    LoanApplication rows.
     """
 
     total_leads: int = Field(
@@ -198,6 +224,22 @@ class AgentAnalyticsVisibility(BaseModel):
     Visibility information returned by the backend.
 
     All IDs are EmployeeContext IDs.
+
+    The lists represent the visibility returned by
+    AccessControl for the authenticated employee.
+
+    Depending on `filters.type`:
+
+        agent
+            agent_context_ids are the primary analytics
+            visibility scope.
+
+        rm
+            rm_context_ids are the primary analytics
+            visibility scope.
+
+    The other visibility lists are still returned because
+    they are required by the dashboard filters.
     """
 
     team_lead_context_ids: List[int] = Field(
@@ -235,21 +277,43 @@ class AgentAnalyticsOverviewResponse(BaseModel):
 
     pipeline
         -> Application Pipeline
-           Current status of applications from the selected
-           applied-date cohort.
+           Application cohort based analytics.
 
-    No application rows are returned.
+    filters
+        -> The requested analytics type and filters.
+
+    visibility
+        -> EmployeeContext IDs available through
+           AccessControl.
+
+    No application detail rows are returned.
     """
+
+    # =========================================================
+    # PIPELINE INSIGHTS
+    # =========================================================
 
     counts: AgentAnalyticsCounts = Field(
         default_factory=AgentAnalyticsCounts,
     )
 
+    # =========================================================
+    # APPLICATION PIPELINE
+    # =========================================================
+
     pipeline: AgentAnalyticsPipelineCounts = Field(
         default_factory=AgentAnalyticsPipelineCounts,
     )
 
+    # =========================================================
+    # FILTERS
+    # =========================================================
+
     filters: AgentAnalyticsFilters
+
+    # =========================================================
+    # VISIBILITY
+    # =========================================================
 
     visibility: AgentAnalyticsVisibility = Field(
         default_factory=AgentAnalyticsVisibility,

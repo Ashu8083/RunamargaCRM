@@ -8,629 +8,213 @@ import {
     Tooltip,
 } from 'recharts'
 
-
-// =============================================================
-// HELPERS
-// =============================================================
-
-const formatNumber = (value) => {
-    return Number(value || 0).toLocaleString('en-IN')
+const STAGE_COLORS = {
+    'In Process': '#3B82F6',
+    Login: '#8B5CF6',
+    Sanctioned: '#10B981',
+    Disbursed: '#F59E0B',
+    Rejected: '#EF4444',
 }
 
-
-const getValue = (item, keys) => {
-
-    for (const key of keys) {
-
-        if (
-            item?.[key] !== undefined &&
-            item?.[key] !== null
-        ) {
-            return Number(item[key]) || 0
-        }
-
-    }
-
-    return 0
-}
-
-
-// =============================================================
-// STAGE CONFIG
-// =============================================================
-
-const STAGES = [
-    {
-        key: 'inProcess',
-        label: 'In Process',
-        color: '#8BCF00',
-        keys: [
-            'inProcess',
-            'in_process',
-            'inProcessCount',
-        ],
-    },
-    {
-        key: 'login',
-        label: 'Login',
-        color: '#009FE3',
-        keys: [
-            'loggedIn',
-            'login',
-            'loginCount',
-        ],
-    },
-    {
-        key: 'sanctioned',
-        label: 'Sanctioned',
-        color: '#D97706',
-        keys: [
-            'sanctioned',
-            'sanctionedCount',
-        ],
-    },
-    {
-        key: 'disbursed',
-        label: 'Disbursed',
-        color: '#25803C',
-        keys: [
-            'disbursed',
-            'disbursedCount',
-        ],
-    },
-    {
-        key: 'rejected',
-        label: 'Rejected',
-        color: '#D92D20',
-        keys: [
-            'rejected',
-            'rejectedCount',
-        ],
-    },
-]
-
-
-// =============================================================
-// BUILD DATA
-// =============================================================
-
-const buildDistributionData = (analytics) => {
-
-    const totals = STAGES.reduce(
-        (result, stage) => {
-
-            result[stage.key] = 0
-
-            return result
-
+const buildDistributionData = (stageDistribution = {}) => {
+    const data = [
+        {
+            name: 'In Process',
+            value: Number(stageDistribution?.inProcess ?? 0) || 0,
         },
-        {}
-    )
+        {
+            name: 'Login',
+            value: Number(stageDistribution?.login ?? 0) || 0,
+        },
+        {
+            name: 'Sanctioned',
+            value: Number(stageDistribution?.sanctioned ?? 0) || 0,
+        },
+        {
+            name: 'Disbursed',
+            value: Number(stageDistribution?.disbursed ?? 0) || 0,
+        },
+        {
+            name: 'Rejected',
+            value: Number(stageDistribution?.rejected ?? 0) || 0,
+        },
+    ]
 
-
-    analytics.forEach((item) => {
-
-        STAGES.forEach((stage) => {
-
-            totals[stage.key] += getValue(
-                item,
-                stage.keys
-            )
-
-        })
-
-    })
-
-
-    return STAGES
-        .map((stage) => ({
-            ...stage,
-            value: totals[stage.key],
-        }))
-        .filter(
-            (stage) => stage.value > 0
-        )
-
+    return data.filter((item) => item.value > 0)
 }
 
+const CenterLabel = ({ totalLeads }) => {
+    return (
+        <g>
+            <text
+                x="50%"
+                y="48%"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="fill-gray-900 text-[22px] font-semibold"
+            >
+                {totalLeads}
+            </text>
 
-// =============================================================
-// TOOLTIP
-// =============================================================
+            <text
+                x="50%"
+                y="56%"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="fill-gray-500 text-[11px]"
+            >
+                Total Leads
+            </text>
+        </g>
+    )
+}
 
-function DistributionTooltip({
-    active,
-    payload,
-}) {
-
-    if (
-        !active ||
-        !payload?.length
-    ) {
+const CustomTooltip = ({ active, payload }) => {
+    if (!active || !payload || !payload.length) {
         return null
     }
 
+    const item = payload[0]
 
-    const item =
-        payload[0]?.payload
-
-
-    if (!item) {
-        return null
-    }
-
-
-    const total =
-        payload[0]?.payload?.total || 0
-
+    const total = Number(item?.payload?.total ?? 0) || 0
+    const value = Number(item?.value ?? 0) || 0
 
     const percentage =
         total > 0
-            ? (item.value / total) * 100
-            : 0
-
+            ? ((value / total) * 100).toFixed(1)
+            : '0.0'
 
     return (
-
-        <div className="
-            min-w-[150px]
-            rounded-xl
-            border
-            border-base-300
-            bg-base-100
-            px-3
-            py-2.5
-            shadow-xl
-        ">
-
-            <div className="
-                flex
-                items-center
-                justify-between
-                gap-4
-            ">
-
-                <div className="
-                    flex
-                    items-center
-                    gap-2
-                ">
-
-                    <span
-                        className="
-                            h-2.5
-                            w-2.5
-                            rounded-full
-                        "
-                        style={{
-                            backgroundColor:
-                                item.color,
-                        }}
-                    />
-
-                    <span className="
-                        text-xs
-                        text-base-content/60
-                    ">
-                        {item.label}
-                    </span>
-
-                </div>
-
-
-                <span className="
-                    text-sm
-                    font-semibold
-                    text-base-content
-                ">
-                    {formatNumber(item.value)}
-                </span>
-
-            </div>
-
-
-            <p className="
-                mt-1.5
-                text-right
-                text-[11px]
-                text-base-content/40
-            ">
-                {percentage.toFixed(1)}%
+        <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-lg">
+            <p className="text-sm font-medium text-gray-900">
+                {item.name}
             </p>
 
+            <p className="mt-1 text-xs text-gray-500">
+                {value.toLocaleString()} applications
+            </p>
+
+            <p className="text-xs text-gray-500">
+                {percentage}%
+            </p>
         </div>
-
     )
-
 }
 
-
-// =============================================================
-// CENTER LABEL
-// =============================================================
-
-function CenterLabel({
-    total,
-}) {
-
-    return (
-
-        <g>
-
-            <text
-                x="50%"
-                y="47%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="
-                    fill-base-content
-                    text-2xl
-                    font-bold
-                "
-            >
-                {formatNumber(total)}
-            </text>
-
-
-            <text
-                x="50%"
-                y="57%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="
-                    fill-base-content/45
-                    text-[11px]
-                "
-            >
-                Applications
-            </text>
-
-        </g>
-
-    )
-
-}
-
-
-// =============================================================
-// EMPTY STATE
-// =============================================================
-
-function EmptyState() {
-
-    return (
-
-        <div className="
-            flex
-            h-[320px]
-            items-center
-            justify-center
-            text-center
-        ">
-
-            <div>
-
-                <div className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-base-200
-                ">
-
-                    <div className="
-                        h-8
-                        w-8
-                        rounded-full
-                        border-4
-                        border-base-300
-                    " />
-
-                </div>
-
-
-                <p className="
-                    mt-4
-                    text-sm
-                    font-medium
-                    text-base-content/50
-                ">
-                    No stage data available
-                </p>
-
-
-                <p className="
-                    mt-1
-                    text-xs
-                    text-base-content/35
-                ">
-                    Try changing the selected filters
-                </p>
-
-            </div>
-
-        </div>
-
-    )
-
-}
-
-
-// =============================================================
-// COMPONENT
-// =============================================================
-
-function LoanStageDistribution({
-    analytics = [],
-}) {
-
+const LoanStageDistribution = ({
+    stageDistribution = {},
+}) => {
     const distribution =
-        buildDistributionData(
-            analytics
-        )
+        buildDistributionData(stageDistribution)
 
+    const totalLeads = Number(
+        stageDistribution?.totalLeads ??
+        stageDistribution?.total_leads ??
+        0
+    ) || 0
 
-    const total =
-        distribution.reduce(
-            (sum, item) =>
-                sum + item.value,
-            0
-        )
-
-
-    const chartData =
-        distribution.map((item) => ({
-            ...item,
-            total,
-        }))
-
+    const chartData = distribution.map((item) => ({
+        ...item,
+        total: totalLeads,
+    }))
 
     return (
-
-        <section className="
-            w-full
-            min-w-0
-            overflow-hidden
-            rounded-2xl
-            border
-            border-base-300
-            bg-base-100
-            p-4
-            shadow-sm
-            sm:p-5
-        ">
-
-            {/* =================================================
-                HEADER
-            ================================================= */}
-
-            <div>
-
-                <h2 className="
-                    text-sm
-                    font-semibold
-                    text-base-content
-                ">
+        <div className="w-full rounded-2xl bg-white p-5 shadow-sm">
+            <div className="mb-4">
+                <h3 className="text-base font-semibold text-gray-900">
                     Loan Stage Distribution
-                </h2>
+                </h3>
 
-
-                <p className="
-                    mt-1
-                    text-xs
-                    text-base-content/45
-                ">
-                    Current application distribution
+                <p className="mt-1 text-xs text-gray-500">
+                    Current application stage distribution
                 </p>
-
             </div>
-
 
             {chartData.length === 0 ? (
+                <div className="flex h-[280px] items-center justify-center">
+                    <div className="text-center">
+                        <p className="text-2xl font-semibold text-gray-900">
+                            {totalLeads.toLocaleString()}
+                        </p>
 
-                <EmptyState />
-
+                        <p className="mt-1 text-sm text-gray-400">
+                            Total Leads
+                        </p>
+                    </div>
+                </div>
             ) : (
-
-                <>
-
-                    {/* =============================================
-                        CHART
-                    ============================================= */}
-
-                    <div className="
-                        mt-3
-                        h-[270px]
-                        w-full
-                    ">
-
+                <div className="flex flex-col items-center">
+                    <div className="h-[280px] w-full">
                         <ResponsiveContainer
                             width="100%"
                             height="100%"
                         >
-
                             <PieChart>
-
                                 <Pie
                                     data={chartData}
                                     dataKey="value"
-                                    nameKey="label"
+                                    nameKey="name"
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius="58%"
-                                    outerRadius="82%"
-                                    paddingAngle={3}
+                                    innerRadius={78}
+                                    outerRadius={105}
+                                    paddingAngle={2}
                                     stroke="none"
-                                    isAnimationActive
+                                    labelLine={false}
                                 >
-
-                                    {chartData.map(
-                                        (item) => (
-
-                                            <Cell
-                                                key={item.key}
-                                                fill={item.color}
-                                            />
-
-                                        )
-                                    )}
-
+                                    {chartData.map((entry) => (
+                                        <Cell
+                                            key={`cell-${entry.name}`}
+                                            fill={
+                                                STAGE_COLORS[
+                                                    entry.name
+                                                ] ?? '#9CA3AF'
+                                            }
+                                        />
+                                    ))}
                                 </Pie>
 
-
                                 <Tooltip
-                                    content={
-                                        <DistributionTooltip />
-                                    }
+                                    content={<CustomTooltip />}
                                 />
-
 
                                 <CenterLabel
-                                    total={total}
+                                    totalLeads={totalLeads}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap justify-center gap-x-5 gap-y-3">
+                        {chartData.map((item) => (
+                            <div
+                                key={item.name}
+                                className="flex items-center gap-2"
+                            >
+                                <span
+                                    className="h-2.5 w-2.5 rounded-full"
+                                    style={{
+                                        backgroundColor:
+                                            STAGE_COLORS[
+                                                item.name
+                                            ] ?? '#9CA3AF',
+                                    }}
                                 />
 
-                            </PieChart>
+                                <span className="text-xs text-gray-600">
+                                    {item.name}
+                                </span>
 
-                        </ResponsiveContainer>
-
+                                <span className="text-xs font-semibold text-gray-900">
+                                    {item.value.toLocaleString()}
+                                </span>
+                            </div>
+                        ))}
                     </div>
-
-
-                    {/* =============================================
-                        LEGEND
-                    ============================================= */}
-
-                    <div className="
-                        grid
-                        grid-cols-1
-                        gap-2
-                        border-t
-                        border-base-300
-                        pt-4
-                        sm:grid-cols-2
-                    ">
-
-                        {STAGES.map((stage) => {
-
-                            const current =
-                                chartData.find(
-                                    (item) =>
-                                        item.key ===
-                                        stage.key
-                                )
-
-
-                            const value =
-                                current?.value || 0
-
-
-                            const percentage =
-                                total > 0
-                                    ? (
-                                        value /
-                                        total
-                                    ) *
-                                    100
-                                    : 0
-
-
-                            return (
-
-                                <div
-                                    key={stage.key}
-                                    className="
-                                        flex
-                                        min-w-0
-                                        items-center
-                                        justify-between
-                                        gap-3
-                                        rounded-lg
-                                        px-2
-                                        py-1.5
-                                        transition
-                                        hover:bg-base-200/60
-                                    "
-                                >
-
-                                    <div className="
-                                        flex
-                                        min-w-0
-                                        items-center
-                                        gap-2
-                                    ">
-
-                                        <span
-                                            className="
-                                                h-2.5
-                                                w-2.5
-                                                shrink-0
-                                                rounded-full
-                                            "
-                                            style={{
-                                                backgroundColor:
-                                                    stage.color,
-                                            }}
-                                        />
-
-
-                                        <span className="
-                                            truncate
-                                            text-xs
-                                            text-base-content/60
-                                        ">
-                                            {stage.label}
-                                        </span>
-
-                                    </div>
-
-
-                                    <div className="
-                                        flex
-                                        shrink-0
-                                        items-center
-                                        gap-2
-                                    ">
-
-                                        <span className="
-                                            text-xs
-                                            font-semibold
-                                            text-base-content
-                                        ">
-                                            {formatNumber(
-                                                value
-                                            )}
-                                        </span>
-
-
-                                        <span className="
-                                            text-[10px]
-                                            text-base-content/35
-                                        ">
-                                            {percentage.toFixed(1)}%
-                                        </span>
-
-                                    </div>
-
-                                </div>
-
-                            )
-
-                        })}
-
-                    </div>
-
-                </>
-
+                </div>
             )}
-
-        </section>
-
+        </div>
     )
-
 }
-
 
 export default LoanStageDistribution

@@ -8,7 +8,9 @@ import ArrowTrendingUpIcon from '@heroicons/react/24/outline/ArrowTrendingUpIcon
 // HELPERS
 // =============================================================
 
-const formatNumber = (value) => {
+const formatNumber = (
+    value
+) => {
 
     return Number(
         value || 0
@@ -17,11 +19,128 @@ const formatNumber = (value) => {
 }
 
 
-const formatCurrency = (value) => {
+const formatCurrency = (
+    value
+) => {
 
     return `₹${Number(
         value || 0
     ).toLocaleString('en-IN')}`
+
+}
+
+
+// =============================================================
+// TOTALS
+// =============================================================
+
+const getTotals = (
+    rows = []
+) => {
+
+    return rows.reduce(
+        (
+            totals,
+            item
+        ) => {
+
+            totals.inProcess +=
+                Number(
+                    item?.inProcess || 0
+                )
+
+            totals.login +=
+                Number(
+                    item?.login || 0
+                )
+
+            totals.sanctioned +=
+                Number(
+                    item?.sanctioned || 0
+                )
+
+            totals.disbursed +=
+                Number(
+                    item?.disbursed || 0
+                )
+
+            totals.rejected +=
+                Number(
+                    item?.rejected || 0
+                )
+
+            totals.disbursedAmount +=
+                Number(
+                    item?.disbursedAmount || 0
+                )
+
+            return totals
+
+        },
+        {
+            inProcess: 0,
+            login: 0,
+            sanctioned: 0,
+            disbursed: 0,
+            rejected: 0,
+            disbursedAmount: 0,
+        }
+    )
+
+}
+
+
+// =============================================================
+// EMPTY STATE
+// =============================================================
+
+function EmptyState() {
+
+    return (
+
+        <section className="
+            w-full
+            rounded-2xl
+            border
+            border-base-300
+            bg-base-100
+            p-5
+            shadow-sm
+        ">
+
+            <div className="
+                flex
+                items-center
+                gap-2
+            ">
+
+                <DocumentTextIcon className="
+                    h-5
+                    w-5
+                    text-[#8BCF00]
+                " />
+
+                <h2 className="
+                    text-sm
+                    font-semibold
+                ">
+                    Loan Wise Performance
+                </h2>
+
+            </div>
+
+            <p className="
+                py-10
+                text-center
+                text-sm
+                text-base-content/40
+            ">
+                No loan performance data available.
+            </p>
+
+        </section>
+
+    )
 
 }
 
@@ -36,90 +155,34 @@ function LoanWisePerformance({
 }) {
 
     // =========================================================
-    // GROUP BY LOAN TYPE
+    // NORMALIZE
     // =========================================================
 
-    const loanMap =
-        performance.reduce(
-            (result, item) => {
-
-                const loanId =
-                    item.loanTypeId ??
-                    item.loanTypeName ??
-                    'unknown'
-
-
-                const key =
-                    String(loanId)
-
-
-                if (!result[key]) {
-
-                    result[key] = {
-
-                        id: loanId,
-
-                        name:
-                            item.loanTypeName ||
-                            'Unknown Loan Type',
-
-                        inProcess: 0,
-                        login: 0,
-                        sanctioned: 0,
-                        disbursed: 0,
-                        rejected: 0,
-                        disbursedAmount: 0,
-
-                    }
-
-                }
-
-
-                result[key].inProcess +=
-                    Number(
-                        item.inProcess || 0
-                    )
-
-                result[key].login +=
-                    Number(
-                        item.login || 0
-                    )
-
-                result[key].sanctioned +=
-                    Number(
-                        item.sanctioned || 0
-                    )
-
-                result[key].disbursed +=
-                    Number(
-                        item.disbursed || 0
-                    )
-
-                result[key].rejected +=
-                    Number(
-                        item.rejected || 0
-                    )
-
-                result[key].disbursedAmount +=
-                    Number(
-                        item.disbursedAmount || 0
-                    )
-
-
-                return result
-
-            },
-            {}
+    const rows =
+        Array.isArray(
+            performance
         )
+            ? performance
+            : []
 
+
+    // =========================================================
+    // SORT BY DISBURSED
+    // =========================================================
 
     const loanRows =
-        Object.values(loanMap)
-            .sort(
-                (a, b) =>
-                    b.disbursed -
-                    a.disbursed
-            )
+        [...rows].sort(
+            (
+                a,
+                b
+            ) =>
+                Number(
+                    b?.disbursed || 0
+                ) -
+                Number(
+                    a?.disbursed || 0
+                )
+        )
 
 
     // =========================================================
@@ -127,40 +190,14 @@ function LoanWisePerformance({
     // =========================================================
 
     const totals =
-        loanRows.reduce(
-            (result, item) => {
-
-                result.inProcess +=
-                    item.inProcess
-
-                result.login +=
-                    item.login
-
-                result.sanctioned +=
-                    item.sanctioned
-
-                result.disbursed +=
-                    item.disbursed
-
-                result.rejected +=
-                    item.rejected
-
-                result.disbursedAmount +=
-                    item.disbursedAmount
-
-                return result
-
-            },
-            {
-                inProcess: 0,
-                login: 0,
-                sanctioned: 0,
-                disbursed: 0,
-                rejected: 0,
-                disbursedAmount: 0,
-            }
+        getTotals(
+            loanRows
         )
 
+
+    // =========================================================
+    // ENTITY LABEL
+    // =========================================================
 
     const entityLabel =
         mode === 'rm'
@@ -172,57 +209,18 @@ function LoanWisePerformance({
     // EMPTY
     // =========================================================
 
-    if (!performance.length) {
+    if (!rows.length) {
 
         return (
-
-            <section className="
-                w-full
-                rounded-2xl
-                border
-                border-base-300
-                bg-base-100
-                p-5
-                shadow-sm
-            ">
-
-                <div className="
-                    flex
-                    items-center
-                    gap-2
-                ">
-
-                    <DocumentTextIcon className="
-                        h-5
-                        w-5
-                        text-[#8BCF00]
-                    " />
-
-                    <h2 className="
-                        text-sm
-                        font-semibold
-                    ">
-                        Loan Wise Performance
-                    </h2>
-
-                </div>
-
-
-                <p className="
-                    py-10
-                    text-center
-                    text-sm
-                    text-base-content/40
-                ">
-                    No loan performance data available.
-                </p>
-
-            </section>
-
+            <EmptyState />
         )
 
     }
 
+
+    // =========================================================
+    // RENDER
+    // =========================================================
 
     return (
 
@@ -238,7 +236,9 @@ function LoanWisePerformance({
             sm:p-5
         ">
 
-            {/* HEADER */}
+            {/* =================================================
+                HEADER
+            ================================================= */}
 
             <div className="
                 flex
@@ -272,7 +272,6 @@ function LoanWisePerformance({
 
                     </div>
 
-
                     <div>
 
                         <h2 className="
@@ -294,7 +293,6 @@ function LoanWisePerformance({
                     </div>
 
                 </div>
-
 
                 <div className="
                     inline-flex
@@ -321,7 +319,9 @@ function LoanWisePerformance({
             </div>
 
 
-            {/* SUMMARY */}
+            {/* =================================================
+                SUMMARY
+            ================================================= */}
 
             <div className="
                 mt-5
@@ -331,6 +331,8 @@ function LoanWisePerformance({
                 sm:grid-cols-3
                 lg:grid-cols-5
             ">
+
+                {/* IN PROCESS */}
 
                 <div className="
                     rounded-xl
@@ -360,6 +362,8 @@ function LoanWisePerformance({
                 </div>
 
 
+                {/* LOGIN */}
+
                 <div className="
                     rounded-xl
                     bg-base-200/40
@@ -388,6 +392,8 @@ function LoanWisePerformance({
                 </div>
 
 
+                {/* SANCTIONED */}
+
                 <div className="
                     rounded-xl
                     bg-base-200/40
@@ -415,6 +421,8 @@ function LoanWisePerformance({
 
                 </div>
 
+
+                {/* DISBURSED */}
 
                 <div className="
                     rounded-xl
@@ -459,6 +467,8 @@ function LoanWisePerformance({
                 </div>
 
 
+                {/* REJECTED */}
+
                 <div className="
                     rounded-xl
                     bg-base-200/40
@@ -489,7 +499,9 @@ function LoanWisePerformance({
             </div>
 
 
-            {/* TABLE */}
+            {/* =================================================
+                TABLE
+            ================================================= */}
 
             <div className="
                 mt-5
@@ -582,16 +594,20 @@ function LoanWisePerformance({
 
                         </thead>
 
-
                         <tbody>
 
                             {loanRows.map(
-                                (item) => (
+                                (
+                                    item,
+                                    index
+                                ) => (
 
                                     <tr
                                         key={
                                             String(
-                                                item.id
+                                                item?.loanTypeId ??
+                                                item?.id ??
+                                                index
                                             )
                                         }
                                         className="
@@ -601,6 +617,8 @@ function LoanWisePerformance({
                                             hover:bg-base-200/30
                                         "
                                     >
+
+                                        {/* LOAN TYPE */}
 
                                         <td className="
                                             px-4
@@ -616,15 +634,23 @@ function LoanWisePerformance({
                                                 <div className="
                                                     h-2
                                                     w-2
+                                                    shrink-0
                                                     rounded-full
                                                     bg-[#8BCF00]
                                                 " />
 
                                                 <span className="
+                                                    block
+                                                    max-w-[260px]
+                                                    truncate
                                                     text-sm
                                                     font-medium
+                                                    text-base-content
                                                 ">
-                                                    {item.name}
+                                                    {
+                                                        item?.loanTypeName ||
+                                                        'Unknown'
+                                                    }
                                                 </span>
 
                                             </div>
@@ -632,19 +658,7 @@ function LoanWisePerformance({
                                         </td>
 
 
-                                        <td className="
-                                            px-4
-                                            py-3
-                                            text-right
-                                            text-sm
-                                        ">
-                                            {
-                                                formatNumber(
-                                                    item.inProcess
-                                                )
-                                            }
-                                        </td>
-
+                                        {/* IN PROCESS */}
 
                                         <td className="
                                             px-4
@@ -654,11 +668,13 @@ function LoanWisePerformance({
                                         ">
                                             {
                                                 formatNumber(
-                                                    item.login
+                                                    item?.inProcess
                                                 )
                                             }
                                         </td>
 
+
+                                        {/* LOGIN */}
 
                                         <td className="
                                             px-4
@@ -668,11 +684,29 @@ function LoanWisePerformance({
                                         ">
                                             {
                                                 formatNumber(
-                                                    item.sanctioned
+                                                    item?.login
                                                 )
                                             }
                                         </td>
 
+
+                                        {/* SANCTIONED */}
+
+                                        <td className="
+                                            px-4
+                                            py-3
+                                            text-right
+                                            text-sm
+                                        ">
+                                            {
+                                                formatNumber(
+                                                    item?.sanctioned
+                                                )
+                                            }
+                                        </td>
+
+
+                                        {/* DISBURSED */}
 
                                         <td className="
                                             px-4
@@ -684,11 +718,13 @@ function LoanWisePerformance({
                                         ">
                                             {
                                                 formatNumber(
-                                                    item.disbursed
+                                                    item?.disbursed
                                                 )
                                             }
                                         </td>
 
+
+                                        {/* DISBURSED AMOUNT */}
 
                                         <td className="
                                             px-4
@@ -700,11 +736,13 @@ function LoanWisePerformance({
                                         ">
                                             {
                                                 formatCurrency(
-                                                    item.disbursedAmount
+                                                    item?.disbursedAmount
                                                 )
                                             }
                                         </td>
 
+
+                                        {/* REJECTED */}
 
                                         <td className="
                                             px-4
@@ -714,7 +752,7 @@ function LoanWisePerformance({
                                         ">
                                             {
                                                 formatNumber(
-                                                    item.rejected
+                                                    item?.rejected
                                                 )
                                             }
                                         </td>
@@ -733,7 +771,9 @@ function LoanWisePerformance({
             </div>
 
 
-            {/* FOOTER */}
+            {/* =================================================
+                FOOTER
+            ================================================= */}
 
             <div className="
                 mt-4
@@ -749,7 +789,6 @@ function LoanWisePerformance({
                 <span>
                     {entityLabel} loan pipeline
                 </span>
-
 
                 <span className="
                     inline-flex

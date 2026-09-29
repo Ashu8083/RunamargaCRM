@@ -1,7 +1,7 @@
 # backend/app/routes/admin/AgentAnalytics/overview_routes.py
 
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -32,25 +32,58 @@ router = APIRouter(
     response_model=AgentAnalyticsOverviewResponse,
 )
 def get_agent_analytics_overview(
+    # ------------------------------------------------------------------------
+    # ANALYTICS TYPE
+    # ------------------------------------------------------------------------
+
+    type: Literal["agent", "rm"] = Query(
+        ...,
+        description=(
+            "Analytics scope. "
+            "'agent' uses visible Agent contexts. "
+            "'rm' uses visible RM contexts."
+        ),
+    ),
+
+    # ------------------------------------------------------------------------
+    # TEAM LEAD
+    # ------------------------------------------------------------------------
+
     team_lead_context_id: Optional[int] = Query(
         default=None,
         description="Filter by Team Lead EmployeeContext ID.",
     ),
+
+    # ------------------------------------------------------------------------
+    # AGENT
+    # ------------------------------------------------------------------------
 
     agent_context_id: Optional[int] = Query(
         default=None,
         description="Filter by Agent EmployeeContext ID.",
     ),
 
+    # ------------------------------------------------------------------------
+    # RM
+    # ------------------------------------------------------------------------
+
     rm_context_id: Optional[int] = Query(
         default=None,
         description="Filter by RM EmployeeContext ID.",
     ),
 
+    # ------------------------------------------------------------------------
+    # LOAN TYPE
+    # ------------------------------------------------------------------------
+
     loan_type_id: Optional[int] = Query(
         default=None,
         description="Filter by Loan Type ID.",
     ),
+
+    # ------------------------------------------------------------------------
+    # FROM DATE
+    # ------------------------------------------------------------------------
 
     from_date: Optional[date] = Query(
         default=None,
@@ -61,6 +94,10 @@ def get_agent_analytics_overview(
         ),
     ),
 
+    # ------------------------------------------------------------------------
+    # TO DATE
+    # ------------------------------------------------------------------------
+
     to_date: Optional[date] = Query(
         default=None,
         description=(
@@ -70,12 +107,24 @@ def get_agent_analytics_overview(
         ),
     ),
 
+    # ------------------------------------------------------------------------
+    # ACTIVE CONTEXT
+    # ------------------------------------------------------------------------
+
     context_id: Optional[int] = Query(
         default=None,
         description="Optional active EmployeeContext ID.",
     ),
 
+    # ------------------------------------------------------------------------
+    # DATABASE
+    # ------------------------------------------------------------------------
+
     db: Session = Depends(get_db),
+
+    # ------------------------------------------------------------------------
+    # AUTHENTICATED EMPLOYEE
+    # ------------------------------------------------------------------------
 
     employee: Employee = Depends(
         get_current_employee
@@ -84,63 +133,98 @@ def get_agent_analytics_overview(
     """
     Return count-only Agent Analytics Overview.
 
+    Analytics type:
+
+        type=agent
+            Uses AccessControl.get_visible_agents()
+            as the primary application scope.
+
+        type=rm
+            Uses AccessControl.get_visible_rms()
+            as the primary application scope.
+
     Authentication:
         get_current_employee()
 
-    Authorization:
+    Authorization / Visibility:
         Handled by AgentAnalyticsOverviewService
         through AccessControl.
 
-    Returned metrics:
-        - Lead Received
-        - Logged In
-        - Rejected
-        - Sanctioned
-        - Disbursed
-        - Active Pipeline
+    Filters:
+        - Team Lead
+        - Agent
+        - RM
+        - Loan Type
+        - From Date
+        - To Date
+        - Active EmployeeContext
 
-    No daily analytics rows are returned.
+    Returned sections:
+        - Pipeline Insights
+        - Application Pipeline
+        - Applied Filters
+        - Visibility
+
+    No application detail rows are returned.
     """
+
+    # ========================================================================
+    # CONTROLLER
+    # ========================================================================
 
     return (
         AgentAnalyticsOverviewController.get_overview(
             db=db,
             employee=employee,
 
-            # --------------------------------------------------------------
-            # Hierarchy filters
-            # --------------------------------------------------------------
+            # ----------------------------------------------------------------
+            # Analytics Type
+            # ----------------------------------------------------------------
+
+            analytics_type=type,
+
+            # ----------------------------------------------------------------
+            # Team Lead
+            # ----------------------------------------------------------------
 
             team_lead_context_id=(
                 team_lead_context_id
             ),
 
+            # ----------------------------------------------------------------
+            # Agent
+            # ----------------------------------------------------------------
+
             agent_context_id=(
                 agent_context_id
             ),
+
+            # ----------------------------------------------------------------
+            # RM
+            # ----------------------------------------------------------------
 
             rm_context_id=(
                 rm_context_id
             ),
 
-            # --------------------------------------------------------------
+            # ----------------------------------------------------------------
             # Loan Type
-            # --------------------------------------------------------------
+            # ----------------------------------------------------------------
 
             loan_type_id=(
                 loan_type_id
             ),
 
-            # --------------------------------------------------------------
-            # Date filters
-            # --------------------------------------------------------------
+            # ----------------------------------------------------------------
+            # Dates
+            # ----------------------------------------------------------------
 
             from_date=from_date,
             to_date=to_date,
 
-            # --------------------------------------------------------------
-            # Active EmployeeContext
-            # --------------------------------------------------------------
+            # ----------------------------------------------------------------
+            # Active Context
+            # ----------------------------------------------------------------
 
             context_id=context_id,
         )

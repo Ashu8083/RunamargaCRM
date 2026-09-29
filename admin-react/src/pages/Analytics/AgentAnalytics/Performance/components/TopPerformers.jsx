@@ -7,7 +7,9 @@ import TrophyIcon from '@heroicons/react/24/outline/TrophyIcon'
 // HELPERS
 // =============================================================
 
-const formatNumber = (value) => {
+const formatNumber = (
+    value
+) => {
 
     return Number(
         value || 0
@@ -16,7 +18,9 @@ const formatNumber = (value) => {
 }
 
 
-const formatCurrency = (value) => {
+const formatCurrency = (
+    value
+) => {
 
     return `₹${Number(
         value || 0
@@ -54,288 +58,98 @@ const METRICS = [
 
 
 // =============================================================
+// EMPTY STATE
+// =============================================================
+
+function EmptyState() {
+
+    return (
+
+        <section className="
+            w-full
+            rounded-2xl
+            border
+            border-base-300
+            bg-base-100
+            p-5
+            shadow-sm
+        ">
+
+            <div className="
+                flex
+                items-center
+                gap-2
+            ">
+
+                <TrophyIcon className="
+                    h-5
+                    w-5
+                    text-[#8BCF00]
+                " />
+
+                <h2 className="
+                    text-sm
+                    font-semibold
+                ">
+                    Top Performers
+                </h2>
+
+            </div>
+
+            <p className="
+                py-10
+                text-center
+                text-sm
+                text-base-content/40
+            ">
+                No performer data available.
+            </p>
+
+        </section>
+
+    )
+
+}
+
+
+// =============================================================
 // COMPONENT
 // =============================================================
 
 function TopPerformers({
     mode = 'agent',
     performance = [],
+    loanWise = [],
+    topPerformers = [],
+    topPerformersByLoanType = [],
     metric = 'disbursed',
     onMetricChange,
 }) {
 
     // =========================================================
-    // ENTITY GROUPING
+    // NORMALIZE
     // =========================================================
 
-    const entityMap =
-        performance.reduce(
-            (result, item) => {
-
-                const id =
-                    mode === 'rm'
-                        ? item.rmId
-                        : item.agentId
-
-
-                const key =
-                    String(id)
-
-
-                if (!result[key]) {
-
-                    result[key] = {
-
-                        id,
-
-                        name:
-                            mode === 'rm'
-                                ? item.rmName
-                                : item.agentName,
-
-                        teamLeadName:
-                            item.teamLeadName ||
-                            '-',
-
-                        teamName:
-                            item.teamName ||
-                            '-',
-
-                        inProcess: 0,
-                        login: 0,
-                        sanctioned: 0,
-                        disbursed: 0,
-                        rejected: 0,
-                        disbursedAmount: 0,
-
-                    }
-
-                }
-
-
-                result[key].inProcess +=
-                    Number(
-                        item.inProcess || 0
-                    )
-
-                result[key].login +=
-                    Number(
-                        item.login || 0
-                    )
-
-                result[key].sanctioned +=
-                    Number(
-                        item.sanctioned || 0
-                    )
-
-                result[key].disbursed +=
-                    Number(
-                        item.disbursed || 0
-                    )
-
-                result[key].rejected +=
-                    Number(
-                        item.rejected || 0
-                    )
-
-                result[key].disbursedAmount +=
-                    Number(
-                        item.disbursedAmount || 0
-                    )
-
-
-                return result
-
-            },
-            {}
+    const overviewRows =
+        Array.isArray(
+            performance
         )
+            ? performance
+            : []
 
-
-    // =========================================================
-    // TOP PERFORMERS
-    // =========================================================
-
-    const topPerformers =
-        Object.values(entityMap)
-            .sort(
-                (a, b) =>
-                    Number(
-                        b[metric] || 0
-                    ) -
-                    Number(
-                        a[metric] || 0
-                    )
-            )
-            .slice(0, 5)
-
-
-    // =========================================================
-    // LOAN + ENTITY GROUPING
-    //
-    // Required structure:
-    //
-    // Loan Type | Agent/RM | Count | Amount
-    //
-    // =========================================================
-
-    const loanEntityMap =
-        performance.reduce(
-            (result, item) => {
-
-                const loanId =
-                    item.loanTypeId ??
-                    item.loanTypeName ??
-                    'unknown'
-
-
-                const entityId =
-                    mode === 'rm'
-                        ? item.rmId
-                        : item.agentId
-
-
-                const key =
-                    `${String(loanId)}-${String(entityId)}`
-
-
-                if (!result[key]) {
-
-                    result[key] = {
-
-                        id: key,
-
-                        loanTypeId:
-                            loanId,
-
-                        loanTypeName:
-                            item.loanTypeName ||
-                            'Unknown Loan Type',
-
-                        entityId,
-
-                        entityName:
-                            mode === 'rm'
-                                ? item.rmName
-                                : item.agentName,
-
-                        count: 0,
-
-                        disbursedAmount: 0,
-
-                    }
-
-                }
-
-
-                result[key].count +=
-                    Number(
-                        item[metric] || 0
-                    )
-
-
-                result[key].disbursedAmount +=
-                    Number(
-                        item.disbursedAmount || 0
-                    )
-
-
-                return result
-
-            },
-            {}
+    const backendTopPerformers =
+        Array.isArray(
+            topPerformers
         )
+            ? topPerformers
+            : []
 
-
-    // =========================================================
-    // GROUP LOAN ROWS
-    // =========================================================
-
-    const loanGroups =
-        Object.values(loanEntityMap)
-            .reduce(
-                (result, item) => {
-
-                    const loanKey =
-                        String(
-                            item.loanTypeId
-                        )
-
-
-                    if (!result[loanKey]) {
-
-                        result[loanKey] = {
-
-                            id:
-                                item.loanTypeId,
-
-                            name:
-                                item.loanTypeName,
-
-                            rows: [],
-
-                        }
-
-                    }
-
-
-                    result[loanKey].rows.push(
-                        item
-                    )
-
-
-                    return result
-
-                },
-                {}
-            )
-
-
-    const groupedLoanTypes =
-        Object.values(loanGroups)
-            .map(
-                (loan) => ({
-
-                    ...loan,
-
-                    rows:
-                        loan.rows.sort(
-                            (a, b) =>
-                                b.count -
-                                a.count
-                        ),
-
-                })
-            )
-            .sort(
-                (a, b) => {
-
-                    const aTotal =
-                        a.rows.reduce(
-                            (
-                                total,
-                                row
-                            ) =>
-                                total +
-                                row.count,
-                            0
-                        )
-
-                    const bTotal =
-                        b.rows.reduce(
-                            (
-                                total,
-                                row
-                            ) =>
-                                total +
-                                row.count,
-                            0
-                        )
-
-                    return bTotal - aTotal
-
-                }
-            )
-
+    const backendLoanGroups =
+        Array.isArray(
+            topPerformersByLoanType
+        )
+            ? topPerformersByLoanType
+            : []
 
     // =========================================================
     // LABELS
@@ -346,12 +160,10 @@ function TopPerformers({
             ? 'RM'
             : 'Agent'
 
-
     const entityPlural =
         mode === 'rm'
             ? 'RMs'
             : 'Agents'
-
 
     const selectedMetric =
         METRICS.find(
@@ -362,60 +174,457 @@ function TopPerformers({
 
 
     // =========================================================
+    // TOP PERFORMERS
+    //
+    // Backend provides complete rows. The selected metric is
+    // used only for ordering/display.
+    // =========================================================
+
+    const topRows =
+        [...backendTopPerformers]
+            .sort(
+                (
+                    a,
+                    b
+                ) =>
+                    Number(
+                        b?.[metric] || 0
+                    ) -
+                    Number(
+                        a?.[metric] || 0
+                    )
+            )
+            .slice(
+                0,
+                5
+            )
+
+
+    // =========================================================
+    // FALLBACK
+    //
+    // Preserves functionality if backend top performers are
+    // temporarily unavailable but overview data exists.
+    // =========================================================
+
+    const fallbackEntityMap =
+        overviewRows.reduce(
+            (
+                result,
+                item
+            ) => {
+
+                const id =
+                    item?.contextId ??
+                    item?.id
+
+                if (
+                    id === null ||
+                    id === undefined
+                ) {
+                    return result
+                }
+
+                const key =
+                    String(id)
+
+                if (
+                    !result[key]
+                ) {
+
+                    result[key] = {
+                        id,
+
+                        name:
+                            item?.name ||
+                            'Unknown',
+
+                        teamLeadContextId:
+                            item?.teamLeadContextId ??
+                            null,
+
+                        teamLeadName:
+                            item?.teamLeadName ||
+                            '-',
+
+                        teamId:
+                            item?.teamId ??
+                            null,
+
+                        teamName:
+                            item?.teamName ||
+                            '-',
+
+                        inProcess: 0,
+                        login: 0,
+                        sanctioned: 0,
+                        disbursed: 0,
+                        rejected: 0,
+                        disbursedAmount: 0,
+                    }
+
+                }
+
+                result[key].inProcess +=
+                    Number(
+                        item?.inProcess || 0
+                    )
+
+                result[key].login +=
+                    Number(
+                        item?.login || 0
+                    )
+
+                result[key].sanctioned +=
+                    Number(
+                        item?.sanctioned || 0
+                    )
+
+                result[key].disbursed +=
+                    Number(
+                        item?.disbursed || 0
+                    )
+
+                result[key].rejected +=
+                    Number(
+                        item?.rejected || 0
+                    )
+
+                result[key].disbursedAmount +=
+                    Number(
+                        item?.disbursedAmount || 0
+                    )
+
+                return result
+
+            },
+            {}
+        )
+
+
+    const fallbackTopRows =
+        Object.values(
+            fallbackEntityMap
+        )
+            .sort(
+                (
+                    a,
+                    b
+                ) =>
+                    Number(
+                        b?.[metric] || 0
+                    ) -
+                    Number(
+                        a?.[metric] || 0
+                    )
+            )
+            .slice(
+                0,
+                5
+            )
+
+
+    const displayedTopRows =
+        topRows.length
+            ? topRows
+            : fallbackTopRows
+
+
+    // =========================================================
+    // LOAN TYPE PERFORMERS
+    //
+    // Backend response is already grouped by loan type.
+    // =========================================================
+
+    const normalizedLoanGroups =
+        backendLoanGroups
+            .map(
+                (
+                    group,
+                    groupIndex
+                ) => {
+
+                    const rows =
+                        Array.isArray(
+                            group?.rows
+                        )
+                            ? group.rows
+                            : []
+
+                    const sortedRows =
+                        [...rows].sort(
+                            (
+                                a,
+                                b
+                            ) =>
+                                Number(
+                                    b?.count || 0
+                                ) -
+                                Number(
+                                    a?.count || 0
+                                )
+                        )
+
+                    const total =
+                        sortedRows.reduce(
+                            (
+                                sum,
+                                row
+                            ) =>
+                                sum +
+                                Number(
+                                    row?.count || 0
+                                ),
+                            0
+                        )
+
+                    return {
+
+                        id:
+                            group?.loanTypeId ??
+                            group?.id ??
+                            `loan-${groupIndex}`,
+
+                        loanTypeId:
+                            group?.loanTypeId ??
+                            null,
+
+                        loanTypeName:
+                            group?.loanTypeName ||
+                            'Unknown Loan Type',
+
+                        rows:
+                            sortedRows,
+
+                        total,
+
+                    }
+
+                }
+            )
+            .sort(
+                (
+                    a,
+                    b
+                ) =>
+                    Number(
+                        b.total || 0
+                    ) -
+                    Number(
+                        a.total || 0
+                    )
+            )
+
+
+    // =========================================================
+    // FALLBACK LOAN TYPE PERFORMERS
+    // =========================================================
+
+    const fallbackLoanMap =
+        overviewRows.reduce(
+            (
+                result,
+                item
+            ) => {
+
+                const loanId =
+                    item?.loanTypeId ??
+                    item?.loan_type_id ??
+                    item?.loanTypeName ??
+                    'unknown'
+
+                const entityId =
+                    item?.contextId ??
+                    item?.id
+
+                if (
+                    entityId === null ||
+                    entityId === undefined
+                ) {
+                    return result
+                }
+
+                const loanKey =
+                    String(
+                        loanId
+                    )
+
+                if (
+                    !result[loanKey]
+                ) {
+
+                    result[loanKey] = {
+
+                        id:
+                            loanId,
+
+                        loanTypeId:
+                            item?.loanTypeId ??
+                            null,
+
+                        loanTypeName:
+                            item?.loanTypeName ||
+                            'Unknown Loan Type',
+
+                        rows: [],
+
+                    }
+
+                }
+
+                const existing =
+                    result[loanKey].rows.find(
+                        (row) =>
+                            String(
+                                row?.contextId
+                            ) ===
+                            String(
+                                entityId
+                            )
+                    )
+
+                if (
+                    existing
+                ) {
+
+                    existing.count +=
+                        Number(
+                            item?.[metric] || 0
+                        )
+
+                    existing.disbursedAmount +=
+                        Number(
+                            item?.disbursedAmount || 0
+                        )
+
+                } else {
+
+                    result[loanKey].rows.push({
+
+                        id:
+                            `${loanKey}-${entityId}`,
+
+                        loanTypeId:
+                            item?.loanTypeId ??
+                            null,
+
+                        loanTypeName:
+                            item?.loanTypeName ||
+                            'Unknown Loan Type',
+
+                        contextId:
+                            entityId,
+
+                        name:
+                            item?.name ||
+                            'Unknown',
+
+                        count:
+                            Number(
+                                item?.[metric] || 0
+                            ),
+
+                        disbursedAmount:
+                            Number(
+                                item?.disbursedAmount || 0
+                            ),
+
+                    })
+
+                }
+
+                return result
+
+            },
+            {}
+        )
+
+
+    const fallbackLoanGroups =
+        Object.values(
+            fallbackLoanMap
+        )
+            .map(
+                (
+                    group
+                ) => {
+
+                    const rows =
+                        [...group.rows].sort(
+                            (
+                                a,
+                                b
+                            ) =>
+                                Number(
+                                    b?.count || 0
+                                ) -
+                                Number(
+                                    a?.count || 0
+                                )
+                        )
+
+                    return {
+
+                        ...group,
+
+                        rows,
+
+                        total:
+                            rows.reduce(
+                                (
+                                    sum,
+                                    row
+                                ) =>
+                                    sum +
+                                    Number(
+                                        row?.count || 0
+                                    ),
+                                0
+                            ),
+
+                    }
+
+                }
+            )
+            .sort(
+                (
+                    a,
+                    b
+                ) =>
+                    Number(
+                        b.total || 0
+                    ) -
+                    Number(
+                        a.total || 0
+                    )
+            )
+
+
+    const displayedLoanGroups =
+        normalizedLoanGroups.length
+            ? normalizedLoanGroups
+            : fallbackLoanGroups
+
+
+    // =========================================================
     // EMPTY
     // =========================================================
 
-    if (!performance.length) {
+    if (
+        !overviewRows.length &&
+        !backendTopPerformers.length
+    ) {
 
         return (
-
-            <section className="
-                w-full
-                rounded-2xl
-                border
-                border-base-300
-                bg-base-100
-                p-5
-                shadow-sm
-            ">
-
-                <div className="
-                    flex
-                    items-center
-                    gap-2
-                ">
-
-                    <TrophyIcon className="
-                        h-5
-                        w-5
-                        text-[#8BCF00]
-                    " />
-
-                    <h2 className="
-                        text-sm
-                        font-semibold
-                    ">
-                        Top Performers
-                    </h2>
-
-                </div>
-
-
-                <p className="
-                    py-10
-                    text-center
-                    text-sm
-                    text-base-content/40
-                ">
-                    No performer data available.
-                </p>
-
-            </section>
-
+            <EmptyState />
         )
 
     }
 
+
+    // =========================================================
+    // RENDER
+    // =========================================================
 
     return (
 
@@ -467,7 +676,6 @@ function TopPerformers({
 
                     </div>
 
-
                     <div>
 
                         <h2 className="
@@ -483,7 +691,8 @@ function TopPerformers({
                             text-xs
                             text-base-content/40
                         ">
-                            Best performing {entityPlural.toLowerCase()}
+                            Best performing{' '}
+                            {entityPlural.toLowerCase()}
                         </p>
 
                     </div>
@@ -513,18 +722,20 @@ function TopPerformers({
                 ">
 
                     {METRICS.map(
-                        (item) => (
+                        (
+                            item
+                        ) => (
 
                             <button
                                 key={
                                     item.value
                                 }
                                 type="button"
-                                onClick={() =>
+                                onClick={() => {
                                     onMetricChange?.(
                                         item.value
                                     )
-                                }
+                                }}
                                 className={`
                                     rounded-md
                                     px-4
@@ -547,7 +758,9 @@ function TopPerformers({
                                     }
                                 `}
                             >
-                                {item.label}
+                                {
+                                    item.label
+                                }
                             </button>
 
                         )
@@ -559,7 +772,7 @@ function TopPerformers({
 
 
             {/* =================================================
-                OVERALL TOP PERFORMERS
+                TOP PERFORMERS
             ================================================= */}
 
             <div className="
@@ -593,7 +806,8 @@ function TopPerformers({
                                 font-semibold
                                 text-base-content
                             ">
-                                Top Performing {entityPlural}
+                                Top Performing{' '}
+                                {entityPlural}
                             </h3>
 
                             <p className="
@@ -602,11 +816,12 @@ function TopPerformers({
                                 text-base-content/40
                             ">
                                 Ranked by{' '}
-                                {selectedMetric.label.toLowerCase()}
+                                {
+                                    selectedMetric.label.toLowerCase()
+                                }
                             </p>
 
                         </div>
-
 
                         <span className="
                             rounded-md
@@ -617,7 +832,10 @@ function TopPerformers({
                             font-medium
                             text-[#78B300]
                         ">
-                            Top {topPerformers.length}
+                            Top{' '}
+                            {
+                                displayedTopRows.length
+                            }
                         </span>
 
                     </div>
@@ -625,7 +843,9 @@ function TopPerformers({
                 </div>
 
 
-                {/* OVERALL TABLE */}
+                {/* =================================================
+                    TOP PERFORMERS TABLE
+                ================================================= */}
 
                 <div className="
                     w-full
@@ -684,17 +904,18 @@ function TopPerformers({
                                     py-3
                                     text-right
                                 ">
-                                    {selectedMetric.label}
+                                    {
+                                        selectedMetric.label
+                                    }
                                 </th>
 
                             </tr>
 
                         </thead>
 
-
                         <tbody>
 
-                            {topPerformers.map(
+                            {displayedTopRows.map(
                                 (
                                     item,
                                     index
@@ -703,7 +924,9 @@ function TopPerformers({
                                     <tr
                                         key={
                                             String(
-                                                item.id
+                                                item?.contextId ??
+                                                item?.id ??
+                                                index
                                             )
                                         }
                                         className="
@@ -730,15 +953,23 @@ function TopPerformers({
                                                 font-bold
                                                 ${
                                                     index === 0
-                                                        ? 'bg-[#8BCF00]/15 text-[#78B300]'
-                                                        : 'bg-base-200 text-base-content/50'
+                                                        ? `
+                                                            bg-[#8BCF00]/15
+                                                            text-[#78B300]
+                                                        `
+                                                        : `
+                                                            bg-base-200
+                                                            text-base-content/50
+                                                        `
                                                 }
                                             `}>
-                                                {index + 1}
+                                                {
+                                                    item?.rank ||
+                                                    index + 1
+                                                }
                                             </span>
 
                                         </td>
-
 
                                         <td className="
                                             px-4
@@ -753,11 +984,25 @@ function TopPerformers({
                                                 font-medium
                                                 text-base-content
                                             ">
-                                                {item.name}
+                                                {
+                                                    item?.name ||
+                                                    'Unknown'
+                                                }
                                             </span>
 
                                         </td>
 
+                                        <td className="
+                                            px-4
+                                            py-3
+                                            text-xs
+                                            text-base-content/55
+                                        ">
+                                            {
+                                                item?.teamLeadName ||
+                                                '-'
+                                            }
+                                        </td>
 
                                         <td className="
                                             px-4
@@ -766,22 +1011,10 @@ function TopPerformers({
                                             text-base-content/55
                                         ">
                                             {
-                                                item.teamLeadName
+                                                item?.teamName ||
+                                                '-'
                                             }
                                         </td>
-
-
-                                        <td className="
-                                            px-4
-                                            py-3
-                                            text-xs
-                                            text-base-content/55
-                                        ">
-                                            {
-                                                item.teamName
-                                            }
-                                        </td>
-
 
                                         <td className="
                                             px-4
@@ -791,20 +1024,38 @@ function TopPerformers({
                                             font-semibold
                                             text-[#78B300]
                                         ">
-
                                             {
                                                 formatNumber(
-                                                    item[
-                                                        metric
-                                                    ]
+                                                    item?.[metric]
                                                 )
                                             }
-
                                         </td>
 
                                     </tr>
 
                                 )
+                            )}
+
+                            {!displayedTopRows.length && (
+
+                                <tr>
+
+                                    <td
+                                        colSpan={5}
+                                        className="
+                                            px-4
+                                            py-8
+                                            text-center
+                                            text-xs
+                                            text-base-content/40
+                                        "
+                                    >
+                                        No top performer data
+                                        available.
+                                    </td>
+
+                                </tr>
+
                             )}
 
                         </tbody>
@@ -851,8 +1102,12 @@ function TopPerformers({
                             text-[11px]
                             text-base-content/40
                         ">
-                            {selectedMetric.label} by loan type and{' '}
-                            {entityLabel.toLowerCase()}
+                            {
+                                selectedMetric.label
+                            } by loan type and{' '}
+                            {
+                                entityLabel.toLowerCase()
+                            }
                         </p>
 
                     </div>
@@ -861,7 +1116,7 @@ function TopPerformers({
 
 
                 {/* =================================================
-                    LOAN TABLE
+                    LOAN TYPE TABLE
                 ================================================= */}
 
                 <div className="
@@ -925,11 +1180,13 @@ function TopPerformers({
 
                         </thead>
 
-
                         <tbody>
 
-                            {groupedLoanTypes.map(
-                                (loan) => (
+                            {displayedLoanGroups.map(
+                                (
+                                    loan,
+                                    loanIndex
+                                ) => (
 
                                     loan.rows.map(
                                         (
@@ -939,7 +1196,11 @@ function TopPerformers({
 
                                             <tr
                                                 key={
-                                                    row.id
+                                                    String(
+                                                        row?.contextId ??
+                                                        row?.id ??
+                                                        `${loanIndex}-${rowIndex}`
+                                                    )
                                                 }
                                                 className="
                                                     border-b
@@ -967,17 +1228,22 @@ function TopPerformers({
                                                             <div className="
                                                                 h-2
                                                                 w-2
+                                                                shrink-0
                                                                 rounded-full
                                                                 bg-[#8BCF00]
                                                             " />
 
                                                             <span className="
+                                                                block
+                                                                max-w-[220px]
+                                                                truncate
                                                                 text-sm
                                                                 font-medium
                                                                 text-base-content
                                                             ">
                                                                 {
-                                                                    loan.name
+                                                                    loan?.loanTypeName ||
+                                                                    'Unknown Loan Type'
                                                                 }
                                                             </span>
 
@@ -1006,11 +1272,15 @@ function TopPerformers({
                                                 ">
 
                                                     <span className="
+                                                        block
+                                                        max-w-[180px]
+                                                        truncate
                                                         text-sm
                                                         text-base-content/70
                                                     ">
                                                         {
-                                                            row.entityName
+                                                            row?.name ||
+                                                            'Unknown'
                                                         }
                                                     </span>
 
@@ -1030,7 +1300,7 @@ function TopPerformers({
 
                                                     {
                                                         formatNumber(
-                                                            row.count
+                                                            row?.count
                                                         )
                                                     }
 
@@ -1053,7 +1323,7 @@ function TopPerformers({
 
                                                         {
                                                             formatCurrency(
-                                                                row.disbursedAmount
+                                                                row?.disbursedAmount
                                                             )
                                                         }
 
@@ -1069,8 +1339,7 @@ function TopPerformers({
                                 )
                             )}
 
-
-                            {!groupedLoanTypes.length && (
+                            {!displayedLoanGroups.length && (
 
                                 <tr>
 

@@ -1,8 +1,9 @@
 // admin-react/src/pages/Analytics/AgentAnalytics/Trends/index.jsx
 
 import {
+    useCallback,
     useEffect,
-    useMemo,
+    useRef,
     useState,
 } from 'react'
 
@@ -19,349 +20,16 @@ import LoanTypeTrend from './components/LoanTypeTrend'
 import SanctionDisbursementTrend from './components/SanctionDisbursementTrend'
 import RejectionTrend from './components/RejectionTrend'
 
+import TrendsAPI from './API'
+
 
 // =============================================================
-// MOCK API
-//
-// Replace only this function when backend API is ready.
-// The components do not contain API calls.
-// =============================================================
-
-const fetchAnalyticsTrends = async () => {
-
-    return new Promise((resolve) => {
-
-        setTimeout(() => {
-
-            resolve([
-                {
-                    id: 1,
-                    date: '2026-08-01',
-
-                    mode: 'agent',
-
-                    agentId: 101,
-                    agentName: 'Rahul Sharma',
-
-                    rmId: 201,
-                    rmName: 'Priya Nair',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    loanTypeId: 401,
-                    loanTypeName: 'Personal Loan',
-
-                    inProcess: 32,
-                    applicationCreated: 18,
-                    loggedIn: 14,
-                    sanctioned: 8,
-                    disbursed: 5,
-                    rejected: 3,
-                },
-
-                {
-                    id: 2,
-                    date: '2026-08-02',
-
-                    mode: 'agent',
-
-                    agentId: 102,
-                    agentName: 'Anil Kumar',
-
-                    rmId: 202,
-                    rmName: 'Rajesh Rao',
-
-                    teamLeadId: 302,
-                    teamLeadName: 'Priya Nair',
-
-                    loanTypeId: 402,
-                    loanTypeName: 'Home Loan',
-
-                    inProcess: 26,
-                    applicationCreated: 15,
-                    loggedIn: 11,
-                    sanctioned: 7,
-                    disbursed: 4,
-                    rejected: 2,
-                },
-
-                {
-                    id: 3,
-                    date: '2026-08-03',
-
-                    mode: 'agent',
-
-                    agentId: 103,
-                    agentName: 'Vikram Singh',
-
-                    rmId: 201,
-                    rmName: 'Priya Nair',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    loanTypeId: 403,
-                    loanTypeName: 'Business Loan',
-
-                    inProcess: 29,
-                    applicationCreated: 17,
-                    loggedIn: 13,
-                    sanctioned: 9,
-                    disbursed: 6,
-                    rejected: 2,
-                },
-
-                {
-                    id: 4,
-                    date: '2026-08-04',
-
-                    mode: 'agent',
-
-                    agentId: 104,
-                    agentName: 'Arjun Rao',
-
-                    rmId: 202,
-                    rmName: 'Rajesh Rao',
-
-                    teamLeadId: 302,
-                    teamLeadName: 'Priya Nair',
-
-                    loanTypeId: 404,
-                    loanTypeName: 'Vehicle Loan',
-
-                    inProcess: 21,
-                    applicationCreated: 13,
-                    loggedIn: 10,
-                    sanctioned: 6,
-                    disbursed: 4,
-                    rejected: 2,
-                },
-
-                {
-                    id: 5,
-                    date: '2026-08-05',
-
-                    mode: 'agent',
-
-                    agentId: 105,
-                    agentName: 'Kiran Kumar',
-
-                    rmId: 203,
-                    rmName: 'Sneha Reddy',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    loanTypeId: 405,
-                    loanTypeName: 'Education Loan',
-
-                    inProcess: 17,
-                    applicationCreated: 11,
-                    loggedIn: 8,
-                    sanctioned: 5,
-                    disbursed: 3,
-                    rejected: 1,
-                },
-
-                {
-                    id: 6,
-                    date: '2026-08-06',
-
-                    mode: 'agent',
-
-                    agentId: 106,
-                    agentName: 'Niveditha Rao',
-
-                    rmId: 201,
-                    rmName: 'Priya Nair',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    loanTypeId: 406,
-                    loanTypeName: 'Gold Loan',
-
-                    inProcess: 23,
-                    applicationCreated: 14,
-                    loggedIn: 10,
-                    sanctioned: 7,
-                    disbursed: 5,
-                    rejected: 1,
-                },
-
-                {
-                    id: 7,
-                    date: '2026-08-07',
-
-                    mode: 'rm',
-
-                    agentId: 101,
-                    agentName: 'Rahul Sharma',
-
-                    rmId: 201,
-                    rmName: 'Priya Nair',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    loanTypeId: 401,
-                    loanTypeName: 'Personal Loan',
-
-                    inProcess: 38,
-                    applicationCreated: 22,
-                    loggedIn: 17,
-                    sanctioned: 10,
-                    disbursed: 7,
-                    rejected: 3,
-                },
-
-                {
-                    id: 8,
-                    date: '2026-08-08',
-
-                    mode: 'rm',
-
-                    agentId: 102,
-                    agentName: 'Anil Kumar',
-
-                    rmId: 202,
-                    rmName: 'Rajesh Rao',
-
-                    teamLeadId: 302,
-                    teamLeadName: 'Priya Nair',
-
-                    loanTypeId: 402,
-                    loanTypeName: 'Home Loan',
-
-                    inProcess: 31,
-                    applicationCreated: 19,
-                    loggedIn: 14,
-                    sanctioned: 8,
-                    disbursed: 5,
-                    rejected: 3,
-                },
-
-                {
-                    id: 9,
-                    date: '2026-08-09',
-
-                    mode: 'rm',
-
-                    agentId: 103,
-                    agentName: 'Vikram Singh',
-
-                    rmId: 201,
-                    rmName: 'Priya Nair',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    loanTypeId: 403,
-                    loanTypeName: 'Business Loan',
-
-                    inProcess: 34,
-                    applicationCreated: 21,
-                    loggedIn: 16,
-                    sanctioned: 9,
-                    disbursed: 6,
-                    rejected: 3,
-                },
-
-                {
-                    id: 10,
-                    date: '2026-08-10',
-
-                    mode: 'rm',
-
-                    agentId: 104,
-                    agentName: 'Arjun Rao',
-
-                    rmId: 202,
-                    rmName: 'Rajesh Rao',
-
-                    teamLeadId: 302,
-                    teamLeadName: 'Priya Nair',
-
-                    loanTypeId: 404,
-                    loanTypeName: 'Vehicle Loan',
-
-                    inProcess: 25,
-                    applicationCreated: 16,
-                    loggedIn: 12,
-                    sanctioned: 7,
-                    disbursed: 4,
-                    rejected: 2,
-                },
-
-                {
-                    id: 11,
-                    date: '2026-08-11',
-
-                    mode: 'rm',
-
-                    agentId: 105,
-                    agentName: 'Kiran Kumar',
-
-                    rmId: 203,
-                    rmName: 'Sneha Reddy',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    loanTypeId: 405,
-                    loanTypeName: 'Education Loan',
-
-                    inProcess: 20,
-                    applicationCreated: 13,
-                    loggedIn: 9,
-                    sanctioned: 6,
-                    disbursed: 4,
-                    rejected: 2,
-                },
-
-                {
-                    id: 12,
-                    date: '2026-08-12',
-
-                    mode: 'rm',
-
-                    agentId: 106,
-                    agentName: 'Niveditha Rao',
-
-                    rmId: 201,
-                    rmName: 'Priya Nair',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    loanTypeId: 406,
-                    loanTypeName: 'Gold Loan',
-
-                    inProcess: 28,
-                    applicationCreated: 18,
-                    loggedIn: 13,
-                    sanctioned: 8,
-                    disbursed: 5,
-                    rejected: 2,
-                },
-            ])
-
-        }, 400)
-
-    })
-
-}
-
-
-// =============================================================
-// LOADING SKELETON
+// LOADING STATE
 // =============================================================
 
 function LoadingState() {
 
     return (
-
         <div className="
             w-full
             max-w-full
@@ -371,7 +39,9 @@ function LoadingState() {
             sm:p-6
         ">
 
-            {/* FILTER */}
+            {/* =================================================
+                FILTER SKELETON
+            ================================================= */}
 
             <div className="
                 w-full
@@ -390,7 +60,6 @@ function LoadingState() {
                     rounded-lg
                     bg-base-200
                 " />
-
 
                 <div className="
                     grid
@@ -421,7 +90,9 @@ function LoadingState() {
             </div>
 
 
-            {/* CHARTS */}
+            {/* =================================================
+                FIRST ROW SKELETON
+            ================================================= */}
 
             <div className="
                 grid
@@ -452,6 +123,10 @@ function LoadingState() {
             </div>
 
 
+            {/* =================================================
+                LOAN TYPE SKELETON
+            ================================================= */}
+
             <div className="
                 h-[400px]
                 animate-pulse
@@ -461,6 +136,10 @@ function LoadingState() {
                 bg-base-100
             " />
 
+
+            {/* =================================================
+                BOTTOM ROW SKELETON
+            ================================================= */}
 
             <div className="
                 grid
@@ -490,9 +169,18 @@ function LoadingState() {
             </div>
 
         </div>
-
     )
 
+}
+
+
+// =============================================================
+// VIEW TYPES
+// =============================================================
+
+const VIEW_TYPES = {
+    AGENT: 'agent',
+    RM: 'rm',
 }
 
 
@@ -503,101 +191,251 @@ function LoadingState() {
 function Trends() {
 
     // =========================================================
-    // DATA
+    // ANALYTICS DATA
     // =========================================================
 
-    const [analytics, setAnalytics] =
+    const [trend, setTrend] =
+        useState([])
+
+    const [loanTypeTrend, setLoanTypeTrend] =
+        useState([])
+
+    const [stageDistribution, setStageDistribution] =
+        useState({})
+
+    const [
+        sanctionDisbursementTrend,
+        setSanctionDisbursementTrend,
+    ] = useState([])
+
+    const [rejectionTrend, setRejectionTrend] =
         useState([])
 
 
+    // =========================================================
+    // LOADING
+    // =========================================================
+
     const [loading, setLoading] =
         useState(true)
-
 
     const [refreshing, setRefreshing] =
         useState(false)
 
 
     // =========================================================
-    // GLOBAL MODE
+    // MODE
     // =========================================================
 
     const [mode, setMode] =
-        useState('agent')
+        useState(VIEW_TYPES.AGENT)
 
 
     // =========================================================
-    // GLOBAL FILTERS
+    // FILTERS
     // =========================================================
 
     const [teamLead, setTeamLead] =
         useState('')
 
-
     const [agent, setAgent] =
         useState('')
-
 
     const [rm, setRm] =
         useState('')
 
-
     const [loanType, setLoanType] =
         useState('')
 
-
     const [fromDate, setFromDate] =
         useState('')
-
 
     const [toDate, setToDate] =
         useState('')
 
 
     // =========================================================
+    // REQUEST CONTROL
+    // =========================================================
+
+    const requestIdRef =
+        useRef(0)
+
+
+    // =========================================================
+    // CLEAR ANALYTICS
+    // =========================================================
+
+    const clearAnalytics = useCallback(() => {
+
+        setTrend([])
+
+        setLoanTypeTrend([])
+
+        setStageDistribution({})
+
+        setSanctionDisbursementTrend([])
+
+        setRejectionTrend([])
+
+    }, [])
+
+
+    // =========================================================
+    // APPLY RESPONSE
+    // =========================================================
+
+    const applyResponse = useCallback((
+        response
+    ) => {
+
+        setTrend(
+            Array.isArray(
+                response?.trend
+            )
+                ? response.trend
+                : []
+        )
+
+
+        setLoanTypeTrend(
+            Array.isArray(
+                response?.loanTypeTrend
+            )
+                ? response.loanTypeTrend
+                : []
+        )
+
+
+        setStageDistribution(
+            response?.stageDistribution &&
+            typeof response.stageDistribution === 'object'
+                ? response.stageDistribution
+                : {}
+        )
+
+
+        setSanctionDisbursementTrend(
+            Array.isArray(
+                response?.sanctionDisbursementTrend
+            )
+                ? response.sanctionDisbursementTrend
+                : []
+        )
+
+
+        setRejectionTrend(
+            Array.isArray(
+                response?.rejectionTrend
+            )
+                ? response.rejectionTrend
+                : []
+        )
+
+    }, [])
+
+
+    // =========================================================
     // LOAD DATA
     // =========================================================
 
-    const loadData = async (
-        showLoader = true
+    const loadData = useCallback(async (
+        filters,
+        initial = false
     ) => {
+
+        const requestId =
+            ++requestIdRef.current
+
+
+        console.log(
+            '[Agent Analytics Trends] Request:',
+            filters
+        )
+
+
+        if (initial) {
+
+            setLoading(true)
+
+        } else {
+
+            setRefreshing(true)
+
+        }
+
 
         try {
 
-            if (showLoader) {
-                setLoading(true)
-            } else {
-                setRefreshing(true)
+            const response =
+                await TrendsAPI.getTrends(
+                    filters
+                )
+
+
+            // -------------------------------------------------
+            // Ignore old request responses
+            // -------------------------------------------------
+
+            if (
+                requestId !==
+                requestIdRef.current
+            ) {
+
+                return
+
             }
 
 
-            const response =
-                await fetchAnalyticsTrends()
+            console.log(
+                '[Agent Analytics Trends] Response:',
+                response
+            )
 
 
-            setAnalytics(
-                Array.isArray(response)
-                    ? response
-                    : []
+            applyResponse(
+                response
             )
 
         } catch (error) {
 
+            if (
+                requestId !==
+                requestIdRef.current
+            ) {
+
+                return
+
+            }
+
+
             console.error(
-                'Failed to load analytics trends:',
+                '[Agent Analytics Trends] Failed:',
                 error
             )
 
-            setAnalytics([])
+
+            clearAnalytics()
 
         } finally {
 
-            setLoading(false)
-            setRefreshing(false)
+            if (
+                requestId ===
+                requestIdRef.current
+            ) {
+
+                setLoading(false)
+
+                setRefreshing(false)
+
+            }
 
         }
 
-    }
+    }, [
+        applyResponse,
+        clearAnalytics,
+    ])
 
 
     // =========================================================
@@ -606,9 +444,120 @@ function Trends() {
 
     useEffect(() => {
 
-        loadData()
+        loadData({
 
-    }, [])
+            type:
+                VIEW_TYPES.AGENT,
+
+            teamLeadContextId:
+                null,
+
+            agentContextId:
+                null,
+
+            rmContextId:
+                null,
+
+            loanTypeId:
+                null,
+
+            fromDate:
+                null,
+
+            toDate:
+                null,
+
+        }, true)
+
+    }, [
+        loadData,
+    ])
+
+
+    // =========================================================
+    // BUILD FILTERS
+    // =========================================================
+
+    const buildFilters = ({
+        nextMode = mode,
+
+        nextTeamLead = teamLead,
+
+        nextAgent = agent,
+
+        nextRm = rm,
+
+        nextLoanType = loanType,
+
+        nextFromDate = fromDate,
+
+        nextToDate = toDate,
+
+    } = {}) => {
+
+        return {
+
+            // -------------------------------------------------
+            // ANALYTICS TYPE
+            // -------------------------------------------------
+
+            type:
+                nextMode,
+
+
+            // -------------------------------------------------
+            // TEAM LEAD
+            // -------------------------------------------------
+
+            teamLeadContextId:
+                nextTeamLead || null,
+
+
+            // -------------------------------------------------
+            // AGENT
+            // -------------------------------------------------
+
+            agentContextId:
+                nextMode === VIEW_TYPES.AGENT
+                    ? (
+                        nextAgent || null
+                    )
+                    : null,
+
+
+            // -------------------------------------------------
+            // RM
+            // -------------------------------------------------
+
+            rmContextId:
+                nextMode === VIEW_TYPES.RM
+                    ? (
+                        nextRm || null
+                    )
+                    : null,
+
+
+            // -------------------------------------------------
+            // LOAN TYPE
+            // -------------------------------------------------
+
+            loanTypeId:
+                nextLoanType || null,
+
+
+            // -------------------------------------------------
+            // DATE RANGE
+            // -------------------------------------------------
+
+            fromDate:
+                nextFromDate || null,
+
+            toDate:
+                nextToDate || null,
+
+        }
+
+    }
 
 
     // =========================================================
@@ -619,125 +568,313 @@ function Trends() {
         nextMode
     ) => {
 
-        setMode(nextMode)
+        const selectedMode =
+            nextMode === VIEW_TYPES.RM
+                ? VIEW_TYPES.RM
+                : VIEW_TYPES.AGENT
 
-        setAgent('')
-        setRm('')
+
+        if (
+            selectedMode === mode
+        ) {
+
+            return
+
+        }
+
+
+        // -----------------------------------------------------
+        // Keep only the filter belonging to the selected mode.
+        // -----------------------------------------------------
+
+        const nextAgent =
+            selectedMode === VIEW_TYPES.AGENT
+                ? agent
+                : ''
+
+
+        const nextRm =
+            selectedMode === VIEW_TYPES.RM
+                ? rm
+                : ''
+
+
+        setMode(
+            selectedMode
+        )
+
+        setAgent(
+            nextAgent
+        )
+
+        setRm(
+            nextRm
+        )
+
+
+        const filters =
+            buildFilters({
+
+                nextMode:
+                    selectedMode,
+
+                nextAgent,
+
+                nextRm,
+
+            })
+
+
+        loadData(
+            filters
+        )
 
     }
 
 
     // =========================================================
-    // FILTER DATA
+    // TEAM LEAD CHANGE
     // =========================================================
 
-    const filteredAnalytics = useMemo(() => {
+    const handleTeamLeadChange = (
+        selectedTeamLead
+    ) => {
 
-        return analytics.filter((item) => {
-
-            // -------------------------------------------------
-            // MODE
-            //
-            // The backend may eventually return separate
-            // datasets for Agent / RM.
-            //
-            // If mode is not supplied by backend, the record
-            // remains available.
-            // -------------------------------------------------
-
-            const matchesMode =
-                !item.mode ||
-                item.mode === mode
+        const nextTeamLead =
+            selectedTeamLead || ''
 
 
-            // -------------------------------------------------
-            // TEAM LEAD
-            // -------------------------------------------------
+        // -----------------------------------------------------
+        // Update Team Lead
+        // -----------------------------------------------------
 
-            const matchesTeamLead =
-                !teamLead ||
-                String(
-                    item.teamLeadId ??
-                    item.reportingToId
-                ) === String(teamLead)
+        setTeamLead(
+            nextTeamLead
+        )
 
 
-            // -------------------------------------------------
-            // AGENT
-            // -------------------------------------------------
+        // -----------------------------------------------------
+        // IMPORTANT:
+        // Agent and RM depend on Team Lead.
+        //
+        // When Team Lead changes, clear both child filters.
+        // This is the same behavior used in Overview.
+        // -----------------------------------------------------
 
-            const matchesAgent =
-                mode !== 'agent' ||
-                !agent ||
-                String(item.agentId) ===
-                    String(agent)
+        setAgent('')
 
-
-            // -------------------------------------------------
-            // RM
-            // -------------------------------------------------
-
-            const matchesRm =
-                mode !== 'rm' ||
-                !rm ||
-                String(item.rmId) ===
-                    String(rm)
+        setRm('')
 
 
-            // -------------------------------------------------
-            // LOAN TYPE
-            // -------------------------------------------------
+        // -----------------------------------------------------
+        // Load analytics using the new Team Lead.
+        //
+        // Do NOT send the old Agent/RM selection.
+        // -----------------------------------------------------
 
-            const matchesLoanType =
-                !loanType ||
-                String(
-                    item.loanTypeId ??
-                    item.loanType
-                ) === String(loanType)
+        const filters =
+            buildFilters({
 
+                nextTeamLead,
 
-            // -------------------------------------------------
-            // FROM DATE
-            // -------------------------------------------------
+                nextAgent:
+                    '',
 
-            const matchesFromDate =
-                !fromDate ||
-                !item.date ||
-                item.date >= fromDate
+                nextRm:
+                    '',
+
+            })
 
 
-            // -------------------------------------------------
-            // TO DATE
-            // -------------------------------------------------
+        loadData(
+            filters
+        )
 
-            const matchesToDate =
-                !toDate ||
-                !item.date ||
-                item.date <= toDate
+    }
 
 
-            return (
-                matchesMode &&
-                matchesTeamLead &&
-                matchesAgent &&
-                matchesRm &&
-                matchesLoanType &&
-                matchesFromDate &&
-                matchesToDate
-            )
+    // =========================================================
+    // AGENT CHANGE
+    // =========================================================
 
-        })
+    const handleAgentChange = (
+        selectedAgent
+    ) => {
 
-    }, [
-        analytics,
-        mode,
-        teamLead,
-        agent,
-        rm,
-        loanType,
-        fromDate,
-        toDate,
-    ])
+        const nextAgent =
+            selectedAgent || ''
+
+
+        setAgent(
+            nextAgent
+        )
+
+
+        const filters =
+            buildFilters({
+
+                nextAgent,
+
+            })
+
+
+        loadData(
+            filters
+        )
+
+    }
+
+
+    // =========================================================
+    // RM CHANGE
+    // =========================================================
+
+    const handleRmChange = (
+        selectedRm
+    ) => {
+
+        const nextRm =
+            selectedRm || ''
+
+
+        setRm(
+            nextRm
+        )
+
+
+        const filters =
+            buildFilters({
+
+                nextRm,
+
+            })
+
+
+        loadData(
+            filters
+        )
+
+    }
+
+
+    // =========================================================
+    // LOAN TYPE CHANGE
+    // =========================================================
+
+    const handleLoanTypeChange = (
+        selectedLoanType
+    ) => {
+
+        const nextLoanType =
+            selectedLoanType || ''
+
+
+        setLoanType(
+            nextLoanType
+        )
+
+
+        const filters =
+            buildFilters({
+
+                nextLoanType,
+
+            })
+
+
+        loadData(
+            filters
+        )
+
+    }
+
+
+    // =========================================================
+    // FROM DATE CHANGE
+    // =========================================================
+
+    const handleFromDateChange = (
+        value
+    ) => {
+
+        setFromDate(
+            value
+        )
+
+
+        // -----------------------------------------------------
+        // Do not request invalid date range.
+        // -----------------------------------------------------
+
+        if (
+            toDate &&
+            value &&
+            value > toDate
+        ) {
+
+            return
+
+        }
+
+
+        const filters =
+            buildFilters({
+
+                nextFromDate:
+                    value,
+
+            })
+
+
+        loadData(
+            filters
+        )
+
+    }
+
+
+    // =========================================================
+    // TO DATE CHANGE
+    // =========================================================
+
+    const handleToDateChange = (
+        value
+    ) => {
+
+        setToDate(
+            value
+        )
+
+
+        // -----------------------------------------------------
+        // Do not request invalid date range.
+        // -----------------------------------------------------
+
+        if (
+            fromDate &&
+            value &&
+            value < fromDate
+        ) {
+
+            return
+
+        }
+
+
+        const filters =
+            buildFilters({
+
+                nextToDate:
+                    value,
+
+            })
+
+
+        loadData(
+            filters
+        )
+
+    }
 
 
     // =========================================================
@@ -746,14 +883,87 @@ function Trends() {
 
     const handleReset = () => {
 
+        const resetFilters = {
+
+            type:
+                VIEW_TYPES.AGENT,
+
+            teamLeadContextId:
+                null,
+
+            agentContextId:
+                null,
+
+            rmContextId:
+                null,
+
+            loanTypeId:
+                null,
+
+            fromDate:
+                null,
+
+            toDate:
+                null,
+
+        }
+
+
+        // -----------------------------------------------------
+        // Reset local state
+        // -----------------------------------------------------
+
+        setMode(
+            VIEW_TYPES.AGENT
+        )
+
         setTeamLead('')
+
         setAgent('')
+
         setRm('')
+
         setLoanType('')
+
         setFromDate('')
+
         setToDate('')
 
+
+        // -----------------------------------------------------
+        // Reload with completely clean filters.
+        // -----------------------------------------------------
+
+        loadData(
+            resetFilters
+        )
+
     }
+
+
+    // =========================================================
+    // HAS STAGE DATA
+    // =========================================================
+
+    const hasStageData =
+        Object.values(
+            stageDistribution || {}
+        ).some(
+            (value) =>
+                Number(value || 0) > 0
+        )
+
+
+    // =========================================================
+    // HAS DATA
+    // =========================================================
+
+    const hasData =
+        trend.length > 0 ||
+        loanTypeTrend.length > 0 ||
+        hasStageData ||
+        sanctionDisbursementTrend.length > 0 ||
+        rejectionTrend.length > 0
 
 
     // =========================================================
@@ -761,7 +971,9 @@ function Trends() {
     // =========================================================
 
     if (loading) {
+
         return <LoadingState />
+
     }
 
 
@@ -796,7 +1008,7 @@ function Trends() {
             ">
 
                 {/* =================================================
-                    AGENT / RM TOGGLE
+                    MODE
                 ================================================= */}
 
                 <div className="
@@ -817,13 +1029,18 @@ function Trends() {
                         p-1
                     ">
 
+                        {/* -------------------------------------------------
+                            AGENT
+                        ------------------------------------------------- */}
+
                         <button
                             type="button"
                             onClick={() =>
                                 handleModeChange(
-                                    'agent'
+                                    VIEW_TYPES.AGENT
                                 )
                             }
+                            disabled={refreshing}
                             className={`
                                 h-9
                                 flex-1
@@ -832,8 +1049,10 @@ function Trends() {
                                 text-xs
                                 font-semibold
                                 transition
+                                disabled:cursor-not-allowed
+                                disabled:opacity-60
                                 ${
-                                    mode === 'agent'
+                                    mode === VIEW_TYPES.AGENT
                                         ? 'bg-base-100 text-[#78B300] shadow-sm'
                                         : 'text-base-content/50 hover:text-base-content'
                                 }
@@ -843,13 +1062,18 @@ function Trends() {
                         </button>
 
 
+                        {/* -------------------------------------------------
+                            RM
+                        ------------------------------------------------- */}
+
                         <button
                             type="button"
                             onClick={() =>
                                 handleModeChange(
-                                    'rm'
+                                    VIEW_TYPES.RM
                                 )
                             }
+                            disabled={refreshing}
                             className={`
                                 h-9
                                 flex-1
@@ -858,8 +1082,10 @@ function Trends() {
                                 text-xs
                                 font-semibold
                                 transition
+                                disabled:cursor-not-allowed
+                                disabled:opacity-60
                                 ${
-                                    mode === 'rm'
+                                    mode === VIEW_TYPES.RM
                                         ? 'bg-base-100 text-[#78B300] shadow-sm'
                                         : 'text-base-content/50 hover:text-base-content'
                                 }
@@ -888,7 +1114,9 @@ function Trends() {
                     xl:grid-cols-6
                 ">
 
-                    {/* FROM */}
+                    {/* =================================================
+                        FROM
+                    ================================================= */}
 
                     <div className="
                         min-w-0
@@ -909,8 +1137,12 @@ function Trends() {
                         <input
                             type="date"
                             value={fromDate}
+                            max={
+                                toDate ||
+                                undefined
+                            }
                             onChange={(event) =>
-                                setFromDate(
+                                handleFromDateChange(
                                     event.target.value
                                 )
                             }
@@ -928,7 +1160,9 @@ function Trends() {
                     </div>
 
 
-                    {/* TO */}
+                    {/* =================================================
+                        TO
+                    ================================================= */}
 
                     <div className="
                         min-w-0
@@ -949,8 +1183,12 @@ function Trends() {
                         <input
                             type="date"
                             value={toDate}
+                            min={
+                                fromDate ||
+                                undefined
+                            }
                             onChange={(event) =>
-                                setToDate(
+                                handleToDateChange(
                                     event.target.value
                                 )
                             }
@@ -968,7 +1206,9 @@ function Trends() {
                     </div>
 
 
-                    {/* TEAM LEAD */}
+                    {/* =================================================
+                        TEAM LEAD
+                    ================================================= */}
 
                     <div className="
                         min-w-0
@@ -978,7 +1218,9 @@ function Trends() {
                         <TeamLeadDropdown
                             label="Team Lead"
                             value={teamLead}
-                            onChange={setTeamLead}
+                            onChange={
+                                handleTeamLeadChange
+                            }
                             allLabel="All Team Leads"
                             placeholder="All Team Leads"
                             searchPlaceholder="Search team lead"
@@ -988,9 +1230,11 @@ function Trends() {
                     </div>
 
 
-                    {/* AGENT */}
+                    {/* =================================================
+                        AGENT
+                    ================================================= */}
 
-                    {mode === 'agent' && (
+                    {mode === VIEW_TYPES.AGENT && (
 
                         <div className="
                             min-w-0
@@ -998,8 +1242,17 @@ function Trends() {
                         ">
 
                             <AgentDropdown
+                                label="Agent"
                                 value={agent}
-                                onChange={setAgent}
+                                onChange={
+                                    handleAgentChange
+                                }
+
+                                // IMPORTANT:
+                                // Agent list is filtered by Team Lead.
+                                teamLeadContextId={
+                                    teamLead || null
+                                }
                             />
 
                         </div>
@@ -1007,9 +1260,11 @@ function Trends() {
                     )}
 
 
-                    {/* RM */}
+                    {/* =================================================
+                        RM
+                    ================================================= */}
 
-                    {mode === 'rm' && (
+                    {mode === VIEW_TYPES.RM && (
 
                         <div className="
                             min-w-0
@@ -1017,8 +1272,17 @@ function Trends() {
                         ">
 
                             <RmDropdown
+                                label="RM"
                                 value={rm}
-                                onChange={setRm}
+                                onChange={
+                                    handleRmChange
+                                }
+
+                                // IMPORTANT:
+                                // RM list is filtered by Team Lead.
+                                teamLeadContextId={
+                                    teamLead || null
+                                }
                             />
 
                         </div>
@@ -1026,7 +1290,9 @@ function Trends() {
                     )}
 
 
-                    {/* LOAN TYPE */}
+                    {/* =================================================
+                        LOAN TYPE
+                    ================================================= */}
 
                     <div className="
                         min-w-0
@@ -1034,30 +1300,40 @@ function Trends() {
                     ">
 
                         <LoanTypeDropdown
+                            label="Loan Type"
                             value={loanType}
-                            onChange={setLoanType}
+                            onChange={
+                                handleLoanTypeChange
+                            }
                         />
 
                     </div>
 
 
-                    {/* ACTIONS */}
+                    {/* =================================================
+                        RESET
+                    ================================================= */}
 
                     <div className="
                         flex
                         min-w-0
                         w-full
                         items-end
-                        gap-2
                     ">
 
                         <button
                             type="button"
-                            onClick={handleReset}
+                            onClick={
+                                handleReset
+                            }
+                            disabled={refreshing}
                             className="
+                                inline-flex
                                 h-10
-                                min-w-0
-                                flex-1
+                                w-full
+                                items-center
+                                justify-center
+                                gap-1.5
                                 rounded-lg
                                 border
                                 border-base-300
@@ -1069,34 +1345,6 @@ function Trends() {
                                 transition
                                 hover:bg-base-200
                                 hover:text-base-content
-                            "
-                        >
-                            Reset
-                        </button>
-
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                loadData(false)
-                            }
-                            disabled={refreshing}
-                            className="
-                                inline-flex
-                                h-10
-                                min-w-0
-                                flex-1
-                                items-center
-                                justify-center
-                                gap-1.5
-                                rounded-lg
-                                bg-[#8BCF00]
-                                px-3
-                                text-xs
-                                font-medium
-                                text-white
-                                transition
-                                hover:bg-[#78B300]
                                 disabled:cursor-not-allowed
                                 disabled:opacity-60
                             "
@@ -1111,7 +1359,7 @@ function Trends() {
                             <span>
                                 {refreshing
                                     ? 'Loading...'
-                                    : 'Refresh'}
+                                    : 'Reset'}
                             </span>
 
                         </button>
@@ -1127,7 +1375,7 @@ function Trends() {
                 NO DATA
             ================================================= */}
 
-            {!filteredAnalytics.length && (
+            {!hasData && (
 
                 <section className="
                     flex
@@ -1171,10 +1419,10 @@ function Trends() {
 
 
             {/* =================================================
-                APPLICATION TREND + STAGE DISTRIBUTION
+                APPLICATION TREND + STAGE
             ================================================= */}
 
-            {filteredAnalytics.length > 0 && (
+            {hasData && (
 
                 <div className="
                     grid
@@ -1185,7 +1433,9 @@ function Trends() {
                     xl:grid-cols-3
                 ">
 
-                    {/* APPLICATION TREND */}
+                    {/* -------------------------------------------------
+                        APPLICATION TREND
+                    ------------------------------------------------- */}
 
                     <div className="
                         min-w-0
@@ -1194,22 +1444,24 @@ function Trends() {
 
                         <ApplicationTrend
                             analytics={
-                                filteredAnalytics
+                                trend
                             }
                         />
 
                     </div>
 
 
-                    {/* STAGE DISTRIBUTION */}
+                    {/* -------------------------------------------------
+                        STAGE DISTRIBUTION
+                    ------------------------------------------------- */}
 
                     <div className="
                         min-w-0
                     ">
 
                         <LoanStageDistribution
-                            analytics={
-                                filteredAnalytics
+                            stageDistribution={
+                                stageDistribution
                             }
                         />
 
@@ -1224,11 +1476,11 @@ function Trends() {
                 LOAN TYPE TREND
             ================================================= */}
 
-            {filteredAnalytics.length > 0 && (
+            {hasData && (
 
                 <LoanTypeTrend
-                    analytics={
-                        filteredAnalytics
+                    loanTypeTrend={
+                        loanTypeTrend
                     }
                 />
 
@@ -1236,10 +1488,10 @@ function Trends() {
 
 
             {/* =================================================
-                SANCTION + REJECTION
+                SANCTION / REJECTION
             ================================================= */}
 
-            {filteredAnalytics.length > 0 && (
+            {hasData && (
 
                 <div className="
                     grid
@@ -1250,26 +1502,34 @@ function Trends() {
                     xl:grid-cols-2
                 ">
 
+                    {/* -------------------------------------------------
+                        SANCTION / DISBURSEMENT
+                    ------------------------------------------------- */}
+
                     <div className="
                         min-w-0
                     ">
 
                         <SanctionDisbursementTrend
-                            analytics={
-                                filteredAnalytics
+                            sanctionDisbursementTrend={
+                                sanctionDisbursementTrend
                             }
                         />
 
                     </div>
 
 
+                    {/* -------------------------------------------------
+                        REJECTION
+                    ------------------------------------------------- */}
+
                     <div className="
                         min-w-0
                     ">
 
                         <RejectionTrend
-                            analytics={
-                                filteredAnalytics
+                            rejectionTrend={
+                                rejectionTrend
                             }
                         />
 

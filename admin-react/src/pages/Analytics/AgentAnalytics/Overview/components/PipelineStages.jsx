@@ -10,6 +10,16 @@ import ArrowRightIcon from '@heroicons/react/24/outline/ArrowRightIcon'
 
 
 // =============================================================
+// VIEW TYPES
+// =============================================================
+
+const VIEW_TYPES = {
+    AGENT: 'agent',
+    RM: 'rm',
+}
+
+
+// =============================================================
 // HELPERS
 // =============================================================
 
@@ -20,6 +30,21 @@ const formatNumber = (
     return Number(
         value || 0
     ).toLocaleString('en-IN')
+
+}
+
+
+// =============================================================
+// GET VIEW LABEL
+// =============================================================
+
+const getViewLabel = (
+    viewType
+) => {
+
+    return viewType === VIEW_TYPES.RM
+        ? 'RM'
+        : 'Agent'
 
 }
 
@@ -208,10 +233,21 @@ function PipelineConnector() {
 
 function PipelineStages({
     pipeline = {},
+    viewType = VIEW_TYPES.AGENT,
 }) {
 
     // =========================================================
-    // CURRENT STATUS COUNTS
+    // VIEW LABEL
+    // =========================================================
+
+    const viewLabel =
+        getViewLabel(
+            viewType
+        )
+
+
+    // =========================================================
+    // APPLICATION PIPELINE COUNTS
     // =========================================================
 
     const totalLeads =
@@ -326,15 +362,15 @@ function PipelineStages({
                             text-base-content/50
                         "
                     >
-                        Current status of applications from the selected
-                        application cohort
+                        {viewLabel} application cohort and
+                        application-processing activity
                     </p>
 
                 </div>
 
 
                 {/* =================================================
-                    STATUS NOTE
+                    ANALYTICS TYPE
                 ================================================= */}
 
                 <div
@@ -371,7 +407,7 @@ function PipelineStages({
                             text-base-content/50
                         "
                     >
-                        Current Status
+                        {viewLabel} View
                     </span>
 
                 </div>
@@ -475,7 +511,8 @@ function PipelineStages({
                                 "
                             >
                                 Applications whose applied date falls within
-                                the selected period.
+                                the selected period and the visible
+                                {` ${viewLabel.toLowerCase()}`} scope.
                             </p>
 
                         </div>
@@ -529,7 +566,7 @@ function PipelineStages({
 
 
                 {/* =================================================
-                    CURRENT STATUS GRID
+                    APPLICATION PROCESSING GRID
                 ================================================= */}
 
                 <div
@@ -551,7 +588,7 @@ function PipelineStages({
                     <PipelineStage
                         number="01"
                         title="In Process"
-                        description="No later login, sanction, disbursement, or rejection status."
+                        description="Applications in in-process or document-pending status within the selected cohort."
                         value={
                             inProcess
                         }
@@ -581,7 +618,7 @@ function PipelineStages({
                     <PipelineStage
                         number="02"
                         title="Login"
-                        description="Login is the latest reached status for the application."
+                        description="Qualifying BankProcessing login rows belonging to the selected application cohort."
                         value={
                             login
                         }
@@ -611,7 +648,7 @@ function PipelineStages({
                     <PipelineStage
                         number="03"
                         title="Sanctioned"
-                        description="Sanction is the latest reached status for the application."
+                        description="Qualifying BankProcessing sanction rows belonging to the selected application cohort."
                         value={
                             sanctioned
                         }
@@ -641,7 +678,7 @@ function PipelineStages({
                     <PipelineStage
                         number="04"
                         title="Disbursed"
-                        description="Disbursement is the latest reached status for the application."
+                        description="Qualifying BankProcessing disbursement rows belonging to the selected application cohort."
                         value={
                             disbursed
                         }
@@ -749,8 +786,8 @@ function PipelineStages({
                                         text-base-content/50
                                     "
                                 >
-                                    Rejection is the current status for these
-                                    applications.
+                                    Applications with rejected status
+                                    within the selected application cohort.
                                 </p>
 
                             </div>
@@ -812,7 +849,7 @@ function PipelineStages({
 
 
                 {/* =================================================
-                    STATUS SEMANTICS
+                    PIPELINE SEMANTICS
                 ================================================= */}
 
                 <div
@@ -832,10 +869,12 @@ function PipelineStages({
                             text-base-content/50
                         "
                     >
-                        Each application is counted in only one current-status
-                        bucket. For example, an application with Login,
-                        Sanctioned, and Disbursed records is counted only under
-                        Disbursed.
+                        The application cohort is selected by applied date.
+                        In Process and Rejected count applications, while
+                        Login, Sanctioned, and Disbursed count qualifying
+                        BankProcessing rows. These categories are independent,
+                        so one application can contribute to more than one
+                        processing category.
                     </p>
 
                 </div>

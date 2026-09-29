@@ -1,6 +1,6 @@
 // admin-react/src/pages/Analytics/AgentAnalytics/Performance/index.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 
@@ -8,6 +8,8 @@ import AgentDropdown from '../../../../components/GlobalModels/Filters/AgentDrop
 import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
 import TeamLeadDropdown from '../../../../components/GlobalModels/Filters/TeamLeadDropdown'
 import LoanTypeDropdown from '../../../../components/GlobalModels/Filters/LoanTypeDropdown'
+
+import PerformanceAPI from './API'
 
 import PerformanceOverview from './components/PerformanceOverview'
 import LoanWisePerformance from './components/LoanWisePerformance'
@@ -43,360 +45,12 @@ export const PERFORMANCE_METRICS = [
 
 
 // =============================================================
-// MOCK API
-//
-// Replace only this function when backend API is ready.
+// DEFAULT VALUES
 // =============================================================
 
-const fetchAgentPerformance = async () => {
+const DEFAULT_MODE = 'agent'
 
-    return new Promise((resolve) => {
-
-        setTimeout(() => {
-
-            resolve([
-                {
-                    id: 1,
-                    date: '2026-08-28',
-
-                    agentId: 101,
-                    agentName: 'Rahul Sharma',
-
-                    rmId: 201,
-                    rmName: 'Priya Nair',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    teamId: 501,
-                    teamName: 'Bangalore Team',
-
-                    loanTypeId: 401,
-                    loanTypeName: 'Personal Loan',
-
-                    inProcess: 32,
-                    login: 24,
-                    sanctioned: 12,
-                    disbursed: 8,
-                    rejected: 4,
-
-                    disbursedAmount: 640000,
-                },
-
-                {
-                    id: 2,
-                    date: '2026-08-28',
-
-                    agentId: 102,
-                    agentName: 'Anil Kumar',
-
-                    rmId: 202,
-                    rmName: 'Rajesh Rao',
-
-                    teamLeadId: 302,
-                    teamLeadName: 'Priya Nair',
-
-                    teamId: 502,
-                    teamName: 'Mysore Team',
-
-                    loanTypeId: 402,
-                    loanTypeName: 'Home Loan',
-
-                    inProcess: 27,
-                    login: 19,
-                    sanctioned: 10,
-                    disbursed: 6,
-                    rejected: 3,
-
-                    disbursedAmount: 4200000,
-                },
-
-                {
-                    id: 3,
-                    date: '2026-08-27',
-
-                    agentId: 103,
-                    agentName: 'Vikram Singh',
-
-                    rmId: 203,
-                    rmName: 'Sneha Reddy',
-
-                    teamLeadId: 303,
-                    teamLeadName: 'Rajesh Rao',
-
-                    teamId: 501,
-                    teamName: 'Bangalore Team',
-
-                    loanTypeId: 403,
-                    loanTypeName: 'Business Loan',
-
-                    inProcess: 21,
-                    login: 17,
-                    sanctioned: 9,
-                    disbursed: 5,
-                    rejected: 2,
-
-                    disbursedAmount: 1250000,
-                },
-
-                {
-                    id: 4,
-                    date: '2026-08-27',
-
-                    agentId: 101,
-                    agentName: 'Rahul Sharma',
-
-                    rmId: 201,
-                    rmName: 'Priya Nair',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    teamId: 501,
-                    teamName: 'Bangalore Team',
-
-                    loanTypeId: 402,
-                    loanTypeName: 'Home Loan',
-
-                    inProcess: 28,
-                    login: 22,
-                    sanctioned: 13,
-                    disbursed: 9,
-                    rejected: 3,
-
-                    disbursedAmount: 5850000,
-                },
-
-                {
-                    id: 5,
-                    date: '2026-08-26',
-
-                    agentId: 104,
-                    agentName: 'Arjun Rao',
-
-                    rmId: 202,
-                    rmName: 'Rajesh Rao',
-
-                    teamLeadId: 302,
-                    teamLeadName: 'Priya Nair',
-
-                    teamId: 502,
-                    teamName: 'Mysore Team',
-
-                    loanTypeId: 404,
-                    loanTypeName: 'Vehicle Loan',
-
-                    inProcess: 19,
-                    login: 15,
-                    sanctioned: 8,
-                    disbursed: 5,
-                    rejected: 3,
-
-                    disbursedAmount: 875000,
-                },
-
-                {
-                    id: 6,
-                    date: '2026-08-26',
-
-                    agentId: 105,
-                    agentName: 'Kiran Kumar',
-
-                    rmId: 203,
-                    rmName: 'Sneha Reddy',
-
-                    teamLeadId: 303,
-                    teamLeadName: 'Rajesh Rao',
-
-                    teamId: 501,
-                    teamName: 'Bangalore Team',
-
-                    loanTypeId: 405,
-                    loanTypeName: 'Education Loan',
-
-                    inProcess: 15,
-                    login: 11,
-                    sanctioned: 6,
-                    disbursed: 4,
-                    rejected: 2,
-
-                    disbursedAmount: 320000,
-                },
-
-                {
-                    id: 7,
-                    date: '2026-08-25',
-
-                    agentId: 106,
-                    agentName: 'Niveditha Rao',
-
-                    rmId: 201,
-                    rmName: 'Priya Nair',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    teamId: 501,
-                    teamName: 'Bangalore Team',
-
-                    loanTypeId: 406,
-                    loanTypeName: 'Gold Loan',
-
-                    inProcess: 23,
-                    login: 18,
-                    sanctioned: 10,
-                    disbursed: 7,
-                    rejected: 2,
-
-                    disbursedAmount: 490000,
-                },
-
-                {
-                    id: 8,
-                    date: '2026-08-25',
-
-                    agentId: 102,
-                    agentName: 'Anil Kumar',
-
-                    rmId: 202,
-                    rmName: 'Rajesh Rao',
-
-                    teamLeadId: 302,
-                    teamLeadName: 'Priya Nair',
-
-                    teamId: 502,
-                    teamName: 'Mysore Team',
-
-                    loanTypeId: 401,
-                    loanTypeName: 'Personal Loan',
-
-                    inProcess: 31,
-                    login: 23,
-                    sanctioned: 14,
-                    disbursed: 10,
-                    rejected: 4,
-
-                    disbursedAmount: 800000,
-                },
-
-                {
-                    id: 9,
-                    date: '2026-08-24',
-
-                    agentId: 103,
-                    agentName: 'Vikram Singh',
-
-                    rmId: 203,
-                    rmName: 'Sneha Reddy',
-
-                    teamLeadId: 303,
-                    teamLeadName: 'Rajesh Rao',
-
-                    teamId: 501,
-                    teamName: 'Bangalore Team',
-
-                    loanTypeId: 401,
-                    loanTypeName: 'Personal Loan',
-
-                    inProcess: 25,
-                    login: 20,
-                    sanctioned: 11,
-                    disbursed: 8,
-                    rejected: 3,
-
-                    disbursedAmount: 620000,
-                },
-
-                {
-                    id: 10,
-                    date: '2026-08-24',
-
-                    agentId: 104,
-                    agentName: 'Arjun Rao',
-
-                    rmId: 202,
-                    rmName: 'Rajesh Rao',
-
-                    teamLeadId: 302,
-                    teamLeadName: 'Priya Nair',
-
-                    teamId: 502,
-                    teamName: 'Mysore Team',
-
-                    loanTypeId: 403,
-                    loanTypeName: 'Business Loan',
-
-                    inProcess: 22,
-                    login: 17,
-                    sanctioned: 9,
-                    disbursed: 6,
-                    rejected: 2,
-
-                    disbursedAmount: 1500000,
-                },
-
-                {
-                    id: 11,
-                    date: '2026-08-23',
-
-                    agentId: 105,
-                    agentName: 'Kiran Kumar',
-
-                    rmId: 203,
-                    rmName: 'Sneha Reddy',
-
-                    teamLeadId: 303,
-                    teamLeadName: 'Rajesh Rao',
-
-                    teamId: 501,
-                    teamName: 'Bangalore Team',
-
-                    loanTypeId: 404,
-                    loanTypeName: 'Vehicle Loan',
-
-                    inProcess: 17,
-                    login: 13,
-                    sanctioned: 7,
-                    disbursed: 5,
-                    rejected: 2,
-
-                    disbursedAmount: 910000,
-                },
-
-                {
-                    id: 12,
-                    date: '2026-08-23',
-
-                    agentId: 106,
-                    agentName: 'Niveditha Rao',
-
-                    rmId: 201,
-                    rmName: 'Priya Nair',
-
-                    teamLeadId: 301,
-                    teamLeadName: 'Suresh Kumar',
-
-                    teamId: 501,
-                    teamName: 'Bangalore Team',
-
-                    loanTypeId: 402,
-                    loanTypeName: 'Home Loan',
-
-                    inProcess: 29,
-                    login: 22,
-                    sanctioned: 12,
-                    disbursed: 8,
-                    rejected: 3,
-
-                    disbursedAmount: 5100000,
-                },
-            ])
-
-        }, 400)
-
-    })
-
-}
+const DEFAULT_METRIC = 'disbursed'
 
 
 // =============================================================
@@ -417,7 +71,7 @@ function DateInput({
         ">
 
             <label className="
-                mb-1.5
+                mb-1
                 block
                 text-xs
                 font-medium
@@ -429,11 +83,11 @@ function DateInput({
             <input
                 type="date"
                 value={value}
-                onChange={(event) =>
+                onChange={(event) => {
                     onChange(
                         event.target.value
                     )
-                }
+                }}
                 className="
                     input
                     input-bordered
@@ -441,9 +95,108 @@ function DateInput({
                     min-h-10
                     w-full
                     min-w-0
-                    text-sm
+                    rounded-lg
+                    px-2.5
+                    text-xs
                 "
             />
+
+        </div>
+
+    )
+
+}
+
+
+// =============================================================
+// MODE TOGGLE
+// =============================================================
+
+function ModeToggle({
+    mode,
+    onChange,
+}) {
+
+    return (
+
+        <div className="
+            inline-flex
+            rounded-lg
+            border
+            border-base-300
+            bg-base-200/50
+            p-1
+        ">
+
+            <button
+                type="button"
+                onClick={() => {
+                    onChange('agent')
+                }}
+                className={
+                    mode === 'agent'
+                        ? `
+                            min-w-[80px]
+                            rounded-md
+                            bg-base-100
+                            px-3
+                            py-1.5
+                            text-xs
+                            font-semibold
+                            text-[#78B300]
+                            shadow-sm
+                            transition
+                        `
+                        : `
+                            min-w-[80px]
+                            rounded-md
+                            px-3
+                            py-1.5
+                            text-xs
+                            font-semibold
+                            text-base-content/50
+                            transition
+                            hover:text-base-content
+                        `
+                }
+            >
+                Agent
+            </button>
+
+            <button
+                type="button"
+                onClick={() => {
+                    onChange('rm')
+                }}
+                className={
+                    mode === 'rm'
+                        ? `
+                            min-w-[80px]
+                            rounded-md
+                            bg-base-100
+                            px-3
+                            py-1.5
+                            text-xs
+                            font-semibold
+                            text-[#78B300]
+                            shadow-sm
+                            transition
+                        `
+                        : `
+                            min-w-[80px]
+                            rounded-md
+                            px-3
+                            py-1.5
+                            text-xs
+                            font-semibold
+                            text-base-content/50
+                            transition
+                            hover:text-base-content
+                        `
+                }
+            >
+                RM
+            </button>
 
         </div>
 
@@ -462,72 +215,78 @@ function Performance() {
     // DATA
     // =========================================================
 
-    const [performance, setPerformance] =
-        useState([])
+    const [performance, setPerformance] = useState([])
 
+    const [overview, setOverview] = useState([])
 
-    const [loading, setLoading] =
-        useState(true)
+    const [loanWise, setLoanWise] = useState([])
 
+    const [
+        topPerformers,
+        setTopPerformers,
+    ] = useState([])
 
-    const [refreshing, setRefreshing] =
-        useState(false)
-
-
-    // =========================================================
-    // GLOBAL MODE
-    // =========================================================
-
-    const [mode, setMode] =
-        useState('agent')
-
+    const [
+        topPerformersByLoanType,
+        setTopPerformersByLoanType,
+    ] = useState([])
 
     // =========================================================
-    // GLOBAL FILTERS
+    // STATE
     // =========================================================
 
-    const [teamLead, setTeamLead] =
-        useState('')
+    const [loading, setLoading] = useState(true)
 
+    const [refreshing, setRefreshing] = useState(false)
 
-    const [agent, setAgent] =
-        useState('')
+    const [mode, setMode] = useState(
+        DEFAULT_MODE
+    )
 
+    // =========================================================
+    // FILTERS
+    // =========================================================
 
-    const [rm, setRm] =
-        useState('')
+    const [teamLead, setTeamLead] = useState('')
 
+    const [agent, setAgent] = useState('')
 
-    const [loanType, setLoanType] =
-        useState('')
+    const [rm, setRm] = useState('')
 
+    const [loanType, setLoanType] = useState('')
 
-    const [fromDate, setFromDate] =
-        useState('')
+    const [fromDate, setFromDate] = useState('')
 
-
-    const [toDate, setToDate] =
-        useState('')
-
+    const [toDate, setToDate] = useState('')
 
     // =========================================================
     // TOP PERFORMER METRIC
-    //
-    // This is controlled by index.
-    // It is not a filter dropdown.
     // =========================================================
 
-    const [performanceMetric, setPerformanceMetric] =
-        useState('disbursed')
+    const [
+        performanceMetric,
+        setPerformanceMetric,
+    ] = useState(
+        DEFAULT_METRIC
+    )
 
+    // =========================================================
+    // REQUEST CONTROL
+    // =========================================================
+
+    const requestIdRef = useRef(0)
 
     // =========================================================
     // LOAD DATA
     // =========================================================
 
-    const loadData = async (
-        isRefresh = false
-    ) => {
+    const loadData = async ({
+        isRefresh = false,
+        filters = {},
+    } = {}) => {
+
+        const requestId =
+            ++requestIdRef.current
 
         try {
 
@@ -537,18 +296,66 @@ function Performance() {
                 setLoading(true)
             }
 
-
             const response =
-                await fetchAgentPerformance()
+                await PerformanceAPI.getPerformance(
+                    filters
+                )
 
+            if (
+                requestId !==
+                requestIdRef.current
+            ) {
+                return
+            }
+
+            setOverview(
+                Array.isArray(
+                    response?.overview
+                )
+                    ? response.overview
+                    : []
+            )
+
+            setLoanWise(
+                Array.isArray(
+                    response?.loanWise
+                )
+                    ? response.loanWise
+                    : []
+            )
+
+            setTopPerformers(
+                Array.isArray(
+                    response?.topPerformers
+                )
+                    ? response.topPerformers
+                    : []
+            )
+
+            setTopPerformersByLoanType(
+                Array.isArray(
+                    response?.topPerformersByLoanType
+                )
+                    ? response.topPerformersByLoanType
+                    : []
+            )
 
             setPerformance(
-                Array.isArray(response)
-                    ? response
+                Array.isArray(
+                    response?.overview
+                )
+                    ? response.overview
                     : []
             )
 
         } catch (error) {
+
+            if (
+                requestId !==
+                requestIdRef.current
+            ) {
+                return
+            }
 
             console.error(
                 'Failed to load agent performance:',
@@ -557,10 +364,72 @@ function Performance() {
 
             setPerformance([])
 
+            setOverview([])
+
+            setLoanWise([])
+
+            setTopPerformers([])
+
+            setTopPerformersByLoanType([])
+
         } finally {
 
-            setLoading(false)
-            setRefreshing(false)
+            if (
+                requestId ===
+                requestIdRef.current
+            ) {
+
+                setLoading(false)
+
+                setRefreshing(false)
+
+            }
+
+        }
+
+    }
+
+
+    // =========================================================
+    // BUILD FILTERS
+    // =========================================================
+
+    const buildFilters = ({
+        nextMode = mode,
+        nextTeamLead = teamLead,
+        nextAgent = agent,
+        nextRm = rm,
+        nextLoanType = loanType,
+        nextFromDate = fromDate,
+        nextToDate = toDate,
+    } = {}) => {
+
+        return {
+
+            type:
+                nextMode,
+
+            teamLeadContextId:
+                nextTeamLead || null,
+
+            agentContextId:
+                nextMode === 'agent'
+                    ? nextAgent || null
+                    : null,
+
+            rmContextId:
+                nextMode === 'rm'
+                    ? nextRm || null
+                    : null,
+
+            loanTypeId:
+                nextLoanType || null,
+
+            fromDate:
+                nextFromDate || null,
+
+            toDate:
+                nextToDate || null,
 
         }
 
@@ -573,7 +442,17 @@ function Performance() {
 
     useEffect(() => {
 
-        loadData()
+        loadData({
+            filters: buildFilters({
+                nextMode: DEFAULT_MODE,
+                nextTeamLead: '',
+                nextAgent: '',
+                nextRm: '',
+                nextLoanType: '',
+                nextFromDate: '',
+                nextToDate: '',
+            }),
+        })
 
     }, [])
 
@@ -586,90 +465,181 @@ function Performance() {
         nextMode
     ) => {
 
+        const nextAgent =
+            nextMode === 'agent'
+                ? agent
+                : ''
+
+        const nextRm =
+            nextMode === 'rm'
+                ? rm
+                : ''
+
         setMode(nextMode)
 
-        if (nextMode === 'agent') {
-            setRm('')
-        } else {
-            setAgent('')
-        }
+        setAgent(
+            nextAgent
+        )
+
+        setRm(
+            nextRm
+        )
+
+        loadData({
+            filters: buildFilters({
+                nextMode,
+                nextAgent,
+                nextRm,
+            }),
+        })
 
     }
 
 
     // =========================================================
-    // FILTER DATA
+    // TEAM LEAD CHANGE
     // =========================================================
 
-    const filteredPerformance = useMemo(() => {
+    const handleTeamLeadChange = (
+        selectedTeamLead
+    ) => {
 
-        return performance.filter((item) => {
+        const nextTeamLead =
+            selectedTeamLead || ''
 
-            const matchesTeamLead =
-                !teamLead ||
-                String(
-                    item.teamLeadId ?? ''
-                ) === String(teamLead)
+        setTeamLead(
+            nextTeamLead
+        )
 
+        setAgent('')
 
-            const matchesAgent =
-                mode !== 'agent' ||
-                !agent ||
-                String(
-                    item.agentId ?? ''
-                ) === String(agent)
+        setRm('')
 
-
-            const matchesRm =
-                mode !== 'rm' ||
-                !rm ||
-                String(
-                    item.rmId ?? ''
-                ) === String(rm)
-
-
-            const matchesLoanType =
-                !loanType ||
-                String(
-                    item.loanTypeId ?? ''
-                ) === String(loanType)
-
-
-            const matchesFromDate =
-                !fromDate ||
-                String(
-                    item.date ?? ''
-                ) >= String(fromDate)
-
-
-            const matchesToDate =
-                !toDate ||
-                String(
-                    item.date ?? ''
-                ) <= String(toDate)
-
-
-            return (
-                matchesTeamLead &&
-                matchesAgent &&
-                matchesRm &&
-                matchesLoanType &&
-                matchesFromDate &&
-                matchesToDate
-            )
-
+        loadData({
+            filters: buildFilters({
+                nextTeamLead,
+                nextAgent: '',
+                nextRm: '',
+            }),
         })
 
-    }, [
-        performance,
-        mode,
-        teamLead,
-        agent,
-        rm,
-        loanType,
-        fromDate,
-        toDate,
-    ])
+    }
+
+
+    // =========================================================
+    // AGENT CHANGE
+    // =========================================================
+
+    const handleAgentChange = (
+        selectedAgent
+    ) => {
+
+        const nextAgent =
+            selectedAgent || ''
+
+        setAgent(
+            nextAgent
+        )
+
+        loadData({
+            filters: buildFilters({
+                nextAgent,
+            }),
+        })
+
+    }
+
+
+    // =========================================================
+    // RM CHANGE
+    // =========================================================
+
+    const handleRmChange = (
+        selectedRm
+    ) => {
+
+        const nextRm =
+            selectedRm || ''
+
+        setRm(
+            nextRm
+        )
+
+        loadData({
+            filters: buildFilters({
+                nextRm,
+            }),
+        })
+
+    }
+
+
+    // =========================================================
+    // LOAN TYPE CHANGE
+    // =========================================================
+
+    const handleLoanTypeChange = (
+        selectedLoanType
+    ) => {
+
+        const nextLoanType =
+            selectedLoanType || ''
+
+        setLoanType(
+            nextLoanType
+        )
+
+        loadData({
+            filters: buildFilters({
+                nextLoanType,
+            }),
+        })
+
+    }
+
+
+    // =========================================================
+    // FROM DATE CHANGE
+    // =========================================================
+
+    const handleFromDateChange = (
+        value
+    ) => {
+
+        setFromDate(
+            value
+        )
+
+        loadData({
+            filters: buildFilters({
+                nextFromDate:
+                    value,
+            }),
+        })
+
+    }
+
+
+    // =========================================================
+    // TO DATE CHANGE
+    // =========================================================
+
+    const handleToDateChange = (
+        value
+    ) => {
+
+        setToDate(
+            value
+        )
+
+        loadData({
+            filters: buildFilters({
+                nextToDate:
+                    value,
+            }),
+        })
+
+    }
 
 
     // =========================================================
@@ -678,22 +648,58 @@ function Performance() {
 
     const handleReset = () => {
 
-        setMode('agent')
+        setMode(
+            DEFAULT_MODE
+        )
 
         setTeamLead('')
+
         setAgent('')
+
         setRm('')
+
         setLoanType('')
+
         setFromDate('')
+
         setToDate('')
 
-        setPerformanceMetric('disbursed')
+        setPerformanceMetric(
+            DEFAULT_METRIC
+        )
+
+        loadData({
+            filters: buildFilters({
+                nextMode:
+                    DEFAULT_MODE,
+                nextTeamLead: '',
+                nextAgent: '',
+                nextRm: '',
+                nextLoanType: '',
+                nextFromDate: '',
+                nextToDate: '',
+            }),
+        })
 
     }
 
 
     // =========================================================
-    // LOADING
+    // REFRESH
+    // =========================================================
+
+    const handleRefresh = () => {
+
+        loadData({
+            isRefresh: true,
+            filters: buildFilters(),
+        })
+
+    }
+
+
+    // =========================================================
+    // LOADING STATE
     // =========================================================
 
     if (loading) {
@@ -703,14 +709,14 @@ function Performance() {
             <div className="
                 w-full
                 max-w-full
-                space-y-5
+                space-y-4
                 overflow-x-hidden
                 p-4
-                sm:p-6
+                sm:p-5
             ">
 
                 <div className="
-                    h-36
+                    h-32
                     w-full
                     animate-pulse
                     rounded-2xl
@@ -726,7 +732,7 @@ function Performance() {
                     <div
                         key={index}
                         className="
-                            h-[300px]
+                            h-[280px]
                             w-full
                             animate-pulse
                             rounded-2xl
@@ -754,14 +760,14 @@ function Performance() {
         <div className="
             w-full
             max-w-full
-            space-y-5
+            space-y-4
             overflow-x-hidden
             p-4
-            sm:p-6
+            sm:p-5
         ">
 
             {/* =================================================
-                GLOBAL FILTER PANEL
+                FILTER PANEL
             ================================================= */}
 
             <section className="
@@ -771,8 +777,9 @@ function Performance() {
                 border
                 border-base-300
                 bg-base-100
-                p-4
+                p-3
                 shadow-sm
+                sm:p-4
             ">
 
                 {/* =================================================
@@ -785,85 +792,30 @@ function Performance() {
                     justify-center
                 ">
 
-                    <div className="
-                        inline-flex
-                        rounded-lg
-                        border
-                        border-base-300
-                        bg-base-200/50
-                        p-1
-                    ">
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handleModeChange(
-                                    'agent'
-                                )
-                            }
-                            className={`
-                                min-w-[90px]
-                                rounded-md
-                                px-4
-                                py-2
-                                text-xs
-                                font-semibold
-                                transition
-                                ${
-                                    mode === 'agent'
-                                        ? 'bg-base-100 text-[#78B300] shadow-sm'
-                                        : 'text-base-content/50 hover:text-base-content'
-                                }
-                            `}
-                        >
-                            Agent
-                        </button>
-
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                handleModeChange(
-                                    'rm'
-                                )
-                            }
-                            className={`
-                                min-w-[90px]
-                                rounded-md
-                                px-4
-                                py-2
-                                text-xs
-                                font-semibold
-                                transition
-                                ${
-                                    mode === 'rm'
-                                        ? 'bg-base-100 text-[#78B300] shadow-sm'
-                                        : 'text-base-content/50 hover:text-base-content'
-                                }
-                            `}
-                        >
-                            RM
-                        </button>
-
-                    </div>
+                    <ModeToggle
+                        mode={mode}
+                        onChange={
+                            handleModeChange
+                        }
+                    />
 
                 </div>
 
 
                 {/* =================================================
-                    FILTERS
+                    FILTER GRID
                 ================================================= */}
 
                 <div className="
-                    mt-4
+                    mt-3
                     grid
                     w-full
                     min-w-0
                     grid-cols-1
-                    gap-3
+                    gap-2.5
                     sm:grid-cols-2
                     lg:grid-cols-3
-                    xl:grid-cols-7
+                    xl:grid-cols-6
                 ">
 
                     {/* FROM */}
@@ -871,7 +823,9 @@ function Performance() {
                     <DateInput
                         label="From"
                         value={fromDate}
-                        onChange={setFromDate}
+                        onChange={
+                            handleFromDateChange
+                        }
                     />
 
 
@@ -880,18 +834,24 @@ function Performance() {
                     <DateInput
                         label="To"
                         value={toDate}
-                        onChange={setToDate}
+                        onChange={
+                            handleToDateChange
+                        }
                     />
 
 
                     {/* TEAM LEAD */}
 
-                    <div className="min-w-0">
+                    <div className="
+                        min-w-0
+                    ">
 
                         <TeamLeadDropdown
                             label="Team Lead"
                             value={teamLead}
-                            onChange={setTeamLead}
+                            onChange={
+                                handleTeamLeadChange
+                            }
                             allLabel="All Team Leads"
                             placeholder="All Team Leads"
                             searchPlaceholder="Search team lead"
@@ -903,20 +863,34 @@ function Performance() {
 
                     {/* AGENT / RM */}
 
-                    <div className="min-w-0">
+                    <div className="
+                        min-w-0
+                    ">
 
                         {mode === 'agent' ? (
 
                             <AgentDropdown
+                                label="Agent"
                                 value={agent}
-                                onChange={setAgent}
+                                onChange={
+                                    handleAgentChange
+                                }
+                                teamLeadContextId={
+                                    teamLead || null
+                                }
                             />
 
                         ) : (
 
                             <RmDropdown
+                                label="Rm"
                                 value={rm}
-                                onChange={setRm}
+                                onChange={
+                                    handleRmChange
+                                }
+                                teamLeadContextId={
+                                    teamLead || null
+                                }
                             />
 
                         )}
@@ -926,35 +900,44 @@ function Performance() {
 
                     {/* LOAN TYPE */}
 
-                    <div className="min-w-0">
+                    <div className="
+                        min-w-0
+                    ">
 
                         <LoanTypeDropdown
+                            label="Loan Type"
                             value={loanType}
-                            onChange={setLoanType}
+                            onChange={
+                                handleLoanTypeChange
+                            }
                         />
 
                     </div>
 
 
-                    {/* RESET */}
+                    {/* ACTIONS */}
 
                     <div className="
                         flex
                         min-w-0
                         items-end
+                        gap-2
                     ">
 
                         <button
                             type="button"
-                            onClick={handleReset}
+                            onClick={
+                                handleReset
+                            }
                             className="
                                 h-10
-                                w-full
+                                min-w-0
+                                flex-1
                                 rounded-lg
                                 border
                                 border-base-300
                                 bg-base-100
-                                px-3
+                                px-2
                                 text-xs
                                 font-medium
                                 text-base-content/60
@@ -966,33 +949,25 @@ function Performance() {
                             Reset
                         </button>
 
-                    </div>
-
-
-                    {/* REFRESH */}
-
-                    <div className="
-                        flex
-                        min-w-0
-                        items-end
-                    ">
-
                         <button
                             type="button"
-                            onClick={() =>
-                                loadData(true)
+                            onClick={
+                                handleRefresh
                             }
-                            disabled={refreshing}
+                            disabled={
+                                refreshing
+                            }
                             className="
                                 inline-flex
                                 h-10
-                                w-full
+                                min-w-0
+                                flex-1
                                 items-center
                                 justify-center
-                                gap-1.5
+                                gap-1
                                 rounded-lg
                                 bg-[#8BCF00]
-                                px-3
+                                px-2
                                 text-xs
                                 font-medium
                                 text-white
@@ -1004,16 +979,20 @@ function Performance() {
                         >
 
                             <ArrowPathIcon
-                                className={`
-                                    h-4
-                                    w-4
-                                    shrink-0
-                                    ${
-                                        refreshing
-                                            ? 'animate-spin'
-                                            : ''
-                                    }
-                                `}
+                                className={
+                                    refreshing
+                                        ? `
+                                            h-4
+                                            w-4
+                                            shrink-0
+                                            animate-spin
+                                        `
+                                        : `
+                                            h-4
+                                            w-4
+                                            shrink-0
+                                        `
+                                }
                             />
 
                             <span>
@@ -1035,7 +1014,7 @@ function Performance() {
                 NO DATA
             ================================================= */}
 
-            {!filteredPerformance.length && (
+            {!overview.length && (
 
                 <section className="
                     rounded-2xl
@@ -1043,7 +1022,7 @@ function Performance() {
                     border-base-300
                     bg-base-100
                     px-5
-                    py-12
+                    py-10
                     text-center
                     shadow-sm
                 ">
@@ -1073,30 +1052,39 @@ function Performance() {
                 DATA SECTIONS
             ================================================= */}
 
-            {filteredPerformance.length > 0 && (
+            {overview.length > 0 && (
 
-                <>
+                <div className="
+                    space-y-4
+                ">
 
                     <PerformanceOverview
                         mode={mode}
                         performance={
-                            filteredPerformance
+                            overview
                         }
                     />
-
 
                     <LoanWisePerformance
                         mode={mode}
                         performance={
-                            filteredPerformance
+                            loanWise
                         }
                     />
-
 
                     <TopPerformers
                         mode={mode}
                         performance={
-                            filteredPerformance
+                            overview
+                        }
+                        loanWise={
+                            loanWise
+                        }
+                        topPerformers={
+                            topPerformers
+                        }
+                        topPerformersByLoanType={
+                            topPerformersByLoanType
                         }
                         metric={
                             performanceMetric
@@ -1106,7 +1094,7 @@ function Performance() {
                         }
                     />
 
-                </>
+                </div>
 
             )}
 

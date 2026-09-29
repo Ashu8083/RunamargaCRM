@@ -24,8 +24,11 @@ class AgentAnalyticsOverviewController:
     - Pass filters to the service.
     - Return the validated count-only response.
 
-    The controller does not contain hierarchy,
-    analytics, or business logic.
+    The controller does not contain:
+    - hierarchy logic
+    - visibility logic
+    - analytics logic
+    - business logic
     """
 
     # =========================================================
@@ -36,6 +39,7 @@ class AgentAnalyticsOverviewController:
     def get_overview(
         db: Session,
         employee: Employee,
+        analytics_type: str,
         team_lead_context_id: Optional[int] = None,
         agent_context_id: Optional[int] = None,
         rm_context_id: Optional[int] = None,
@@ -46,6 +50,16 @@ class AgentAnalyticsOverviewController:
     ) -> AgentAnalyticsOverviewResponse:
         """
         Get count-only Agent Analytics Overview.
+
+        analytics_type:
+
+            agent
+                Analytics are scoped using visible Agent
+                EmployeeContexts from AccessControl.
+
+            rm
+                Analytics are scoped using visible RM
+                EmployeeContexts from AccessControl.
 
         Date behavior:
 
@@ -60,11 +74,11 @@ class AgentAnalyticsOverviewController:
 
         The service handles:
             - AccessControl
-            - hierarchy visibility
+            - visibility
             - selected filters
             - event-date logic
+            - application-cohort logic
             - count calculation
-            - active pipeline calculation
         """
 
         # =====================================================
@@ -86,16 +100,30 @@ class AgentAnalyticsOverviewController:
                 employee=employee,
 
                 # -------------------------------------------------
-                # Hierarchy filters
+                # Analytics Type
+                # -------------------------------------------------
+
+                analytics_type=analytics_type,
+
+                # -------------------------------------------------
+                # Team Lead Filter
                 # -------------------------------------------------
 
                 team_lead_context_id=(
                     team_lead_context_id
                 ),
 
+                # -------------------------------------------------
+                # Agent Filter
+                # -------------------------------------------------
+
                 agent_context_id=(
                     agent_context_id
                 ),
+
+                # -------------------------------------------------
+                # RM Filter
+                # -------------------------------------------------
 
                 rm_context_id=(
                     rm_context_id
@@ -110,7 +138,7 @@ class AgentAnalyticsOverviewController:
                 ),
 
                 # -------------------------------------------------
-                # Date filters
+                # Date Filters
                 # -------------------------------------------------
 
                 from_date=from_date,

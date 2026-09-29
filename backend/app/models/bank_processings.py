@@ -1,4 +1,4 @@
-# backend/app/models/bank_processing.py
+# backend\app\models\bank_processings.py
 from sqlalchemy import (
     Column,
     Integer,

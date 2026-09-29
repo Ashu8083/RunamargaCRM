@@ -1,7 +1,6 @@
 # backend/app/services/AgentAnalytics/overview_service.py
-
 from datetime import date, datetime, time, timedelta
-from typing import Optional
+from typing import Literal, Optional
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -21,101 +20,25 @@ from app.schemas.AgentAnalytics.overview_schema import (
 
 class AgentAnalyticsOverviewService:
     """
-    Agent Analytics Overview service.
+    Agent Analytics Overview Service.
 
-    This service intentionally provides TWO different analytics
-    views.
+    Analytics type:
 
-    =============================================================
-    1. PIPELINE INSIGHTS -> `counts`
-    =============================================================
+        agent
+            Uses AccessControl.get_visible_agents()
+            and scopes applications through
+            LoanApplication.agent_context_id.
 
-    This section is EVENT / DATE based.
+        rm
+            Uses AccessControl.get_visible_rms()
+            and scopes applications through
+            LoanApplication.rm_context_id.
 
-    The selected date range determines which events happened
-    during that period.
+    AccessControl is the single source of truth
+    for visibility.
 
-        Total Leads
-            -> LoanApplication.applied_date
-
-        Login
-            -> BankProcessing.loggedin_at
-
-        Sanctioned
-            -> BankProcessing.sanctioned_at
-
-        Disbursed
-            -> BankProcessing.disbursed_at
-
-        Rejected
-            -> LoanApplication.rejection_date
-
-    =============================================================
-    2. APPLICATION PIPELINE -> `pipeline`
-    =============================================================
-
-    This section is APPLICATION COHORT based.
-
-    First:
-
-        LoanApplication.applied_date
-
-    selects the applications belonging to the selected date
-    range.
-
-    Then the current/latest status of those applications is
-    determined.
-
-    The application is counted in ONLY ONE current-status bucket.
-
-        Rejected
-        Disbursed
-        Sanctioned
-        Login
-        In Process
-
-    Example:
-
-        Application:
-            applied_date = 2026-08-10
-
-        BankProcessing:
-            Bank A -> Login
-            Bank B -> Sanction
-            Bank C -> Disbursement
-
-    Application Pipeline:
-
-        Disbursed = 1
-        Sanctioned = 0
-        Login = 0
-        In Process = 0
-
-    Another example:
-
-        Bank A -> Login
-        Bank B -> Sanction
-
-    Application Pipeline:
-
-        Sanctioned = 1
-
-    Another example:
-
-        Bank A -> Login
-        Bank B -> Login
-
-    Application Pipeline:
-
-        Login = 1
-
-    =============================================================
-    ACCESS CONTROL
-    =============================================================
-
-    AccessControl is used through its static methods.
-
-    It is NOT instantiated.
+    No separate hierarchy-scope logic is maintained
+    in this service.
     """
 
     # =========================================================
@@ -125,7 +48,7 @@ class AgentAnalyticsOverviewService:
     @staticmethod
     def _get_default_dates() -> tuple[date, date]:
         """
-        Default analytics period is today.
+        Return today's date as both from_date and to_date.
         """
 
         today = date.today()
@@ -133,7 +56,7 @@ class AgentAnalyticsOverviewService:
         return today, today
 
     @staticmethod
-    def _get_date_range_datetimes(
+    def _get_date_bounds(
         from_date: date,
         to_date: date,
     ) -> tuple[datetime, datetime]:
@@ -143,7 +66,8 @@ class AgentAnalyticsOverviewService:
 
         Example:
 
-            2026-08-01 -> 2026-08-31
+            from_date = 2026-08-01
+            to_date   = 2026-08-31
 
         becomes:
 
@@ -151,46 +75,17 @@ class AgentAnalyticsOverviewService:
             <  2026-09-01 00:00:00
         """
 
-        start_datetime = datetime.combine(
+        start = datetime.combine(
             from_date,
             time.min,
         )
 
-        end_datetime = datetime.combine(
+        end = datetime.combine(
             to_date + timedelta(days=1),
             time.min,
         )
 
-        return (
-            start_datetime,
-            end_datetime,
-        )
-
-    @staticmethod
-    def _date_range_condition(
-        column,
-        from_date: date,
-        to_date: date,
-    ):
-        """
-        Build an inclusive date-range SQL condition.
-
-        The helper is used for both DATE and DATETIME-like
-        database columns.
-        """
-
-        start_datetime, end_datetime = (
-            AgentAnalyticsOverviewService
-            ._get_date_range_datetimes(
-                from_date=from_date,
-                to_date=to_date,
-            )
-        )
-
-        return (
-            (column >= start_datetime)
-            & (column < end_datetime)
-        )
+        return start, end
 
     # =========================================================
     # ACTIVE CONTEXT
@@ -203,39 +98,32 @@ class AgentAnalyticsOverviewService:
         context_id: Optional[int] = None,
     ) -> EmployeeContext:
         """
-        Resolve the authenticated employee's active context.
+        Get the employee's active context.
 
-        AccessControl is called statically.
+        AccessControl owns the context-resolution logic.
         """
 
-        active_context = (
-            AccessControl.get_active_context(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
+        active_context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
         )
 
         if not active_context:
-
             raise PermissionError(
                 "No active EmployeeContext found for the authenticated employee."
             )
 
         return active_context
 
-    # =========================================================
-    # CONTEXT FAMILY
-    # =========================================================
-
     @staticmethod
     def _get_context_family(
         context: EmployeeContext,
     ) -> Optional[str]:
         """
-        Resolve context family.
+        Resolve the context family/code.
 
-        Possible values include:
+        Examples:
 
             GLOBAL
             MANAGER
@@ -244,10 +132,7 @@ class AgentAnalyticsOverviewService:
             AGENT
         """
 
-        if not context:
-            return None
-
-        if not context.context:
+        if not context or not context.context:
             return None
 
         return AccessControl.get_context_family(
@@ -263,7 +148,8 @@ class AgentAnalyticsOverviewService:
         contexts,
     ) -> list[int]:
         """
-        Convert EmployeeContext objects to EmployeeContext IDs.
+        Convert EmployeeContext objects into
+        EmployeeContext IDs.
         """
 
         return [
@@ -284,22 +170,19 @@ class AgentAnalyticsOverviewService:
         context_id: Optional[int] = None,
     ) -> list[int]:
         """
-        Get visible Team Lead EmployeeContext IDs.
+        Get Team Lead contexts visible to the employee.
+
+        AccessControl remains the source of truth.
         """
 
-        contexts = (
-            AccessControl.get_visible_team_leads(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
+        contexts = AccessControl.get_visible_team_leads(
+            db=db,
+            employee=employee,
+            context_id=context_id,
         )
 
-        return (
-            AgentAnalyticsOverviewService
-            ._get_context_ids(
-                contexts
-            )
+        return AgentAnalyticsOverviewService._get_context_ids(
+            contexts
         )
 
     # =========================================================
@@ -314,33 +197,25 @@ class AgentAnalyticsOverviewService:
         team_lead_context_id: Optional[int] = None,
     ) -> list[int]:
         """
-        Get visible Agent EmployeeContext IDs.
+        Get Agent contexts visible to the employee.
 
-        Team Lead filtering is passed directly to
-        AccessControl so hierarchy resolution remains
-        centralized there.
+        If a Team Lead is selected, AccessControl applies
+        that Team Lead visibility restriction.
         """
 
-        contexts = (
-            AccessControl.get_visible_agents(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-                team_lead_context_id=(
-                    team_lead_context_id
-                ),
-            )
+        contexts = AccessControl.get_visible_agents(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+            team_lead_context_id=team_lead_context_id,
         )
 
-        return (
-            AgentAnalyticsOverviewService
-            ._get_context_ids(
-                contexts
-            )
+        return AgentAnalyticsOverviewService._get_context_ids(
+            contexts
         )
 
     # =========================================================
-    # VISIBLE RMs
+    # VISIBLE RMS
     # =========================================================
 
     @staticmethod
@@ -351,157 +226,53 @@ class AgentAnalyticsOverviewService:
         team_lead_context_id: Optional[int] = None,
     ) -> list[int]:
         """
-        Get visible RM EmployeeContext IDs.
+        Get RM contexts visible to the employee.
+
+        If a Team Lead is selected, AccessControl applies
+        that Team Lead visibility restriction.
         """
 
-        contexts = (
-            AccessControl.get_visible_rms(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-                team_lead_context_id=(
-                    team_lead_context_id
-                ),
-            )
+        contexts = AccessControl.get_visible_rms(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+            team_lead_context_id=team_lead_context_id,
         )
 
-        return (
-            AgentAnalyticsOverviewService
-            ._get_context_ids(
-                contexts
-            )
+        return AgentAnalyticsOverviewService._get_context_ids(
+            contexts
         )
 
     # =========================================================
-    # HIERARCHY SCOPE
+    # VALIDATE TYPE
     # =========================================================
 
     @staticmethod
-    def _apply_hierarchy_scope(
-        query,
-        family: Optional[str],
-        active_context: EmployeeContext,
-        visible_agent_ids: list[int],
-        visible_rm_ids: list[int],
-        selected_team_lead_context_id: Optional[int] = None,
-    ):
+    def _validate_type(
+        analytics_type: str,
+    ) -> Literal["agent", "rm"]:
         """
-        Apply hierarchy visibility to LoanApplication.
+        Validate analytics type.
 
-        All hierarchy fields use EmployeeContext IDs.
+        Supported values:
+
+            agent
+            rm
         """
 
-        # =====================================================
-        # GLOBAL / MANAGER
-        # =====================================================
+        value = str(
+            analytics_type or ""
+        ).strip().lower()
 
-        if family in {
-            "GLOBAL",
-            "MANAGER",
+        if value not in {
+            "agent",
+            "rm",
         }:
-
-            conditions = []
-
-            if visible_agent_ids:
-
-                conditions.append(
-                    LoanApplication.agent_context_id.in_(
-                        visible_agent_ids
-                    )
-                )
-
-            if visible_rm_ids:
-
-                conditions.append(
-                    LoanApplication.rm_context_id.in_(
-                        visible_rm_ids
-                    )
-                )
-
-            # -------------------------------------------------
-            # If AccessControl returned no restrictions, allow
-            # the full application set.
-            # -------------------------------------------------
-
-            if not conditions:
-
-                return query
-
-            return query.filter(
-                or_(*conditions)
+            raise ValueError(
+                "type must be either 'agent' or 'rm'."
             )
 
-        # =====================================================
-        # TEAM LEAD
-        # =====================================================
-
-        if family == "TEAMLEAD":
-
-            conditions = []
-
-            if visible_agent_ids:
-
-                conditions.append(
-                    LoanApplication.agent_context_id.in_(
-                        visible_agent_ids
-                    )
-                )
-
-            if visible_rm_ids:
-
-                conditions.append(
-                    LoanApplication.rm_context_id.in_(
-                        visible_rm_ids
-                    )
-                )
-
-            if not conditions:
-
-                return query.filter(False)
-
-            return query.filter(
-                or_(*conditions)
-            )
-
-        # =====================================================
-        # RM
-        # =====================================================
-
-        if family == "RM":
-
-            conditions = [
-                LoanApplication.rm_context_id
-                == active_context.id
-            ]
-
-            if visible_agent_ids:
-
-                conditions.append(
-                    LoanApplication.agent_context_id.in_(
-                        visible_agent_ids
-                    )
-                )
-
-            return query.filter(
-                or_(*conditions)
-            )
-
-        # =====================================================
-        # AGENT
-        # =====================================================
-
-        if family == "AGENT":
-
-            return query.filter(
-                LoanApplication.agent_context_id
-                == active_context.id
-            )
-
-        # =====================================================
-        # UNKNOWN
-        # =====================================================
-
-        return query.filter(False)
+        return value  # type: ignore[return-value]
 
     # =========================================================
     # FILTER VALIDATION
@@ -509,6 +280,7 @@ class AgentAnalyticsOverviewService:
 
     @staticmethod
     def _validate_selected_filters(
+        analytics_type: Literal["agent", "rm"],
         family: Optional[str],
         active_context: EmployeeContext,
         selected_team_lead_context_id: Optional[int],
@@ -519,8 +291,21 @@ class AgentAnalyticsOverviewService:
         visible_rm_ids: list[int],
     ) -> None:
         """
-        Validate requested hierarchy filters against the
-        authenticated employee's visibility.
+        Validate all selected filters against the visibility
+        returned by AccessControl.
+
+        Rules:
+
+        Team Lead:
+            Only GLOBAL/MANAGER can select Team Lead.
+
+        Agent analytics:
+            Agent filter is allowed.
+            RM filter is not allowed.
+
+        RM analytics:
+            RM filter is allowed.
+            Agent filter is not allowed.
         """
 
         # =====================================================
@@ -533,7 +318,6 @@ class AgentAnalyticsOverviewService:
                 "GLOBAL",
                 "MANAGER",
             }:
-
                 raise PermissionError(
                     "You are not allowed to filter by Team Lead."
                 )
@@ -542,7 +326,6 @@ class AgentAnalyticsOverviewService:
                 selected_team_lead_context_id
                 not in visible_team_lead_ids
             ):
-
                 raise PermissionError(
                     "Selected Team Lead is outside your visibility scope."
                 )
@@ -553,22 +336,15 @@ class AgentAnalyticsOverviewService:
 
         if selected_agent_context_id is not None:
 
-            if family == "AGENT":
+            if analytics_type != "agent":
+                raise PermissionError(
+                    "Agent filter is not available for RM analytics."
+                )
 
-                if (
-                    selected_agent_context_id
-                    != active_context.id
-                ):
-
-                    raise PermissionError(
-                        "Selected Agent is outside your visibility scope."
-                    )
-
-            elif (
+            if (
                 selected_agent_context_id
                 not in visible_agent_ids
             ):
-
                 raise PermissionError(
                     "Selected Agent is outside your visibility scope."
                 )
@@ -579,22 +355,15 @@ class AgentAnalyticsOverviewService:
 
         if selected_rm_context_id is not None:
 
-            if family == "RM":
+            if analytics_type != "rm":
+                raise PermissionError(
+                    "RM filter is not available for Agent analytics."
+                )
 
-                if (
-                    selected_rm_context_id
-                    != active_context.id
-                ):
-
-                    raise PermissionError(
-                        "Selected RM is outside your visibility scope."
-                    )
-
-            elif (
+            if (
                 selected_rm_context_id
                 not in visible_rm_ids
             ):
-
                 raise PermissionError(
                     "Selected RM is outside your visibility scope."
                 )
@@ -606,11 +375,9 @@ class AgentAnalyticsOverviewService:
     @staticmethod
     def _build_base_query(
         db: Session,
-        family: Optional[str],
-        active_context: EmployeeContext,
+        analytics_type: Literal["agent", "rm"],
         visible_agent_ids: list[int],
         visible_rm_ids: list[int],
-        selected_team_lead_context_id: Optional[int],
         agent_context_id: Optional[int],
         rm_context_id: Optional[int],
         loan_type_id: Optional[int],
@@ -618,43 +385,62 @@ class AgentAnalyticsOverviewService:
         """
         Build the common LoanApplication query.
 
-        Applied filters:
+        Primary scope:
 
-            - deleted_at
-            - hierarchy visibility
-            - selected Agent
-            - selected RM
-            - selected Loan Type
+            type=agent
+                LoanApplication.agent_context_id
+                must belong to visible_agent_ids.
 
-        No date filter is applied here.
+            type=rm
+                LoanApplication.rm_context_id
+                must belong to visible_rm_ids.
+
+        Additional filters:
+
+            agent_context_id
+            rm_context_id
+            loan_type_id
         """
 
         query = (
-            db.query(
-                LoanApplication
-            )
+            db.query(LoanApplication)
             .filter(
                 LoanApplication.deleted_at.is_(None)
             )
         )
 
-        query = (
-            AgentAnalyticsOverviewService
-            ._apply_hierarchy_scope(
-                query=query,
-                family=family,
-                active_context=active_context,
-                visible_agent_ids=visible_agent_ids,
-                visible_rm_ids=visible_rm_ids,
-                selected_team_lead_context_id=(
-                    selected_team_lead_context_id
-                ),
-            )
-        )
+        # =====================================================
+        # PRIMARY ANALYTICS SCOPE
+        # =====================================================
 
-        # -----------------------------------------------------
-        # AGENT FILTER
-        # -----------------------------------------------------
+        if analytics_type == "agent":
+
+            if not visible_agent_ids:
+                return query.filter(False)
+
+            query = query.filter(
+                LoanApplication.agent_context_id.in_(
+                    visible_agent_ids
+                )
+            )
+
+        elif analytics_type == "rm":
+
+            if not visible_rm_ids:
+                return query.filter(False)
+
+            query = query.filter(
+                LoanApplication.rm_context_id.in_(
+                    visible_rm_ids
+                )
+            )
+
+        else:
+            return query.filter(False)
+
+        # =====================================================
+        # EXPLICIT AGENT FILTER
+        # =====================================================
 
         if agent_context_id is not None:
 
@@ -663,9 +449,9 @@ class AgentAnalyticsOverviewService:
                 == agent_context_id
             )
 
-        # -----------------------------------------------------
-        # RM FILTER
-        # -----------------------------------------------------
+        # =====================================================
+        # EXPLICIT RM FILTER
+        # =====================================================
 
         if rm_context_id is not None:
 
@@ -674,9 +460,9 @@ class AgentAnalyticsOverviewService:
                 == rm_context_id
             )
 
-        # -----------------------------------------------------
+        # =====================================================
         # LOAN TYPE FILTER
-        # -----------------------------------------------------
+        # =====================================================
 
         if loan_type_id is not None:
 
@@ -688,92 +474,112 @@ class AgentAnalyticsOverviewService:
         return query
 
     # =========================================================
-    # COHORT APPLICATIONS
-    # =========================================================
-
-    @staticmethod
-    def _get_cohort_applications(
-        base_query,
-        from_date: date,
-        to_date: date,
-    ) -> list[LoanApplication]:
-        """
-        Return applications whose applied_date falls inside
-        the selected date range.
-
-        This is the cohort used by Application Pipeline.
-        """
-
-        applied_condition = (
-            AgentAnalyticsOverviewService
-            ._date_range_condition(
-                LoanApplication.applied_date,
-                from_date,
-                to_date,
-            )
-        )
-
-        return (
-            base_query
-            .filter(
-                applied_condition
-            )
-            .all()
-        )
-
-    # =========================================================
     # PIPELINE INSIGHTS
     # =========================================================
 
     @staticmethod
     def _get_event_counts(
-        db: Session,
         base_query,
         from_date: date,
         to_date: date,
     ) -> AgentAnalyticsCounts:
         """
-        Calculate Pipeline Insights.
+        Pipeline Insights.
 
-        These counts are based on events occurring during the
-        selected date range.
+        Event/date based.
 
-        IMPORTANT:
+        Total Leads:
+            LoanApplication.applied_date in selected range.
 
-        This is intentionally different from Application
-        Pipeline.
+        In Process:
+            1. applied_date in selected range
+               AND status = inprocess
 
-        Application Pipeline asks:
+            OR
 
-            "What is the current status of applications
-             applied during this period?"
+            2. docspending_date in selected range
+               AND status = docspending
 
-        Pipeline Insights asks:
+        Rejected:
+            LoanApplication.rejection_date in selected range.
 
-            "What events happened during this period?"
+        Login:
+            BankProcessing.loggedin_at in selected range
+            AND sanctioned_at IS NULL
+            AND disbursed_at IS NULL
+            AND rejected_at IS NULL.
+
+        Sanctioned:
+            loggedin_at IS NOT NULL
+            AND sanctioned_at in selected range
+            AND disbursed_at IS NULL
+            AND rejected_at IS NULL.
+
+        Disbursed:
+            loggedin_at IS NOT NULL
+            AND sanctioned_at IS NOT NULL
+            AND disbursed_at in selected range
+            AND rejected_at IS NULL.
+
+        Login/Sanctioned/Disbursed count individual
+        BankProcessing rows.
         """
 
-        # =====================================================
-        # TOTAL LEADS
-        # =====================================================
-        #
-        # Total Leads are applications applied during the
-        # selected period.
-        # =====================================================
-
-        applied_condition = (
-            AgentAnalyticsOverviewService
-            ._date_range_condition(
-                LoanApplication.applied_date,
+        start_datetime, end_datetime = (
+            AgentAnalyticsOverviewService._get_date_bounds(
                 from_date,
                 to_date,
             )
         )
 
+        # =====================================================
+        # TOTAL LEADS
+        # =====================================================
+
         total_leads = (
             base_query
             .filter(
-                applied_condition
+                LoanApplication.applied_date
+                >= start_datetime,
+                LoanApplication.applied_date
+                < end_datetime,
+            )
+            .count()
+        )
+
+        # =====================================================
+        # IN PROCESS
+        # =====================================================
+
+        in_process = (
+            base_query
+            .filter(
+                or_(
+                    (
+                        LoanApplication.applied_date
+                        >= start_datetime
+                    )
+                    & (
+                        LoanApplication.applied_date
+                        < end_datetime
+                    )
+                    & (
+                        LoanApplication.status
+                        == "inprocess"
+                    ),
+                    (
+                        LoanApplication.docspending_date
+                        >= start_datetime
+                    )
+                    & (
+                        LoanApplication.docspending_date
+                        < end_datetime
+                    )
+                    & (
+                        LoanApplication.status
+                        == "docspending"
+                    ),
+                )
             )
             .count()
         )
@@ -781,48 +587,23 @@ class AgentAnalyticsOverviewService:
         # =====================================================
         # REJECTED
         # =====================================================
-        #
-        # Rejected uses LoanApplication.rejection_date.
-        # =====================================================
-
-        rejection_condition = (
-            AgentAnalyticsOverviewService
-            ._date_range_condition(
-                LoanApplication.rejection_date,
-                from_date,
-                to_date,
-            )
-        )
 
         rejected = (
             base_query
             .filter(
-                rejection_condition
+                LoanApplication.rejection_date
+                >= start_datetime,
+                LoanApplication.rejection_date
+                < end_datetime,
             )
             .count()
         )
 
         # =====================================================
-        # LOGIN
-        # =====================================================
-        #
-        # Login uses BankProcessing.loggedin_at.
-        #
-        # DISTINCT application IDs are counted so multiple
-        # banks for the same application do not create multiple
-        # Login counts.
+        # BANK PROCESSING BASE
         # =====================================================
 
-        login_condition = (
-            AgentAnalyticsOverviewService
-            ._date_range_condition(
-                BankProcessing.loggedin_at,
-                from_date,
-                to_date,
-            )
-        )
-
-        login = (
+        bank_query = (
             base_query
             .join(
                 BankProcessing,
@@ -832,13 +613,23 @@ class AgentAnalyticsOverviewService:
             .filter(
                 BankProcessing.deleted_at.is_(None)
             )
+        )
+
+        # =====================================================
+        # LOGIN
+        # =====================================================
+
+        login = (
+            bank_query
             .filter(
-                login_condition
+                BankProcessing.loggedin_at
+                >= start_datetime,
+                BankProcessing.loggedin_at
+                < end_datetime,
+                BankProcessing.sanctioned_at.is_(None),
+                BankProcessing.disbursed_at.is_(None),
+                BankProcessing.rejected_at.is_(None),
             )
-            .with_entities(
-                LoanApplication.id
-            )
-            .distinct()
             .count()
         )
 
@@ -846,32 +637,17 @@ class AgentAnalyticsOverviewService:
         # SANCTIONED
         # =====================================================
 
-        sanction_condition = (
-            AgentAnalyticsOverviewService
-            ._date_range_condition(
-                BankProcessing.sanctioned_at,
-                from_date,
-                to_date,
-            )
-        )
-
         sanctioned = (
-            base_query
-            .join(
-                BankProcessing,
-                BankProcessing.loan_id
-                == LoanApplication.id,
-            )
+            bank_query
             .filter(
-                BankProcessing.deleted_at.is_(None)
+                BankProcessing.loggedin_at.isnot(None),
+                BankProcessing.sanctioned_at
+                >= start_datetime,
+                BankProcessing.sanctioned_at
+                < end_datetime,
+                BankProcessing.disbursed_at.is_(None),
+                BankProcessing.rejected_at.is_(None),
             )
-            .filter(
-                sanction_condition
-            )
-            .with_entities(
-                LoanApplication.id
-            )
-            .distinct()
             .count()
         )
 
@@ -879,17 +655,139 @@ class AgentAnalyticsOverviewService:
         # DISBURSED
         # =====================================================
 
-        disbursement_condition = (
-            AgentAnalyticsOverviewService
-            ._date_range_condition(
-                BankProcessing.disbursed_at,
+        disbursed = (
+            bank_query
+            .filter(
+                BankProcessing.loggedin_at.isnot(None),
+                BankProcessing.sanctioned_at.isnot(None),
+                BankProcessing.disbursed_at
+                >= start_datetime,
+                BankProcessing.disbursed_at
+                < end_datetime,
+                BankProcessing.rejected_at.is_(None),
+            )
+            .count()
+        )
+
+        return AgentAnalyticsCounts(
+            total_leads=int(total_leads),
+            in_process=int(in_process),
+            login=int(login),
+            sanctioned=int(sanctioned),
+            disbursed=int(disbursed),
+            rejected=int(rejected),
+        )
+
+    # =========================================================
+    # APPLICATION PIPELINE
+    # =========================================================
+
+    @staticmethod
+    def _get_application_pipeline(
+        base_query,
+        from_date: date,
+        to_date: date,
+    ) -> AgentAnalyticsPipelineCounts:
+        """
+        Application Pipeline.
+
+        Cohort:
+
+            LoanApplication.applied_date
+            in selected date range.
+
+        Categories are NOT mutually exclusive.
+
+        Total Leads:
+            Count of applications in the cohort.
+
+        In Process:
+            status = inprocess
+            OR
+            status = docspending.
+
+        Rejected:
+            status = rejected.
+
+        Login:
+            Qualifying BankProcessing rows.
+
+        Sanctioned:
+            Qualifying BankProcessing rows.
+
+        Disbursed:
+            Qualifying BankProcessing rows.
+
+        Login/Sanctioned/Disbursed count individual
+        BankProcessing rows.
+
+        Therefore, one application may contribute to
+        multiple BankProcessing categories.
+        """
+
+        start_datetime, end_datetime = (
+            AgentAnalyticsOverviewService._get_date_bounds(
                 from_date,
                 to_date,
             )
         )
 
-        disbursed = (
+        # =====================================================
+        # APPLICATION COHORT
+        # =====================================================
+
+        cohort = (
             base_query
+            .filter(
+                LoanApplication.applied_date
+                >= start_datetime,
+                LoanApplication.applied_date
+                < end_datetime,
+            )
+        )
+
+        # =====================================================
+        # TOTAL LEADS
+        # =====================================================
+
+        total_leads = cohort.count()
+
+        # =====================================================
+        # IN PROCESS
+        # =====================================================
+
+        in_process = (
+            cohort
+            .filter(
+                LoanApplication.status.in_(
+                    [
+                        "inprocess",
+                        "docspending",
+                    ]
+                )
+            )
+            .count()
+        )
+
+        # =====================================================
+        # REJECTED
+        # =====================================================
+
+        rejected = (
+            cohort
+            .filter(
+                LoanApplication.status
+                == "rejected"
+            )
+            .count()
+        )
+
+        # =====================================================
+        # BANK PROCESSING BASE
+        # =====================================================
+
+        bank_query = (
+            cohort
             .join(
                 BankProcessing,
                 BankProcessing.loan_id
@@ -898,796 +796,64 @@ class AgentAnalyticsOverviewService:
             .filter(
                 BankProcessing.deleted_at.is_(None)
             )
+        )
+
+        # =====================================================
+        # LOGIN
+        # =====================================================
+
+        login = (
+            bank_query
             .filter(
-                disbursement_condition
+                BankProcessing.loggedin_at.isnot(None),
+                BankProcessing.sanctioned_at.is_(None),
+                BankProcessing.disbursed_at.is_(None),
+                BankProcessing.rejected_at.is_(None),
             )
-            .with_entities(
-                LoanApplication.id
-            )
-            .distinct()
             .count()
         )
 
         # =====================================================
-        # IN PROCESS
-        # =====================================================
-        #
-        # Pipeline Insights needs an event/date-based
-        # in-process count.
-        #
-        # We therefore use applications applied during the
-        # selected period and remove applications that already
-        # have a Login/Sanction/Disbursement event or rejection
-        # during the same period.
-        #
-        # This count is intentionally separate from the
-        # Application Pipeline current-status calculation.
+        # SANCTIONED
         # =====================================================
 
-        cohort_query = (
-            base_query
+        sanctioned = (
+            bank_query
             .filter(
-                applied_condition
+                BankProcessing.status
+                == "sanctioned",
+                BankProcessing.loggedin_at.isnot(None),
+                BankProcessing.sanctioned_at.isnot(None),
+                BankProcessing.disbursed_at.is_(None),
+                BankProcessing.rejected_at.is_(None),
             )
-        )
-
-        cohort_applications = (
-            cohort_query
-            .all()
-        )
-
-        if not cohort_applications:
-
-            in_process = 0
-
-        else:
-
-            application_ids = [
-                int(application.id)
-                for application in cohort_applications
-                if application.id is not None
-            ]
-
-            processing_rows = (
-                db.query(
-                    BankProcessing
-                )
-                .filter(
-                    BankProcessing.loan_id.in_(
-                        application_ids
-                    )
-                )
-                .filter(
-                    BankProcessing.deleted_at.is_(None)
-                )
-                .all()
-            )
-
-            processing_by_application: dict[
-                int,
-                list[BankProcessing],
-            ] = {}
-
-            for row in processing_rows:
-
-                loan_id = getattr(
-                    row,
-                    "loan_id",
-                    None,
-                )
-
-                if loan_id is None:
-                    continue
-
-                processing_by_application.setdefault(
-                    int(loan_id),
-                    [],
-                ).append(
-                    row
-                )
-
-            in_process = 0
-
-            for application in cohort_applications:
-
-                application_id = (
-                    int(application.id)
-                    if application.id is not None
-                    else None
-                )
-
-                rows = (
-                    processing_by_application.get(
-                        application_id,
-                        [],
-                    )
-                )
-
-                # -------------------------------------------------
-                # Has rejection during selected period?
-                # -------------------------------------------------
-
-                rejected_in_period = (
-                    getattr(
-                        application,
-                        "rejection_date",
-                        None,
-                    ) is not None
-                    and
-                    AgentAnalyticsOverviewService
-                    ._value_in_date_range(
-                        getattr(
-                            application,
-                            "rejection_date",
-                            None,
-                        ),
-                        from_date,
-                        to_date,
-                    )
-                )
-
-                # -------------------------------------------------
-                # Has Login during selected period?
-                # -------------------------------------------------
-
-                login_in_period = any(
-                    AgentAnalyticsOverviewService
-                    ._value_in_date_range(
-                        getattr(
-                            row,
-                            "loggedin_at",
-                            None,
-                        ),
-                        from_date,
-                        to_date,
-                    )
-                    for row in rows
-                )
-
-                # -------------------------------------------------
-                # Has Sanction during selected period?
-                # -------------------------------------------------
-
-                sanction_in_period = any(
-                    AgentAnalyticsOverviewService
-                    ._value_in_date_range(
-                        getattr(
-                            row,
-                            "sanctioned_at",
-                            None,
-                        ),
-                        from_date,
-                        to_date,
-                    )
-                    for row in rows
-                )
-
-                # -------------------------------------------------
-                # Has Disbursement during selected period?
-                # -------------------------------------------------
-
-                disbursement_in_period = any(
-                    AgentAnalyticsOverviewService
-                    ._value_in_date_range(
-                        getattr(
-                            row,
-                            "disbursed_at",
-                            None,
-                        ),
-                        from_date,
-                        to_date,
-                    )
-                    for row in rows
-                )
-
-                if not (
-                    rejected_in_period
-                    or login_in_period
-                    or sanction_in_period
-                    or disbursement_in_period
-                ):
-
-                    in_process += 1
-
-        return AgentAnalyticsCounts(
-            total_leads=int(
-                total_leads
-            ),
-            in_process=int(
-                in_process
-            ),
-            login=int(
-                login
-            ),
-            sanctioned=int(
-                sanctioned
-            ),
-            disbursed=int(
-                disbursed
-            ),
-            rejected=int(
-                rejected
-            ),
-        )
-
-    # =========================================================
-    # VALUE DATE CHECK
-    # =========================================================
-
-    @staticmethod
-    def _value_in_date_range(
-        value,
-        from_date: date,
-        to_date: date,
-    ) -> bool:
-        """
-        Check whether a date/datetime value falls within the
-        inclusive analytics date range.
-
-        This is used for in-memory Pipeline Insights
-        calculations.
-        """
-
-        if value is None:
-
-            return False
-
-        if isinstance(
-            value,
-            datetime,
-        ):
-
-            value_date = value.date()
-
-        elif isinstance(
-            value,
-            date,
-        ):
-
-            value_date = value
-
-        else:
-
-            return False
-
-        return (
-            from_date
-            <= value_date
-            <= to_date
-        )
-
-    # =========================================================
-    # STATUS DATE EXTRACTION
-    # =========================================================
-
-    @staticmethod
-    def _get_latest_status_event(
-        application: LoanApplication,
-        processing_rows: list[BankProcessing],
-    ) -> tuple[
-        Optional[str],
-        Optional[datetime],
-    ]:
-        """
-        Determine the latest reached status for an application.
-
-        Status hierarchy:
-
-            REJECTED
-            DISBURSED
-            SANCTIONED
-            LOGIN
-            IN_PROCESS
-
-        The latest timestamp is used when multiple bank
-        processing records exist.
-
-        Important:
-
-        We compare actual status event timestamps rather than
-        simply checking whether a field is populated.
-
-        Example:
-
-            Bank A:
-                login = Aug 10
-
-            Bank B:
-                sanction = Aug 12
-
-            Bank C:
-                disbursement = Aug 15
-
-        Result:
-
-            DISBURSED
-        """
-
-        events: list[
-            tuple[str, datetime]
-        ] = []
-
-        # =====================================================
-        # APPLICATION-LEVEL REJECTION
-        # =====================================================
-
-        rejection_date = getattr(
-            application,
-            "rejection_date",
-            None,
-        )
-
-        if rejection_date is not None:
-
-            normalized = (
-                AgentAnalyticsOverviewService
-                ._normalize_datetime(
-                    rejection_date
-                )
-            )
-
-            if normalized is not None:
-
-                events.append(
-                    (
-                        "REJECTED",
-                        normalized,
-                    )
-                )
-
-        # =====================================================
-        # APPLICATION-LEVEL LOGIN
-        # =====================================================
-
-        loggedin_date = getattr(
-            application,
-            "loggedin_date",
-            None,
-        )
-
-        if loggedin_date is not None:
-
-            normalized = (
-                AgentAnalyticsOverviewService
-                ._normalize_datetime(
-                    loggedin_date
-                )
-            )
-
-            if normalized is not None:
-
-                events.append(
-                    (
-                        "LOGIN",
-                        normalized,
-                    )
-                )
-
-        # =====================================================
-        # APPLICATION-LEVEL SANCTION
-        # =====================================================
-
-        sanction_date = getattr(
-            application,
-            "sanction_date",
-            None,
-        )
-
-        if sanction_date is not None:
-
-            normalized = (
-                AgentAnalyticsOverviewService
-                ._normalize_datetime(
-                    sanction_date
-                )
-            )
-
-            if normalized is not None:
-
-                events.append(
-                    (
-                        "SANCTIONED",
-                        normalized,
-                    )
-                )
-
-        # =====================================================
-        # APPLICATION-LEVEL DISBURSEMENT
-        # =====================================================
-
-        disbursement_date = getattr(
-            application,
-            "disbursement_date",
-            None,
-        )
-
-        if disbursement_date is not None:
-
-            normalized = (
-                AgentAnalyticsOverviewService
-                ._normalize_datetime(
-                    disbursement_date
-                )
-            )
-
-            if normalized is not None:
-
-                events.append(
-                    (
-                        "DISBURSED",
-                        normalized,
-                    )
-                )
-
-        # =====================================================
-        # BANK PROCESSING EVENTS
-        # =====================================================
-
-        for row in processing_rows:
-
-            # -------------------------------------------------
-            # LOGIN
-            # -------------------------------------------------
-
-            loggedin_at = getattr(
-                row,
-                "loggedin_at",
-                None,
-            )
-
-            if loggedin_at is not None:
-
-                normalized = (
-                    AgentAnalyticsOverviewService
-                    ._normalize_datetime(
-                        loggedin_at
-                    )
-                )
-
-                if normalized is not None:
-
-                    events.append(
-                        (
-                            "LOGIN",
-                            normalized,
-                        )
-                    )
-
-            # -------------------------------------------------
-            # SANCTION
-            # -------------------------------------------------
-
-            sanctioned_at = getattr(
-                row,
-                "sanctioned_at",
-                None,
-            )
-
-            if sanctioned_at is not None:
-
-                normalized = (
-                    AgentAnalyticsOverviewService
-                    ._normalize_datetime(
-                        sanctioned_at
-                    )
-                )
-
-                if normalized is not None:
-
-                    events.append(
-                        (
-                            "SANCTIONED",
-                            normalized,
-                        )
-                    )
-
-            # -------------------------------------------------
-            # DISBURSEMENT
-            # -------------------------------------------------
-
-            disbursed_at = getattr(
-                row,
-                "disbursed_at",
-                None,
-            )
-
-            if disbursed_at is not None:
-
-                normalized = (
-                    AgentAnalyticsOverviewService
-                    ._normalize_datetime(
-                        disbursed_at
-                    )
-                )
-
-                if normalized is not None:
-
-                    events.append(
-                        (
-                            "DISBURSED",
-                            normalized,
-                        )
-                    )
-
-            # -------------------------------------------------
-            # REJECTION
-            # -------------------------------------------------
-
-            rejected_at = getattr(
-                row,
-                "rejected_at",
-                None,
-            )
-
-            if rejected_at is not None:
-
-                normalized = (
-                    AgentAnalyticsOverviewService
-                    ._normalize_datetime(
-                        rejected_at
-                    )
-                )
-
-                if normalized is not None:
-
-                    events.append(
-                        (
-                            "REJECTED",
-                            normalized,
-                        )
-                    )
-
-        # =====================================================
-        # NO STATUS EVENT
-        # =====================================================
-
-        if not events:
-
-            return (
-                "IN_PROCESS",
-                None,
-            )
-
-        # =====================================================
-        # LATEST EVENT
-        # =====================================================
-
-        latest_status, latest_datetime = max(
-            events,
-            key=lambda item: item[1],
-        )
-
-        return (
-            latest_status,
-            latest_datetime,
-        )
-
-    # =========================================================
-    # NORMALIZE STATUS DATETIME
-    # =========================================================
-
-    @staticmethod
-    def _normalize_datetime(
-        value,
-    ) -> Optional[datetime]:
-        """
-        Normalize date/datetime values to datetime.
-
-        Date values are converted to midnight.
-
-        Unsupported values return None.
-        """
-
-        if value is None:
-
-            return None
-
-        if isinstance(
-            value,
-            datetime,
-        ):
-
-            return value
-
-        if isinstance(
-            value,
-            date,
-        ):
-
-            return datetime.combine(
-                value,
-                time.min,
-            )
-
-        return None
-
-    # =========================================================
-    # APPLICATION PIPELINE
-    # =========================================================
-
-    @staticmethod
-    def _get_application_pipeline(
-        db: Session,
-        applications: list[LoanApplication],
-    ) -> AgentAnalyticsPipelineCounts:
-        """
-        Calculate current-status counts for the selected
-        application cohort.
-
-        The applications are already selected using:
-
-            LoanApplication.applied_date
-
-        No event-date filtering is performed here.
-
-        Every application is assigned to exactly ONE bucket.
-        """
-
-        total_leads = len(
-            applications
+            .count()
         )
 
         # =====================================================
-        # EMPTY COHORT
+        # DISBURSED
         # =====================================================
 
-        if not applications:
-
-            return AgentAnalyticsPipelineCounts(
-                total_leads=0,
-                in_process=0,
-                login=0,
-                sanctioned=0,
-                disbursed=0,
-                rejected=0,
-            )
-
-        # =====================================================
-        # APPLICATION IDS
-        # =====================================================
-
-        application_ids = [
-            int(application.id)
-            for application in applications
-            if application.id is not None
-        ]
-
-        # =====================================================
-        # LOAD ALL BANK PROCESSING ROWS
-        # =====================================================
-        #
-        # NO DATE FILTER.
-        #
-        # We need the complete status history to determine the
-        # CURRENT status of the application.
-        # =====================================================
-
-        processing_rows = (
-            db.query(
-                BankProcessing
-            )
+        disbursed = (
+            bank_query
             .filter(
-                BankProcessing.loan_id.in_(
-                    application_ids
-                )
+                BankProcessing.status
+                == "disbursed",
+                BankProcessing.loggedin_at.isnot(None),
+                BankProcessing.sanctioned_at.isnot(None),
+                BankProcessing.disbursed_at.isnot(None),
+                BankProcessing.rejected_at.is_(None),
             )
-            .filter(
-                BankProcessing.deleted_at.is_(None)
-            )
-            .all()
+            .count()
         )
-
-        processing_by_application: dict[
-            int,
-            list[BankProcessing],
-        ] = {}
-
-        for row in processing_rows:
-
-            loan_id = getattr(
-                row,
-                "loan_id",
-                None,
-            )
-
-            if loan_id is None:
-                continue
-
-            processing_by_application.setdefault(
-                int(loan_id),
-                [],
-            ).append(
-                row
-            )
-
-        # =====================================================
-        # COUNTERS
-        # =====================================================
-
-        in_process = 0
-
-        login = 0
-
-        sanctioned = 0
-
-        disbursed = 0
-
-        rejected = 0
-
-        # =====================================================
-        # CURRENT STATUS OF EACH APPLICATION
-        # =====================================================
-
-        for application in applications:
-
-            application_id = (
-                int(application.id)
-                if application.id is not None
-                else None
-            )
-
-            rows = (
-                processing_by_application.get(
-                    application_id,
-                    [],
-                )
-            )
-
-            current_status, _ = (
-                AgentAnalyticsOverviewService
-                ._get_latest_status_event(
-                    application=application,
-                    processing_rows=rows,
-                )
-            )
-
-            # -------------------------------------------------
-            # CURRENT STATUS
-            # -------------------------------------------------
-
-            if current_status == "REJECTED":
-
-                rejected += 1
-
-            elif current_status == "DISBURSED":
-
-                disbursed += 1
-
-            elif current_status == "SANCTIONED":
-
-                sanctioned += 1
-
-            elif current_status == "LOGIN":
-
-                login += 1
-
-            else:
-
-                in_process += 1
-
-        # =====================================================
-        # RESPONSE
-        # =====================================================
 
         return AgentAnalyticsPipelineCounts(
-            total_leads=int(
-                total_leads
-            ),
-            in_process=int(
-                in_process
-            ),
-            login=int(
-                login
-            ),
-            sanctioned=int(
-                sanctioned
-            ),
-            disbursed=int(
-                disbursed
-            ),
-            rejected=int(
-                rejected
-            ),
+            total_leads=int(total_leads),
+            in_process=int(in_process),
+            login=int(login),
+            sanctioned=int(sanctioned),
+            disbursed=int(disbursed),
+            rejected=int(rejected),
         )
 
     # =========================================================
@@ -1698,6 +864,7 @@ class AgentAnalyticsOverviewService:
     def get_overview(
         db: Session,
         employee: Employee,
+        analytics_type: str = "agent",
         team_lead_context_id: Optional[int] = None,
         agent_context_id: Optional[int] = None,
         rm_context_id: Optional[int] = None,
@@ -1709,27 +876,27 @@ class AgentAnalyticsOverviewService:
         """
         Return Agent Analytics Overview.
 
-        Response contains:
+        analytics_type:
 
-            counts
-                -> Pipeline Insights / event analytics
+            agent
+                Use visible Agent contexts from
+                AccessControl as the primary scope.
 
-            pipeline
-                -> Application Pipeline / current status
+            rm
+                Use visible RM contexts from
+                AccessControl as the primary scope.
 
-        Date normalization:
+        Filters:
 
-            no dates
-                -> today
+            team_lead_context_id
+            agent_context_id
+            rm_context_id
+            loan_type_id
+            from_date
+            to_date
 
-            only from_date
-                -> from_date
-
-            only to_date
-                -> to_date
-
-            both dates
-                -> inclusive range
+        Both Pipeline Insights and Application Pipeline
+        use the same visibility/application scope.
         """
 
         # =====================================================
@@ -1737,10 +904,20 @@ class AgentAnalyticsOverviewService:
         # =====================================================
 
         if not employee:
-
             raise PermissionError(
                 "Authenticated employee is required."
             )
+
+        # =====================================================
+        # ANALYTICS TYPE
+        # =====================================================
+
+        analytics_type = (
+            AgentAnalyticsOverviewService
+            ._validate_type(
+                analytics_type
+            )
+        )
 
         # =====================================================
         # DATE RANGE
@@ -1768,13 +945,11 @@ class AgentAnalyticsOverviewService:
             from_date is None
             or to_date is None
         ):
-
             raise ValueError(
                 "Unable to resolve analytics date range."
             )
 
         if from_date > to_date:
-
             raise ValueError(
                 "from_date cannot be greater than to_date."
             )
@@ -1784,16 +959,13 @@ class AgentAnalyticsOverviewService:
         # =====================================================
 
         active_context = (
-            AgentAnalyticsOverviewService._get_active_context(
+            AgentAnalyticsOverviewService
+            ._get_active_context(
                 db=db,
                 employee=employee,
                 context_id=context_id,
             )
         )
-
-        # =====================================================
-        # CONTEXT FAMILY
-        # =====================================================
 
         family = (
             AgentAnalyticsOverviewService
@@ -1803,7 +975,7 @@ class AgentAnalyticsOverviewService:
         )
 
         # =====================================================
-        # VISIBILITY
+        # VISIBLE TEAM LEADS
         # =====================================================
 
         visible_team_lead_ids = (
@@ -1815,17 +987,23 @@ class AgentAnalyticsOverviewService:
             )
         )
 
+        # =====================================================
+        # VISIBLE AGENTS
+        # =====================================================
+
         visible_agent_ids = (
             AgentAnalyticsOverviewService
             ._get_visible_agent_ids(
                 db=db,
                 employee=employee,
                 context_id=context_id,
-                team_lead_context_id=(
-                    team_lead_context_id
-                ),
+                team_lead_context_id=team_lead_context_id,
             )
         )
+
+        # =====================================================
+        # VISIBLE RMS
+        # =====================================================
 
         visible_rm_ids = (
             AgentAnalyticsOverviewService
@@ -1833,9 +1011,7 @@ class AgentAnalyticsOverviewService:
                 db=db,
                 employee=employee,
                 context_id=context_id,
-                team_lead_context_id=(
-                    team_lead_context_id
-                ),
+                team_lead_context_id=team_lead_context_id,
             )
         )
 
@@ -1843,56 +1019,32 @@ class AgentAnalyticsOverviewService:
         # FILTER VALIDATION
         # =====================================================
 
-        (
-            AgentAnalyticsOverviewService
-            ._validate_selected_filters(
-                family=family,
-                active_context=active_context,
-                selected_team_lead_context_id=(
-                    team_lead_context_id
-                ),
-                selected_agent_context_id=(
-                    agent_context_id
-                ),
-                selected_rm_context_id=(
-                    rm_context_id
-                ),
-                visible_team_lead_ids=(
-                    visible_team_lead_ids
-                ),
-                visible_agent_ids=(
-                    visible_agent_ids
-                ),
-                visible_rm_ids=(
-                    visible_rm_ids
-                ),
-            )
+        AgentAnalyticsOverviewService._validate_selected_filters(
+            analytics_type=analytics_type,
+            family=family,
+            active_context=active_context,
+            selected_team_lead_context_id=team_lead_context_id,
+            selected_agent_context_id=agent_context_id,
+            selected_rm_context_id=rm_context_id,
+            visible_team_lead_ids=visible_team_lead_ids,
+            visible_agent_ids=visible_agent_ids,
+            visible_rm_ids=visible_rm_ids,
         )
 
         # =====================================================
-        # BASE QUERY
+        # COMMON BASE QUERY
         # =====================================================
 
         base_query = (
             AgentAnalyticsOverviewService
             ._build_base_query(
                 db=db,
-                family=family,
-                active_context=active_context,
+                analytics_type=analytics_type,
                 visible_agent_ids=visible_agent_ids,
                 visible_rm_ids=visible_rm_ids,
-                selected_team_lead_context_id=(
-                    team_lead_context_id
-                ),
-                agent_context_id=(
-                    agent_context_id
-                ),
-                rm_context_id=(
-                    rm_context_id
-                ),
-                loan_type_id=(
-                    loan_type_id
-                ),
+                agent_context_id=agent_context_id,
+                rm_context_id=rm_context_id,
+                loan_type_id=loan_type_id,
             )
         )
 
@@ -1903,26 +1055,6 @@ class AgentAnalyticsOverviewService:
         counts = (
             AgentAnalyticsOverviewService
             ._get_event_counts(
-                db=db,
-                base_query=base_query,
-                from_date=from_date,
-                to_date=to_date,
-            )
-        )
-
-        # =====================================================
-        # APPLICATION COHORT
-        # =====================================================
-        #
-        # This cohort is ONLY based on applied_date.
-        #
-        # All current-status calculations below operate on
-        # this exact cohort.
-        # =====================================================
-
-        applications = (
-            AgentAnalyticsOverviewService
-            ._get_cohort_applications(
                 base_query=base_query,
                 from_date=from_date,
                 to_date=to_date,
@@ -1936,46 +1068,34 @@ class AgentAnalyticsOverviewService:
         pipeline = (
             AgentAnalyticsOverviewService
             ._get_application_pipeline(
-                db=db,
-                applications=applications,
+                base_query=base_query,
+                from_date=from_date,
+                to_date=to_date,
             )
         )
 
         # =====================================================
-        # FILTERS
+        # FILTER RESPONSE
         # =====================================================
 
         filters = AgentAnalyticsFilters(
-            team_lead_context_id=(
-                team_lead_context_id
-            ),
-            agent_context_id=(
-                agent_context_id
-            ),
-            rm_context_id=(
-                rm_context_id
-            ),
-            loan_type_id=(
-                loan_type_id
-            ),
+            type=analytics_type,
+            team_lead_context_id=team_lead_context_id,
+            agent_context_id=agent_context_id,
+            rm_context_id=rm_context_id,
+            loan_type_id=loan_type_id,
             from_date=from_date,
             to_date=to_date,
         )
 
         # =====================================================
-        # VISIBILITY
+        # VISIBILITY RESPONSE
         # =====================================================
 
         visibility = AgentAnalyticsVisibility(
-            team_lead_context_ids=(
-                visible_team_lead_ids
-            ),
-            agent_context_ids=(
-                visible_agent_ids
-            ),
-            rm_context_ids=(
-                visible_rm_ids
-            ),
+            team_lead_context_ids=visible_team_lead_ids,
+            agent_context_ids=visible_agent_ids,
+            rm_context_ids=visible_rm_ids,
         )
 
         # =====================================================
@@ -1983,6 +1103,7 @@ class AgentAnalyticsOverviewService:
         # =====================================================
 
         return {
+            "type": analytics_type,
             "counts": counts,
             "pipeline": pipeline,
             "filters": filters,

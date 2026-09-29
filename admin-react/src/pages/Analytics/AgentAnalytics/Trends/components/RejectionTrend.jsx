@@ -15,25 +15,44 @@ import {
 // HELPERS
 // =============================================================
 
-const formatNumber = (value) => {
-    return Number(value || 0).toLocaleString('en-IN')
+const formatNumber = (
+    value
+) => {
+
+    return Number(
+        value || 0
+    ).toLocaleString('en-IN')
+
 }
 
 
-const formatDate = (date) => {
+const formatDate = (
+    value
+) => {
 
-    if (!date) {
+    if (!value) {
         return ''
     }
 
-    const parsedDate =
-        new Date(`${date}T00:00:00`)
 
-    if (Number.isNaN(parsedDate.getTime())) {
-        return date
+    const date =
+        new Date(
+            `${value}T00:00:00`
+        )
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+
+        return value
+
     }
 
-    return parsedDate.toLocaleDateString(
+
+    return date.toLocaleDateString(
         'en-IN',
         {
             day: '2-digit',
@@ -44,62 +63,48 @@ const formatDate = (date) => {
 }
 
 
-const getRejectedValue = (item) => {
-
-    const value =
-        item?.rejected ??
-        item?.rejectedCount ??
-        item?.rejectedApplications ??
-        item?.rejections ??
-        0
-
-    return Number(value) || 0
-
-}
-
-
 // =============================================================
-// BUILD CHART DATA
+// NORMALIZE DATA
 // =============================================================
 
-const buildChartData = (analytics) => {
+const normalizeRejectionTrend = (
+    rejectionTrend
+) => {
 
-    const grouped = {}
+    if (
+        !Array.isArray(
+            rejectionTrend
+        )
+    ) {
 
+        return []
 
-    analytics.forEach((item) => {
-
-        if (!item?.date) {
-            return
-        }
-
-
-        const date =
-            item.date
-
-
-        if (!grouped[date]) {
-
-            grouped[date] = {
-                date,
-                displayDate: formatDate(date),
-                rejected: 0,
-            }
-
-        }
+    }
 
 
-        grouped[date].rejected +=
-            getRejectedValue(item)
+    return rejectionTrend
+        .map((item) => ({
 
-    })
+            date:
+                item?.date ??
+                null,
 
+            rejected:
+                Number(
+                    item?.rejected ??
+                    0
+                ) || 0,
 
-    return Object.values(grouped)
+        }))
+        .filter(
+            (item) =>
+                item.date !== null
+        )
         .sort(
             (a, b) =>
-                new Date(a.date) -
-                new Date(b.date)
+                String(a.date).localeCompare(
+                    String(b.date)
+                )
         )
 
 }
@@ -119,7 +124,9 @@ function RejectionTooltip({
         !active ||
         !payload?.length
     ) {
+
         return null
+
     }
 
 
@@ -132,7 +139,7 @@ function RejectionTooltip({
             border-base-300
             bg-base-100
             px-3
-            py-3
+            py-2.5
             shadow-xl
         ">
 
@@ -142,7 +149,7 @@ function RejectionTooltip({
                 font-semibold
                 text-base-content
             ">
-                {label}
+                {formatDate(label)}
             </p>
 
 
@@ -167,7 +174,7 @@ function RejectionTooltip({
                     " />
 
                     <span className="
-                        text-xs
+                        text-[11px]
                         text-base-content/55
                     ">
                         Rejected
@@ -177,12 +184,12 @@ function RejectionTooltip({
 
 
                 <span className="
-                    text-sm
+                    text-xs
                     font-semibold
                     text-base-content
                 ">
                     {formatNumber(
-                        payload[0].value
+                        payload[0]?.value
                     )}
                 </span>
 
@@ -205,7 +212,7 @@ function EmptyState() {
 
         <div className="
             flex
-            h-[320px]
+            h-[360px]
             items-center
             justify-center
             text-center
@@ -213,7 +220,30 @@ function EmptyState() {
 
             <div>
 
+                <div className="
+                    mx-auto
+                    flex
+                    h-16
+                    w-16
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-base-200
+                ">
+
+                    <div className="
+                        h-8
+                        w-8
+                        rounded-full
+                        border-4
+                        border-base-300
+                    " />
+
+                </div>
+
+
                 <p className="
+                    mt-4
                     text-sm
                     font-medium
                     text-base-content/50
@@ -244,24 +274,33 @@ function EmptyState() {
 // =============================================================
 
 function RejectionTrend({
-    analytics = [],
+    rejectionTrend = [],
 }) {
 
-    const chartData =
-        buildChartData(analytics)
+    const data =
+        normalizeRejectionTrend(
+            rejectionTrend
+        )
 
 
     const totalRejected =
-        chartData.reduce(
-            (total, item) =>
-                total + item.rejected,
+        data.reduce(
+            (
+                total,
+                item
+            ) =>
+                total +
+                item.rejected,
             0
         )
 
 
     const highestRejected =
-        chartData.reduce(
-            (highest, item) =>
+        data.reduce(
+            (
+                highest,
+                item
+            ) =>
                 Math.max(
                     highest,
                     item.rejected
@@ -289,106 +328,45 @@ function RejectionTrend({
                 HEADER
             ================================================= */}
 
-            <div className="
-                flex
-                flex-wrap
-                items-start
-                justify-between
-                gap-3
-            ">
+            <div>
 
-                <div className="min-w-0">
-
-                    <h2 className="
-                        text-sm
-                        font-semibold
-                        text-base-content
-                    ">
-                        Rejection Trend
-                    </h2>
+                <h2 className="
+                    text-sm
+                    font-semibold
+                    text-base-content
+                ">
+                    Rejection Trend
+                </h2>
 
 
-                    <p className="
-                        mt-1
-                        text-xs
-                        text-base-content/45
-                    ">
-                        Rejected applications over time
-                    </p>
-
-                </div>
-
-
-                {chartData.length > 0 && (
-
-                    <div className="
-                        rounded-lg
-                        bg-[#D92D20]/5
-                        px-3
-                        py-2
-                    ">
-
-                        <p className="
-                            text-[10px]
-                            font-medium
-                            uppercase
-                            tracking-wide
-                            text-base-content/40
-                        ">
-                            Total Rejected
-                        </p>
-
-
-                        <p className="
-                            mt-0.5
-                            text-sm
-                            font-semibold
-                            text-[#D92D20]
-                        ">
-                            {formatNumber(
-                                totalRejected
-                            )}
-                        </p>
-
-                    </div>
-
-                )}
+                <p className="
+                    mt-1
+                    text-xs
+                    text-base-content/45
+                ">
+                    Daily rejected applications across the selected period
+                </p>
 
             </div>
 
 
-            {/* =================================================
-                CHART
-            ================================================= */}
-
-            {chartData.length === 0 ? (
+            {data.length === 0 ? (
 
                 <EmptyState />
 
             ) : (
 
-                <div className="
-                    mt-5
-                    h-[320px]
-                    w-full
-                    overflow-x-auto
-                ">
+                <>
 
-                    <div
-                        className="
-                            h-full
-                            min-w-[600px]
-                        "
-                        style={{
-                            width:
-                                chartData.length > 12
-                                    ? `${Math.max(
-                                        100,
-                                        chartData.length * 65
-                                    )}%`
-                                    : '100%',
-                        }}
-                    >
+                    {/* =============================================
+                        CHART
+                    ============================================= */}
+
+                    <div className="
+                        mt-4
+                        h-[360px]
+                        w-full
+                    ">
 
                         <ResponsiveContainer
                             width="100%"
@@ -396,75 +374,53 @@ function RejectionTrend({
                         >
 
                             <AreaChart
-                                data={chartData}
+                                data={data}
                                 margin={{
                                     top: 10,
-                                    right: 20,
+                                    right: 10,
                                     left: 0,
-                                    bottom: 5,
+                                    bottom: 10,
                                 }}
                             >
-
-                                <defs>
-
-                                    <linearGradient
-                                        id="rejectionGradient"
-                                        x1="0"
-                                        y1="0"
-                                        x2="0"
-                                        y2="1"
-                                    >
-
-                                        <stop
-                                            offset="0%"
-                                            stopColor="#D92D20"
-                                            stopOpacity={0.22}
-                                        />
-
-                                        <stop
-                                            offset="100%"
-                                            stopColor="#D92D20"
-                                            stopOpacity={0.02}
-                                        />
-
-                                    </linearGradient>
-
-                                </defs>
-
 
                                 <CartesianGrid
                                     strokeDasharray="3 3"
                                     vertical={false}
-                                    stroke="rgba(0,0,0,0.08)"
+                                    stroke="currentColor"
+                                    className="
+                                        text-base-content/10
+                                    "
                                 />
 
 
                                 <XAxis
-                                    dataKey="displayDate"
+                                    dataKey="date"
                                     tick={{
-                                        fontSize: 11,
+                                        fontSize: 10,
                                     }}
                                     tickLine={false}
                                     axisLine={false}
-                                    minTickGap={20}
+                                    minTickGap={18}
+                                    tickFormatter={
+                                        formatDate
+                                    }
                                 />
 
 
                                 <YAxis
+                                    allowDecimals={false}
                                     tick={{
-                                        fontSize: 11,
+                                        fontSize: 10,
                                     }}
                                     tickLine={false}
                                     axisLine={false}
-                                    width={42}
+                                    width={45}
                                     tickFormatter={
                                         formatNumber
                                     }
                                     domain={[
                                         0,
-                                        (
-                                            dataMax
-                                        ) => {
+                                        (dataMax) => {
 
                                             if (
                                                 !Number.isFinite(
@@ -472,8 +428,11 @@ function RejectionTrend({
                                                 ) ||
                                                 dataMax <= 0
                                             ) {
+
                                                 return 10
+
                                             }
+
 
                                             return Math.ceil(
                                                 dataMax * 1.2
@@ -485,17 +444,15 @@ function RejectionTrend({
 
 
                                 <Tooltip
+                                    cursor={{
+                                        stroke:
+                                            'currentColor',
+                                        className:
+                                            'text-base-content/20',
+                                    }}
                                     content={
                                         <RejectionTooltip />
                                     }
-                                    cursor={{
-                                        stroke:
-                                            '#D92D20',
-                                        strokeOpacity:
-                                            0.25,
-                                        strokeDasharray:
-                                            '4 4',
-                                    }}
                                 />
 
 
@@ -504,13 +461,13 @@ function RejectionTrend({
                                     dataKey="rejected"
                                     name="Rejected"
                                     stroke="#D92D20"
-                                    strokeWidth={2.5}
-                                    fill="url(#rejectionGradient)"
+                                    fill="#D92D20"
+                                    fillOpacity={0.12}
+                                    strokeWidth={2}
                                     dot={false}
                                     activeDot={{
-                                        r: 5,
+                                        r: 4,
                                     }}
-                                    connectNulls
                                 />
 
                             </AreaChart>
@@ -519,84 +476,81 @@ function RejectionTrend({
 
                     </div>
 
-                </div>
 
-            )}
-
-
-            {/* =================================================
-                SUMMARY
-            ================================================= */}
-
-            {chartData.length > 0 && (
-
-                <div className="
-                    mt-4
-                    flex
-                    flex-wrap
-                    items-center
-                    justify-between
-                    gap-3
-                    border-t
-                    border-base-300
-                    pt-4
-                ">
-
-                    <div>
-
-                        <p className="
-                            text-[10px]
-                            uppercase
-                            tracking-wide
-                            text-base-content/40
-                        ">
-                            Period
-                        </p>
-
-
-                        <p className="
-                            mt-0.5
-                            text-xs
-                            font-medium
-                            text-base-content/70
-                        ">
-                            {chartData.length}{' '}
-                            {chartData.length === 1
-                                ? 'day'
-                                : 'days'}
-                        </p>
-
-                    </div>
-
+                    {/* =============================================
+                        SUMMARY
+                    ============================================= */}
 
                     <div className="
-                        text-right
+                        mt-2
+                        grid
+                        grid-cols-2
+                        gap-2
+                        border-t
+                        border-base-300
+                        pt-4
                     ">
 
-                        <p className="
-                            text-[10px]
-                            uppercase
-                            tracking-wide
-                            text-base-content/40
+                        <div className="
+                            rounded-lg
+                            bg-base-200/40
+                            px-3
+                            py-2
                         ">
-                            Highest Daily Rejection
-                        </p>
+
+                            <p className="
+                                text-[11px]
+                                text-base-content/45
+                            ">
+                                Total Rejected
+                            </p>
 
 
-                        <p className="
-                            mt-0.5
-                            text-xs
-                            font-semibold
-                            text-[#D92D20]
+                            <p className="
+                                mt-1
+                                text-sm
+                                font-semibold
+                                text-base-content
+                            ">
+                                {formatNumber(
+                                    totalRejected
+                                )}
+                            </p>
+
+                        </div>
+
+
+                        <div className="
+                            rounded-lg
+                            bg-base-200/40
+                            px-3
+                            py-2
                         ">
-                            {formatNumber(
-                                highestRejected
-                            )}
-                        </p>
+
+                            <p className="
+                                text-[11px]
+                                text-base-content/45
+                            ">
+                                Highest Daily
+                            </p>
+
+
+                            <p className="
+                                mt-1
+                                text-sm
+                                font-semibold
+                                text-base-content
+                            ">
+                                {formatNumber(
+                                    highestRejected
+                                )}
+                            </p>
+
+                        </div>
 
                     </div>
 
-                </div>
+                </>
 
             )}
 

@@ -9,6 +9,16 @@ import XCircleIcon from '@heroicons/react/24/outline/XCircleIcon'
 
 
 // =============================================================
+// VIEW TYPES
+// =============================================================
+
+const VIEW_TYPES = {
+    AGENT: 'agent',
+    RM: 'rm',
+}
+
+
+// =============================================================
 // HELPERS
 // =============================================================
 
@@ -19,6 +29,21 @@ const formatNumber = (
     return Number(
         value || 0
     ).toLocaleString('en-IN')
+
+}
+
+
+// =============================================================
+// GET VIEW LABEL
+// =============================================================
+
+const getViewLabel = (
+    viewType
+) => {
+
+    return viewType === VIEW_TYPES.RM
+        ? 'RM'
+        : 'Agent'
 
 }
 
@@ -191,7 +216,18 @@ function InsightCard({
 
 function PipelineInsights({
     counts = {},
+    viewType = VIEW_TYPES.AGENT,
 }) {
+
+    // =========================================================
+    // VIEW LABEL
+    // =========================================================
+
+    const viewLabel =
+        getViewLabel(
+            viewType
+        )
+
 
     // =========================================================
     // EVENT COUNTS
@@ -309,8 +345,40 @@ function PipelineInsights({
                             text-base-content/50
                         "
                     >
-                        Events recorded during the selected date range
+                        {viewLabel} analytics events recorded during
+                        the selected date range
                     </p>
+
+                </div>
+
+
+                {/* =================================================
+                    VIEW TYPE
+                ================================================= */}
+
+                <div
+                    className="
+                        shrink-0
+                        rounded-xl
+                        border
+                        border-base-300
+                        bg-base-100
+                        px-3
+                        py-2
+                    "
+                >
+
+                    <span
+                        className="
+                            text-[10px]
+                            font-semibold
+                            uppercase
+                            tracking-wide
+                            text-base-content/45
+                        "
+                    >
+                        {viewLabel} View
+                    </span>
 
                 </div>
 
@@ -342,7 +410,9 @@ function PipelineInsights({
                     value={
                         totalLeads
                     }
-                    description="Applications received during the selected application period."
+                    description={
+                        `Applications received during the selected application period for the visible ${viewLabel.toLowerCase()} scope.`
+                    }
                     icon={
                         DocumentTextIcon
                     }
@@ -368,7 +438,9 @@ function PipelineInsights({
                     value={
                         inProcess
                     }
-                    description="Applications from the selected period with no recorded progression or rejection event."
+                    description={
+                        `Applications relevant to the selected period that are currently in process within the visible ${viewLabel.toLowerCase()} scope.`
+                    }
                     icon={
                         ClockIcon
                     }
@@ -394,7 +466,9 @@ function PipelineInsights({
                     value={
                         login
                     }
-                    description="Applications with a login event recorded during the selected date range."
+                    description={
+                        `Bank-processing login events recorded during the selected date range for the visible ${viewLabel.toLowerCase()} scope.`
+                    }
                     icon={
                         ArrowRightOnRectangleIcon
                     }
@@ -420,7 +494,9 @@ function PipelineInsights({
                     value={
                         sanctioned
                     }
-                    description="Applications with a sanction event recorded during the selected date range."
+                    description={
+                        `Bank-processing sanction events recorded during the selected date range for the visible ${viewLabel.toLowerCase()} scope.`
+                    }
                     icon={
                         CheckCircleIcon
                     }
@@ -446,7 +522,9 @@ function PipelineInsights({
                     value={
                         disbursed
                     }
-                    description="Applications with a disbursement event recorded during the selected date range."
+                    description={
+                        `Bank-processing disbursement events recorded during the selected date range for the visible ${viewLabel.toLowerCase()} scope.`
+                    }
                     icon={
                         CurrencyRupeeIcon
                     }
@@ -472,7 +550,9 @@ function PipelineInsights({
                     value={
                         rejected
                     }
-                    description="Applications with a rejection date falling within the selected date range."
+                    description={
+                        `Applications with a rejection date in the selected date range for the visible ${viewLabel.toLowerCase()} scope.`
+                    }
                     icon={
                         XCircleIcon
                     }

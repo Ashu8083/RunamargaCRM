@@ -32,21 +32,11 @@ const DEFAULT_PIPELINE = {
 
 
 // =============================================================
-// DEFAULT VISIBILITY
-// =============================================================
-
-const DEFAULT_VISIBILITY = {
-    teamLeadContextIds: [],
-    agentContextIds: [],
-    rmContextIds: [],
-}
-
-
-// =============================================================
 // DEFAULT FILTERS
 // =============================================================
 
 const DEFAULT_FILTERS = {
+    type: 'agent',
     teamLeadContextId: null,
     agentContextId: null,
     rmContextId: null,
@@ -72,17 +62,11 @@ const toNullableNumber = (
         return null
     }
 
+    const number = Number(value)
 
-    const number =
-        Number(value)
-
-
-    return Number.isFinite(
-        number
-    )
+    return Number.isFinite(number)
         ? number
         : null
-
 }
 
 
@@ -94,9 +78,7 @@ const toCount = (
     value
 ) => {
 
-    const number =
-        Number(value)
-
+    const number = Number(value)
 
     if (
         !Number.isFinite(number) ||
@@ -105,11 +87,7 @@ const toCount = (
         return 0
     }
 
-
-    return Math.floor(
-        number
-    )
-
+    return Math.floor(number)
 }
 
 
@@ -123,51 +101,39 @@ const normalizeCounts = (
 
     return {
 
-        totalLeads:
-            toCount(
-                counts?.totalLeads ??
-                counts?.total_leads ??
-                0
-            ),
+        totalLeads: toCount(
+            counts?.totalLeads ??
+            counts?.total_leads ??
+            0
+        ),
 
+        inProcess: toCount(
+            counts?.inProcess ??
+            counts?.in_process ??
+            0
+        ),
 
-        inProcess:
-            toCount(
-                counts?.inProcess ??
-                counts?.in_process ??
-                0
-            ),
+        login: toCount(
+            counts?.login ??
+            0
+        ),
 
+        sanctioned: toCount(
+            counts?.sanctioned ??
+            0
+        ),
 
-        login:
-            toCount(
-                counts?.login ??
-                0
-            ),
+        disbursed: toCount(
+            counts?.disbursed ??
+            0
+        ),
 
-
-        sanctioned:
-            toCount(
-                counts?.sanctioned ??
-                0
-            ),
-
-
-        disbursed:
-            toCount(
-                counts?.disbursed ??
-                0
-            ),
-
-
-        rejected:
-            toCount(
-                counts?.rejected ??
-                0
-            ),
+        rejected: toCount(
+            counts?.rejected ??
+            0
+        ),
 
     }
-
 }
 
 
@@ -181,130 +147,66 @@ const normalizePipeline = (
 
     return {
 
-        totalLeads:
-            toCount(
-                pipeline?.totalLeads ??
-                pipeline?.total_leads ??
-                0
-            ),
+        totalLeads: toCount(
+            pipeline?.totalLeads ??
+            pipeline?.total_leads ??
+            0
+        ),
 
+        inProcess: toCount(
+            pipeline?.inProcess ??
+            pipeline?.in_process ??
+            0
+        ),
 
-        inProcess:
-            toCount(
-                pipeline?.inProcess ??
-                pipeline?.in_process ??
-                0
-            ),
+        login: toCount(
+            pipeline?.login ??
+            0
+        ),
 
+        sanctioned: toCount(
+            pipeline?.sanctioned ??
+            0
+        ),
 
-        login:
-            toCount(
-                pipeline?.login ??
-                0
-            ),
+        disbursed: toCount(
+            pipeline?.disbursed ??
+            0
+        ),
 
-
-        sanctioned:
-            toCount(
-                pipeline?.sanctioned ??
-                0
-            ),
-
-
-        disbursed:
-            toCount(
-                pipeline?.disbursed ??
-                0
-            ),
-
-
-        rejected:
-            toCount(
-                pipeline?.rejected ??
-                0
-            ),
+        rejected: toCount(
+            pipeline?.rejected ??
+            0
+        ),
 
     }
-
 }
 
 
 // =============================================================
-// NORMALIZE VISIBILITY
+// NORMALIZE TYPE
 // =============================================================
 
-const normalizeVisibility = (
-    visibility = {}
+const normalizeType = (
+    value
 ) => {
 
-    const teamLeadIds =
-        Array.isArray(
-            visibility?.teamLeadContextIds
+    const normalized =
+        String(
+            value || ''
         )
-            ? visibility.teamLeadContextIds
-            : (
-                Array.isArray(
-                    visibility?.team_lead_context_ids
-                )
-                    ? visibility.team_lead_context_ids
-                    : []
-            )
+            .trim()
+            .toLowerCase()
 
 
-    const agentIds =
-        Array.isArray(
-            visibility?.agentContextIds
-        )
-            ? visibility.agentContextIds
-            : (
-                Array.isArray(
-                    visibility?.agent_context_ids
-                )
-                    ? visibility.agent_context_ids
-                    : []
-            )
-
-
-    const rmIds =
-        Array.isArray(
-            visibility?.rmContextIds
-        )
-            ? visibility.rmContextIds
-            : (
-                Array.isArray(
-                    visibility?.rm_context_ids
-                )
-                    ? visibility.rm_context_ids
-                    : []
-            )
-
-
-    return {
-
-        teamLeadContextIds:
-            teamLeadIds
-                .map(Number)
-                .filter(
-                    Number.isFinite
-                ),
-
-
-        agentContextIds:
-            agentIds
-                .map(Number)
-                .filter(
-                    Number.isFinite
-                ),
-
-
-        rmContextIds:
-            rmIds
-                .map(Number)
-                .filter(
-                    Number.isFinite
-                ),
-
+    if (
+        normalized === 'rm'
+    ) {
+        return 'rm'
     }
+
+
+    return 'agent'
 
 }
 
@@ -314,10 +216,17 @@ const normalizeVisibility = (
 // =============================================================
 
 const normalizeFilters = (
-    filters = {}
+    filters = {},
+    fallbackType = 'agent'
 ) => {
 
     return {
+
+        type:
+            normalizeType(
+                filters?.type ??
+                fallbackType
+            ),
 
         teamLeadContextId:
             toNullableNumber(
@@ -325,13 +234,11 @@ const normalizeFilters = (
                 filters?.team_lead_context_id
             ),
 
-
         agentContextId:
             toNullableNumber(
                 filters?.agentContextId ??
                 filters?.agent_context_id
             ),
-
 
         rmContextId:
             toNullableNumber(
@@ -339,19 +246,16 @@ const normalizeFilters = (
                 filters?.rm_context_id
             ),
 
-
         loanTypeId:
             toNullableNumber(
                 filters?.loanTypeId ??
                 filters?.loan_type_id
             ),
 
-
         fromDate:
             filters?.fromDate ??
             filters?.from_date ??
             null,
-
 
         toDate:
             filters?.toDate ??
@@ -359,7 +263,6 @@ const normalizeFilters = (
             null,
 
     }
-
 }
 
 
@@ -368,16 +271,48 @@ const normalizeFilters = (
 // =============================================================
 
 const getOverview = async ({
+    type = 'agent',
+
     teamLeadContextId = null,
+
     agentContextId = null,
+
     rmContextId = null,
+
     loanTypeId = null,
+
     fromDate = null,
+
     toDate = null,
+
     contextId = null,
+
 } = {}) => {
 
-    const params = {}
+    // =========================================================
+    // NORMALIZE TYPE
+    // =========================================================
+
+    const selectedType =
+        normalizeType(
+            type
+        )
+
+
+    // =========================================================
+    // REQUEST PARAMS
+    // =========================================================
+
+    const params = {
+
+        // -----------------------------------------------------
+        // Analytics scope
+        // -----------------------------------------------------
+
+        type:
+            selectedType,
+
+    }
 
 
     // =========================================================
@@ -403,19 +338,37 @@ const getOverview = async ({
     // =========================================================
     // AGENT
     // =========================================================
-
-    const agentValue =
-        toNullableNumber(
-            agentContextId
-        )
-
+    //
+    // Agent context is sent only in Agent analytics mode.
+    //
+    // Backend:
+    //
+    //     type=agent
+    //
+    // uses:
+    //
+    //     AccessControl.get_visible_agents()
+    //
+    // =========================================================
 
     if (
-        agentValue !== null
+        selectedType === 'agent'
     ) {
 
-        params.agent_context_id =
-            agentValue
+        const agentValue =
+            toNullableNumber(
+                agentContextId
+            )
+
+
+        if (
+            agentValue !== null
+        ) {
+
+            params.agent_context_id =
+                agentValue
+
+        }
 
     }
 
@@ -423,19 +376,37 @@ const getOverview = async ({
     // =========================================================
     // RM
     // =========================================================
-
-    const rmValue =
-        toNullableNumber(
-            rmContextId
-        )
-
+    //
+    // RM context is sent only in RM analytics mode.
+    //
+    // Backend:
+    //
+    //     type=rm
+    //
+    // uses:
+    //
+    //     AccessControl.get_visible_rms()
+    //
+    // =========================================================
 
     if (
-        rmValue !== null
+        selectedType === 'rm'
     ) {
 
-        params.rm_context_id =
-            rmValue
+        const rmValue =
+            toNullableNumber(
+                rmContextId
+            )
+
+
+        if (
+            rmValue !== null
+        ) {
+
+            params.rm_context_id =
+                rmValue
+
+        }
 
     }
 
@@ -464,7 +435,9 @@ const getOverview = async ({
     // DATE RANGE
     // =========================================================
 
-    if (fromDate) {
+    if (
+        fromDate
+    ) {
 
         params.from_date =
             fromDate
@@ -472,7 +445,9 @@ const getOverview = async ({
     }
 
 
-    if (toDate) {
+    if (
+        toDate
+    ) {
 
         params.to_date =
             toDate
@@ -481,7 +456,7 @@ const getOverview = async ({
 
 
     // =========================================================
-    // CONTEXT
+    // ACTIVE CONTEXT
     // =========================================================
 
     const contextValue =
@@ -501,7 +476,7 @@ const getOverview = async ({
 
 
     // =========================================================
-    // REQUEST
+    // API REQUEST
     // =========================================================
 
     const response =
@@ -514,7 +489,7 @@ const getOverview = async ({
 
 
     // =========================================================
-    // RESPONSE
+    // RESPONSE DATA
     // =========================================================
 
     const responseData =
@@ -522,7 +497,19 @@ const getOverview = async ({
 
 
     // =========================================================
-    // PIPELINE INSIGHTS COUNTS
+    // RESPONSE TYPE
+    // =========================================================
+
+    const responseType =
+        normalizeType(
+            responseData?.filters?.type ??
+            responseData?.type ??
+            selectedType
+        )
+
+
+    // =========================================================
+    // PIPELINE INSIGHTS
     // =========================================================
 
     const counts =
@@ -532,7 +519,7 @@ const getOverview = async ({
 
 
     // =========================================================
-    // APPLICATION PIPELINE COUNTS
+    // APPLICATION PIPELINE
     // =========================================================
 
     const pipeline =
@@ -547,17 +534,9 @@ const getOverview = async ({
 
     const filters =
         normalizeFilters(
-            responseData?.filters
-        )
-
-
-    // =========================================================
-    // VISIBILITY
-    // =========================================================
-
-    const visibility =
-        normalizeVisibility(
-            responseData?.visibility
+            responseData?.filters ||
+            DEFAULT_FILTERS,
+            responseType
         )
 
 
@@ -573,7 +552,8 @@ const getOverview = async ({
 
         filters,
 
-        visibility,
+        type:
+            responseType,
 
     }
 
@@ -585,7 +565,5 @@ const getOverview = async ({
 // =============================================================
 
 export default {
-
     getOverview,
-
 }

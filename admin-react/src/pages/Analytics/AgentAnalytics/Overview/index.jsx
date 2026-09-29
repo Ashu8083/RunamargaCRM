@@ -44,13 +44,12 @@ const DEFAULT_PIPELINE = {
 
 
 // =============================================================
-// DEFAULT VISIBILITY
+// VIEW TYPES
 // =============================================================
 
-const DEFAULT_VISIBILITY = {
-    teamLeadContextIds: [],
-    agentContextIds: [],
-    rmContextIds: [],
+const VIEW_TYPES = {
+    AGENT: 'agent',
+    RM: 'rm',
 }
 
 
@@ -61,77 +60,58 @@ const DEFAULT_VISIBILITY = {
 function Overview() {
 
     // =========================================================
+    // VIEW TYPE
+    // =========================================================
+
+    const [viewType, setViewType] = useState(
+        VIEW_TYPES.AGENT
+    )
+
+
+    // =========================================================
     // PIPELINE INSIGHTS COUNTS
     // =========================================================
 
-    const [counts, setCounts] =
-        useState(
-            DEFAULT_COUNTS
-        )
+    const [counts, setCounts] = useState(
+        DEFAULT_COUNTS
+    )
 
 
     // =========================================================
     // APPLICATION PIPELINE COUNTS
     // =========================================================
 
-    const [pipeline, setPipeline] =
-        useState(
-            DEFAULT_PIPELINE
-        )
+    const [pipeline, setPipeline] = useState(
+        DEFAULT_PIPELINE
+    )
 
 
     // =========================================================
     // LOADING
     // =========================================================
 
-    const [loading, setLoading] =
-        useState(true)
+    const [loading, setLoading] = useState(true)
 
+    const [refreshing, setRefreshing] = useState(false)
 
-    const [refreshing, setRefreshing] =
-        useState(false)
-
-
-    const [error, setError] =
-        useState('')
+    const [error, setError] = useState('')
 
 
     // =========================================================
     // FILTERS
     // =========================================================
 
-    const [teamLead, setTeamLead] =
-        useState('')
+    const [teamLead, setTeamLead] = useState('')
 
+    const [agent, setAgent] = useState('')
 
-    const [agent, setAgent] =
-        useState('')
+    const [rm, setRm] = useState('')
 
+    const [loanType, setLoanType] = useState('')
 
-    const [rm, setRm] =
-        useState('')
+    const [fromDate, setFromDate] = useState('')
 
-
-    const [loanType, setLoanType] =
-        useState('')
-
-
-    const [fromDate, setFromDate] =
-        useState('')
-
-
-    const [toDate, setToDate] =
-        useState('')
-
-
-    // =========================================================
-    // VISIBILITY
-    // =========================================================
-
-    const [visibility, setVisibility] =
-        useState(
-            DEFAULT_VISIBILITY
-        )
+    const [toDate, setToDate] = useState('')
 
 
     // =========================================================
@@ -165,17 +145,53 @@ function Overview() {
             const response =
                 await API.getOverview({
 
+                    // -------------------------------------------------
+                    // ANALYTICS TYPE
+                    // -------------------------------------------------
+
+                    type:
+                        viewType,
+
+
+                    // -------------------------------------------------
+                    // TEAM LEAD
+                    // -------------------------------------------------
+
                     teamLeadContextId:
                         teamLead || null,
 
+
+                    // -------------------------------------------------
+                    // AGENT
+                    // -------------------------------------------------
+
                     agentContextId:
-                        agent || null,
+                        viewType === VIEW_TYPES.AGENT
+                            ? agent || null
+                            : null,
+
+
+                    // -------------------------------------------------
+                    // RM
+                    // -------------------------------------------------
 
                     rmContextId:
-                        rm || null,
+                        viewType === VIEW_TYPES.RM
+                            ? rm || null
+                            : null,
+
+
+                    // -------------------------------------------------
+                    // LOAN TYPE
+                    // -------------------------------------------------
 
                     loanTypeId:
                         loanType || null,
+
+
+                    // -------------------------------------------------
+                    // DATE RANGE
+                    // -------------------------------------------------
 
                     fromDate:
                         fromDate || null,
@@ -205,16 +221,6 @@ function Overview() {
                 DEFAULT_PIPELINE
             )
 
-
-            // -------------------------------------------------
-            // VISIBILITY
-            // -------------------------------------------------
-
-            setVisibility(
-                response?.visibility ||
-                DEFAULT_VISIBILITY
-            )
-
         } catch (error) {
 
             console.error(
@@ -230,11 +236,6 @@ function Overview() {
 
             setPipeline(
                 DEFAULT_PIPELINE
-            )
-
-
-            setVisibility(
-                DEFAULT_VISIBILITY
             )
 
 
@@ -267,7 +268,7 @@ function Overview() {
 
 
     // =========================================================
-    // FILTER CHANGE
+    // FILTER / VIEW CHANGE
     // =========================================================
 
     useEffect(() => {
@@ -280,6 +281,7 @@ function Overview() {
         loadData()
 
     }, [
+        viewType,
         teamLead,
         agent,
         rm,
@@ -290,15 +292,55 @@ function Overview() {
 
 
     // =========================================================
+    // VIEW TYPE CHANGE
+    // =========================================================
+
+    const handleViewTypeChange = (
+        selectedView
+    ) => {
+
+        if (
+            selectedView ===
+            VIEW_TYPES.RM
+        ) {
+
+            setViewType(
+                VIEW_TYPES.RM
+            )
+
+            // Clear Agent filter when switching to RM.
+            setAgent('')
+
+            return
+
+        }
+
+
+        setViewType(
+            VIEW_TYPES.AGENT
+        )
+
+        // Clear RM filter when switching to Agent.
+        setRm('')
+
+    }
+
+
+    // =========================================================
     // TEAM LEAD CHANGE
     // =========================================================
 
-    const handleTeamLeadChange = (selectedTeamLead) => {
-        console.log('TEAM LEAD VALUE:', selectedTeamLead)
+    const handleTeamLeadChange = (
+        selectedTeamLead
+    ) => {
 
         setTeamLead(
             selectedTeamLead || ''
         )
+
+
+        // Reset both child filters because
+        // available options depend on Team Lead.
 
         setAgent('')
 
@@ -358,6 +400,10 @@ function Overview() {
 
     const handleReset = () => {
 
+        setViewType(
+            VIEW_TYPES.AGENT
+        )
+
         setTeamLead('')
 
         setAgent('')
@@ -393,10 +439,6 @@ function Overview() {
                     lg:p-6
                 "
             >
-
-                {/* =================================================
-                    MAIN CARD SKELETON
-                ================================================= */}
 
                 <div
                     className="
@@ -537,6 +579,7 @@ function Overview() {
 
             <section
                 className="
+                    isolate
                     w-full
                     min-w-0
                     rounded-2xl
@@ -550,7 +593,7 @@ function Overview() {
             >
 
                 {/* =================================================
-                    FILTER HEADER + REFRESH
+                    FILTER HEADER
                 ================================================= */}
 
                 <div
@@ -566,7 +609,7 @@ function Overview() {
                 >
 
                     {/* -------------------------------------------------
-                        FILTER TITLE
+                        TITLE
                     ------------------------------------------------- */}
 
                     <div
@@ -575,47 +618,122 @@ function Overview() {
                         "
                     >
 
-                        <h2
-                            className="
-                                text-sm
-                                font-semibold
-                                text-base-content
-                            "
-                        >
-                            Filters
-                        </h2>
-
-
-                        <p
-                            className="
-                                mt-0.5
-                                text-[11px]
-                                text-base-content/45
-                            "
-                        >
-                            Filter the analytics by hierarchy, loan type,
-                            and application period.
-                        </p>
-
                     </div>
 
 
                     {/* -------------------------------------------------
-                        ACTIONS
+                        AGENT / RM TOGGLE + ACTIONS
                     ------------------------------------------------- */}
 
                     <div
                         className="
                             flex
                             shrink-0
+                            flex-wrap
                             items-center
                             gap-2
                         "
                     >
 
-                        {/* -------------------------------------------------
+                        {/* =================================================
+                            AGENT / RM TOGGLE
+                        ================================================= */}
+
+                        <div
+                            className="
+                                inline-flex
+                                items-center
+                                rounded-xl
+                                border
+                                border-base-300
+                                bg-base-200/60
+                                p-1
+                            "
+                        >
+
+                            {/* -------------------------------------------------
+                                AGENT
+                            ------------------------------------------------- */}
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handleViewTypeChange(
+                                        VIEW_TYPES.AGENT
+                                    )
+                                }
+                                className={`
+                                    rounded-lg
+                                    px-3
+                                    py-1.5
+                                    text-xs
+                                    font-medium
+                                    transition
+                                    sm:px-4
+                                    sm:text-sm
+                                    ${
+                                        viewType ===
+                                        VIEW_TYPES.AGENT
+                                            ? `
+                                                bg-base-100
+                                                text-base-content
+                                                shadow-sm
+                                            `
+                                            : `
+                                                text-base-content/50
+                                                hover:text-base-content
+                                            `
+                                    }
+                                `}
+                            >
+                                Agent
+                            </button>
+
+
+                            {/* -------------------------------------------------
+                                RM
+                            ------------------------------------------------- */}
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handleViewTypeChange(
+                                        VIEW_TYPES.RM
+                                    )
+                                }
+                                className={`
+                                    rounded-lg
+                                    px-3
+                                    py-1.5
+                                    text-xs
+                                    font-medium
+                                    transition
+                                    sm:px-4
+                                    sm:text-sm
+                                    ${
+                                        viewType ===
+                                        VIEW_TYPES.RM
+                                            ? `
+                                                bg-base-100
+                                                text-base-content
+                                                shadow-sm
+                                            `
+                                            : `
+                                                text-base-content/50
+                                                hover:text-base-content
+                                            `
+                                    }
+                                `}
+                            >
+                                RM
+                            </button>
+
+                        </div>
+
+
+                        {/* =================================================
                             RESET
-                        ------------------------------------------------- */}
+                        ================================================= */}
 
                         <button
                             type="button"
@@ -638,9 +756,9 @@ function Overview() {
                         </button>
 
 
-                        {/* -------------------------------------------------
+                        {/* =================================================
                             REFRESH
-                        ------------------------------------------------- */}
+                        ================================================= */}
 
                         <button
                             type="button"
@@ -672,11 +790,6 @@ function Overview() {
                             "
                         >
 
-                            {/* -------------------------------------------------
-                                Refresh icon replaced with text symbol
-                                to avoid SVG/icon overlap.
-                            ------------------------------------------------- */}
-
                             <span
                                 className="
                                     text-sm
@@ -706,6 +819,8 @@ function Overview() {
 
                 <div
                     className="
+                        relative
+                        z-0
                         grid
                         w-full
                         min-w-0
@@ -754,60 +869,70 @@ function Overview() {
                         AGENT
                     ================================================= */}
 
-                    <div
-                        className="
-                            min-w-0
-                            w-full
-                        "
-                    >
+                    {viewType ===
+                        VIEW_TYPES.AGENT && (
 
-                        <AgentDropdown
+                        <div
+                            className="
+                                min-w-0
+                                w-full
+                            "
+                        >
 
-                            label="Agent"
+                            <AgentDropdown
 
-                            value={agent}
+                                label="Agent"
 
-                            onChange={
-                                handleAgentChange
-                            }
+                                value={agent}
 
-                            teamLeadContextId={
-                                teamLead || null
-                            }
+                                onChange={
+                                    handleAgentChange
+                                }
 
-                        />
+                                teamLeadContextId={
+                                    teamLead || null
+                                }
 
-                    </div>
+                            />
+
+                        </div>
+
+                    )}
 
 
                     {/* =================================================
                         RM
                     ================================================= */}
 
-                    <div
-                        className="
-                            min-w-0
-                            w-full
-                        "
-                    >
+                    {viewType ===
+                        VIEW_TYPES.RM && (
 
-                        <RmDropdown
+                        <div
+                            className="
+                                min-w-0
+                                w-full
+                            "
+                        >
 
-                            label="RM"
+                            <RmDropdown
 
-                            value={rm}
+                                label="RM"
 
-                            onChange={
-                                handleRmChange
-                            }
+                                value={rm}
 
-                            teamLeadContextId={
-                                teamLead || null
-                            }
+                                onChange={
+                                    handleRmChange
+                                }
 
-                        />
+                                teamLeadContextId={
+                                    teamLead || null
+                                }
 
-                    </div>
+                            />
+
+                        </div>
+
+                    )}
 
 
                     {/* =================================================
@@ -863,6 +988,7 @@ function Overview() {
                         <div
                             className="
                                 relative
+                                isolate
                                 w-full
                             "
                         >
@@ -895,13 +1021,12 @@ function Overview() {
                                     )
                                 }
                                 max={
-                                    toDate || undefined
+                                    toDate ||
+                                    undefined
                                 }
                                 className="
                                     input
                                     input-bordered
-                                    relative
-                                    z-10
                                     h-10
                                     min-h-10
                                     w-full
@@ -944,6 +1069,7 @@ function Overview() {
                         <div
                             className="
                                 relative
+                                isolate
                                 w-full
                             "
                         >
@@ -976,13 +1102,12 @@ function Overview() {
                                     )
                                 }
                                 min={
-                                    fromDate || undefined
+                                    fromDate ||
+                                    undefined
                                 }
                                 className="
                                     input
                                     input-bordered
-                                    relative
-                                    z-10
                                     h-10
                                     min-h-10
                                     w-full
@@ -1169,6 +1294,7 @@ function Overview() {
 
                         <PipelineInsights
                             counts={counts}
+                            viewType={viewType}
                         />
 
 
@@ -1185,6 +1311,7 @@ function Overview() {
 
                             <PipelineStages
                                 pipeline={pipeline}
+                                viewType={viewType}
                             />
 
                         </div>
