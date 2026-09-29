@@ -28,8 +28,8 @@ def log_admin_action(
 
     log_entry = AdminLogs(
         action=action,
-        action_by=action_by,
-        action_on=action_on,
+        action_by_id=action_by,
+        admin_id=action_on,
         date_and_time=date_and_time or datetime.now(),
     )
     db.add(log_entry)

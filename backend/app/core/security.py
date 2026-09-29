@@ -137,6 +137,7 @@ def get_current_employee(
 
     # Check for x-employee-context-id or x-context-id header
     context_header = request.headers.get("x-employee-context-id") or request.headers.get("x-context-id")
+
     if context_header and context_header.isdigit():
         request.state.employee_context_id = int(context_header)
     else:
