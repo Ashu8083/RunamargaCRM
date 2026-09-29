@@ -21,10 +21,12 @@ router = APIRouter(
     tags=["Applications"],
 )
 
-
 @router.get("")
 def get_applications_route(
     context_id: int | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
+    no_chat_for_days: int | None = Query(default=None, ge=1),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -32,6 +34,8 @@ def get_applications_route(
         db=db,
         employee=employee,
         context_id=context_id,
+        page=page,
+        page_size=page_size,
     )
 
 

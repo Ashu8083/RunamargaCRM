@@ -41,3 +41,4 @@ venv/
 # Python cache
 __pycache__/
 *.py[cod]
+admin-react/public/websiteimages/

@@ -5,6 +5,7 @@ import App from './App';
 import store from './app/store'
 import { Provider } from 'react-redux'
 import SuspenseContent from './containers/SuspenseContent';
+import { CommonDataProvider } from './context/CommonDataContext'
 import { ToastProvider } from './components/Toast/ToastProvider'
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -12,7 +13,9 @@ root.render(
   <Suspense fallback={<SuspenseContent />}>
     <Provider store={store}>
       <ToastProvider>
-        <App />
+        <CommonDataProvider>
+          <App />
+        </CommonDataProvider>
       </ToastProvider>
     </Provider>
   </Suspense>

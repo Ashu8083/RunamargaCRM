@@ -11,7 +11,7 @@ import PaperAirplaneIcon from '@heroicons/react/24/outline/PaperAirplaneIcon'
 import {
     getTeamChat,
     sendTeamChat,
-} from '../../../pages/Loans/ViewApplication/components/Teamchat/Api'
+} from '../../../pages/crm/Loans/ViewApplication/components/Teamchat/Api'
 import { WS_BASE_URL } from '../../../config/url'
 const EMOJIS = [
     '😀', '😃', '😄', '😁', '😆', '😅',

@@ -91,7 +91,7 @@ def get_current_employee(
     db: Session = Depends(get_db),
     access_token: str | None = Cookie(default=None),
 ) -> Employee:
-    print(access_token)
+    # print(access_token)
 
     if not access_token:
         raise HTTPException(

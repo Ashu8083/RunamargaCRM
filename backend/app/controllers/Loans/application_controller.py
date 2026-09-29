@@ -9,14 +9,18 @@ def get_applications(
     db: Session,
     employee: Employee,
     context_id: int | None = None,
+    page: int = 1,
+    page_size: int = 10,
+    no_chat_for_days: int | None = None,
 ):
     return ApplicationService.get_applications(
         db=db,
         employee=employee,
         context_id=context_id,
+        page=page,
+        page_size=page_size,
+        no_chat_for_days=no_chat_for_days,
     )
-
-
 def view_application(
     db: Session,
     employee: Employee,

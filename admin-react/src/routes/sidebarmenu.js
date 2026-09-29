@@ -454,13 +454,13 @@ const sidebarmenu = [
         permission: PERMISSIONS.ADMIN_LOGS_VIEW,
       },
 
-      {
-        path: "/crm/role-logs",
-        icon: <KeyIcon className={submenuIconClasses} />,
-        name: "Role Logs",
-        parent: "Logs",
-        permission: PERMISSIONS.ROLE_LOGS_VIEW,
-      },
+      // {
+      //   path: "/crm/role-logs",
+      //   icon: <KeyIcon className={submenuIconClasses} />,
+      //   name: "Role Logs",
+      //   parent: "Logs",
+      //   permission: PERMISSIONS.ROLE_LOGS_VIEW,
+      // },
       /* -----------------------------------------------------
        * EMPLOYEE & USER MANAGEMENT
        * ----------------------------------------------------- */

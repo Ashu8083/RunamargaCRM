@@ -12,7 +12,7 @@ from app.models.loan_coapplicant import LoanCoApplicant
 from app.models.reverted_loans import RevertedLoan
 from app.models.bank_processings import BankProcessing
 from app.models.dsa_details import DSADetail
-
+from app.models.bank_processing_logs import BankProcessingLog
 from app.models.loan_reference import LoanReference
 from app.models.bank import Bank
 
@@ -21,7 +21,8 @@ from app.schemas.application_schema import (
 )
 from app.models.loan_addresses import LoanAddress
 from app.models.loan_document import LoanDocument
-
+from app.services.Loans.application_service import ApplicationService
+from app.models.loan_type_change_log import LoanTypeChangeLog
 
 
 # =============================================================
@@ -50,7 +51,7 @@ def update_application_loan_type(
     # RBAC
     # =========================================================
 
-    scoped_query = AccessControl.apply_application_scope(
+    scoped_query = ApplicationService.apply_scope(
         query=db.query(LoanApplication),
         db=db,
         employee=employee,
@@ -91,10 +92,64 @@ def update_application_loan_type(
             detail="Loan type not found",
         )
 
+    # =========================================================
+    # CHECK WHETHER ACTUALLY CHANGED
+    # =========================================================
+
+    # Capture old value
+    from_loan_type_id = application.loan_type_id
+
+    # Don't create a log if nothing changed
+    if from_loan_type_id == loan_type_id:
+        return {
+            "success": True,
+            "message": "Loan type is already assigned",
+            "data": {
+                "id": application.id,
+                "loan_type_id": application.loan_type_id,
+                "updated_at": application.updated_at,
+            },
+        }
+
+    # Get active EmployeeContext
+    active_context = AccessControl.get_active_context(
+        db=db,
+        employee=employee,
+    )
+
+    if not active_context:
+        raise HTTPException(
+            status_code=403,
+            detail="No active employee context found",
+        )
+
+    # Context/role
+    changed_by_role = (
+        active_context.context.code
+        if active_context.context
+        else "UNKNOWN"
+    )
+
+    # Update application
     application.loan_type_id = loan_type_id
 
+    # Create audit log
+    loan_type_change_log = LoanTypeChangeLog(
+        loan_id=application.id,
+        changed_by_id=active_context.id,
+        changed_by_role=changed_by_role,
+        reports_to_id=active_context.reports_to_id,
+        from_loan_type_id=from_loan_type_id,
+        to_loan_type_id=loan_type_id,
+    )
+
+    db.add(loan_type_change_log)
+
+    # Both happen in one transaction
     db.commit()
+
     db.refresh(application)
+    db.refresh(loan_type_change_log)
 
     return {
         "success": True,
@@ -105,8 +160,6 @@ def update_application_loan_type(
             "updated_at": application.updated_at,
         },
     }
-
-
 # =============================================================
 # UPDATE APPLICATION STATUS
 # =============================================================
@@ -138,7 +191,7 @@ def update_application_status(
     # RBAC ACCESS
     # =========================================================
 
-    scoped_query = AccessControl.apply_application_scope(
+    scoped_query = ApplicationService.apply_scope(
         query=db.query(LoanApplication),
         db=db,
         employee=employee,
@@ -566,7 +619,7 @@ def add_application_address(
     # RBAC
     # =========================================================
 
-    scoped_query = AccessControl.apply_application_scope(
+    scoped_query = ApplicationService.apply_scope(
         query=db.query(LoanApplication),
         db=db,
         employee=employee,
@@ -635,7 +688,7 @@ def add_application_reference(
         )
 
     # RBAC
-    scoped_query = AccessControl.apply_application_scope(
+    scoped_query = ApplicationService.apply_scope(
         query=db.query(LoanApplication),
         db=db,
         employee=employee,
@@ -705,7 +758,7 @@ def add_application_co_applicant(
         )
 
     # RBAC
-    scoped_query = AccessControl.apply_application_scope(
+    scoped_query = ApplicationService.apply_scope(
         query=db.query(LoanApplication),
         db=db,
         employee=employee,
@@ -1114,14 +1167,36 @@ def delete_application_document(
         )
 
 
-def update_bank_processing_workflow(
-    db,
+
+# ============================================================
+# ASSIGN BANK
+# ============================================================
+
+def assign_bank(
+    db: Session,
     employee,
     application_id: str,
-    processing_id: int,
-    action: str,
-    data: dict,
+    payload,
 ):
+    """
+    Assign a bank to a loan application.
+
+    When a bank is assigned:
+
+        BankProcessing.status = "login"
+
+    And the first audit event is created:
+
+        LOGIN
+
+    The BankProcessing record and BankProcessingLog are committed
+    together in the same transaction.
+    """
+
+    # --------------------------------------------------------
+    # GET APPLICATION
+    # --------------------------------------------------------
+
     application = (
         db.query(LoanApplication)
         .filter(
@@ -1136,6 +1211,173 @@ def update_bank_processing_workflow(
             status_code=404,
             detail="Application not found",
         )
+
+    # --------------------------------------------------------
+    # GET ACTIVE EMPLOYEE CONTEXT
+    # --------------------------------------------------------
+
+    active_context = AccessControl.get_active_context(
+        db,
+        employee,
+    )
+
+    if not active_context:
+        raise HTTPException(
+            status_code=403,
+            detail="No active employee context found",
+        )
+
+    # --------------------------------------------------------
+    # GET BANK
+    # --------------------------------------------------------
+
+    bank = (
+        db.query(Bank)
+        .filter(
+            Bank.id == payload.bank_id,
+            Bank.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not bank:
+        raise HTTPException(
+            status_code=404,
+            detail="Bank not found",
+        )
+
+    # --------------------------------------------------------
+    # CHECK IF THIS BANK IS ALREADY ASSIGNED
+    # --------------------------------------------------------
+
+    existing_processing = (
+        db.query(BankProcessing)
+        .filter(
+            BankProcessing.loan_id == application.id,
+            BankProcessing.bank_id == payload.bank_id,
+            BankProcessing.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if existing_processing:
+        raise HTTPException(
+            status_code=400,
+            detail="This bank is already assigned to the application",
+        )
+
+    # --------------------------------------------------------
+    # CREATE BANK PROCESSING
+    # --------------------------------------------------------
+
+    bank_processing = BankProcessing(
+        loan_id=application.id,
+        bank_id=payload.bank_id,
+        loan_type_id=application.loan_type_id,
+        status="login",
+        loggedin_at=datetime.now(),
+    )
+
+    db.add(bank_processing)
+
+    # We need bp.id for the log.
+    db.flush()
+
+    # --------------------------------------------------------
+    # CREATE LOGIN LOG
+    # --------------------------------------------------------
+
+    bank_processing_log = BankProcessingLog(
+        loan_id=application.id,
+        bp_id=bank_processing.id,
+        event="LOGIN",
+        employee_context_id=active_context.id,
+    )
+
+    db.add(bank_processing_log)
+
+    # --------------------------------------------------------
+    # COMMIT EVERYTHING TOGETHER
+    # --------------------------------------------------------
+
+    try:
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(bank_processing)
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
+
+    return {
+        "success": True,
+        "message": "Bank assigned successfully",
+        "data": {
+            "id": bank_processing.id,
+            "loan_id": bank_processing.loan_id,
+            "bank_id": bank_processing.bank_id,
+            "loan_type_id": bank_processing.loan_type_id,
+            "status": bank_processing.status,
+            "loggedin_at": bank_processing.loggedin_at,
+            "created_at": bank_processing.created_at,
+        },
+    }
+
+
+# ============================================================
+# UPDATE BANK PROCESSING WORKFLOW
+# ============================================================
+
+def update_bank_processing_workflow(
+    db,
+    employee,
+    application_id: str,
+    processing_id: int,
+    action: str,
+    data: dict,
+):
+    """
+    Update bank processing workflow.
+
+    Possible transitions:
+
+        LOGIN
+          |
+          +----> SANCTIONED ----> DISBURSED
+          |
+          +----> REJECTED
+          |
+          +----> DISBURSED
+
+    Every successful transition creates a BankProcessingLog.
+    """
+
+    # --------------------------------------------------------
+    # GET APPLICATION
+    # --------------------------------------------------------
+
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    # --------------------------------------------------------
+    # GET BANK PROCESSING
+    # --------------------------------------------------------
 
     bank_processing = (
         db.query(BankProcessing)
@@ -1153,16 +1395,66 @@ def update_bank_processing_workflow(
             detail="Bank processing not found",
         )
 
+    # --------------------------------------------------------
+    # GET ACTIVE EMPLOYEE CONTEXT
+    # --------------------------------------------------------
+
+    active_context = AccessControl.get_active_context(
+        db,
+        employee,
+    )
+
+    if not active_context:
+        raise HTTPException(
+            status_code=403,
+            detail="No active employee context found",
+        )
+
+    # --------------------------------------------------------
+    # CURRENT STATUS
+    # --------------------------------------------------------
+
     current_status = bank_processing.status
 
+    # --------------------------------------------------------
+    # VALID TRANSITIONS
+    #
+    # Bank is assigned with status = login.
+    #
+    # login:
+    #   -> sanctioned
+    #   -> rejected
+    #   -> disbursed
+    #
+    # sanctioned:
+    #   -> disbursed
+    #   -> rejected
+    #
+    # disbursed:
+    #   -> nothing
+    #
+    # rejected:
+    #   -> nothing
+    # --------------------------------------------------------
+
     valid_transitions = {
-        "login": ["sanction", "reject"],
-        "sanctioned": ["disburse", "reject"],
+        "login": [
+            "sanction",
+            "reject",
+            "disburse",
+        ],
+        "sanctioned": [
+            "disburse",
+            "reject",
+        ],
         "disbursed": [],
         "rejected": [],
     }
 
-    if action not in valid_transitions.get(current_status, []):
+    if action not in valid_transitions.get(
+        current_status,
+        [],
+    ):
         raise HTTPException(
             status_code=400,
             detail=(
@@ -1171,11 +1463,15 @@ def update_bank_processing_workflow(
             ),
         )
 
-    # -------------------------
+    # --------------------------------------------------------
     # SANCTION
-    # -------------------------
+    # --------------------------------------------------------
+
     if action == "sanction":
-        offered_amount = data.get("offered_amount")
+
+        offered_amount = data.get(
+            "offered_amount"
+        )
 
         if offered_amount is None:
             raise HTTPException(
@@ -1184,65 +1480,150 @@ def update_bank_processing_workflow(
             )
 
         bank_processing.status = "sanctioned"
-        bank_processing.offered_amount = offered_amount
-        bank_processing.sanctioned_at = datetime.now()
 
-        bank_processing.approved_by = employee.id
+        bank_processing.offered_amount = (
+            offered_amount
+        )
 
-        application.status = LoanStatus.sanctioned
-        application.sanction_date = datetime.now().date()
+        bank_processing.sanctioned_at = (
+            datetime.now()
+        )
 
-    # -------------------------
+        bank_processing.approved_by = (
+            employee.id
+        )
+
+        application.status = (
+            LoanStatus.sanctioned
+        )
+
+        application.sanction_date = (
+            datetime.now().date()
+        )
+
+        # ----------------------------------------------------
+        # SANCTIONED LOG
+        # ----------------------------------------------------
+
+        db.add(
+            BankProcessingLog(
+                loan_id=bank_processing.loan_id,
+                bp_id=bank_processing.id,
+                event="SANCTIONED",
+                employee_context_id=active_context.id,
+            )
+        )
+
+    # --------------------------------------------------------
     # DISBURSE
-    # -------------------------
+    # --------------------------------------------------------
+
     elif action == "disburse":
-        disbursement_amount = data.get("disbursement_amount")
-        processing_fees = data.get("processing_fees")
-        insurance = data.get("insurance")
-        disbursed_at = data.get("disbursed_at")
+
+        disbursement_amount = data.get(
+            "disbursement_amount"
+        )
+
+        processing_fees = data.get(
+            "processing_fees"
+        )
+
+        insurance = data.get(
+            "insurance"
+        )
+
+        disbursed_at = data.get(
+            "disbursed_at"
+        )
 
         if disbursement_amount is None:
             raise HTTPException(
                 status_code=400,
-                detail="disbursement_amount is required for disbursement",
+                detail=(
+                    "disbursement_amount is required "
+                    "for disbursement"
+                ),
             )
 
         if processing_fees is None:
             raise HTTPException(
                 status_code=400,
-                detail="processing_fees is required for disbursement",
+                detail=(
+                    "processing_fees is required "
+                    "for disbursement"
+                ),
             )
 
         if insurance is None:
             raise HTTPException(
                 status_code=400,
-                detail="insurance is required for disbursement",
+                detail=(
+                    "insurance is required "
+                    "for disbursement"
+                ),
             )
 
         if disbursed_at is None:
             raise HTTPException(
                 status_code=400,
-                detail="disbursed_at is required for disbursement",
+                detail=(
+                    "disbursed_at is required "
+                    "for disbursement"
+                ),
             )
 
         bank_processing.status = "disbursed"
-        bank_processing.disbursement_amount = disbursement_amount
-        bank_processing.processing_fees = processing_fees
-        bank_processing.insurance = insurance
-        bank_processing.disbursed_at = datetime.now()
-        bank_processing.application_reference_id = data.get(
-            "application_reference_id"
+
+        bank_processing.disbursement_amount = (
+            disbursement_amount
         )
 
-        bank_processing.approved_by = employee.id
+        bank_processing.processing_fees = (
+            processing_fees
+        )
 
-        application.status = LoanStatus.disbursed
+        bank_processing.insurance = (
+            insurance
+        )
 
-    # -------------------------
+        bank_processing.disbursed_at = (
+            datetime.now()
+        )
+
+        bank_processing.application_reference_id = (
+            data.get("application_reference_id")
+        )
+
+        bank_processing.approved_by = (
+            employee.id
+        )
+
+        application.status = (
+            LoanStatus.disbursed
+        )
+
+        # ----------------------------------------------------
+        # DISBURSED LOG
+        # ----------------------------------------------------
+
+        db.add(
+            BankProcessingLog(
+                loan_id=bank_processing.loan_id,
+                bp_id=bank_processing.id,
+                event="DISBURSED",
+                employee_context_id=active_context.id,
+            )
+        )
+
+    # --------------------------------------------------------
     # REJECT
-    # -------------------------
+    # --------------------------------------------------------
+
     elif action == "reject":
-        remarks = data.get("remarks")
+
+        remarks = data.get(
+            "remarks"
+        )
 
         if not remarks:
             raise HTTPException(
@@ -1251,48 +1632,103 @@ def update_bank_processing_workflow(
             )
 
         bank_processing.status = "rejected"
+
         bank_processing.remarks = remarks
-        bank_processing.rejected_at = datetime.now()
 
-        bank_processing.approved_by = employee.id
+        bank_processing.rejected_at = (
+            datetime.now()
+        )
 
-        application.status = LoanStatus.rejected
-        application.rejection_date = datetime.now().date()
-        application.rejected_remarks = remarks
+        bank_processing.approved_by = (
+            employee.id
+        )
 
-    db.commit()
-    db.refresh(bank_processing)
+        application.status = (
+            LoanStatus.rejected
+        )
+
+        application.rejection_date = (
+            datetime.now().date()
+        )
+
+        application.rejected_remarks = (
+            remarks
+        )
+
+        # ----------------------------------------------------
+        # REJECTED LOG
+        # ----------------------------------------------------
+
+        db.add(
+            BankProcessingLog(
+                loan_id=bank_processing.loan_id,
+                bp_id=bank_processing.id,
+                event="REJECTED",
+                employee_context_id=active_context.id,
+            )
+        )
+
+    # --------------------------------------------------------
+    # COMMIT
+    # --------------------------------------------------------
+
+    try:
+
+        db.commit()
+
+    except Exception:
+
+        db.rollback()
+
+        raise
+
+    db.refresh(
+        bank_processing
+    )
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
 
     return {
         "success": True,
-        "message": f"Bank processing {action} successful",
+        "message": (
+            f"Bank processing {action} successful"
+        ),
         "data": {
             "id": bank_processing.id,
             "loan_id": bank_processing.loan_id,
             "bank_id": bank_processing.bank_id,
             "status": bank_processing.status,
-            "offered_amount": bank_processing.offered_amount,
-            "disbursement_amount": bank_processing.disbursement_amount,
-            "processing_fees": bank_processing.processing_fees,
-            "insurance": bank_processing.insurance,
-            "remarks": bank_processing.remarks,
-            "sanctioned_at": bank_processing.sanctioned_at,
-            "disbursed_at": bank_processing.disbursed_at,
-            "rejected_at": bank_processing.rejected_at,
+            "offered_amount": (
+                bank_processing.offered_amount
+            ),
+            "disbursement_amount": (
+                bank_processing.disbursement_amount
+            ),
+            "processing_fees": (
+                bank_processing.processing_fees
+            ),
+            "insurance": (
+                bank_processing.insurance
+            ),
+            "remarks": (
+                bank_processing.remarks
+            ),
+            "sanctioned_at": (
+                bank_processing.sanctioned_at
+            ),
+            "disbursed_at": (
+                bank_processing.disbursed_at
+            ),
+            "rejected_at": (
+                bank_processing.rejected_at
+            ),
             "application_reference_id": (
                 bank_processing.application_reference_id
             ),
         },
     }
-
-
-
-def assign_bank(
-    db: Session,
-    employee,
-    application_id: str,
-    payload,
-):
     application = (
         db.query(LoanApplication)
         .filter(

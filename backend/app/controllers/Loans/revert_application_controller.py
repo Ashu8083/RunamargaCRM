@@ -8,6 +8,7 @@ from app.models.loan_applications import LoanApplication
 from app.models.loan_types import LoanType
 from app.models.employees import Employee
 from app.core.access_control import AccessControl
+from app.services.Loans.application_service import ApplicationService
 
 # =========================================================
 # GET REVERTED APPLICATIONS
@@ -90,7 +91,7 @@ def get_reverted_applications(
             LoanApplication.deleted_at.is_(None),
         )
     )
-    query = AccessControl.apply_application_scope(
+    query = ApplicationService.apply_scope(
         query=query,
         db=db,
         employee=employee,
@@ -322,7 +323,7 @@ def get_revert_history(
             "loan_id": loan_id,
             "history": [],
         }
-        scoped_query = AccessControl.apply_application_scope(
+        scoped_query = ApplicationService.apply_scope(
             query=db.query(LoanApplication),
             db=db,
             employee=employee,

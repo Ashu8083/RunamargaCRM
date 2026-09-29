@@ -1,46 +1,17 @@
 # backend/app/services/Dashboard/application_funnel_service.py
 
-from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import HTTPException
+from sqlalchemy import Numeric, String, cast, func, literal
 from sqlalchemy.orm import Session
 
 from app.core.access_control import AccessControl
-from app.models.loan_applications import LoanApplication
 from app.models.bank_processings import BankProcessing
 from app.models.employees import Employee
-
-
-STATUS_PRIORITY = {
-    "inprocess": 1,
-    "docspending": 1,
-    "rejected": 2,
-    "revert_rejected": 2,
-    "login": 3,
-    "sanctioned": 4,
-    "disbursed": 5,
-}
-
-
-STATUS_LABELS = {
-    "inprocess": "In Process",
-    "docspending": "In Process",
-    "rejected": "Rejected",
-    "revert_rejected": "Rejected",
-    "login": "Login",
-    "sanctioned": "Sanctioned",
-    "disbursed": "Disbursed",
-}
-
-
-BANK_STATUS_PRIORITY = {
-    "rejected": 2,
-    "login": 3,
-    "sanctioned": 4,
-    "disbursed": 5,
-}
+from app.models.loan_applications import LoanApplication
+from app.services.Loans.application_service import ApplicationService
 
 
 FUNNEL_STATUSES = [
@@ -51,6 +22,138 @@ FUNNEL_STATUSES = [
     "Rejected",
 ]
 
+MONEY_TYPE = Numeric(18, 2)
+
+
+def _get_current_month_range():
+    """
+    Return the first day of the current month and the first day
+    of the next month.
+
+    Example:
+        2026-09-26
+
+    returns:
+        2026-09-01
+        2026-10-01
+    """
+
+    today = date.today()
+
+    month_start = today.replace(day=1)
+
+    if today.month == 12:
+        next_month_start = date(
+            today.year + 1,
+            1,
+            1,
+        )
+    else:
+        next_month_start = date(
+            today.year,
+            today.month + 1,
+            1,
+        )
+
+    return month_start, next_month_start
+
+
+def _money(expression):
+    return cast(
+        func.coalesce(
+            expression,
+            0,
+        ),
+        MONEY_TYPE,
+    )
+
+
+def _build_stage_processing_query(
+    db: Session,
+    scoped_applications,
+    status: str,
+    timestamp_column,
+    amount_column,
+    from_date: date,
+    to_date_exclusive: date,
+):
+    """
+    Return one BankProcessing record per application
+    for the requested lifecycle stage.
+
+    Used for:
+        Login
+        Sanctioned
+
+    Disbursed is handled separately because multiple
+    disbursement records must contribute to the total amount.
+    """
+
+    ranked = (
+        db.query(
+            BankProcessing.loan_id.label(
+                "loan_id"
+            ),
+            timestamp_column.label(
+                "stage_date"
+            ),
+            _money(
+                amount_column
+            ).label(
+                "stage_amount"
+            ),
+            func.row_number()
+            .over(
+                partition_by=BankProcessing.loan_id,
+                order_by=[
+                    timestamp_column.desc(),
+                    BankProcessing.id.desc(),
+                ],
+            )
+            .label(
+                "row_number"
+            ),
+        )
+        .join(
+            scoped_applications,
+            scoped_applications.c.loan_id
+            == BankProcessing.loan_id,
+        )
+        .filter(
+            BankProcessing.deleted_at.is_(None),
+            func.lower(
+                BankProcessing.status
+            ) == status,
+            timestamp_column.isnot(None),
+            timestamp_column >= from_date,
+            timestamp_column < to_date_exclusive,
+        )
+        .subquery(
+            name=f"{status}_processing"
+        )
+    )
+
+    return (
+        db.query(
+            ranked.c.loan_id.label(
+                "loan_id"
+            ),
+            ranked.c.stage_date.label(
+                "stage_date"
+            ),
+            cast(
+                ranked.c.stage_amount,
+                MONEY_TYPE,
+            ).label(
+                "stage_amount"
+            ),
+        )
+        .filter(
+            ranked.c.row_number == 1
+        )
+    )
+
+
 def get_application_funnel(
     db: Session,
     employee: Employee,
@@ -60,23 +163,49 @@ def get_application_funnel(
     loan_type: Optional[int] = None,
 ):
     """
-    Return application funnel data for the current employee's
-    permitted application scope.
+    Return application funnel data.
 
-    Each loan application is counted only once.
+    Each funnel stage is calculated independently.
 
-    BankProcessing can move an application to a higher-priority
-    status.
+    One LoanApplication can therefore appear in multiple stages.
 
-    Filters:
-        from_date -> LoanApplication.applied_date >= from_date
-        to_date   -> LoanApplication.applied_date <= to_date
-        loan_type -> LoanApplication.loan_type_id == loan_type
+    Current-month default:
+        First day of current month -> today.
+
+    Stage dates:
+
+        In Process -> LoanApplication.applied_date
+        Login      -> BankProcessing.loggedin_at
+        Sanctioned -> BankProcessing.sanctioned_at
+        Disbursed  -> BankProcessing.disbursed_at
+        Rejected   -> LoanApplication.rejection_date
+
+    Disbursed:
+
+        Count:
+            COUNT(DISTINCT loan_id)
+
+        Amount:
+            SUM(all active disbursement_amount records
+                inside the selected date range)
+
+    Rejected:
+
+        Only:
+            LoanApplication.status IN
+            ('rejected', 'revert_rejected')
+
+        and:
+            LoanApplication.rejection_date
+            inside the selected date range.
+
+    ApplicationService.apply_scope() remains the RBAC
+    source of truth.
     """
 
-    # ---------------------------------------------------------
+    # =========================================================
     # PERMISSION
-    # ---------------------------------------------------------
+    # =========================================================
 
     if not AccessControl.has_permission(
         db=db,
@@ -85,283 +214,521 @@ def get_application_funnel(
     ):
         raise HTTPException(
             status_code=403,
-            detail="You do not have access to the application funnel.",
+            detail=(
+                "You do not have access to "
+                "the application funnel."
+            ),
         )
 
-    # ---------------------------------------------------------
-    # APPLICATION QUERY
-    # ---------------------------------------------------------
+    # =========================================================
+    # CONTEXT
+    # =========================================================
 
-    query = db.query(LoanApplication)
-
-    # Apply the existing application visibility rules.
     if context_id is None:
         raise HTTPException(
             status_code=400,
             detail="context_id is required.",
         )
 
-    query = AccessControl.apply_application_scope(
-        query=query,
-        db=db,
-        employee=employee,
-        context_id=context_id,
-    )
+    # =========================================================
+    # DATE RANGE
+    #
+    # Default:
+    # current month -> today
+    # =========================================================
 
-    # Only active applications.
-    query = query.filter(
-        LoanApplication.deleted_at.is_(None)
-    )
-
-    # ---------------------------------------------------------
-    # DATE FILTER
-    # ---------------------------------------------------------
-
-    if from_date:
-        query = query.filter(
-            LoanApplication.applied_date >= from_date
+    if from_date is None and to_date is None:
+        from_date, to_date_exclusive = (
+            _get_current_month_range()
         )
 
-    if to_date:
-        query = query.filter(
-            LoanApplication.applied_date <= to_date
+        response_to_date = (
+            date.today()
         )
 
-    # ---------------------------------------------------------
+    else:
+        if from_date is None:
+            from_date = to_date
+
+        if to_date is None:
+            to_date = from_date
+
+        if from_date > to_date:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "from_date cannot be greater "
+                    "than to_date."
+                ),
+            )
+
+        to_date_exclusive = (
+            to_date
+            + timedelta(days=1)
+        )
+
+        response_to_date = to_date
+
+    # =========================================================
+    # BASE APPLICATION SCOPE
+    # =========================================================
+
+    application_query = (
+        db.query(
+            LoanApplication.id.label(
+                "loan_id"
+            ),
+            LoanApplication.loan_type_id.label(
+                "loan_type_id"
+            ),
+            LoanApplication.loan_amt.label(
+                "loan_amount"
+            ),
+            LoanApplication.applied_date.label(
+                "applied_date"
+            ),
+            LoanApplication.status.label(
+                "application_status"
+            ),
+            LoanApplication.rejection_date.label(
+                "rejection_date"
+            ),
+        )
+        .filter(
+            LoanApplication.deleted_at.is_(None),
+        )
+    )
+
+    application_query = (
+        ApplicationService.apply_scope(
+            query=application_query,
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+    )
+
+    scoped_applications = (
+        application_query
+        .subquery(
+            name="scoped_applications"
+        )
+    )
+
+    # =========================================================
     # LOAN TYPE FILTER
-    # ---------------------------------------------------------
+    # =========================================================
 
     if loan_type:
-        query = query.filter(
-            LoanApplication.loan_type_id == loan_type
+        scoped_applications = (
+            db.query(
+                scoped_applications,
+            )
+            .filter(
+                scoped_applications.c.loan_type_id
+                == loan_type
+            )
+            .subquery(
+                name="filtered_applications"
+            )
         )
 
-    applications = query.all()
+    # =========================================================
+    # IN PROCESS
+    #
+    # Application created during the selected period.
+    #
+    # Funnel behavior intentionally allows the same
+    # application to also appear in Login/Sanctioned/
+    # Disbursed.
+    # =========================================================
 
-    # ---------------------------------------------------------
-    # EMPTY RESPONSE
-    # ---------------------------------------------------------
-
-    if not applications:
-        return {
-            "data": [
-                {
-                    "status": status,
-                    "count": 0,
-                    "amount": 0,
-                }
-                for status in FUNNEL_STATUSES
-            ],
-            "totalApplications": 0,
-            "totalAmount": 0,
-            "filters": {
-                "fromDate": (
-                    from_date.isoformat()
-                    if from_date
-                    else None
-                ),
-                "toDate": (
-                    to_date.isoformat()
-                    if to_date
-                    else None
-                ),
-                "loanType": loan_type,
-            },
-        }
-
-    # ---------------------------------------------------------
-    # BANK PROCESSINGS
-    # ---------------------------------------------------------
-
-    loan_ids = [
-        application.id
-        for application in applications
-    ]
-
-    bank_processings = (
-        db.query(BankProcessing)
+    in_process_query = (
+        db.query(
+            scoped_applications.c.loan_id.label(
+                "loan_id"
+            ),
+            literal("In Process").label(
+                "stage"
+            ),
+            _money(
+                scoped_applications.c.loan_amount
+            ).label(
+                "stage_amount"
+            ),
+        )
         .filter(
-            BankProcessing.loan_id.in_(loan_ids),
+            scoped_applications.c.applied_date
+            >= from_date,
+            scoped_applications.c.applied_date
+            < to_date_exclusive,
+        )
+    )
+
+    # =========================================================
+    # LOGIN
+    #
+    # One application counted once.
+    # Latest login record inside selected period is used
+    # for the stage amount.
+    # =========================================================
+
+    login_query = _build_stage_processing_query(
+        db=db,
+        scoped_applications=scoped_applications,
+        status="login",
+        timestamp_column=BankProcessing.loggedin_at,
+        amount_column=func.coalesce(
+            BankProcessing.offered_amount,
+            scoped_applications.c.loan_amount,
+            0,
+        ),
+        from_date=from_date,
+        to_date_exclusive=to_date_exclusive,
+    )
+
+    login_query = login_query.with_entities(
+        login_query.column_descriptions[0]["expr"].label(
+            "loan_id"
+        ),
+        literal("Login").label(
+            "stage"
+        ),
+        cast(
+            login_query.column_descriptions[2]["expr"],
+            MONEY_TYPE,
+        ).label(
+            "stage_amount"
+        ),
+    )
+
+    # =========================================================
+    # SANCTIONED
+    #
+    # One application counted once.
+    # Latest sanctioned record inside selected period is used.
+    # =========================================================
+
+    sanctioned_query = _build_stage_processing_query(
+        db=db,
+        scoped_applications=scoped_applications,
+        status="sanctioned",
+        timestamp_column=BankProcessing.sanctioned_at,
+        amount_column=func.coalesce(
+            BankProcessing.offered_amount,
+            scoped_applications.c.loan_amount,
+            0,
+        ),
+        from_date=from_date,
+        to_date_exclusive=to_date_exclusive,
+    )
+
+    sanctioned_query = sanctioned_query.with_entities(
+        sanctioned_query.column_descriptions[0]["expr"].label(
+            "loan_id"
+        ),
+        literal("Sanctioned").label(
+            "stage"
+        ),
+        cast(
+            sanctioned_query.column_descriptions[2]["expr"],
+            MONEY_TYPE,
+        ).label(
+            "stage_amount"
+        ),
+    )
+
+    # =========================================================
+    # DISBURSED
+    #
+    # IMPORTANT:
+    #
+    # Do NOT use ROW_NUMBER() here.
+    #
+    # One loan can have multiple disbursement records.
+    #
+    # Example:
+    #
+    # loan 100:
+    #     2,00,000
+    #     1,00,000
+    #
+    # Count:
+    #     1
+    #
+    # Amount:
+    #     3,00,000
+    #
+    # Therefore:
+    #
+    #     COUNT(DISTINCT loan_id)
+    #     SUM(disbursement_amount)
+    # =========================================================
+
+    disbursed_rows = (
+        db.query(
+            BankProcessing.loan_id.label(
+                "loan_id"
+            ),
+            _money(
+                BankProcessing.disbursement_amount
+            ).label(
+                "stage_amount"
+            ),
+        )
+        .join(
+            scoped_applications,
+            scoped_applications.c.loan_id
+            == BankProcessing.loan_id,
+        )
+        .filter(
             BankProcessing.deleted_at.is_(None),
+            func.lower(
+                BankProcessing.status
+            ) == "disbursed",
+            BankProcessing.disbursed_at.isnot(None),
+            BankProcessing.disbursed_at >= from_date,
+            BankProcessing.disbursed_at < to_date_exclusive,
+        )
+        .subquery(
+            name="disbursed_rows"
+        )
+    )
+
+    disbursed_query = (
+        db.query(
+            disbursed_rows.c.loan_id.label(
+                "loan_id"
+            ),
+            literal("Disbursed").label(
+                "stage"
+            ),
+            cast(
+                func.sum(
+                    disbursed_rows.c.stage_amount
+                ),
+                MONEY_TYPE,
+            ).label(
+                "stage_amount"
+            ),
+        )
+        .group_by(
+            disbursed_rows.c.loan_id,
+        )
+    )
+
+    # =========================================================
+    # REJECTED
+    #
+    # IMPORTANT:
+    #
+    # Rejected is based ONLY on LoanApplication.
+    #
+    # We do NOT union BankProcessing.rejected_at.
+    #
+    # This prevents duplicate/repeated rejected records
+    # from inflating the count.
+    # =========================================================
+
+    rejected_query = (
+        db.query(
+            scoped_applications.c.loan_id.label(
+                "loan_id"
+            ),
+            literal("Rejected").label(
+                "stage"
+            ),
+            _money(
+                scoped_applications.c.loan_amount
+            ).label(
+                "stage_amount"
+            ),
+        )
+        .filter(
+            func.lower(
+                cast(
+                    scoped_applications.c.application_status,
+                    String,
+                )
+            ).in_(
+                [
+                    "rejected",
+                    "revert_rejected",
+                ]
+            ),
+            scoped_applications.c.rejection_date
+            >= from_date,
+            scoped_applications.c.rejection_date
+            < to_date_exclusive,
+        )
+    )
+
+    # =========================================================
+    # COMBINE ALL STAGES
+    #
+    # UNION ALL is intentional.
+    #
+    # One application can appear in multiple funnel stages.
+    # =========================================================
+
+    all_stage_rows = (
+        in_process_query
+        .union_all(
+            login_query,
+            sanctioned_query,
+            disbursed_query,
+            rejected_query,
+        )
+        .subquery(
+            name="all_funnel_stage_rows"
+        )
+    )
+
+    # =========================================================
+    # ONE ROW PER APPLICATION PER STAGE
+    #
+    # Disbursed has already summed all disbursements for
+    # each loan.
+    #
+    # Other stages already have one row per loan.
+    #
+    # MAX therefore does not reduce a disbursement amount.
+    # =========================================================
+
+    unique_stage_rows = (
+        db.query(
+            all_stage_rows.c.loan_id.label(
+                "loan_id"
+            ),
+            all_stage_rows.c.stage.label(
+                "stage"
+            ),
+            cast(
+                func.max(
+                    all_stage_rows.c.stage_amount
+                ),
+                MONEY_TYPE,
+            ).label(
+                "stage_amount"
+            ),
+        )
+        .group_by(
+            all_stage_rows.c.loan_id,
+            all_stage_rows.c.stage,
+        )
+        .subquery(
+            name="unique_funnel_stage_rows"
+        )
+    )
+
+    # =========================================================
+    # FINAL STAGE AGGREGATION
+    # =========================================================
+
+    result = (
+        db.query(
+            unique_stage_rows.c.stage,
+            func.count(
+                unique_stage_rows.c.loan_id
+            ).label(
+                "count"
+            ),
+            cast(
+                func.coalesce(
+                    func.sum(
+                        unique_stage_rows.c.stage_amount
+                    ),
+                    0,
+                ),
+                MONEY_TYPE,
+            ).label(
+                "amount"
+            ),
+        )
+        .group_by(
+            unique_stage_rows.c.stage
         )
         .all()
     )
 
-    bank_by_loan = defaultdict(list)
+    # =========================================================
+    # RESULT MAP
+    # =========================================================
 
-    for processing in bank_processings:
-        bank_by_loan[processing.loan_id].append(
-            processing
-        )
-
-    # ---------------------------------------------------------
-    # INITIALIZE ALL FUNNEL STAGES
-    # ---------------------------------------------------------
-
-    funnel_data = {
-        status: {
-            "status": status,
-            "count": 0,
-            "amount": 0,
+    result_map = {
+        row.stage: {
+            "status": row.stage,
+            "count": int(
+                row.count or 0
+            ),
+            "amount": float(
+                row.amount or 0
+            ),
         }
-        for status in FUNNEL_STATUSES
+        for row in result
     }
 
-    # ---------------------------------------------------------
-    # PROCESS APPLICATIONS
-    # ---------------------------------------------------------
-
-    for application in applications:
-
-        # -----------------------------------------------------
-        # APPLICATION STATUS
-        # -----------------------------------------------------
-
-        application_status = (
-            application.status.value
-            if hasattr(application.status, "value")
-            else str(application.status)
-        )
-
-        application_status = application_status.lower()
-
-        current_priority = STATUS_PRIORITY.get(
-            application_status,
-            1,
-        )
-
-        current_status = application_status
-        current_amount = (
-            application.loan_amt or 0
-        )
-
-        # -----------------------------------------------------
-        # FIND HIGHEST BANK STATUS
-        # -----------------------------------------------------
-
-        processings = bank_by_loan.get(
-            application.id,
-            []
-        )
-
-        highest_bank_processing = None
-        highest_bank_priority = 0
-
-        for processing in processings:
-
-            processing_status = (
-                processing.status.value
-                if hasattr(processing.status, "value")
-                else str(processing.status)
-            )
-
-            processing_status = (
-                processing_status.lower()
-            )
-
-            bank_priority = BANK_STATUS_PRIORITY.get(
-                processing_status,
-                0,
-            )
-
-            if bank_priority > highest_bank_priority:
-                highest_bank_priority = bank_priority
-                highest_bank_processing = processing
-
-        # -----------------------------------------------------
-        # BANK PROCESSING STATUS
-        # -----------------------------------------------------
-
-        if highest_bank_processing:
-
-            processing_status = (
-                highest_bank_processing.status.value
-                if hasattr(
-                    highest_bank_processing.status,
-                    "value",
-                )
-                else str(
-                    highest_bank_processing.status
-                )
-            )
-
-            processing_status = (
-                processing_status.lower()
-            )
-
-            # Bank processing moves the application forward
-            # when its status has equal or higher priority.
-            if (
-                highest_bank_priority >= current_priority
-                and highest_bank_priority > 0
-            ):
-                current_status = processing_status
-
-                # Amount is based on the actual stage.
-                if current_status == "disbursed":
-                    current_amount = (
-                        highest_bank_processing.disbursement_amount
-                        or highest_bank_processing.offered_amount
-                        or application.loan_amt
-                        or 0
-                    )
-
-                elif current_status in {
-                    "sanctioned",
-                    "login",
-                    "rejected",
-                }:
-                    current_amount = (
-                        highest_bank_processing.offered_amount
-                        or application.loan_amt
-                        or 0
-                    )
-
-        # -----------------------------------------------------
-        # NORMALIZE STATUS
-        # -----------------------------------------------------
-
-        normalized_status = STATUS_LABELS.get(
-            current_status,
-            "In Process",
-        )
-
-        # -----------------------------------------------------
-        # ADD TO FUNNEL STAGE
-        # -----------------------------------------------------
-
-        if normalized_status not in funnel_data:
-            continue
-
-        funnel_data[normalized_status]["count"] += 1
-
-        funnel_data[normalized_status]["amount"] += (
-            current_amount or 0
-        )
-
-    # ---------------------------------------------------------
-    # RESPONSE
-    # ---------------------------------------------------------
+    # =========================================================
+    # INITIALIZE ALL FUNNEL STAGES
+    # =========================================================
 
     data = [
-        funnel_data[status]
+        result_map.get(
+            status,
+            {
+                "status": status,
+                "count": 0,
+                "amount": 0,
+            },
+        )
         for status in FUNNEL_STATUSES
     ]
 
-    total_applications = sum(
-        item["count"]
-        for item in data
+    # =========================================================
+    # UNIQUE APPLICATION COUNT
+    #
+    # This is NOT the sum of funnel stage counts.
+    # =========================================================
+
+    total_applications = (
+        db.query(
+            func.count(
+                func.distinct(
+                    unique_stage_rows.c.loan_id
+                )
+            )
+        )
+        .scalar()
+        or 0
     )
 
-    total_amount = sum(
-        item["amount"]
-        for item in data
+    # =========================================================
+    # TOTAL AMOUNT
+    #
+    # Funnel total amount represents Disbursed amount.
+    # =========================================================
+
+    total_amount = next(
+        (
+            item["amount"]
+            for item in data
+            if item["status"] == "Disbursed"
+        ),
+        0,
     )
+
+    # =========================================================
+    # RESPONSE
+    # =========================================================
 
     return {
         "data": data,
-        "totalApplications": total_applications,
-        "totalAmount": total_amount,
+        "totalApplications": int(
+            total_applications
+        ),
+        "totalAmount": float(
+            total_amount
+        ),
         "filters": {
             "fromDate": (
                 from_date.isoformat()
@@ -369,8 +736,8 @@ def get_application_funnel(
                 else None
             ),
             "toDate": (
-                to_date.isoformat()
-                if to_date
+                response_to_date.isoformat()
+                if response_to_date
                 else None
             ),
             "loanType": loan_type,

@@ -2,12 +2,14 @@
 
 from datetime import date
 from typing import Optional
-from app.core.access_control import AccessControl
-from sqlalchemy.orm import Session
+
 from fastapi import HTTPException
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
 from app.models.bank_processings import BankProcessing
 from app.models.loan_applications import LoanApplication
-
+from app.services.Loans.application_service import ApplicationService
 
 
 MONTH_NAMES = [
@@ -25,6 +27,7 @@ MONTH_NAMES = [
     "December",
 ]
 
+
 def get_monthly_trend(
     db: Session,
     employee,
@@ -34,16 +37,14 @@ def get_monthly_trend(
     """
     Return month-wise disbursed application count and amount.
 
-    Only active bank-processing records with status='disbursed'
-    are considered.
-
-    Month is determined by disbursed_at.
-    Amount is taken from disbursement_amount.
+    Rules:
+    - Each LoanApplication is counted only once per month.
+    - Disbursed data comes from BankProcessing.
+    - Month is determined by BankProcessing.disbursed_at.
+    - Count uses distinct LoanApplication IDs.
+    - Amount sums all active disbursement records in the month.
+    - Existing ApplicationService RBAC scope is preserved.
     """
-
-    # ---------------------------------------------------------
-    # NORMALIZE PERIOD
-    # ---------------------------------------------------------
 
     try:
         month_count = int(period)
@@ -53,9 +54,11 @@ def get_monthly_trend(
     if month_count not in {3, 6, 12}:
         month_count = 3
 
-    # ---------------------------------------------------------
-    # LAST N MONTHS
-    # ---------------------------------------------------------
+    if context_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="context_id is required.",
+        )
 
     today = date.today()
 
@@ -76,44 +79,105 @@ def get_monthly_trend(
             (year, month_index)
         )
 
-    month_key_set = set(month_keys)
+    first_year, first_month = month_keys[0]
 
-    # ---------------------------------------------------------
-    # DISBURSED BANK PROCESSINGS
-    # ---------------------------------------------------------
+    range_start = date(
+        first_year,
+        first_month,
+        1,
+    )
 
-    if context_id is None:
-        raise HTTPException(
-            status_code=400,
-            detail="context_id is required.",
+    if current_month == 12:
+        range_end = date(
+            current_year + 1,
+            1,
+            1,
+        )
+    else:
+        range_end = date(
+            current_year,
+            current_month + 1,
+            1,
         )
 
-    processing_query = (
-        db.query(BankProcessing)
-        .join(
-            LoanApplication,
-            LoanApplication.id == BankProcessing.loan_id,
-        )
+    applications_query = (
+        db.query(LoanApplication)
         .filter(
-            BankProcessing.deleted_at.is_(None),
-            BankProcessing.status == "disbursed",
-            BankProcessing.disbursed_at.isnot(None),
             LoanApplication.deleted_at.is_(None),
         )
     )
 
-    processing_query = AccessControl.apply_application_scope(
-        query=processing_query,
+    applications_query = ApplicationService.apply_scope(
+        query=applications_query,
         db=db,
         employee=employee,
         context_id=context_id,
     )
 
-    processings = processing_query.all()
+    scoped_applications = (
+        applications_query
+        .with_entities(
+            LoanApplication.id.label("loan_id"),
+        )
+        .subquery()
+    )
 
-    # ---------------------------------------------------------
-    # INITIALIZE MONTH DATA
-    # ---------------------------------------------------------
+    rows = (
+        db.query(
+            func.extract(
+                "year",
+                BankProcessing.disbursed_at,
+            ).label("year"),
+            func.extract(
+                "month",
+                BankProcessing.disbursed_at,
+            ).label("month"),
+            func.count(
+                func.distinct(BankProcessing.loan_id)
+            ).label("count"),
+            func.coalesce(
+                func.sum(
+                    BankProcessing.disbursement_amount
+                ),
+                0,
+            ).label("amount"),
+        )
+        .join(
+            scoped_applications,
+            scoped_applications.c.loan_id
+            == BankProcessing.loan_id,
+        )
+        .filter(
+            BankProcessing.deleted_at.is_(None),
+            func.lower(
+                BankProcessing.status
+            ) == "disbursed",
+            BankProcessing.disbursed_at.isnot(None),
+            BankProcessing.disbursed_at >= range_start,
+            BankProcessing.disbursed_at < range_end,
+        )
+        .group_by(
+            func.extract(
+                "year",
+                BankProcessing.disbursed_at,
+            ),
+            func.extract(
+                "month",
+                BankProcessing.disbursed_at,
+            ),
+        )
+        .order_by(
+            func.extract(
+                "year",
+                BankProcessing.disbursed_at,
+            ),
+            func.extract(
+                "month",
+                BankProcessing.disbursed_at,
+            ),
+        )
+        .all()
+    )
 
     grouped_data = {}
 
@@ -126,31 +190,22 @@ def get_monthly_trend(
             "amount": 0,
         }
 
-    # ---------------------------------------------------------
-    # GROUP DISBURSEMENTS BY MONTH
-    # ---------------------------------------------------------
+    for row in rows:
+        year = int(row.year)
+        month = int(row.month)
 
-    for processing in processings:
+        month_key = (year, month)
 
-        disbursed_at = processing.disbursed_at
-
-        month_key = (
-            disbursed_at.year,
-            disbursed_at.month,
-        )
-
-        if month_key not in month_key_set:
+        if month_key not in grouped_data:
             continue
 
-        grouped_data[month_key]["count"] += 1
-
-        grouped_data[month_key]["amount"] += (
-            processing.disbursement_amount or 0
+        grouped_data[month_key]["count"] = int(
+            row.count or 0
         )
 
-    # ---------------------------------------------------------
-    # RESPONSE
-    # ---------------------------------------------------------
+        grouped_data[month_key]["amount"] = float(
+            row.amount or 0
+        )
 
     data = [
         grouped_data[month_key]

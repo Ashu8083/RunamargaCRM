@@ -1,12 +1,13 @@
 # backend/app/services/Loans/application_service.py
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, Query
+from sqlalchemy import exists
 
 from app.core.access_control import AccessControl
-
+from app.models.team_chat import TeamChat
 from app.models.employees import Employee
 from app.models.loan_applications import LoanApplication, LoanStatus
 from app.models.reverted_loans import RevertedLoan
@@ -62,7 +63,7 @@ class ApplicationService:
             )
 
         if family == "TEAMLEAD":
-            agent_contexts = AccessControl.get_visible_contexts(
+            agent_contexts = AccessControl._visible_contexts(
                 db=db,
                 family="AGENT",
                 reports_to_id=context.id,
@@ -92,22 +93,57 @@ class ApplicationService:
         db: Session,
         employee: Employee,
         context_id: int | None = None,
+        page: int = 1,
+        page_size: int = 10,
+        no_chat_for_days: int | None = None,
     ):
         query = db.query(LoanApplication)
 
-        query = AccessControl.apply_scope(
+        # ---------------------------------------------------------
+        # RBAC SCOPE
+        # ---------------------------------------------------------
+        query = ApplicationService.apply_scope(
             query=query,
             db=db,
             employee=employee,
             context_id=context_id,
         )
 
+        # Exclude deleted applications
+        query = query.filter(
+            LoanApplication.deleted_at.is_(None)
+        )
+
+        # Pending/no-chat filter
+        if no_chat_for_days is not None:
+            cutoff_datetime = datetime.now(timezone.utc) - timedelta(
+                days=no_chat_for_days
+            )
+
+            query = query.filter(
+                LoanApplication.created_at <= cutoff_datetime,
+                ~exists().where(
+                    TeamChat.loan_application_id == LoanApplication.id
+                ),
+            )
+
+        # Count AFTER filtering
+        total_count = query.count()
+
+        # Pagination AFTER count
+        offset = (page - 1) * page_size
+
         applications = (
             query
             .order_by(LoanApplication.id.desc())
+            .offset(offset)
+            .limit(page_size)
             .all()
         )
 
+        # ---------------------------------------------------------
+        # BUILD RESPONSE
+        # ---------------------------------------------------------
         data = []
 
         for application in applications:
@@ -233,12 +269,23 @@ class ApplicationService:
                 "updated_at": application.updated_at,
             })
 
+        # ---------------------------------------------------------
+        # PAGINATION RESPONSE
+        # ---------------------------------------------------------
+        total_pages = (
+            (total_count + page_size - 1) // page_size
+            if total_count
+            else 1
+        )
+
         return {
             "success": True,
-            "count": len(data),
+            "count": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
             "data": data,
         }
-
     # =========================================================
     # VIEW APPLICATION
     # =========================================================
@@ -261,7 +308,7 @@ class ApplicationService:
         if not application:
             return None
 
-        scoped_query = AccessControl.apply_scope(
+        scoped_query = ApplicationService.apply_scope(
             query=db.query(LoanApplication),
             db=db,
             employee=employee,
@@ -757,7 +804,7 @@ class ApplicationService:
                 detail="Application not found",
             )
 
-        scoped_query = AccessControl.apply_scope(
+        scoped_query = ApplicationService.apply_scope(
             query=db.query(LoanApplication),
             db=db,
             employee=employee,

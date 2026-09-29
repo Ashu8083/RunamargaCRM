@@ -122,6 +122,30 @@ from app.routes.admin.ApplicationFilter.application_filter_routes import (
 )
 
 # ============================================================================
+# Loan Shuffle Logs
+# ============================================================================
+
+from app.routes.admin.Logs.loan_shuffle_logs_routes import (
+    router as loan_shuffle_logs_router,
+)
+
+# ============================================================================
+# Loan Type Change Logs
+# ============================================================================
+
+
+from app.routes.admin.Logs.loan_type_change_logs_routes import (
+    router as loan_type_change_logs_router,
+)
+
+# ============================================================================
+# Bank processing Logs
+# ============================================================================
+
+from app.routes.admin.Logs.bank_processing_logs_routes import (
+    router as bank_processing_logs_router,
+)
+# ============================================================================
 # MAIN ADMIN ROUTER
 # ============================================================================
 
@@ -222,4 +246,30 @@ router.include_router(application_status_applications_router)
 
 router.include_router(
     application_filter_router
+)
+
+
+
+# ============================================================================
+# Loan Shuffle Logs
+# ============================================================================
+
+router.include_router(
+    loan_shuffle_logs_router
+)
+
+
+# ============================================================================
+# Loan Type Change Logs
+# ============================================================================
+
+router.include_router(
+    loan_type_change_logs_router
+)
+
+# ============================================================================
+# Bank processing Logs
+# ============================================================================
+router.include_router(
+    bank_processing_logs_router,
 )
