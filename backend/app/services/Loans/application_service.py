@@ -19,6 +19,8 @@ from app.models.dsa_details import DSADetail
 from app.models.bank import Bank
 from app.models.employee_contexts import EmployeeContext
 from app.models.contexts import Context
+from app.services.loan_application_audit_log_service import LoanApplicationAuditLogService
+
 
 
 class ApplicationService:
@@ -718,6 +720,14 @@ class ApplicationService:
         db.flush()
 
         application.unique_id = f"LN{application.id}"
+
+        LoanApplicationAuditLogService.log_audit_log(
+            db=db,
+            action="create",
+            action_by=current_context.id,
+            action_on=application.id,
+            commit=False,
+        )
 
         db.commit()
         db.refresh(application)
