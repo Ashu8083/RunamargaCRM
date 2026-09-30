@@ -6,7 +6,7 @@ from fastapi import Cookie, Depends, HTTPException,Request
 from sqlalchemy.orm import Session
 from app.models.employees import Employee
 from app.config.database import get_db
-from app.services.employee_face_profile_service import logger
+from app.core.log_config import logger
 
 JWT_SECRET_KEY = os.getenv(
     "JWT_SECRET_KEY",
@@ -138,10 +138,10 @@ def get_current_employee(
     # Check for x-employee-context-id or x-context-id header
     context_header = request.headers.get("x-employee-context-id") or request.headers.get("x-context-id")
 
+
     if context_header and context_header.isdigit():
         request.state.employee_context_id = int(context_header)
     else:
         default_context = next((ctx for ctx in getattr(employee, "contexts", []) if getattr(ctx, "is_default", False)), None)
         request.state.employee_context_id = default_context.id if default_context else None
-
     return employee

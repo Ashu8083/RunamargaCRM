@@ -18,6 +18,7 @@ class LoanApplicationAuditLogService(AuditLogService[LoanApplicationAuditLog]):
         action_on: Optional[int] = None,   # loan_application_id target
         report_to: Optional[int] = None,   # employee_context_id of reporting manager
         date_and_time: Optional[datetime] = None,
+        delete: Optional[datetime] = None,
         commit: bool = False,
     ) -> LoanApplicationAuditLog:
         """
@@ -74,6 +75,16 @@ class LoanApplicationAuditLogService(AuditLogService[LoanApplicationAuditLog]):
                         )
                         if target_ctx and target_ctx.reports_to_id:
                             report_to = target_ctx.reports_to_id
+        if delete:
+            log_entry = LoanApplicationAuditLog(
+                action=action,
+                action_by_id=action_by,
+                loan_application_id=action_on,
+                report_to_id=report_to,
+                date_and_time=date_and_time or datetime.now(),
+                deleted_at=delete,
+            )
+            db.add(log_entry)
 
         log_entry = LoanApplicationAuditLog(
             action=action,

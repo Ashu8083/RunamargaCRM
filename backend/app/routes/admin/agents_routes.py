@@ -1,6 +1,6 @@
 # app/routes/admin/agents_routes.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,Request
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
@@ -116,6 +116,7 @@ def get_agent_roles(
 @router.post("")
 def create_agent(
     payload: AgentCreate,
+    request: Request,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -124,6 +125,7 @@ def create_agent(
         result = AgentController.create_agent(
             db=db,
             payload=payload,
+            action_by_ctx= request.state.employee_context_id,
         )
 
         db.commit()
@@ -164,6 +166,7 @@ def create_agent(
 def update_agent(
     agent_id: int,
     payload: AgentUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -173,6 +176,7 @@ def update_agent(
             db=db,
             agent_id=agent_id,
             payload=payload,
+            action_by_ctx= request.state.employee_context_id,
         )
 
         db.commit()
@@ -202,6 +206,7 @@ def update_agent(
 @router.delete("/{agent_id}")
 def delete_agent(
     agent_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -210,6 +215,7 @@ def delete_agent(
         result = AgentController.delete_agent(
             db=db,
             agent_id=agent_id,
+            action_by_ctx= request.state.employee_context_id,
         )
 
         db.commit()
@@ -251,6 +257,7 @@ def delete_agent(
 def update_agent_status(
     agent_id: int,
     payload: AgentStatusUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -260,6 +267,7 @@ def update_agent_status(
             db=db,
             agent_id=agent_id,
             payload=payload,
+            action_by_ctx= request.state.employee_context_id,
         )
 
         db.commit()

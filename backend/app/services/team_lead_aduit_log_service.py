@@ -1,3 +1,4 @@
+from sqlalchemy import false
 from sqlalchemy.orm import Session
 
 from typing import List, Optional
@@ -8,6 +9,7 @@ from app.models.employee_audit_logs import EmployeeAuditLog
 from app.models.employee_contexts import EmployeeContext
 from app.Enums.LogAction import LogAction
 from app.schemas.employee_audit_log_schema import EmployeeAuditLogCreate
+from app.core.log_config import logger
 
 
 
@@ -25,6 +27,7 @@ class TeamLeadAuditLogService(AuditLogService[TeamLeadLogs]):
             action_on: Optional[int] = None,
             report_to: Optional[int] = None,
             date_and_time: Optional[datetime] = None,
+            delete: Optional[datetime] = None,
             commit: bool = False,
     )-> List [TeamLeadLogs]:
 
@@ -45,11 +48,25 @@ class TeamLeadAuditLogService(AuditLogService[TeamLeadLogs]):
                 )
                 if manager_ctx:
                     report_to = manager_ctx.id
+        if delete :
+            delete_at = delete
+            log_entry = TeamLeadLogs(
+                action=action,
+                action_by_id=action_by,
+                team_lead_id=action_on,
+                report_to_id=report_to,
+                date_and_time=date_and_time or datetime.now(),
+                deleted_at=delete_at
+            )   
+            db.add(log_entry)
+
+        logger.info(f"<--------------------------- report_to: {report_to}------------------->")
+        logger.info(f"<--------------------------- team_lead_id: {action_on}---------------------->")
 
         log_entry = TeamLeadLogs(
             action=action,
             action_by_id=action_by,
-            employee_id=action_on,
+            team_lead_id=action_on,
             report_to_id=report_to,
             date_and_time=date_and_time or datetime.now(),
         )

@@ -767,7 +767,8 @@ class ApplicationService:
         db.flush()
 
         application.unique_id = f"LN{application.id}"
-
+        db.commit()
+        db.refresh(application)
         LoanApplicationAuditLogService.log_audit_log(
             db=db,
             action="create",
@@ -775,9 +776,6 @@ class ApplicationService:
             action_on=application.id,
             commit=False,
         )
-
-        db.commit()
-        db.refresh(application)
 
         return {
             "success": True,
@@ -979,7 +977,7 @@ class ApplicationService:
                 detail="Application not found",
             )
 
-        scoped_query = AccessControl.apply_scope(
+        scoped_query = ApplicationService.apply_scope(
             query=db.query(LoanApplication),
             db=db,
             employee=employee,

@@ -400,7 +400,9 @@ class AgentService:
             is_default=False,
             is_active=is_active,
         )
-
+        db.add(agent)
+        db.flush()
+        db.refresh(agent)
         log_service = AgentAuditLogService.log_audit_log(
             db=db,
             action="update",
@@ -408,11 +410,6 @@ class AgentService:
             action_on=agent.id,
             date_and_time=datetime.now(),
         )
-
-
-        db.add(agent)
-
-        db.flush()
 
         return {
             "id": agent.id,
@@ -535,6 +532,7 @@ class AgentService:
             action_by=action_by_ctx,
             action_on=agent.id,
             date_and_time=datetime.now(),
+            delete= datetime.now()
         )
 
         db.flush()
