@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.core.security import get_current_employee
 from app.models.employees import Employee
+from app.core.log_config import logger
 
 from app.schemas.team_lead_schema import (
     TeamLeadCreate,
@@ -52,6 +53,8 @@ def create_team_lead(
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
+
+    logger.info(request.state.employee_context_id)
     try:
         result = TeamLeadController.create_team_lead(
             db=db,

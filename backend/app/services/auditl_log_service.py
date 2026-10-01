@@ -17,6 +17,7 @@ class AuditLogService(ABC,Generic[T]):
                       action_on : Optional[int]= None,
                       report_to : Optional[int] = None,
                       date_and_time: Optional[datetime] = None,
+                      delete : Optional[datetime] = None,
                       commit: bool = False,
                       ) -> List[T]:
 

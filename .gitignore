@@ -32,6 +32,9 @@ node_modules/
 .venv/
 venv/
 
+# IDE configurations
+.vscode/
+
 # IntelliJ IDEA
 .idea/
 *.iml

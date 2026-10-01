@@ -25,10 +25,10 @@ class TeamLeadController:
     ):
         return TeamLeadService.create_team_lead(
             db=db,
+            action_by_ctx=action_by_ctx,
             employee_id=payload.employee_id,
             context_id=payload.context_id,
             status=payload.status,
-            action_by_ctx=action_by_ctx,
         )
 
     @staticmethod

@@ -318,15 +318,16 @@ class TeamLeadService:
             is_active=is_active,
         )
 
-        team_lead_service = TeamLeadAuditLogService.log_audit_log(
-            db = db,
-            action = "create",
-            action_by= action_by_ctx,
-            action_on = team_lead.id,
-        )
 
         db.add(team_lead)
         db.flush()
+
+        team_lead_service = TeamLeadAuditLogService.log_audit_log(
+            db=db,
+            action="create",
+            action_by=action_by_ctx,
+            action_on=team_lead.id,
+        )
 
         return {
             "id":
@@ -478,6 +479,7 @@ class TeamLeadService:
             action="delete",
             action_by=action_by_ctx,
             action_on=team_lead_id,
+            delete=datetime.now()
         )
 
         db.flush()
@@ -525,7 +527,11 @@ class TeamLeadService:
 
         team_lead_service = TeamLeadAuditLogService.log_audit_log(
             db=db,
+<<<<<<< HEAD
             action="delete",
+=======
+            action="update",
+>>>>>>> 6bc0d8bb40704be3c1b168731fa05b5fc7efec0e
             action_by=action_by_ctx,
             action_on=team_lead_id
         )
