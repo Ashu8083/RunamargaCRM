@@ -1,3 +1,4 @@
+// admin-react\src\pages\crm\Loans\Application-Status\index.jsx
 import {
     useEffect,
     useMemo,
@@ -117,46 +118,23 @@ const ApplicationStatus = () => {
 
     // =========================================================
     // TABLE FILTERS
+    //
+    // The filter UI/state will live inside ApplicationsTable.
+    // This object only receives the current values from the table
+    // so that this page can perform server-side fetching.
     // =========================================================
 
     const [
-        search,
-        setSearch,
-    ] = useState("");
-
-
-    const [
-        selectedLoanType,
-        setSelectedLoanType,
-    ] = useState(
-        loanType || ""
-    );
-
-
-    const [
-        selectedRM,
-        setSelectedRM,
-    ] = useState("");
-
-
-    const [
-        selectedTeamLead,
-        setSelectedTeamLead,
-    ] = useState("");
-
-
-    const [
-        selectedAgent,
-        setSelectedAgent,
-    ] = useState("");
-
-
-    const [
-        selectedStatus,
-        setSelectedStatus,
-    ] = useState(
-        dashboardStatus || ""
-    );
+        tableFilters,
+        setTableFilters,
+    ] = useState({
+        search: "",
+        selectedLoanType: loanType || "",
+        selectedRM: "",
+        selectedTeamLead: "",
+        selectedAgent: "",
+        selectedStatus: dashboardStatus || "",
+    });
 
 
     // =========================================================
@@ -164,7 +142,8 @@ const ApplicationStatus = () => {
     // =========================================================
 
     const fetchApplications = async (
-        page = currentPage
+        page = currentPage,
+        filters = tableFilters
     ) => {
 
         try {
@@ -182,25 +161,26 @@ const ApplicationStatus = () => {
                     toDate,
 
                     loanType:
-                        selectedLoanType ||
+                        filters?.selectedLoanType ||
                         loanType ||
                         "",
 
                     status:
-                        selectedStatus ||
+                        filters?.selectedStatus ||
                         dashboardStatus ||
                         "",
 
-                    search,
+                    search:
+                        filters?.search || "",
 
                     rmId:
-                        selectedRM,
+                        filters?.selectedRM || "",
 
                     agentId:
-                        selectedAgent,
+                        filters?.selectedAgent || "",
 
                     teamLeadId:
-                        selectedTeamLead,
+                        filters?.selectedTeamLead || "",
 
                     contextId,
 
@@ -274,7 +254,27 @@ const ApplicationStatus = () => {
 
 
     // =========================================================
-    // RESET PAGE WHEN FILTERS CHANGE
+    // TABLE FILTER CHANGE
+    //
+    // ApplicationsTable will call this whenever any filter
+    // changes.
+    // =========================================================
+
+    const handleTableFiltersChange = (
+        filters
+    ) => {
+
+        setTableFilters(
+            filters
+        );
+
+        setCurrentPage(1);
+
+    };
+
+
+    // =========================================================
+    // RESET PAGE WHEN URL / CONTEXT CHANGES
     // =========================================================
 
     useEffect(() => {
@@ -282,14 +282,9 @@ const ApplicationStatus = () => {
         setCurrentPage(1);
 
     }, [
-        search,
-        selectedLoanType,
-        selectedRM,
-        selectedTeamLead,
-        selectedAgent,
-        selectedStatus,
         fromDate,
         toDate,
+        loanType,
         dashboardStatus,
         contextId,
     ]);
@@ -315,7 +310,8 @@ const ApplicationStatus = () => {
         const timer = setTimeout(() => {
 
             fetchApplications(
-                currentPage
+                currentPage,
+                tableFilters
             );
 
         }, 300);
@@ -338,45 +334,34 @@ const ApplicationStatus = () => {
 
         dashboardStatus,
 
-        search,
-
-        selectedLoanType,
-
-        selectedRM,
-
-        selectedTeamLead,
-
-        selectedAgent,
-
-        selectedStatus,
-
         currentPage,
+
+        tableFilters,
     ]);
 
 
     // =========================================================
-    // RESET LOCAL FILTERS WHEN URL CHANGES
+    // RESET TABLE FILTERS WHEN URL CHANGES
     // =========================================================
 
     useEffect(() => {
 
-        setSelectedLoanType(
-            loanType || ""
-        );
+        setTableFilters({
+            search: "",
 
+            selectedLoanType:
+                loanType || "",
 
-        setSelectedStatus(
-            dashboardStatus || ""
-        );
+            selectedRM: "",
 
+            selectedTeamLead: "",
 
-        setSelectedRM("");
+            selectedAgent: "",
 
-        setSelectedTeamLead("");
+            selectedStatus:
+                dashboardStatus || "",
+        });
 
-        setSelectedAgent("");
-
-        setSearch("");
 
         setCurrentPage(1);
 
@@ -388,29 +373,35 @@ const ApplicationStatus = () => {
 
     // =========================================================
     // CLEAR FILTERS
+    //
+    // This is now delegated to ApplicationsTable.
+    // ApplicationsTable will reset its own filter state and
+    // notify this page through handleTableFiltersChange().
     // =========================================================
 
     const handleClearFilters = () => {
 
-        setSearch("");
+        const clearedFilters = {
+
+            search: "",
+
+            selectedLoanType:
+                loanType || "",
+
+            selectedRM: "",
+
+            selectedTeamLead: "",
+
+            selectedAgent: "",
+
+            selectedStatus:
+                dashboardStatus || "",
+        };
 
 
-        setSelectedLoanType(
-            loanType || ""
+        setTableFilters(
+            clearedFilters
         );
-
-
-        setSelectedRM("");
-
-        setSelectedTeamLead("");
-
-        setSelectedAgent("");
-
-
-        setSelectedStatus(
-            dashboardStatus || ""
-        );
-
 
         setCurrentPage(1);
 
@@ -424,93 +415,9 @@ const ApplicationStatus = () => {
     const handleRefresh = () => {
 
         fetchApplications(
-            currentPage
+            currentPage,
+            tableFilters
         );
-
-    };
-
-
-    // =========================================================
-    // LOAN TYPE CHANGE
-    // =========================================================
-
-    const handleLoanTypeChange = (
-        value
-    ) => {
-
-        setSelectedLoanType(
-            value || ""
-        );
-
-        setCurrentPage(1);
-
-    };
-
-
-    // =========================================================
-    // STATUS CHANGE
-    // =========================================================
-
-    const handleStatusChange = (
-        value
-    ) => {
-
-        setSelectedStatus(
-            value || ""
-        );
-
-        setCurrentPage(1);
-
-    };
-
-
-    // =========================================================
-    // RM CHANGE
-    // =========================================================
-
-    const handleRMChange = (
-        value
-    ) => {
-
-        setSelectedRM(
-            value || ""
-        );
-
-        setCurrentPage(1);
-
-    };
-
-
-    // =========================================================
-    // TEAM LEAD CHANGE
-    // =========================================================
-
-    const handleTeamLeadChange = (
-        value
-    ) => {
-
-        setSelectedTeamLead(
-            value || ""
-        );
-
-        setCurrentPage(1);
-
-    };
-
-
-    // =========================================================
-    // AGENT CHANGE
-    // =========================================================
-
-    const handleAgentChange = (
-        value
-    ) => {
-
-        setSelectedAgent(
-            value || ""
-        );
-
-        setCurrentPage(1);
 
     };
 
@@ -534,7 +441,9 @@ const ApplicationStatus = () => {
         }
 
 
-        setCurrentPage(page);
+        setCurrentPage(
+            page
+        );
 
     };
 
@@ -925,57 +834,19 @@ const ApplicationStatus = () => {
                     }
 
 
-                    search={
-                        search
+                    // =================================================
+                    // FILTER VALUES
+                    //
+                    // ApplicationsTable will own the actual filter
+                    // controls/state.
+                    // =================================================
+
+                    filters={
+                        tableFilters
                     }
 
-                    setSearch={
-                        setSearch
-                    }
-
-
-                    selectedLoanType={
-                        selectedLoanType
-                    }
-
-                    setSelectedLoanType={
-                        handleLoanTypeChange
-                    }
-
-
-                    selectedRM={
-                        selectedRM
-                    }
-
-                    setSelectedRM={
-                        handleRMChange
-                    }
-
-
-                    selectedTeamLead={
-                        selectedTeamLead
-                    }
-
-                    setSelectedTeamLead={
-                        handleTeamLeadChange
-                    }
-
-
-                    selectedAgent={
-                        selectedAgent
-                    }
-
-                    setSelectedAgent={
-                        handleAgentChange
-                    }
-
-
-                    selectedStatus={
-                        selectedStatus
-                    }
-
-                    setSelectedStatus={
-                        handleStatusChange
+                    onFiltersChange={
+                        handleTableFiltersChange
                     }
 
 
@@ -983,6 +854,10 @@ const ApplicationStatus = () => {
                         handleClearFilters
                     }
 
+
+                    // =================================================
+                    // ACTIONS
+                    // =================================================
 
                     onLoanTypeChange={
                         handleLoanTypeAction

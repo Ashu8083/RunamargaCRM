@@ -1,13 +1,12 @@
 // admin-react/src/pages/Role-management/TeamLead/components/TeamLeadTable.jsx
 
-import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
-import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
-import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
-import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
-import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon'
-import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
-import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
-
+import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
+import PlusIcon from "@heroicons/react/24/outline/PlusIcon";
+import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
+import UserGroupIcon from "@heroicons/react/24/outline/UserGroupIcon";
+import ShieldCheckIcon from "@heroicons/react/24/outline/ShieldCheckIcon";
+import PencilIcon from "@heroicons/react/24/outline/PencilIcon";
+import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
 
 function TeamLeadTable({
     teamLeads = [],
@@ -21,105 +20,102 @@ function TeamLeadTable({
     onManagePermissions,
     onStatusChange,
 }) {
-
-
     // ========================================================================
     // FILTER
     // ========================================================================
 
     const filteredTeamLeads = teamLeads.filter((teamLead) => {
-
         const searchValue =
-            search?.toLowerCase().trim() || ''
-
+            String(search || "")
+                .toLowerCase()
+                .trim();
 
         if (!searchValue) {
-            return true
+            return true;
         }
 
-
         return (
-            String(teamLead.name || '')
+            String(teamLead?.name || "")
                 .toLowerCase()
                 .includes(searchValue) ||
 
             String(
-                teamLead.employeeId ??
-                teamLead.employee_id ??
-                ''
+                teamLead?.employeeId ??
+                    teamLead?.employee_id ??
+                    ""
             )
                 .toLowerCase()
                 .includes(searchValue) ||
 
-            String(teamLead.phone || '')
+            String(teamLead?.phone || "")
                 .toLowerCase()
                 .includes(searchValue) ||
 
-            String(teamLead.email || '')
+            String(teamLead?.email || "")
                 .toLowerCase()
                 .includes(searchValue) ||
 
-            String(teamLead.role || '')
+            String(teamLead?.role || "")
                 .toLowerCase()
                 .includes(searchValue) ||
 
-            String(teamLead.status || '')
+            String(teamLead?.contextName || "")
+                .toLowerCase()
+                .includes(searchValue) ||
+
+            String(teamLead?.context_name || "")
+                .toLowerCase()
+                .includes(searchValue) ||
+
+            String(teamLead?.status || "")
                 .toLowerCase()
                 .includes(searchValue)
-        )
-
-    })
-
+        );
+    });
 
     // ========================================================================
     // STATUS CLASS
     // ========================================================================
 
     const getStatusClass = (status) => {
-
-        if (status === 'Active') {
-
+        if (status === "Active") {
             return `
                 text-[#78B300]
                 border-[#8BCF00]/50
                 bg-[#8BCF00]/10
-            `
-
+                focus:border-[#8BCF00]
+                focus:ring-[#8BCF00]/20
+            `;
         }
-
 
         return `
             text-error
             border-error/30
             bg-error/5
-        `
-    }
-
+            focus:border-error
+            focus:ring-error/20
+        `;
+    };
 
     // ========================================================================
     // ROLE DISPLAY
     // ========================================================================
 
     const getRoleDisplay = (teamLead) => {
-
         return (
             teamLead?.role ||
             teamLead?.contextName ||
             teamLead?.context_name ||
-            'N/A'
-        )
-
-    }
-
+            "N/A"
+        );
+    };
 
     // ========================================================================
     // RENDER
     // ========================================================================
 
     return (
-
-        <div className="space-y-5">
-
+        <div className="w-full space-y-5">
 
             {/* ==================================================================
                 SEARCH / ACTION BAR
@@ -127,36 +123,50 @@ function TeamLeadTable({
 
             <div
                 className="
-                    card
+                    w-full
+                    overflow-hidden
+                    rounded-xl
                     border
                     border-base-300
                     bg-base-100
                     shadow-sm
                 "
             >
-
-                <div className="card-body p-4">
+                <div className="p-4">
 
                     <div
                         className="
                             flex
+                            w-full
                             flex-col
                             gap-3
-                            xl:flex-row
-                            xl:items-center
+                            lg:flex-row
+                            lg:items-center
                         "
                     >
 
-                        <div className="flex-1">
+                        {/* ======================================================
+                            SEARCH INPUT
+                        ======================================================= */}
+
+                        <div className="min-w-0 flex-1">
 
                             <label
                                 className="
                                     input
                                     input-bordered
                                     flex
+                                    h-11
                                     w-full
                                     items-center
                                     gap-3
+                                    rounded-lg
+                                    border-base-300
+                                    bg-base-100
+                                    transition-all
+                                    focus-within:border-[#8BCF00]
+                                    focus-within:ring-2
+                                    focus-within:ring-[#8BCF00]/10
                                 "
                             >
 
@@ -164,120 +174,167 @@ function TeamLeadTable({
                                     className="
                                         h-5
                                         w-5
+                                        shrink-0
                                         text-base-content/40
                                     "
                                 />
 
-
                                 <input
                                     type="text"
-                                    value={search}
+                                    value={search || ""}
                                     onChange={(event) =>
                                         setSearch(
                                             event.target.value
                                         )
                                     }
-                                    placeholder="
-                                        Search team leads by
-                                        name, employee ID,
-                                        phone, email or role...
+                                    placeholder="Search team leads by name, employee ID, phone, email or role..."
+                                    className="
+                                        min-w-0
+                                        grow
+                                        bg-transparent
+                                        text-sm
+                                        outline-none
                                     "
-                                    className="grow"
                                 />
 
                             </label>
 
                         </div>
 
+                        {/* ======================================================
+                            SEARCH BUTTON
+                        ======================================================= */}
 
                         <button
                             type="button"
                             className="
                                 btn
+                                h-11
+                                min-h-11
+                                shrink-0
+                                rounded-lg
+                                border
                                 border-[#8BCF00]
+                                bg-transparent
+                                px-4
                                 text-[#78B300]
+                                hover:border-[#8BCF00]
                                 hover:bg-[#8BCF00]
                                 hover:text-white
                             "
                         >
 
-                            <SearchIcon
-                                className="h-5 w-5"
-                            />
+                            <SearchIcon className="h-5 w-5" />
 
-                            Search
+                            <span>
+                                Search
+                            </span>
 
                         </button>
 
+                        {/* ======================================================
+                            CLEAR
+                        ======================================================= */}
 
                         <button
                             type="button"
-                            onClick={() => setSearch('')}
-                            className="btn btn-ghost"
+                            onClick={() => setSearch("")}
+                            className="
+                                btn
+                                btn-ghost
+                                h-11
+                                min-h-11
+                                shrink-0
+                                rounded-lg
+                                px-4
+                                text-base-content/70
+                                hover:bg-base-200
+                            "
                         >
                             Clear
                         </button>
 
+                        {/* ======================================================
+                            DIVIDER
+                        ======================================================= */}
 
                         <div
                             className="
                                 hidden
                                 h-8
-                                border-l
-                                border-base-300
-                                xl:block
+                                w-px
+                                bg-base-300
+                                lg:block
                             "
                         />
 
+                        {/* ======================================================
+                            ADD TEAM LEAD
+                        ======================================================= */}
 
                         <button
                             type="button"
                             onClick={onCreate}
                             className="
                                 btn
+                                h-11
+                                min-h-11
+                                shrink-0
+                                rounded-lg
+                                border
                                 border-[#8BCF00]
                                 bg-[#8BCF00]
+                                px-4
                                 text-white
                                 hover:border-[#6FA800]
                                 hover:bg-[#6FA800]
                             "
                         >
 
-                            <PlusIcon
-                                className="h-5 w-5"
-                            />
+                            <PlusIcon className="h-5 w-5" />
 
-                            Add Team Lead
+                            <span>
+                                Add Team Lead
+                            </span>
 
                         </button>
 
+                        {/* ======================================================
+                            REFRESH
+                        ======================================================= */}
 
                         <button
                             type="button"
                             onClick={onRefresh}
                             className="
                                 btn
+                                h-11
+                                min-h-11
+                                shrink-0
+                                rounded-lg
+                                border
                                 border-[#8BCF00]
+                                bg-transparent
+                                px-4
                                 text-[#78B300]
+                                hover:border-[#8BCF00]
                                 hover:bg-[#8BCF00]
                                 hover:text-white
                             "
                         >
 
-                            <ArrowPathIcon
-                                className="h-5 w-5"
-                            />
+                            <ArrowPathIcon className="h-5 w-5" />
 
-                            Refresh
+                            <span>
+                                Refresh
+                            </span>
 
                         </button>
 
                     </div>
 
                 </div>
-
             </div>
-
 
             {/* ==================================================================
                 TABLE
@@ -285,7 +342,9 @@ function TeamLeadTable({
 
             <div
                 className="
-                    card
+                    w-full
+                    overflow-hidden
+                    rounded-xl
                     border
                     border-base-300
                     bg-base-100
@@ -293,50 +352,129 @@ function TeamLeadTable({
                 "
             >
 
-                <div className="overflow-x-auto">
+                <div className="w-full overflow-x-auto">
 
-                    <table className="table">
+                    <table className="table w-full">
+
+                        {/* ======================================================
+                            TABLE HEADER
+                        ======================================================= */}
 
                         <thead>
 
-                            <tr>
+                            <tr className="border-base-300 bg-base-200/50">
 
-                                <th className="w-16 text-center">
+                                <th
+                                    className="
+                                        w-16
+                                        whitespace-nowrap
+                                        text-center
+                                        text-xs
+                                        font-semibold
+                                        uppercase
+                                        tracking-wide
+                                        text-base-content/60
+                                    "
+                                >
                                     #
                                 </th>
 
-
-                                <th>
+                                <th
+                                    className="
+                                        min-w-[190px]
+                                        whitespace-nowrap
+                                        text-xs
+                                        font-semibold
+                                        uppercase
+                                        tracking-wide
+                                        text-base-content/60
+                                    "
+                                >
                                     Employee
                                 </th>
 
-
-                                <th>
+                                <th
+                                    className="
+                                        min-w-[130px]
+                                        whitespace-nowrap
+                                        text-xs
+                                        font-semibold
+                                        uppercase
+                                        tracking-wide
+                                        text-base-content/60
+                                    "
+                                >
                                     Role
                                 </th>
 
-
-                                <th>
+                                <th
+                                    className="
+                                        min-w-[210px]
+                                        whitespace-nowrap
+                                        text-xs
+                                        font-semibold
+                                        uppercase
+                                        tracking-wide
+                                        text-base-content/60
+                                    "
+                                >
                                     Contact Info
                                 </th>
 
-
-                                <th>
+                                <th
+                                    className="
+                                        min-w-[135px]
+                                        whitespace-nowrap
+                                        text-xs
+                                        font-semibold
+                                        uppercase
+                                        tracking-wide
+                                        text-base-content/60
+                                    "
+                                >
                                     Status
                                 </th>
 
-
-                                <th>
+                                <th
+                                    className="
+                                        min-w-[160px]
+                                        whitespace-nowrap
+                                        text-xs
+                                        font-semibold
+                                        uppercase
+                                        tracking-wide
+                                        text-base-content/60
+                                    "
+                                >
                                     Created At
                                 </th>
 
-
-                                <th>
+                                <th
+                                    className="
+                                        min-w-[160px]
+                                        whitespace-nowrap
+                                        text-xs
+                                        font-semibold
+                                        uppercase
+                                        tracking-wide
+                                        text-base-content/60
+                                    "
+                                >
                                     Updated At
                                 </th>
 
-
-                                <th className="text-right">
+                                <th
+                                    className="
+                                        min-w-[180px]
+                                        whitespace-nowrap
+                                        text-right
+                                        text-xs
+                                        font-semibold
+                                        uppercase
+                                        tracking-wide
+                                        text-base-content/60
+                                    "
+                                >
                                     Actions
                                 </th>
 
@@ -344,6 +482,9 @@ function TeamLeadTable({
 
                         </thead>
 
+                        {/* ======================================================
+                            TABLE BODY
+                        ======================================================= */}
 
                         <tbody>
 
@@ -352,44 +493,68 @@ function TeamLeadTable({
                                 <tr>
 
                                     <td
-                                        colSpan="8"
+                                        colSpan={8}
                                         className="
-                                            py-12
+                                            border-0
+                                            py-16
                                             text-center
                                         "
                                     >
 
-                                        <UserGroupIcon
+                                        <div
                                             className="
-                                                mx-auto
-                                                h-8
-                                                w-8
-                                                text-base-content/30
-                                            "
-                                        />
-
-
-                                        <p
-                                            className="
-                                                mt-3
-                                                text-sm
-                                                font-medium
+                                                flex
+                                                flex-col
+                                                items-center
+                                                justify-center
                                             "
                                         >
-                                            No team leads found
-                                        </p>
 
+                                            <div
+                                                className="
+                                                    flex
+                                                    h-12
+                                                    w-12
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-base-200
+                                                "
+                                            >
 
-                                        <p
-                                            className="
-                                                mt-1
-                                                text-xs
-                                                text-base-content/50
-                                            "
-                                        >
-                                            Try changing your search
-                                            or add a new team lead.
-                                        </p>
+                                                <UserGroupIcon
+                                                    className="
+                                                        h-6
+                                                        w-6
+                                                        text-base-content/30
+                                                    "
+                                                />
+
+                                            </div>
+
+                                            <p
+                                                className="
+                                                    mt-4
+                                                    text-sm
+                                                    font-semibold
+                                                    text-base-content
+                                                "
+                                            >
+                                                No team leads found
+                                            </p>
+
+                                            <p
+                                                className="
+                                                    mt-1
+                                                    text-xs
+                                                    text-base-content/50
+                                                "
+                                            >
+                                                Try changing your search
+                                                or add a new team lead.
+                                            </p>
+
+                                        </div>
 
                                     </td>
 
@@ -402,20 +567,34 @@ function TeamLeadTable({
 
                                         <tr
                                             key={
-                                                teamLead.id
+                                                teamLead?.id ??
+                                                teamLead?.employeeId ??
+                                                teamLead?.employee_id ??
+                                                index
                                             }
+                                            className="
+                                                border-base-200
+                                                transition-colors
+                                                hover:bg-base-200/40
+                                            "
                                         >
 
                                             {/* ==================================================
                                                 #
                                             ================================================== */}
 
-                                            <td className="text-center">
+                                            <td
+                                                className="
+                                                    text-center
+                                                    align-middle
+                                                "
+                                            >
 
                                                 <span
                                                     className="
                                                         text-sm
-                                                        text-base-content/60
+                                                        font-medium
+                                                        text-base-content/50
                                                     "
                                                 >
                                                     {index + 1}
@@ -423,40 +602,47 @@ function TeamLeadTable({
 
                                             </td>
 
-
                                             {/* ==================================================
                                                 EMPLOYEE
                                             ================================================== */}
 
-                                            <td>
+                                            <td className="align-middle">
 
-                                                <div>
+                                                <div className="min-w-0">
 
                                                     <p
                                                         className="
+                                                            truncate
+                                                            text-sm
                                                             font-semibold
+                                                            text-base-content
                                                         "
                                                     >
-                                                        {
-                                                            teamLead.name
-                                                        }
+                                                        {teamLead?.name ||
+                                                            "N/A"}
                                                     </p>
-
 
                                                     <p
                                                         className="
-                                                            mt-0.5
+                                                            mt-1
                                                             text-xs
                                                             text-base-content/50
                                                         "
                                                     >
-                                                        Employee ID:{' '}
 
-                                                        {
-                                                            teamLead.employeeId ??
-                                                            teamLead.employee_id ??
-                                                            'N/A'
-                                                        }
+                                                        <span>
+                                                            Employee ID:
+                                                        </span>
+
+                                                        {" "}
+
+                                                        <span className="font-medium">
+
+                                                            {teamLead?.employeeId ??
+                                                                teamLead?.employee_id ??
+                                                                "N/A"}
+
+                                                        </span>
 
                                                     </p>
 
@@ -464,16 +650,16 @@ function TeamLeadTable({
 
                                             </td>
 
-
                                             {/* ==================================================
                                                 ROLE
                                             ================================================== */}
 
-                                            <td>
+                                            <td className="align-middle">
 
                                                 <span
                                                     className="
                                                         inline-flex
+                                                        max-w-[180px]
                                                         items-center
                                                         rounded-md
                                                         border
@@ -483,89 +669,98 @@ function TeamLeadTable({
                                                         py-1
                                                         text-xs
                                                         font-medium
-                                                        whitespace-nowrap
+                                                        text-base-content/80
                                                     "
+                                                    title={getRoleDisplay(
+                                                        teamLead
+                                                    )}
                                                 >
-                                                    {
-                                                        getRoleDisplay(
+
+                                                    <span className="truncate">
+
+                                                        {getRoleDisplay(
                                                             teamLead
-                                                        )
-                                                    }
+                                                        )}
+
+                                                    </span>
+
                                                 </span>
 
                                             </td>
-
 
                                             {/* ==================================================
                                                 CONTACT INFO
                                             ================================================== */}
 
-                                            <td>
+                                            <td className="align-middle">
 
-                                                <div
-                                                    className="
-                                                        space-y-0.5
-                                                    "
-                                                >
+                                                <div className="min-w-[180px]">
 
                                                     <p
                                                         className="
+                                                            truncate
                                                             text-sm
+                                                            font-medium
+                                                            text-base-content
                                                         "
                                                     >
-                                                        {
-                                                            teamLead.phone ||
-                                                            'N/A'
-                                                        }
+                                                        {teamLead?.phone ||
+                                                            "N/A"}
                                                     </p>
-
 
                                                     <p
                                                         className="
+                                                            mt-1
+                                                            truncate
                                                             text-xs
                                                             text-base-content/50
                                                         "
-                                                    >
-                                                        {
-                                                            teamLead.email ||
-                                                            'N/A'
+                                                        title={
+                                                            teamLead?.email ||
+                                                            "N/A"
                                                         }
+                                                    >
+                                                        {teamLead?.email ||
+                                                            "N/A"}
                                                     </p>
 
                                                 </div>
 
                                             </td>
 
-
                                             {/* ==================================================
                                                 STATUS
                                             ================================================== */}
 
-                                            <td>
+                                            <td className="align-middle">
 
                                                 <select
                                                     value={
-                                                        teamLead.status ===
-                                                        'Inactive'
-                                                            ? 'Inactive'
-                                                            : 'Active'
+                                                        teamLead?.status ===
+                                                        "Inactive"
+                                                            ? "Inactive"
+                                                            : "Active"
                                                     }
-
                                                     onChange={(event) =>
                                                         onStatusChange?.(
                                                             teamLead,
                                                             event.target.value
                                                         )
                                                     }
-
                                                     className={`
                                                         select
                                                         select-sm
+                                                        h-9
+                                                        min-h-9
                                                         min-w-[125px]
+                                                        rounded-md
                                                         border
+                                                        px-3
+                                                        text-xs
                                                         font-medium
+                                                        outline-none
                                                         ${getStatusClass(
-                                                            teamLead.status
+                                                            teamLead?.status
                                                         )}
                                                     `}
                                                 >
@@ -573,7 +768,6 @@ function TeamLeadTable({
                                                     <option value="Active">
                                                         Active
                                                     </option>
-
 
                                                     <option value="Inactive">
                                                         Inactive
@@ -583,54 +777,49 @@ function TeamLeadTable({
 
                                             </td>
 
-
                                             {/* ==================================================
                                                 CREATED
                                             ================================================== */}
 
-                                            <td>
+                                            <td className="align-middle">
 
                                                 <span
                                                     className="
                                                         whitespace-nowrap
                                                         text-sm
+                                                        text-base-content/70
                                                     "
                                                 >
-                                                    {
-                                                        teamLead.createdAt ||
-                                                        'N/A'
-                                                    }
+                                                    {teamLead?.createdAt ||
+                                                        "N/A"}
                                                 </span>
 
                                             </td>
-
 
                                             {/* ==================================================
                                                 UPDATED
                                             ================================================== */}
 
-                                            <td>
+                                            <td className="align-middle">
 
                                                 <span
                                                     className="
                                                         whitespace-nowrap
                                                         text-sm
+                                                        text-base-content/70
                                                     "
                                                 >
-                                                    {
-                                                        teamLead.updatedAt ||
-                                                        'N/A'
-                                                    }
+                                                    {teamLead?.updatedAt ||
+                                                        "N/A"}
                                                 </span>
 
                                             </td>
-
 
                                             {/* ==================================================
                                                 ACTIONS
                                             ================================================== */}
 
-                                            <td>
+                                            <td className="align-middle">
 
                                                 <div
                                                     className="
@@ -655,10 +844,16 @@ function TeamLeadTable({
                                                             btn-ghost
                                                             btn-sm
                                                             btn-square
+                                                            h-9
+                                                            min-h-9
+                                                            w-9
+                                                            rounded-md
+                                                            text-base-content/60
                                                             hover:bg-[#8BCF00]/10
                                                             hover:text-[#78B300]
                                                         "
                                                         title="Edit Team Lead"
+                                                        aria-label="Edit Team Lead"
                                                     >
 
                                                         <PencilIcon
@@ -669,7 +864,6 @@ function TeamLeadTable({
                                                         />
 
                                                     </button>
-
 
                                                     {/* ASSIGNED AGENTS */}
 
@@ -685,10 +879,16 @@ function TeamLeadTable({
                                                             btn-ghost
                                                             btn-sm
                                                             btn-square
+                                                            h-9
+                                                            min-h-9
+                                                            w-9
+                                                            rounded-md
+                                                            text-base-content/60
                                                             hover:bg-[#8BCF00]/10
                                                             hover:text-[#78B300]
                                                         "
                                                         title="View Assigned Agents"
+                                                        aria-label="View Assigned Agents"
                                                     >
 
                                                         <UserGroupIcon
@@ -699,7 +899,6 @@ function TeamLeadTable({
                                                         />
 
                                                     </button>
-
 
                                                     {/* PERMISSIONS */}
 
@@ -715,10 +914,16 @@ function TeamLeadTable({
                                                             btn-ghost
                                                             btn-sm
                                                             btn-square
+                                                            h-9
+                                                            min-h-9
+                                                            w-9
+                                                            rounded-md
+                                                            text-base-content/60
                                                             hover:bg-[#8BCF00]/10
                                                             hover:text-[#78B300]
                                                         "
                                                         title="Manage Permissions"
+                                                        aria-label="Manage Permissions"
                                                     >
 
                                                         <ShieldCheckIcon
@@ -729,7 +934,6 @@ function TeamLeadTable({
                                                         />
 
                                                     </button>
-
 
                                                     {/* DELETE */}
 
@@ -745,10 +949,16 @@ function TeamLeadTable({
                                                             btn-ghost
                                                             btn-sm
                                                             btn-square
-                                                            text-error
+                                                            h-9
+                                                            min-h-9
+                                                            w-9
+                                                            rounded-md
+                                                            text-error/70
                                                             hover:bg-error/10
+                                                            hover:text-error
                                                         "
                                                         title="Delete Team Lead"
+                                                        aria-label="Delete Team Lead"
                                                     >
 
                                                         <TrashIcon
@@ -780,9 +990,7 @@ function TeamLeadTable({
             </div>
 
         </div>
-
-    )
+    );
 }
 
-
-export default TeamLeadTable
+export default TeamLeadTable;

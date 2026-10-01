@@ -252,28 +252,6 @@ function Employees() {
             sm:p-6
         ">
 
-            <div>
-
-                <h1 className="
-                    text-2xl
-                    font-semibold
-                    text-base-content
-                    sm:text-3xl
-                ">
-                    Employees
-                </h1>
-
-                <p className="
-                    mt-1
-                    text-sm
-                    text-base-content/60
-                ">
-                    Manage employees, status and access.
-                </p>
-
-            </div>
-
-
             <EmployeeTable
                 employees={employees}
                 search={search}

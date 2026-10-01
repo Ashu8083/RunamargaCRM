@@ -1,5 +1,10 @@
 // admin-react/src/components/GlobalModels/Filters/RmDropdown.jsx
-import { useEffect, useState } from 'react'
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'
 import { useCommonData } from '../../../context/CommonDataContext'
@@ -13,6 +18,9 @@ const RmDropdown = ({
   label = '',
   error = '',
   required = false,
+
+  // Selected RM name when value is not in loaded options
+  fallbackLabel = '',
 
   // Optional Team Lead EmployeeContext ID
   teamLeadContextId = null,
@@ -82,6 +90,42 @@ const RmDropdown = ({
   ])
 
   // =========================================================
+  // INCLUDE CURRENT SELECTED RM IF NOT IN OPTIONS
+  // =========================================================
+
+  const dropdownRms = useMemo(() => {
+    if (
+      value === '' ||
+      value === null ||
+      value === undefined ||
+      !fallbackLabel
+    ) {
+      return rms
+    }
+
+    const exists = rms.some(
+      (rm) =>
+        String(rm.id) === String(value)
+    )
+
+    if (exists) {
+      return rms
+    }
+
+    return [
+      {
+        id: value,
+        name: fallbackLabel,
+      },
+      ...rms,
+    ]
+  }, [
+    rms,
+    value,
+    fallbackLabel,
+  ])
+
+  // =========================================================
   // HANDLE CHANGE
   // =========================================================
 
@@ -136,7 +180,7 @@ const RmDropdown = ({
 
       <SearchableFilterDropdown
         value={value}
-        options={rms}
+        options={dropdownRms}
         onChange={handleChange}
         includeAllOption={false}
         searchPlaceholder="Search RM"
