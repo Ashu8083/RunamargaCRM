@@ -1,16 +1,14 @@
 # backend/app/services/CallAnalytics/overview_service.py
 
-import calendar
-import re
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import Optional
 
-from sqlalchemy import and_, distinct, func, or_
-from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from sqlalchemy.orm import Session, joinedload
 
+from app.core.access_control import AccessControl
 from app.models.call_assignments import CallAssignment
 from app.models.call_logs import CallLog
-from app.models.contexts import Context
 from app.models.employee_contexts import EmployeeContext
 from app.models.employees import Employee
 from app.models.loan_applications import LoanApplication
@@ -18,424 +16,1083 @@ from app.models.loan_applications import LoanApplication
 
 class CallAnalyticsOverviewService:
     """
-    Call Analytics Overview business logic.
+    Call Analytics Overview Service.
 
-    Responsibilities:
-    - Apply current-month default when no date filter is supplied.
-    - Apply explicit date filters when supplied.
-    - Apply employee filter.
-    - Apply call direction filter.
-    - Apply call status filter.
-    - Apply hierarchy visibility based on EmployeeContext.
-    - Calculate total / answered / missed / unknown / assigned / converted.
-    - Return call activity records.
+    Classification rules:
 
-    Important:
-    EmployeeContext.reports_to_id points to EmployeeContext.id,
-    not Employee.id.
+    UNKNOWN
+    -------
+    A call is UNKNOWN when:
 
-    AccessControl is intentionally NOT used here so the existing
-    AccessControl implementation remains unchanged.
+        1. The call was MISSED / unattended
+        2. There is no matching active CallAssignment
+        3. The phone number does not exist in LoanApplication
+
+    ASSIGNED
+    --------
+    A call is ASSIGNED when its normalized phone number exists
+    in an active CallAssignment.
+
+    CONVERTED
+    ---------
+    A call is CONVERTED when its normalized phone number exists
+    in LoanApplication.
+
+    A phone number that exists in LoanApplication is considered
+    converted even if it also has a CallAssignment.
+
+    A phone number that is assigned but does not exist in
+    LoanApplication is ASSIGNED.
+
+    A fresh/unhandled missed number that is neither assigned nor
+    present in LoanApplication is UNKNOWN.
+
+    Visibility is handled only through AccessControl.
+
+    DEFAULT DATE BEHAVIOR:
+        If no from_date and no to_date are supplied,
+        ONLY TODAY'S DATA is returned.
     """
 
     # =========================================================
-    # PHONE NORMALIZATION
+    # EMPTY RESPONSE
     # =========================================================
 
     @staticmethod
-    def _normalize_phone(phone: Optional[str]) -> Optional[str]:
-        """
-        Normalize a phone number to its last 10 digits.
-
-        This keeps matching consistent between:
-        - call_logs.phone_number
-        - call_assignments.phone_number
-        - loan_applications.phone
-        """
-
-        if phone is None:
-            return None
-
-        digits = re.sub(r"\D", "", str(phone))
-
-        if not digits:
-            return None
-
-        if len(digits) > 10:
-            digits = digits[-10:]
-
-        return digits
-
-    @staticmethod
-    def _phone_sql_expression(column):
-        """
-        PostgreSQL expression that normalizes a phone column
-        to its last 10 digits.
-        """
-
-        digits_expression = func.regexp_replace(
-            column,
-            r"\D",
-            "",
-            "g",
-        )
-
-        return func.right(digits_expression, 10)
+    def _empty_response() -> dict:
+        return {
+            "summary": {
+                "total": 0,
+                "answered": 0,
+                "missed": 0,
+                "unknown": 0,
+                "assigned": 0,
+                "converted": 0,
+            },
+            "calls": [],
+        }
 
     # =========================================================
     # DATE HELPERS
     # =========================================================
 
     @staticmethod
-    def _date_start(value: Optional[date]) -> Optional[datetime]:
-        if value is None:
-            return None
-
-        return datetime.combine(
-            value,
-            time.min,
-        )
-
-    @staticmethod
-    def _date_end(value: Optional[date]) -> Optional[datetime]:
-        if value is None:
-            return None
-
-        return datetime.combine(
-            value,
-            time.max,
-        )
-
-    @staticmethod
-    def _get_current_month_dates() -> tuple[date, date]:
-        """
-        Return the first and last date of the current month.
-        """
+    def _get_default_dates() -> tuple[date, date]:
 
         today = date.today()
 
-        first_day = today.replace(day=1)
+        return today, today
 
-        last_day = calendar.monthrange(
-            today.year,
-            today.month,
-        )[1]
+    @staticmethod
+    def _get_date_bounds(
+        from_date: date,
+        to_date: date,
+    ) -> tuple[datetime, datetime]:
 
-        last_date = today.replace(
-            day=last_day,
+        start_datetime = datetime.combine(
+            from_date,
+            time.min,
         )
 
-        return first_day, last_date
+        end_datetime = datetime.combine(
+            to_date + timedelta(days=1),
+            time.min,
+        )
+
+        return start_datetime, end_datetime
 
     # =========================================================
-    # CONTEXT / ROLE HELPERS
+    # ACTIVE CONTEXT
     # =========================================================
 
     @staticmethod
-    def _get_active_employee_context(
+    def _get_active_context(
         db: Session,
-        employee_id: int,
+        employee: Employee,
         context_id: Optional[int] = None,
     ) -> Optional[EmployeeContext]:
-        """
-        Resolve the active EmployeeContext for an employee.
 
-        If context_id is supplied, it is treated as the
-        EmployeeContext id first, and then as the Context id
-        for compatibility with existing callers.
-        """
-
-        query = (
-            db.query(EmployeeContext)
-            .join(
-                Context,
-                EmployeeContext.context_id == Context.id,
-            )
-            .filter(
-                EmployeeContext.employee_id == employee_id,
-                EmployeeContext.is_active.is_(True),
-                Context.is_active.is_(True),
-            )
+        return AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
         )
 
-        if context_id is not None:
-            context = (
-                query
-                .filter(
-                    EmployeeContext.id == context_id
-                )
-                .first()
-            )
-
-            if context:
-                return context
-
-            context = (
-                query
-                .filter(
-                    EmployeeContext.context_id == context_id
-                )
-                .first()
-            )
-
-            if context:
-                return context
-
-        default_context = (
-            query
-            .filter(
-                EmployeeContext.is_default.is_(True)
-            )
-            .first()
-        )
-
-        if default_context:
-            return default_context
-
-        return query.first()
+    # =========================================================
+    # CONTEXT FAMILY
+    # =========================================================
 
     @staticmethod
     def _get_context_family(
-        context_code: Optional[str],
+        context: Optional[EmployeeContext],
     ) -> Optional[str]:
-        """
-        Resolve the operational role family from Context.code.
 
-        Examples:
-        AGENT_PERSONAL -> AGENT
-        AGENT_BUSINESS -> AGENT
-        RM_SENIOR      -> RM
-        TEAMLEAD_NORTH -> TEAMLEAD
-        TEAM_LEAD      -> TEAMLEAD
-        MANAGER_OPS    -> MANAGER
-        """
-
-        if not context_code:
+        if not context:
             return None
 
-        code = str(context_code).strip().upper()
+        if not context.context:
+            return None
 
-        if code == "GLOBAL":
-            return "GLOBAL"
+        return AccessControl.get_context_family(
+            context.context.code
+        )
 
-        if (
-            code == "AGENT"
-            or code.startswith("AGENT_")
-        ):
-            return "AGENT"
-
-        if (
-            code == "RM"
-            or code.startswith("RM_")
-        ):
-            return "RM"
-
-        if (
-            code == "TEAMLEAD"
-            or code.startswith("TEAMLEAD_")
-            or code == "TEAM_LEAD"
-            or code.startswith("TEAM_LEAD_")
-        ):
-            return "TEAMLEAD"
-
-        if (
-            code == "MANAGER"
-            or code.startswith("MANAGER_")
-        ):
-            return "MANAGER"
-
-        return None
+    # =========================================================
+    # CONTEXT IDS
+    # =========================================================
 
     @staticmethod
-    def _get_visible_employee_ids(
+    def _get_context_ids(
+        contexts,
+    ) -> list[int]:
+
+        return [
+            int(context.id)
+            for context in (contexts or [])
+            if context is not None
+            and context.id is not None
+        ]
+
+    # =========================================================
+    # VISIBLE AGENTS
+    # =========================================================
+
+    @staticmethod
+    def _get_visible_agent_ids(
         db: Session,
-        employee_id: int,
+        employee: Employee,
         context_id: Optional[int] = None,
-    ) -> Optional[list[int]]:
-        """
-        Determine which employee IDs are allowed to appear in
-        Call Analytics.
+        team_lead_context_id: Optional[int] = None,
+    ) -> list[int]:
 
-        GLOBAL / MANAGER:
-            All active employees.
-
-        AGENT / RM:
-            Only the logged-in employee.
-
-        TEAMLEAD:
-            The logged-in Team Lead plus employees whose
-            EmployeeContext.reports_to_id points to the
-            Team Lead's EmployeeContext.id.
-
-        IMPORTANT:
-            reports_to_id references employee_contexts.id.
-        """
-
-        employee = (
-            db.query(Employee)
-            .filter(
-                Employee.id == employee_id,
-                Employee.status == "active",
-            )
-            .first()
+        contexts = AccessControl.get_visible_agents(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+            team_lead_context_id=team_lead_context_id,
         )
 
-        if not employee:
-            return []
-
-        context = (
+        return (
             CallAnalyticsOverviewService
-            ._get_active_employee_context(
-                db=db,
-                employee_id=employee.id,
-                context_id=context_id,
+            ._get_context_ids(
+                contexts
             )
         )
-
-        if not context or not context.context:
-            return []
-
-        family = (
-            CallAnalyticsOverviewService
-            ._get_context_family(
-                context.context.code
-            )
-        )
-
-        # -----------------------------------------------------
-        # GLOBAL
-        # -----------------------------------------------------
-
-        if family == "GLOBAL":
-            return None
-
-        # -----------------------------------------------------
-        # MANAGER
-        # -----------------------------------------------------
-
-        if family == "MANAGER":
-            return None
-
-        # -----------------------------------------------------
-        # AGENT / RM
-        # -----------------------------------------------------
-
-        if family in {"AGENT", "RM"}:
-            return [employee.id]
-
-        # -----------------------------------------------------
-        # TEAM LEAD
-        # -----------------------------------------------------
-
-        if family == "TEAMLEAD":
-            visible_ids = {employee.id}
-
-            subordinate_ids = (
-                db.query(EmployeeContext.employee_id)
-                .filter(
-                    EmployeeContext.reports_to_id == context.id,
-                    EmployeeContext.is_active.is_(True),
-                )
-                .all()
-            )
-
-            for row in subordinate_ids:
-                if row[0] is not None:
-                    visible_ids.add(row[0])
-
-            return list(visible_ids)
-
-        # -----------------------------------------------------
-        # UNKNOWN ROLE
-        # -----------------------------------------------------
-
-        return []
 
     # =========================================================
-    # CALL SCOPE
+    # VISIBLE RMS
     # =========================================================
 
     @staticmethod
-    def _build_call_conditions(
-        employee_ids: Optional[list[int]],
+    def _get_visible_rm_ids(
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+        team_lead_context_id: Optional[int] = None,
+    ) -> list[int]:
+
+        contexts = AccessControl.get_visible_rms(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+            team_lead_context_id=team_lead_context_id,
+        )
+
+        return (
+            CallAnalyticsOverviewService
+            ._get_context_ids(
+                contexts
+            )
+        )
+
+    # =========================================================
+    # COMBINED VISIBLE CALL CONTEXTS
+    # =========================================================
+
+    @staticmethod
+    def _get_visible_call_context_ids(
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+        team_lead_context_id: Optional[int] = None,
+    ) -> list[int]:
+
+        visible_agent_ids = (
+            CallAnalyticsOverviewService
+            ._get_visible_agent_ids(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+                team_lead_context_id=team_lead_context_id,
+            )
+        )
+
+        visible_rm_ids = (
+            CallAnalyticsOverviewService
+            ._get_visible_rm_ids(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+                team_lead_context_id=team_lead_context_id,
+            )
+        )
+
+        combined_ids = []
+
+        seen_ids = set()
+
+        for employee_context_id in [
+            *visible_agent_ids,
+            *visible_rm_ids,
+        ]:
+
+            if employee_context_id in seen_ids:
+                continue
+
+            seen_ids.add(
+                employee_context_id
+            )
+
+            combined_ids.append(
+                employee_context_id
+            )
+
+        return combined_ids
+
+    # =========================================================
+    # VISIBLE EMPLOYEE CONTEXTS
+    # =========================================================
+
+    @staticmethod
+    def _get_visible_employee_contexts(
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+        team_lead_context_id: Optional[int] = None,
+    ) -> list[EmployeeContext]:
+
+        visible_agent_contexts = (
+            AccessControl.get_visible_agents(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+                team_lead_context_id=team_lead_context_id,
+            )
+        )
+
+        visible_rm_contexts = (
+            AccessControl.get_visible_rms(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+                team_lead_context_id=team_lead_context_id,
+            )
+        )
+
+        contexts = []
+
+        seen_ids = set()
+
+        for employee_context in [
+            *(visible_agent_contexts or []),
+            *(visible_rm_contexts or []),
+        ]:
+
+            if not employee_context:
+                continue
+
+            if employee_context.id is None:
+                continue
+
+            if employee_context.id in seen_ids:
+                continue
+
+            seen_ids.add(
+                employee_context.id
+            )
+
+            contexts.append(
+                employee_context
+            )
+
+        return contexts
+
+    # =========================================================
+    # SELECTED EMPLOYEE CONTEXT IDS
+    # =========================================================
+
+    @staticmethod
+    def _get_selected_employee_context_ids(
+        visible_contexts: list[EmployeeContext],
         employee_id: Optional[int],
+    ) -> list[int]:
+
+        if employee_id is None:
+
+            return [
+                int(context.id)
+                for context in visible_contexts
+                if context.id is not None
+            ]
+
+        return [
+            int(context.id)
+            for context in visible_contexts
+            if (
+                context.id is not None
+                and context.employee_id == employee_id
+            )
+        ]
+
+    # =========================================================
+    # DATE RESOLUTION
+    # =========================================================
+
+    @staticmethod
+    def _resolve_dates(
         from_date: Optional[date],
         to_date: Optional[date],
-        call_type: Optional[str],
-        status: Optional[str],
+    ) -> tuple[date, date]:
+
+        if (
+            from_date is None
+            and to_date is None
+        ):
+
+            return (
+                CallAnalyticsOverviewService
+                ._get_default_dates()
+            )
+
+        if from_date is None:
+
+            from_date = to_date.replace(
+                day=1
+            )
+
+        if to_date is None:
+
+            to_date = date.today()
+
+        if from_date > to_date:
+
+            raise ValueError(
+                "from_date cannot be greater than to_date."
+            )
+
+        return from_date, to_date
+
+    # =========================================================
+    # CALL QUERY
+    # =========================================================
+
+    @staticmethod
+    def _build_call_query(
+        db: Session,
+        context_ids: list[int],
+        from_date: date,
+        to_date: date,
+        call_type: Optional[str] = None,
+        status: Optional[str] = None,
     ):
-        """
-        Build the common CallLog conditions.
 
-        employee_ids:
-            Hierarchy-authorized employee IDs.
+        if not context_ids:
 
-        employee_id:
-            Explicit EmployeeDropdown selection.
-        """
-
-        conditions = []
-
-        # -----------------------------------------------------
-        # Hierarchy scope
-        # -----------------------------------------------------
-
-        if employee_ids is not None:
-            if not employee_ids:
-                conditions.append(False)
-            else:
-                conditions.append(
-                    CallLog.employee_id.in_(employee_ids)
-                )
-
-        # -----------------------------------------------------
-        # Employee filter
-        # -----------------------------------------------------
-
-        if employee_id is not None:
-            conditions.append(
-                CallLog.employee_id == employee_id
+            return (
+                db.query(CallLog)
+                .filter(False)
             )
 
-        # -----------------------------------------------------
-        # Date filter
-        # -----------------------------------------------------
+        start_datetime, end_datetime = (
+            CallAnalyticsOverviewService
+            ._get_date_bounds(
+                from_date=from_date,
+                to_date=to_date,
+            )
+        )
 
-        if from_date is not None:
-            conditions.append(
-                CallLog.call_started_at
-                >= CallAnalyticsOverviewService._date_start(
-                    from_date
+        query = (
+            db.query(CallLog)
+            .options(
+                joinedload(
+                    CallLog.employee_context
+                ).joinedload(
+                    EmployeeContext.employee
                 )
             )
-
-        if to_date is not None:
-            conditions.append(
-                CallLog.call_started_at
-                <= CallAnalyticsOverviewService._date_end(
-                    to_date
-                )
+            .filter(
+                CallLog.employee_context_id.in_(
+                    context_ids
+                ),
+                CallLog.call_started_at >= start_datetime,
+                CallLog.call_started_at < end_datetime,
             )
-
-        # -----------------------------------------------------
-        # Call direction
-        # -----------------------------------------------------
+        )
 
         if call_type:
-            conditions.append(
+
+            query = query.filter(
                 CallLog.call_type == call_type
             )
 
-        # -----------------------------------------------------
-        # Call status
-        # -----------------------------------------------------
-
         if status:
-            conditions.append(
+
+            query = query.filter(
                 CallLog.mobile_status == status
             )
 
-        return conditions
+        return query
+
+    # =========================================================
+    # NORMALIZE PHONE
+    # =========================================================
+
+    @staticmethod
+    def _normalize_phone(
+        phone_number: Optional[str],
+    ) -> Optional[str]:
+
+        if not phone_number:
+            return None
+
+        value = "".join(
+            character
+            for character in str(phone_number)
+            if character.isdigit()
+        )
+
+        if not value:
+            return None
+
+        if len(value) > 10:
+
+            value = value[-10:]
+
+        return value
+
+    # =========================================================
+    # GET ACTIVE ASSIGNED NUMBERS
+    # =========================================================
+
+    @staticmethod
+    def _get_assigned_phone_numbers(
+        db: Session,
+        phone_numbers: set[str],
+    ) -> set[str]:
+        """
+        Return normalized phone numbers that have an active
+        CallAssignment.
+
+        deleted_at IS NULL = active assignment.
+
+        Only requested phone numbers are checked.
+        """
+
+        if not phone_numbers:
+            return set()
+
+        rows = (
+            db.query(
+                CallAssignment.phone_number
+            )
+            .filter(
+                CallAssignment.phone_number.isnot(None),
+                CallAssignment.deleted_at.is_(None),
+            )
+            .all()
+        )
+
+        assigned_numbers = set()
+
+        for row in rows:
+
+            normalized = (
+                CallAnalyticsOverviewService
+                ._normalize_phone(
+                    row.phone_number
+                )
+            )
+
+            if (
+                normalized
+                and normalized in phone_numbers
+            ):
+
+                assigned_numbers.add(
+                    normalized
+                )
+
+        return assigned_numbers
+
+    # =========================================================
+    # GET APPLICATION PHONE NUMBERS
+    # =========================================================
+
+    @staticmethod
+    def _get_application_phone_numbers(
+        db: Session,
+        phone_numbers: set[str],
+    ) -> set[str]:
+        """
+        Return normalized phone numbers that already exist
+        in loan_applications.
+
+        Only non-deleted applications are considered.
+
+        Matching is performed against:
+
+            LoanApplication.phone
+
+        and:
+
+            LoanApplication.alternate_phone
+        """
+
+        if not phone_numbers:
+
+            return set()
+
+        rows = (
+            db.query(
+                LoanApplication.phone,
+                LoanApplication.alternate_phone,
+            )
+            .filter(
+                LoanApplication.deleted_at.is_(None),
+                or_(
+                    LoanApplication.phone.isnot(None),
+                    LoanApplication.alternate_phone.isnot(None),
+                ),
+            )
+            .all()
+        )
+
+        application_numbers = set()
+
+        for row in rows:
+
+            phone = (
+                CallAnalyticsOverviewService
+                ._normalize_phone(
+                    row.phone
+                )
+            )
+
+            alternate_phone = (
+                CallAnalyticsOverviewService
+                ._normalize_phone(
+                    row.alternate_phone
+                )
+            )
+
+            if (
+                phone
+                and phone in phone_numbers
+            ):
+
+                application_numbers.add(
+                    phone
+                )
+
+            if (
+                alternate_phone
+                and alternate_phone in phone_numbers
+            ):
+
+                application_numbers.add(
+                    alternate_phone
+                )
+
+        return application_numbers
+
+    # =========================================================
+    # PHONE CLASSIFICATION
+    # =========================================================
+
+    @staticmethod
+    def _get_phone_classification(
+        db: Session,
+        calls: list[CallLog],
+    ) -> dict:
+        """
+        Classify every call phone number.
+
+        Priority:
+
+            CONVERTED
+                phone exists in LoanApplication
+
+            ASSIGNED
+                phone exists in active CallAssignment
+
+            UNKNOWN
+                phone exists in neither
+
+        The classification is based on phone number.
+
+        This allows the same classification to be used for
+        every CallLog row having that number.
+        """
+
+        normalized_numbers = set()
+
+        for call in calls:
+
+            normalized = (
+                CallAnalyticsOverviewService
+                ._normalize_phone(
+                    call.phone_number
+                )
+            )
+
+            if normalized:
+
+                normalized_numbers.add(
+                    normalized
+                )
+
+        if not normalized_numbers:
+
+            return {
+                "assigned_numbers": set(),
+                "converted_numbers": set(),
+                "unknown_numbers": set(),
+            }
+
+        assigned_numbers = (
+            CallAnalyticsOverviewService
+            ._get_assigned_phone_numbers(
+                db=db,
+                phone_numbers=normalized_numbers,
+            )
+        )
+
+        converted_numbers = (
+            CallAnalyticsOverviewService
+            ._get_application_phone_numbers(
+                db=db,
+                phone_numbers=normalized_numbers,
+            )
+        )
+
+        unknown_numbers = (
+            normalized_numbers
+            - assigned_numbers
+            - converted_numbers
+        )
+
+        return {
+            "assigned_numbers":
+                assigned_numbers,
+
+            "converted_numbers":
+                converted_numbers,
+
+            "unknown_numbers":
+                unknown_numbers,
+        }
+
+    # =========================================================
+    # PHONE SUMMARY
+    # =========================================================
+
+    @staticmethod
+    def _get_phone_summary(
+        db: Session,
+        calls: list[CallLog],
+    ) -> dict:
+        """
+        Calculate:
+
+            unknown
+            assigned
+            converted
+
+        Converted has priority over assigned.
+
+        Therefore:
+
+            application exists
+                -> converted
+
+            no application
+                + assignment exists
+                -> assigned
+
+            no application
+                + no assignment
+                -> unknown
+        """
+
+        classification = (
+            CallAnalyticsOverviewService
+            ._get_phone_classification(
+                db=db,
+                calls=calls,
+            )
+        )
+
+        assigned_numbers = (
+            classification[
+                "assigned_numbers"
+            ]
+        )
+
+        converted_numbers = (
+            classification[
+                "converted_numbers"
+            ]
+        )
+
+        unknown_numbers = (
+            classification[
+                "unknown_numbers"
+            ]
+        )
+
+        unknown = 0
+        assigned = 0
+        converted = 0
+
+        for call in calls:
+
+            normalized = (
+                CallAnalyticsOverviewService
+                ._normalize_phone(
+                    call.phone_number
+                )
+            )
+
+            if not normalized:
+
+                unknown += 1
+
+                continue
+
+            if normalized in converted_numbers:
+
+                converted += 1
+
+            elif normalized in assigned_numbers:
+
+                assigned += 1
+
+            elif normalized in unknown_numbers:
+
+                unknown += 1
+
+        return {
+            "unknown": unknown,
+            "assigned": assigned,
+            "converted": converted,
+        }
+
+    # =========================================================
+    # ENUM VALUE
+    # =========================================================
+
+    @staticmethod
+    def _enum_value(
+        value,
+    ) -> Optional[str]:
+
+        if value is None:
+            return None
+
+        raw_value = getattr(
+            value,
+            "value",
+            None,
+        )
+
+        if raw_value is not None:
+
+            return str(
+                raw_value
+            ).lower()
+
+        value_string = str(
+            value
+        )
+
+        if "." in value_string:
+
+            value_string = (
+                value_string
+                .split(".")[-1]
+            )
+
+        return value_string.lower()
+
+    # =========================================================
+    # SUMMARY
+    # =========================================================
+
+    @staticmethod
+    def _build_summary(
+        db: Session,
+        calls: list[CallLog],
+    ) -> dict:
+
+        total = len(
+            calls
+        )
+
+        answered = 0
+        missed = 0
+
+        for call in calls:
+
+            status = (
+                CallAnalyticsOverviewService
+                ._enum_value(
+                    call.mobile_status
+                )
+            )
+
+            if status == "received":
+
+                answered += 1
+
+            elif status == "missed":
+
+                missed += 1
+
+        phone_summary = (
+            CallAnalyticsOverviewService
+            ._get_phone_summary(
+                db=db,
+                calls=calls,
+            )
+        )
+
+        return {
+            "total": total,
+            "answered": answered,
+            "missed": missed,
+            "unknown": phone_summary[
+                "unknown"
+            ],
+            "assigned": phone_summary[
+                "assigned"
+            ],
+            "converted": phone_summary[
+                "converted"
+            ],
+        }
+
+    # =========================================================
+    # EMPLOYEE NAME
+    # =========================================================
+
+    @staticmethod
+    def _get_employee_name(
+        employee: Optional[Employee],
+    ) -> str:
+
+        if not employee:
+
+            return "Unknown Employee"
+
+        name = getattr(
+            employee,
+            "name",
+            None,
+        )
+
+        if name:
+
+            return str(
+                name
+            )
+
+        first_name = getattr(
+            employee,
+            "first_name",
+            None,
+        ) or ""
+
+        last_name = getattr(
+            employee,
+            "last_name",
+            None,
+        ) or ""
+
+        full_name = (
+            f"{first_name} {last_name}"
+        ).strip()
+
+        if full_name:
+
+            return full_name
+
+        return "Unknown Employee"
+
+    # =========================================================
+    # CALL RECORDS
+    # =========================================================
+
+    @staticmethod
+    def _build_call_records(
+        db: Session,
+        calls: list[CallLog],
+    ) -> list[dict]:
+        """
+        Build frontend call records.
+
+        Every record also receives:
+
+            assigned
+            converted
+            unknown
+
+        based on CallAssignment and LoanApplication.
+        """
+
+        classification = (
+            CallAnalyticsOverviewService
+            ._get_phone_classification(
+                db=db,
+                calls=calls,
+            )
+        )
+
+        assigned_numbers = (
+            classification[
+                "assigned_numbers"
+            ]
+        )
+
+        converted_numbers = (
+            classification[
+                "converted_numbers"
+            ]
+        )
+
+        unknown_numbers = (
+            classification[
+                "unknown_numbers"
+            ]
+        )
+
+        records = []
+
+        for call in calls:
+
+            employee_context = (
+                call.employee_context
+            )
+
+            employee = (
+                employee_context.employee
+                if employee_context
+                else None
+            )
+
+            normalized_phone = (
+                CallAnalyticsOverviewService
+                ._normalize_phone(
+                    call.phone_number
+                )
+            )
+
+            is_converted = (
+                normalized_phone is not None
+                and normalized_phone
+                in converted_numbers
+            )
+
+            is_assigned = (
+                not is_converted
+                and normalized_phone is not None
+                and normalized_phone
+                in assigned_numbers
+            )
+
+            is_unknown = (
+                not is_converted
+                and not is_assigned
+                and (
+                    normalized_phone is None
+                    or normalized_phone
+                    in unknown_numbers
+                )
+            )
+
+            records.append(
+                {
+                    "id":
+                        call.id,
+
+                    "employee_id":
+                        (
+                            employee_context.employee_id
+                            if employee_context
+                            else None
+                        ),
+
+                    "employee":
+                        CallAnalyticsOverviewService
+                        ._get_employee_name(
+                            employee
+                        ),
+
+                    "employee_context_id":
+                        (
+                            employee_context.id
+                            if employee_context
+                            else None
+                        ),
+
+                    "phone_number":
+                        call.phone_number,
+
+                    "call_type":
+                        CallAnalyticsOverviewService
+                        ._enum_value(
+                            call.call_type
+                        ),
+
+                    "mobile_status":
+                        CallAnalyticsOverviewService
+                        ._enum_value(
+                            call.mobile_status
+                        ),
+
+                    "call_started_at":
+                        call.call_started_at,
+
+                    "call_ended_at":
+                        call.call_ended_at,
+
+                    "duration_seconds":
+                        call.duration_seconds,
+
+                    # -----------------------------------------
+                    # ANALYTICS CLASSIFICATION
+                    # -----------------------------------------
+
+                    "assigned":
+                        is_assigned,
+
+                    "is_assigned":
+                        is_assigned,
+
+                    "converted":
+                        is_converted,
+
+                    "is_converted":
+                        is_converted,
+
+                    "unknown":
+                        is_unknown,
+
+                    "is_unknown":
+                        is_unknown,
+                }
+            )
+
+        return records
 
     # =========================================================
     # MAIN OVERVIEW
@@ -444,69 +1101,167 @@ class CallAnalyticsOverviewService:
     @staticmethod
     def get_overview(
         db: Session,
+        employee: Employee,
         employee_id: Optional[int] = None,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
         call_type: Optional[str] = None,
         status: Optional[str] = None,
-        logged_in_employee_id: Optional[int] = None,
         context_id: Optional[int] = None,
+        team_lead_context_id: Optional[int] = None,
     ) -> dict:
-        """
-        Get Call Analytics Overview.
-
-        Date behavior:
-        - No from_date AND no to_date:
-            current month is automatically selected.
-        - Explicit dates:
-            use the supplied dates.
-        - Other filters do not disable the current-month default.
-
-        Employee behavior:
-        - employee_id is the selected EmployeeDropdown ID.
-        - logged_in_employee_id is the authenticated employee.
-        - hierarchy scope is applied from the authenticated
-          employee's EmployeeContext.
-        """
 
         # =====================================================
-        # CURRENT MONTH DEFAULT
+        # AUTHENTICATION
         # =====================================================
 
-        if from_date is None and to_date is None:
-            from_date, to_date = (
-                CallAnalyticsOverviewService
-                ._get_current_month_dates()
-            )
+        if not employee:
 
-        # If only from_date is supplied, keep it.
-        # If only to_date is supplied, keep it.
-
-        # =====================================================
-        # HIERARCHY
-        # =====================================================
-
-        visible_employee_ids = None
-
-        if logged_in_employee_id is not None:
-            visible_employee_ids = (
-                CallAnalyticsOverviewService
-                ._get_visible_employee_ids(
-                    db=db,
-                    employee_id=logged_in_employee_id,
-                    context_id=context_id,
-                )
+            raise PermissionError(
+                "Authenticated employee is required."
             )
 
         # =====================================================
-        # CALL CONDITIONS
+        # DATES
         # =====================================================
 
-        call_conditions = (
+        from_date, to_date = (
             CallAnalyticsOverviewService
-            ._build_call_conditions(
-                employee_ids=visible_employee_ids,
+            ._resolve_dates(
+                from_date=from_date,
+                to_date=to_date,
+            )
+        )
+
+        # =====================================================
+        # ACTIVE CONTEXT
+        # =====================================================
+
+        active_context = (
+            CallAnalyticsOverviewService
+            ._get_active_context(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+            )
+        )
+
+        if not active_context:
+
+            raise PermissionError(
+                "No active EmployeeContext found for the authenticated employee."
+            )
+
+        # =====================================================
+        # VISIBLE AGENTS
+        # =====================================================
+
+        visible_agent_ids = (
+            CallAnalyticsOverviewService
+            ._get_visible_agent_ids(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+                team_lead_context_id=team_lead_context_id,
+            )
+        )
+
+        # =====================================================
+        # VISIBLE RMS
+        # =====================================================
+
+        visible_rm_ids = (
+            CallAnalyticsOverviewService
+            ._get_visible_rm_ids(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+                team_lead_context_id=team_lead_context_id,
+            )
+        )
+
+        # =====================================================
+        # COMBINED CALL CONTEXTS
+        # =====================================================
+
+        visible_call_context_ids = (
+            CallAnalyticsOverviewService
+            ._get_visible_call_context_ids(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+                team_lead_context_id=team_lead_context_id,
+            )
+        )
+
+        if not visible_call_context_ids:
+
+            return (
+                CallAnalyticsOverviewService
+                ._empty_response()
+            )
+
+        # =====================================================
+        # SELECTED EMPLOYEE
+        # =====================================================
+
+        visible_contexts = (
+            CallAnalyticsOverviewService
+            ._get_visible_employee_contexts(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+                team_lead_context_id=team_lead_context_id,
+            )
+        )
+
+        selected_context_ids = (
+            CallAnalyticsOverviewService
+            ._get_selected_employee_context_ids(
+                visible_contexts=visible_contexts,
                 employee_id=employee_id,
+            )
+        )
+
+        # =====================================================
+        # NO MATCHING EMPLOYEE
+        # =====================================================
+
+        if not selected_context_ids:
+
+            return (
+                CallAnalyticsOverviewService
+                ._empty_response()
+            )
+
+        # =====================================================
+        # ADDITIONAL SECURITY CHECK
+        # =====================================================
+
+        selected_context_ids = [
+            context_id_value
+            for context_id_value
+            in selected_context_ids
+            if context_id_value
+            in visible_call_context_ids
+        ]
+
+        if not selected_context_ids:
+
+            return (
+                CallAnalyticsOverviewService
+                ._empty_response()
+            )
+
+        # =====================================================
+        # CALL QUERY
+        # =====================================================
+
+        query = (
+            CallAnalyticsOverviewService
+            ._build_call_query(
+                db=db,
+                context_ids=selected_context_ids,
                 from_date=from_date,
                 to_date=to_date,
                 call_type=call_type,
@@ -515,441 +1270,80 @@ class CallAnalyticsOverviewService:
         )
 
         # =====================================================
-        # BASE QUERY
+        # ORDER
         # =====================================================
 
-        base_query = db.query(CallLog)
+        query = query.order_by(
+            CallLog.call_started_at.asc()
+        )
 
-        if call_conditions:
-            base_query = base_query.filter(
-                and_(*call_conditions)
-            )
+        # =====================================================
+        # EXECUTE
+        # =====================================================
+
+        calls = query.all()
 
         # =====================================================
         # SUMMARY
         # =====================================================
 
-        total = (
-            base_query
-            .with_entities(
-                func.count(CallLog.id)
-            )
-            .scalar()
-            or 0
-        )
-
-        answered = (
-            base_query
-            .filter(
-                CallLog.mobile_status == "received"
-            )
-            .with_entities(
-                func.count(CallLog.id)
-            )
-            .scalar()
-            or 0
-        )
-
-        missed = (
-            base_query
-            .filter(
-                CallLog.mobile_status == "missed"
-            )
-            .with_entities(
-                func.count(CallLog.id)
-            )
-            .scalar()
-            or 0
-        )
-
-        unknown = (
+        summary = (
             CallAnalyticsOverviewService
-            ._get_unknown_count(
+            ._build_summary(
                 db=db,
-                call_conditions=call_conditions,
-            )
-        )
-
-        assigned = (
-            CallAnalyticsOverviewService
-            ._get_assigned_count(
-                db=db,
-                call_conditions=call_conditions,
-            )
-        )
-
-        converted = (
-            CallAnalyticsOverviewService
-            ._get_converted_count(
-                db=db,
-                call_conditions=call_conditions,
+                calls=calls,
             )
         )
 
         # =====================================================
-        # CALL RECORDS
+        # RECORDS
         # =====================================================
 
-        calls = (
+        records = (
             CallAnalyticsOverviewService
-            ._get_call_records(
+            ._build_call_records(
                 db=db,
-                call_conditions=call_conditions,
+                calls=calls,
             )
         )
+
+        # =====================================================
+        # RESPONSE
+        # =====================================================
 
         return {
-            "summary": {
-                "total": int(total),
-                "answered": int(answered),
-                "missed": int(missed),
-                "unknown": int(unknown),
-                "assigned": int(assigned),
-                "converted": int(converted),
-            },
-            "calls": calls,
+            "summary": summary,
+            "calls": records,
         }
 
-    # =========================================================
-    # UNKNOWN
-    # =========================================================
 
-    @staticmethod
-    def _get_unknown_count(
-        db: Session,
-        call_conditions,
-    ) -> int:
-        """
-        Unknown calls are missed-call numbers that:
-        - exist in the filtered call-log scope,
-        - have no received callback,
-        - are not present in call_assignments,
-        - are not present in loan_applications.
+# =============================================================
+# FUNCTION COMPATIBILITY WRAPPER
+# =============================================================
 
-        The number is counted distinctly by normalized phone.
-        """
+def get_overview(
+    db: Session,
+    employee: Employee,
+    employee_id: Optional[int] = None,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    call_type: Optional[str] = None,
+    status: Optional[str] = None,
+    context_id: Optional[int] = None,
+    team_lead_context_id: Optional[int] = None,
+) -> dict:
 
-        missed_query = (
-            db.query(
-                distinct(
-                    CallAnalyticsOverviewService
-                    ._phone_sql_expression(
-                        CallLog.phone_number
-                    )
-                )
-            )
-            .filter(
-                CallLog.mobile_status == "missed"
-            )
+    return (
+        CallAnalyticsOverviewService
+        .get_overview(
+            db=db,
+            employee=employee,
+            employee_id=employee_id,
+            from_date=from_date,
+            to_date=to_date,
+            call_type=call_type,
+            status=status,
+            context_id=context_id,
+            team_lead_context_id=team_lead_context_id,
         )
-
-        if call_conditions:
-            missed_query = missed_query.filter(
-                and_(*call_conditions)
-            )
-
-        missed_numbers = [
-            row[0]
-            for row in missed_query.all()
-            if row[0]
-        ]
-
-        if not missed_numbers:
-            return 0
-
-        # -----------------------------------------------------
-        # Remove numbers that have received calls.
-        # -----------------------------------------------------
-
-        received_numbers = {
-            row[0]
-            for row in (
-                db.query(
-                    distinct(
-                        CallAnalyticsOverviewService
-                        ._phone_sql_expression(
-                            CallLog.phone_number
-                        )
-                    )
-                )
-                .filter(
-                    CallLog.mobile_status == "received"
-                )
-                .filter(
-                    CallAnalyticsOverviewService
-                    ._phone_sql_expression(
-                        CallLog.phone_number
-                    ).in_(missed_numbers)
-                )
-                .all()
-            )
-            if row[0]
-        }
-
-        # -----------------------------------------------------
-        # Remove assigned numbers.
-        # -----------------------------------------------------
-
-        assigned_numbers = {
-            row[0]
-            for row in (
-                db.query(
-                    distinct(
-                        CallAnalyticsOverviewService
-                        ._phone_sql_expression(
-                            CallAssignment.phone_number
-                        )
-                    )
-                )
-                .filter(
-                    CallAnalyticsOverviewService
-                    ._phone_sql_expression(
-                        CallAssignment.phone_number
-                    ).in_(missed_numbers)
-                )
-                .filter(
-                    CallAssignment.deleted_at.is_(None)
-                )
-                .all()
-            )
-            if row[0]
-        }
-
-        # -----------------------------------------------------
-        # Remove converted numbers.
-        # -----------------------------------------------------
-
-        converted_numbers = {
-            row[0]
-            for row in (
-                db.query(
-                    distinct(
-                        CallAnalyticsOverviewService
-                        ._phone_sql_expression(
-                            LoanApplication.phone
-                        )
-                    )
-                )
-                .filter(
-                    CallAnalyticsOverviewService
-                    ._phone_sql_expression(
-                        LoanApplication.phone
-                    ).in_(missed_numbers)
-                )
-                .filter(
-                    LoanApplication.deleted_at.is_(None)
-                )
-                .all()
-            )
-            if row[0]
-        }
-
-        unknown_numbers = [
-            phone
-            for phone in missed_numbers
-            if phone not in received_numbers
-            and phone not in assigned_numbers
-            and phone not in converted_numbers
-        ]
-
-        return len(unknown_numbers)
-
-    # =========================================================
-    # ASSIGNED
-    # =========================================================
-
-    @staticmethod
-    def _get_assigned_count(
-        db: Session,
-        call_conditions,
-    ) -> int:
-        """
-        Count distinct call-log phone numbers that exist in
-        call_assignments.
-        """
-
-        call_numbers_query = (
-            db.query(
-                distinct(
-                    CallAnalyticsOverviewService
-                    ._phone_sql_expression(
-                        CallLog.phone_number
-                    )
-                )
-            )
-        )
-
-        if call_conditions:
-            call_numbers_query = call_numbers_query.filter(
-                and_(*call_conditions)
-            )
-
-        call_numbers = [
-            row[0]
-            for row in call_numbers_query.all()
-            if row[0]
-        ]
-
-        if not call_numbers:
-            return 0
-
-        assigned_count = (
-            db.query(
-                func.count(
-                    distinct(
-                        CallAnalyticsOverviewService
-                        ._phone_sql_expression(
-                            CallAssignment.phone_number
-                        )
-                    )
-                )
-            )
-            .filter(
-                CallAnalyticsOverviewService
-                ._phone_sql_expression(
-                    CallAssignment.phone_number
-                ).in_(call_numbers)
-            )
-            .filter(
-                CallAssignment.deleted_at.is_(None)
-            )
-            .scalar()
-            or 0
-        )
-
-        return int(assigned_count)
-
-    # =========================================================
-    # CONVERTED
-    # =========================================================
-
-    @staticmethod
-    def _get_converted_count(
-        db: Session,
-        call_conditions,
-    ) -> int:
-        """
-        Count loan applications whose normalized phone number
-        matches a phone number in the filtered call-log scope.
-        """
-
-        call_numbers_query = (
-            db.query(
-                distinct(
-                    CallAnalyticsOverviewService
-                    ._phone_sql_expression(
-                        CallLog.phone_number
-                    )
-                )
-            )
-        )
-
-        if call_conditions:
-            call_numbers_query = call_numbers_query.filter(
-                and_(*call_conditions)
-            )
-
-        call_numbers = [
-            row[0]
-            for row in call_numbers_query.all()
-            if row[0]
-        ]
-
-        if not call_numbers:
-            return 0
-
-        converted_count = (
-            db.query(
-                func.count(
-                    LoanApplication.id
-                )
-            )
-            .filter(
-                CallAnalyticsOverviewService
-                ._phone_sql_expression(
-                    LoanApplication.phone
-                ).in_(call_numbers)
-            )
-            .filter(
-                LoanApplication.deleted_at.is_(None)
-            )
-            .scalar()
-            or 0
-        )
-
-        return int(converted_count)
-
-    # =========================================================
-    # CALL RECORDS
-    # =========================================================
-
-    @staticmethod
-    def _get_call_records(
-        db: Session,
-        call_conditions,
-    ) -> list[dict]:
-        """
-        Return call records for the graph/table.
-        """
-
-        query = (
-            db.query(CallLog)
-            .order_by(
-                CallLog.call_started_at.asc(),
-                CallLog.id.asc(),
-            )
-        )
-
-        if call_conditions:
-            query = query.filter(
-                and_(*call_conditions)
-            )
-
-        calls = query.all()
-
-        records = []
-
-        for call in calls:
-            records.append(
-                {
-                    "id": int(call.id),
-                    "employee_id": (
-                        int(call.employee_id)
-                        if call.employee_id is not None
-                        else None
-                    ),
-                    "employee": (
-                        call.employee.name
-                        if call.employee
-                        else None
-                    ),
-                    "phone_number": call.phone_number,
-                    "call_type": (
-                        call.call_type.value
-                        if call.call_type
-                        else None
-                    ),
-                    "mobile_status": (
-                        call.mobile_status.value
-                        if call.mobile_status
-                        else None
-                    ),
-                    "call_started_at": (
-                        call.call_started_at.isoformat()
-                        if call.call_started_at
-                        else None
-                    ),
-                    "call_ended_at": (
-                        call.call_ended_at.isoformat()
-                        if call.call_ended_at
-                        else None
-                    ),
-                    "duration_seconds": (
-                        int(call.duration_seconds)
-                        if call.duration_seconds is not None
-                        else None
-                    ),
-                }
-            )
-
-        return records
+    )

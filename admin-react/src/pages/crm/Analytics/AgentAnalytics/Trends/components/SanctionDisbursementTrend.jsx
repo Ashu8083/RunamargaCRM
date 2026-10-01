@@ -15,24 +15,44 @@ import {
 // HELPERS
 // =============================================================
 
-const formatNumber = (value) => {
-    return Number(value || 0).toLocaleString('en-IN')
+const formatNumber = (
+    value
+) => {
+
+    return Number(
+        value || 0
+    ).toLocaleString('en-IN')
+
 }
 
 
-const formatDate = (date) => {
+const formatDate = (
+    value
+) => {
 
-    if (!date) {
+    if (!value) {
         return ''
     }
 
-    const parsedDate = new Date(`${date}T00:00:00`)
 
-    if (Number.isNaN(parsedDate.getTime())) {
-        return date
+    const date =
+        new Date(
+            `${value}T00:00:00`
+        )
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+
+        return value
+
     }
 
-    return parsedDate.toLocaleDateString(
+
+    return date.toLocaleDateString(
         'en-IN',
         {
             day: '2-digit',
@@ -44,93 +64,60 @@ const formatDate = (date) => {
 
 
 // =============================================================
-// VALUE HELPERS
+// NORMALIZE DATA
 // =============================================================
 
-const getValue = (item, keys) => {
+const normalizeTrend = (
+    sanctionDisbursementTrend
+) => {
 
-    for (const key of keys) {
+    if (
+        !Array.isArray(
+            sanctionDisbursementTrend
+        )
+    ) {
 
-        if (
-            item?.[key] !== undefined &&
-            item?.[key] !== null
-        ) {
-            return Number(item[key]) || 0
-        }
+        return []
 
     }
 
-    return 0
 
-}
+    return sanctionDisbursementTrend
+        .map((item) => ({
 
+            date:
+                item?.date ??
+                null,
 
-// =============================================================
-// BUILD DATA
-// =============================================================
+            sanctioned:
+                Number(
+                    item?.sanctioned ??
+                    0
+                ) || 0,
 
-const buildChartData = (analytics) => {
+            disbursed:
+                Number(
+                    item?.disbursed ??
+                    0
+                ) || 0,
 
-    const grouped = {}
-
-
-    analytics.forEach((item) => {
-
-        if (!item?.date) {
-            return
-        }
-
-
-        const date =
-            item.date
-
-
-        if (!grouped[date]) {
-
-            grouped[date] = {
-                date,
-                displayDate: formatDate(date),
-                sanctioned: 0,
-                disbursed: 0,
-            }
-
-        }
-
-
-        grouped[date].sanctioned +=
-            getValue(
-                item,
-                [
-                    'sanctioned',
-                    'sanctionedCount',
-                ]
-            )
-
-
-        grouped[date].disbursed +=
-            getValue(
-                item,
-                [
-                    'disbursed',
-                    'disbursedCount',
-                ]
-            )
-
-    })
-
-
-    return Object.values(grouped)
+        }))
+        .filter(
+            (item) =>
+                item.date !== null
+        )
         .sort(
             (a, b) =>
-                new Date(a.date) -
-                new Date(b.date)
+                String(a.date).localeCompare(
+                    String(b.date)
+                )
         )
 
 }
 
 
 // =============================================================
-// CUSTOM TOOLTIP
+// TOOLTIP
 // =============================================================
 
 function TrendTooltip({
@@ -143,20 +130,22 @@ function TrendTooltip({
         !active ||
         !payload?.length
     ) {
+
         return null
+
     }
 
 
     return (
 
         <div className="
-            min-w-[180px]
+            min-w-[170px]
             rounded-xl
             border
             border-base-300
             bg-base-100
             px-3
-            py-3
+            py-2.5
             shadow-xl
         ">
 
@@ -166,66 +155,71 @@ function TrendTooltip({
                 font-semibold
                 text-base-content
             ">
-                {label}
+                {formatDate(label)}
             </p>
 
 
             <div className="
-                space-y-2
+                space-y-1.5
             ">
 
-                {payload.map((item) => (
+                {payload.map(
+                    (item) => (
 
-                    <div
-                        key={item.dataKey}
-                        className="
-                            flex
-                            items-center
-                            justify-between
-                            gap-5
-                            text-xs
-                        "
-                    >
+                        <div
+                            key={
+                                item.dataKey
+                            }
+                            className="
+                                flex
+                                items-center
+                                justify-between
+                                gap-5
+                            "
+                        >
 
-                        <div className="
-                            flex
-                            items-center
-                            gap-2
-                        ">
+                            <div className="
+                                flex
+                                items-center
+                                gap-2
+                            ">
 
-                            <span
-                                className="
-                                    h-2
-                                    w-2
-                                    rounded-full
-                                "
-                                style={{
-                                    backgroundColor:
-                                        item.color,
-                                }}
-                            />
+                                <span
+                                    className="
+                                        h-2
+                                        w-2
+                                        rounded-full
+                                    "
+                                    style={{
+                                        backgroundColor:
+                                            item.color,
+                                    }}
+                                />
+
+                                <span className="
+                                    text-[11px]
+                                    text-base-content/55
+                                ">
+                                    {item.name}
+                                </span>
+
+                            </div>
+
 
                             <span className="
-                                text-base-content/55
+                                text-xs
+                                font-semibold
+                                text-base-content
                             ">
-                                {item.name}
+                                {formatNumber(
+                                    item.value
+                                )}
                             </span>
 
                         </div>
 
-
-                        <span className="
-                            font-semibold
-                            text-base-content
-                        ">
-                            {formatNumber(
-                                item.value
-                            )}
-                        </span>
-
-                    </div>
-
-                ))}
+                    )
+                )}
 
             </div>
 
@@ -246,7 +240,7 @@ function EmptyState() {
 
         <div className="
             flex
-            h-[320px]
+            h-[360px]
             items-center
             justify-center
             text-center
@@ -254,12 +248,35 @@ function EmptyState() {
 
             <div>
 
+                <div className="
+                    mx-auto
+                    flex
+                    h-16
+                    w-16
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-base-200
+                ">
+
+                    <div className="
+                        h-8
+                        w-8
+                        rounded-lg
+                        border-4
+                        border-base-300
+                    " />
+
+                </div>
+
+
                 <p className="
+                    mt-4
                     text-sm
                     font-medium
                     text-base-content/50
                 ">
-                    No sanction or disbursement data
+                    No sanction or disbursement data available
                 </p>
 
 
@@ -285,11 +302,13 @@ function EmptyState() {
 // =============================================================
 
 function SanctionDisbursementTrend({
-    analytics = [],
+    sanctionDisbursementTrend = [],
 }) {
 
-    const chartData =
-        buildChartData(analytics)
+    const data =
+        normalizeTrend(
+            sanctionDisbursementTrend
+        )
 
 
     return (
@@ -311,214 +330,137 @@ function SanctionDisbursementTrend({
                 HEADER
             ================================================= */}
 
-            <div className="
-                flex
-                flex-wrap
-                items-start
-                justify-between
-                gap-3
-            ">
+            <div>
 
-                <div className="min-w-0">
-
-                    <h2 className="
-                        text-sm
-                        font-semibold
-                        text-base-content
-                    ">
-                        Sanction vs Disbursement
-                    </h2>
-
-
-                    <p className="
-                        mt-1
-                        text-xs
-                        text-base-content/45
-                    ">
-                        Daily comparison of sanctioned and disbursed applications
-                    </p>
-
-                </div>
-
-
-                {/* =================================================
-                    LEGEND
-                ================================================= */}
-
-                <div className="
-                    flex
-                    items-center
-                    gap-4
+                <h2 className="
+                    text-sm
+                    font-semibold
+                    text-base-content
                 ">
-
-                    <div className="
-                        flex
-                        items-center
-                        gap-1.5
-                        text-xs
-                        text-base-content/55
-                    ">
-
-                        <span className="
-                            h-2
-                            w-2
-                            rounded-full
-                            bg-[#D97706]
-                        " />
-
-                        Sanctioned
-
-                    </div>
+                    Sanction vs Disbursement
+                </h2>
 
 
-                    <div className="
-                        flex
-                        items-center
-                        gap-1.5
-                        text-xs
-                        text-base-content/55
-                    ">
-
-                        <span className="
-                            h-2
-                            w-2
-                            rounded-full
-                            bg-[#25803C]
-                        " />
-
-                        Disbursed
-
-                    </div>
-
-                </div>
+                <p className="
+                    mt-1
+                    text-xs
+                    text-base-content/45
+                ">
+                    Daily sanctioned and disbursed applications
+                </p>
 
             </div>
 
 
-            {/* =================================================
-                CHART
-            ================================================= */}
-
-            {chartData.length === 0 ? (
+            {data.length === 0 ? (
 
                 <EmptyState />
 
             ) : (
 
                 <div className="
-                    mt-5
-                    h-[320px]
+                    mt-4
+                    h-[360px]
                     w-full
-                    overflow-x-auto
                 ">
 
-                    <div
-                        className="
-                            h-full
-                            min-w-[600px]
-                        "
-                        style={{
-                            width:
-                                chartData.length > 12
-                                    ? `${Math.max(
-                                        100,
-                                        chartData.length * 65
-                                    )}%`
-                                    : '100%',
-                        }}
+                    <ResponsiveContainer
+                        width="100%"
+                        height="100%"
                     >
 
-                        <ResponsiveContainer
-                            width="100%"
-                            height="100%"
+                        <BarChart
+                            data={data}
+                            margin={{
+                                top: 10,
+                                right: 10,
+                                left: 0,
+                                bottom: 10,
+                            }}
+                            barGap={4}
                         >
 
-                            <BarChart
-                                data={chartData}
-                                margin={{
-                                    top: 10,
-                                    right: 20,
-                                    left: 0,
-                                    bottom: 5,
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                vertical={false}
+                                stroke="currentColor"
+                                className="
+                                    text-base-content/10
+                                "
+                            />
+
+
+                            <XAxis
+                                dataKey="date"
+                                tick={{
+                                    fontSize: 10,
                                 }}
-                                barCategoryGap="22%"
-                                barGap={5}
-                            >
-
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    vertical={false}
-                                    stroke="rgba(0,0,0,0.08)"
-                                />
+                                tickLine={false}
+                                axisLine={false}
+                                minTickGap={18}
+                                tickFormatter={
+                                    formatDate
+                                }
+                            />
 
 
-                                <XAxis
-                                    dataKey="displayDate"
-                                    tick={{
-                                        fontSize: 11,
-                                    }}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    minTickGap={20}
-                                />
+                            <YAxis
+                                allowDecimals={false}
+                                tick={{
+                                    fontSize: 10,
+                                }}
+                                tickLine={false}
+                                axisLine={false}
+                                width={45}
+                                tickFormatter={
+                                    formatNumber
+                                }
+                            />
 
 
-                                <YAxis
-                                    tick={{
-                                        fontSize: 11,
-                                    }}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    width={42}
-                                    tickFormatter={
-                                        formatNumber
-                                    }
-                                />
+                            <Tooltip
+                                cursor={{
+                                    fill:
+                                        'currentColor',
+                                    className:
+                                        'text-base-content/5',
+                                }}
+                                content={
+                                    <TrendTooltip />
+                                }
+                            />
 
 
-                                <Tooltip
-                                    content={
-                                        <TrendTooltip />
-                                    }
-                                    cursor={{
-                                        fill:
-                                            'rgba(0,0,0,0.03)',
-                                    }}
-                                />
+                            <Bar
+                                dataKey="sanctioned"
+                                name="Sanctioned"
+                                fill="#D97706"
+                                radius={[
+                                    4,
+                                    4,
+                                    0,
+                                    0,
+                                ]}
+                                maxBarSize={24}
+                            />
 
 
-                                <Bar
-                                    dataKey="sanctioned"
-                                    name="Sanctioned"
-                                    fill="#D97706"
-                                    radius={[
-                                        5,
-                                        5,
-                                        0,
-                                        0,
-                                    ]}
-                                    maxBarSize={34}
-                                />
+                            <Bar
+                                dataKey="disbursed"
+                                name="Disbursed"
+                                fill="#25803C"
+                                radius={[
+                                    4,
+                                    4,
+                                    0,
+                                    0,
+                                ]}
+                                maxBarSize={24}
+                            />
 
+                        </BarChart>
 
-                                <Bar
-                                    dataKey="disbursed"
-                                    name="Disbursed"
-                                    fill="#25803C"
-                                    radius={[
-                                        5,
-                                        5,
-                                        0,
-                                        0,
-                                    ]}
-                                    maxBarSize={34}
-                                />
-
-                            </BarChart>
-
-                        </ResponsiveContainer>
-
-                    </div>
+                    </ResponsiveContainer>
 
                 </div>
 

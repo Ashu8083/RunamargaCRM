@@ -480,7 +480,7 @@ class AccessControl:
                 EmployeeContext.context_id == Context.id,
             )
             .filter(
-                Employee.status == "active",
+                Employee.deactivate == False,
                 EmployeeContext.is_active.is_(True),
                 Context.is_active.is_(True),
                 context_filter,
@@ -722,6 +722,8 @@ class AccessControl:
             db=db,
             family="TEAMLEAD",
         )
+
+        
     @staticmethod
     def can_assign_call_to_employee(
         db: Session,

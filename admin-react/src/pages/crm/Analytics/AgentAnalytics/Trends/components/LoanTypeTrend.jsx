@@ -4,6 +4,7 @@ import {
     Bar,
     BarChart,
     CartesianGrid,
+    Legend,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -15,145 +16,102 @@ import {
 // HELPERS
 // =============================================================
 
-const formatNumber = (value) => {
-    return Number(value || 0).toLocaleString('en-IN')
+const formatNumber = (
+    value
+) => {
+
+    return Number(
+        value || 0
+    ).toLocaleString('en-IN')
+
 }
 
 
-const getValue = (item, keys) => {
+// =============================================================
+// NORMALIZE DATA
+// =============================================================
 
-    for (const key of keys) {
+const normalizeLoanTypeTrend = (
+    loanTypeTrend
+) => {
 
-        if (
-            item?.[key] !== undefined &&
-            item?.[key] !== null
-        ) {
-            return Number(item[key]) || 0
-        }
+    if (
+        !Array.isArray(
+            loanTypeTrend
+        )
+    ) {
+
+        return []
 
     }
 
-    return 0
-}
 
+    return loanTypeTrend
+        .map((item) => ({
 
-const getLoanType = (item) => {
+            loanTypeId:
+                item?.loanTypeId ??
+                item?.loan_type_id ??
+                null,
 
-    return (
-        item?.loanTypeName ||
-        item?.loanType ||
-        item?.loan_name ||
-        item?.loanName ||
-        'Unknown'
-    )
+            loanTypeName:
+                item?.loanTypeName ??
+                item?.loan_type_name ??
+                'Unknown',
 
-}
+            applicationCreated:
+                Number(
+                    item?.applicationCreated ??
+                    item?.application_created ??
+                    0
+                ) || 0,
 
+            inProcess:
+                Number(
+                    item?.inProcess ??
+                    item?.in_process ??
+                    0
+                ) || 0,
 
-// =============================================================
-// STAGE CONFIG
-// =============================================================
+            login:
+                Number(
+                    item?.login ??
+                    0
+                ) || 0,
 
-const STAGES = [
-    {
-        key: 'inProcess',
-        label: 'In Process',
-        color: '#8BCF00',
-        keys: [
-            'inProcess',
-            'in_process',
-            'inProcessCount',
-        ],
-    },
-    {
-        key: 'login',
-        label: 'Login',
-        color: '#009FE3',
-        keys: [
-            'loggedIn',
-            'login',
-            'loginCount',
-        ],
-    },
-    {
-        key: 'sanctioned',
-        label: 'Sanctioned',
-        color: '#D97706',
-        keys: [
-            'sanctioned',
-            'sanctionedCount',
-        ],
-    },
-    {
-        key: 'disbursed',
-        label: 'Disbursed',
-        color: '#25803C',
-        keys: [
-            'disbursed',
-            'disbursedCount',
-        ],
-    },
-    {
-        key: 'rejected',
-        label: 'Rejected',
-        color: '#D92D20',
-        keys: [
-            'rejected',
-            'rejectedCount',
-        ],
-    },
-]
+            sanctioned:
+                Number(
+                    item?.sanctioned ??
+                    0
+                ) || 0,
 
+            disbursed:
+                Number(
+                    item?.disbursed ??
+                    0
+                ) || 0,
 
-// =============================================================
-// BUILD CHART DATA
-// =============================================================
+            rejected:
+                Number(
+                    item?.rejected ??
+                    0
+                ) || 0,
 
-const buildChartData = (analytics) => {
-
-    const grouped = {}
-
-
-    analytics.forEach((item) => {
-
-        const loanType =
-            getLoanType(item)
-
-
-        if (!grouped[loanType]) {
-
-            grouped[loanType] = {
-                loanType,
-                inProcess: 0,
-                login: 0,
-                sanctioned: 0,
-                disbursed: 0,
-                rejected: 0,
-            }
-
-        }
-
-
-        STAGES.forEach((stage) => {
-
-            grouped[loanType][stage.key] +=
-                getValue(
-                    item,
-                    stage.keys
-                )
-
-        })
-
-    })
-
-
-    return Object.values(grouped)
+        }))
+        .sort(
+            (
+                a,
+                b
+            ) =>
+                b.applicationCreated -
+                a.applicationCreated
+        )
 
 }
 
 
 // =============================================================
-// CUSTOM TOOLTIP
+// TOOLTIP
 // =============================================================
 
 function LoanTypeTooltip({
@@ -166,14 +124,20 @@ function LoanTypeTooltip({
         !active ||
         !payload?.length
     ) {
+
         return null
+
     }
+
+
+    const data =
+        payload[0]?.payload || {}
 
 
     return (
 
         <div className="
-            min-w-[180px]
+            min-w-[210px]
             rounded-xl
             border
             border-base-300
@@ -183,8 +147,13 @@ function LoanTypeTooltip({
             shadow-xl
         ">
 
+            {/* =================================================
+                LOAN TYPE
+            ================================================= */}
+
             <p className="
-                mb-2
+                mb-3
+                truncate
                 text-xs
                 font-semibold
                 text-base-content
@@ -193,62 +162,113 @@ function LoanTypeTooltip({
             </p>
 
 
+            {/* =================================================
+                APPLICATION CREATED
+            ================================================= */}
+
             <div className="
-                space-y-1.5
+                mb-3
+                rounded-lg
+                bg-base-200/60
+                px-3
+                py-2
             ">
 
-                {payload.map((item) => (
+                <div className="
+                    flex
+                    items-center
+                    justify-between
+                    gap-4
+                ">
 
-                    <div
-                        key={item.dataKey}
-                        className="
-                            flex
-                            items-center
-                            justify-between
-                            gap-5
-                            text-xs
-                        "
-                    >
+                    <span className="
+                        text-[11px]
+                        text-base-content/55
+                    ">
+                        Applications Created
+                    </span>
 
-                        <div className="
-                            flex
-                            items-center
-                            gap-2
-                        ">
 
-                            <span
-                                className="
-                                    h-2
-                                    w-2
-                                    rounded-full
-                                "
-                                style={{
-                                    backgroundColor:
-                                        item.color,
-                                }}
-                            />
+                    <span className="
+                        text-xs
+                        font-semibold
+                        text-base-content
+                    ">
+                        {formatNumber(
+                            data.applicationCreated
+                        )}
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            {/* =================================================
+                STAGES
+            ================================================= */}
+
+            <div className="
+                space-y-2
+            ">
+
+                {payload.map(
+                    (item) => (
+
+                        <div
+                            key={
+                                item.dataKey
+                            }
+                            className="
+                                flex
+                                items-center
+                                justify-between
+                                gap-5
+                            "
+                        >
+
+                            <div className="
+                                flex
+                                items-center
+                                gap-2
+                            ">
+
+                                <span
+                                    className="
+                                        h-2
+                                        w-2
+                                        rounded-full
+                                    "
+                                    style={{
+                                        backgroundColor:
+                                            item.color,
+                                    }}
+                                />
+
+                                <span className="
+                                    text-[11px]
+                                    text-base-content/55
+                                ">
+                                    {item.name}
+                                </span>
+
+                            </div>
+
 
                             <span className="
-                                text-base-content/55
+                                text-xs
+                                font-semibold
+                                text-base-content
                             ">
-                                {item.name}
+                                {formatNumber(
+                                    item.value
+                                )}
                             </span>
 
                         </div>
 
-
-                        <span className="
-                            font-semibold
-                            text-base-content
-                        ">
-                            {formatNumber(
-                                item.value
-                            )}
-                        </span>
-
-                    </div>
-
-                ))}
+                    )
+                )}
 
             </div>
 
@@ -269,7 +289,7 @@ function EmptyState() {
 
         <div className="
             flex
-            h-[340px]
+            h-[320px]
             items-center
             justify-center
             text-center
@@ -277,7 +297,30 @@ function EmptyState() {
 
             <div>
 
+                <div className="
+                    mx-auto
+                    flex
+                    h-14
+                    w-14
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-base-200
+                ">
+
+                    <div className="
+                        h-7
+                        w-7
+                        rounded-lg
+                        border-4
+                        border-base-300
+                    " />
+
+                </div>
+
+
                 <p className="
+                    mt-4
                     text-sm
                     font-medium
                     text-base-content/50
@@ -304,15 +347,109 @@ function EmptyState() {
 
 
 // =============================================================
+// LEGEND
+// =============================================================
+
+function LoanTypeLegend() {
+
+    return (
+
+        <div className="
+            flex
+            flex-wrap
+            items-center
+            justify-end
+            gap-x-4
+            gap-y-2
+        ">
+
+            <LegendItem
+                label="In Process"
+                color="#8BCF00"
+            />
+
+            <LegendItem
+                label="Login"
+                color="#009FE3"
+            />
+
+            <LegendItem
+                label="Sanctioned"
+                color="#D97706"
+            />
+
+            <LegendItem
+                label="Disbursed"
+                color="#25803C"
+            />
+
+            <LegendItem
+                label="Rejected"
+                color="#D92D20"
+            />
+
+        </div>
+
+    )
+
+}
+
+
+// =============================================================
+// LEGEND ITEM
+// =============================================================
+
+function LegendItem({
+    label,
+    color,
+}) {
+
+    return (
+
+        <div className="
+            flex
+            items-center
+            gap-1.5
+        ">
+
+            <span
+                className="
+                    h-2
+                    w-2
+                    rounded-full
+                "
+                style={{
+                    backgroundColor:
+                        color,
+                }}
+            />
+
+            <span className="
+                text-[10px]
+                text-base-content/60
+            ">
+                {label}
+            </span>
+
+        </div>
+
+    )
+
+}
+
+
+// =============================================================
 // COMPONENT
 // =============================================================
 
 function LoanTypeTrend({
-    analytics = [],
+    loanTypeTrend = [],
 }) {
 
-    const chartData =
-        buildChartData(analytics)
+    const data =
+        normalizeLoanTypeTrend(
+            loanTypeTrend
+        )
 
 
     return (
@@ -336,13 +473,20 @@ function LoanTypeTrend({
 
             <div className="
                 flex
-                flex-wrap
-                items-start
-                justify-between
+                flex-col
                 gap-3
+                sm:flex-row
+                sm:items-start
+                sm:justify-between
             ">
 
-                <div className="min-w-0">
+                {/* =============================================
+                    TITLE
+                ============================================= */}
+
+                <div className="
+                    min-w-0
+                ">
 
                     <h2 className="
                         text-sm
@@ -364,86 +508,36 @@ function LoanTypeTrend({
                 </div>
 
 
-                {/* =================================================
+                {/* =============================================
                     LEGEND
-                ================================================= */}
+                ============================================= */}
 
-                <div className="
-                    flex
-                    flex-wrap
-                    items-center
-                    gap-x-4
-                    gap-y-2
-                ">
+                {data.length > 0 && (
 
-                    {STAGES.map((stage) => (
+                    <LoanTypeLegend />
 
-                        <div
-                            key={stage.key}
-                            className="
-                                flex
-                                items-center
-                                gap-1.5
-                                text-xs
-                                text-base-content/55
-                            "
-                        >
-
-                            <span
-                                className="
-                                    h-2
-                                    w-2
-                                    rounded-full
-                                "
-                                style={{
-                                    backgroundColor:
-                                        stage.color,
-                                }}
-                            />
-
-                            {stage.label}
-
-                        </div>
-
-                    ))}
-
-                </div>
+                )}
 
             </div>
 
 
-            {/* =================================================
-                CHART
-            ================================================= */}
-
-            {chartData.length === 0 ? (
+            {data.length === 0 ? (
 
                 <EmptyState />
 
             ) : (
 
-                <div className="
-                    mt-5
-                    h-[340px]
-                    w-full
-                    overflow-x-auto
-                ">
+                <>
 
-                    <div
-                        className="
-                            h-full
-                            min-w-[650px]
-                        "
-                        style={{
-                            width:
-                                chartData.length > 6
-                                    ? `${Math.max(
-                                        100,
-                                        chartData.length * 110
-                                    )}%`
-                                    : '100%',
-                        }}
-                    >
+                    {/* =============================================
+                        CHART
+                    ============================================= */}
+
+                    <div className="
+                        mt-4
+                        h-[320px]
+                        w-full
+                    ">
 
                         <ResponsiveContainer
                             width="100%"
@@ -451,96 +545,214 @@ function LoanTypeTrend({
                         >
 
                             <BarChart
-                                data={chartData}
+                                data={data}
                                 margin={{
-                                    top: 10,
-                                    right: 20,
+                                    top: 8,
+                                    right: 8,
                                     left: 0,
-                                    bottom: 5,
+                                    bottom: 8,
                                 }}
-                                barCategoryGap="18%"
+                                barCategoryGap="35%"
                             >
+
+                                {/* =================================
+                                    GRID
+                                ================================= */}
 
                                 <CartesianGrid
                                     strokeDasharray="3 3"
                                     vertical={false}
-                                    stroke="rgba(0,0,0,0.08)"
+                                    stroke="currentColor"
+                                    className="
+                                        text-base-content/10
+                                    "
                                 />
 
 
+                                {/* =================================
+                                    X AXIS
+                                ================================= */}
+
                                 <XAxis
-                                    dataKey="loanType"
+                                    dataKey="loanTypeName"
                                     tick={{
-                                        fontSize: 11,
+                                        fontSize: 10,
+                                        fill: 'currentColor',
                                     }}
                                     tickLine={false}
                                     axisLine={false}
                                     interval={0}
-                                    angle={
-                                        chartData.length > 6
-                                            ? -25
-                                            : 0
-                                    }
-                                    textAnchor={
-                                        chartData.length > 6
-                                            ? 'end'
-                                            : 'middle'
-                                    }
-                                    height={
-                                        chartData.length > 6
-                                            ? 65
-                                            : 35
-                                    }
+                                    tickFormatter={(
+                                        value
+                                    ) => {
+
+                                        const text =
+                                            String(
+                                                value || ''
+                                            )
+
+                                        if (
+                                            text.length >
+                                            14
+                                        ) {
+
+                                            return `${text.slice(
+                                                0,
+                                                14
+                                            )}...`
+
+                                        }
+
+                                        return text
+
+                                    }}
+                                    className="
+                                        text-base-content/55
+                                    "
                                 />
 
 
+                                {/* =================================
+                                    Y AXIS
+                                ================================= */}
+
                                 <YAxis
+                                    allowDecimals={false}
                                     tick={{
-                                        fontSize: 11,
+                                        fontSize: 10,
+                                        fill: 'currentColor',
                                     }}
                                     tickLine={false}
                                     axisLine={false}
-                                    width={42}
+                                    width={35}
                                     tickFormatter={
                                         formatNumber
                                     }
+                                    className="
+                                        text-base-content/50
+                                    "
                                 />
 
 
+                                {/* =================================
+                                    TOOLTIP
+                                ================================= */}
+
                                 <Tooltip
+                                    cursor={{
+                                        fill:
+                                            'currentColor',
+                                        className:
+                                            'text-base-content/5',
+                                    }}
                                     content={
                                         <LoanTypeTooltip />
                                     }
-                                    cursor={{
-                                        fill:
-                                            'rgba(0,0,0,0.03)',
-                                    }}
                                 />
 
 
-                                {STAGES.map((stage) => (
+                                {/* =================================
+                                    LEGEND
+                                ================================= */}
 
-                                    <Bar
-                                        key={stage.key}
-                                        dataKey={stage.key}
-                                        name={stage.label}
-                                        stackId="loanStage"
-                                        fill={stage.color}
-                                        maxBarSize={70}
-                                        radius={
-                                            stage.key ===
-                                            'rejected'
-                                                ? [
-                                                    4,
-                                                    4,
-                                                    0,
-                                                    0,
-                                                ]
-                                                : 0
-                                        }
-                                    />
+                                <Legend
+                                    content={() => null}
+                                />
 
-                                ))}
+
+                                {/* =================================
+                                    IN PROCESS
+                                ================================= */}
+
+                                <Bar
+                                    dataKey="inProcess"
+                                    name="In Process"
+                                    stackId="pipeline"
+                                    fill="#8BCF00"
+                                    radius={[
+                                        0,
+                                        0,
+                                        0,
+                                        0,
+                                    ]}
+                                    maxBarSize={34}
+                                />
+
+
+                                {/* =================================
+                                    LOGIN
+                                ================================= */}
+
+                                <Bar
+                                    dataKey="login"
+                                    name="Login"
+                                    stackId="pipeline"
+                                    fill="#009FE3"
+                                    radius={[
+                                        0,
+                                        0,
+                                        0,
+                                        0,
+                                    ]}
+                                    maxBarSize={34}
+                                />
+
+
+                                {/* =================================
+                                    SANCTIONED
+                                ================================= */}
+
+                                <Bar
+                                    dataKey="sanctioned"
+                                    name="Sanctioned"
+                                    stackId="pipeline"
+                                    fill="#D97706"
+                                    radius={[
+                                        0,
+                                        0,
+                                        0,
+                                        0,
+                                    ]}
+                                    maxBarSize={34}
+                                />
+
+
+                                {/* =================================
+                                    DISBURSED
+                                ================================= */}
+
+                                <Bar
+                                    dataKey="disbursed"
+                                    name="Disbursed"
+                                    stackId="pipeline"
+                                    fill="#25803C"
+                                    radius={[
+                                        0,
+                                        0,
+                                        0,
+                                        0,
+                                    ]}
+                                    maxBarSize={34}
+                                />
+
+
+                                {/* =================================
+                                    REJECTED
+                                ================================= */}
+
+                                <Bar
+                                    dataKey="rejected"
+                                    name="Rejected"
+                                    stackId="pipeline"
+                                    fill="#D92D20"
+                                    radius={[
+                                        4,
+                                        4,
+                                        0,
+                                        0,
+                                    ]}
+                                    maxBarSize={34}
+                                />
 
                             </BarChart>
 
@@ -548,7 +760,7 @@ function LoanTypeTrend({
 
                     </div>
 
-                </div>
+                </>
 
             )}
 

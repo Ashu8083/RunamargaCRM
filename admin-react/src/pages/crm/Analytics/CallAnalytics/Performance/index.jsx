@@ -1,6 +1,10 @@
 // admin-react/src/pages/Analytics/CallAnalytics/Performance/index.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 
@@ -48,6 +52,37 @@ const CALL_STATUSES = [
 
 
 // =============================================================
+// DATE HELPERS
+// =============================================================
+
+const getToday = () => {
+
+    const today = new Date()
+
+    const year =
+        today.getFullYear()
+
+    const month =
+        String(
+            today.getMonth() + 1
+        ).padStart(
+            2,
+            '0'
+        )
+
+    const day =
+        String(
+            today.getDate()
+        ).padStart(
+            2,
+            '0'
+        )
+
+    return `${year}-${month}-${day}`
+}
+
+
+// =============================================================
 // DATE RANGE
 // =============================================================
 
@@ -68,9 +103,13 @@ function DateRange({
             sm:grid-cols-2
         ">
 
-            {/* FROM */}
+            {/* =================================================
+                FROM
+            ================================================= */}
 
-            <div className="min-w-0">
+            <div className="
+                min-w-0
+            ">
 
                 <label className="
                     mb-1.5
@@ -82,10 +121,10 @@ function DateRange({
                     From
                 </label>
 
-
                 <input
                     type="date"
                     value={fromDate}
+                    max={toDate || undefined}
                     onChange={(event) =>
                         onFromChange(
                             event.target.value
@@ -105,9 +144,13 @@ function DateRange({
             </div>
 
 
-            {/* TO */}
+            {/* =================================================
+                TO
+            ================================================= */}
 
-            <div className="min-w-0">
+            <div className="
+                min-w-0
+            ">
 
                 <label className="
                     mb-1.5
@@ -119,10 +162,11 @@ function DateRange({
                     To
                 </label>
 
-
                 <input
                     type="date"
                     value={toDate}
+                    min={fromDate || undefined}
+                    max={getToday()}
                     onChange={(event) =>
                         onToChange(
                             event.target.value
@@ -176,7 +220,6 @@ function FilterDropdown({
                 {label}
             </label>
 
-
             <select
                 value={value}
                 onChange={(event) =>
@@ -199,16 +242,24 @@ function FilterDropdown({
                     All
                 </option>
 
-                {options.map((option) => (
+                {options.map(
+                    (option) => (
 
-                    <option
-                        key={option.value}
-                        value={option.value}
-                    >
-                        {option.label}
-                    </option>
+                        <option
+                            key={
+                                option.value
+                            }
+                            value={
+                                option.value
+                            }
+                        >
+                            {
+                                option.label
+                            }
+                        </option>
 
-                ))}
+                    )
+                )}
 
             </select>
 
@@ -226,63 +277,99 @@ function FilterDropdown({
 function Performance() {
 
     // =========================================================
+    // TODAY
+    // =========================================================
+
+    const today = useMemo(
+        () => getToday(),
+        []
+    )
+
+
+    // =========================================================
     // DATA
     // =========================================================
 
-    const [performance, setPerformance] =
-        useState([])
+    const [
+        performance,
+        setPerformance,
+    ] = useState([])
 
 
-    const [loading, setLoading] =
-        useState(true)
+    const [
+        loading,
+        setLoading,
+    ] = useState(true)
 
 
     // =========================================================
     // GLOBAL FILTERS
     // =========================================================
 
-    const [team, setTeam] =
-        useState('')
+    const [
+        team,
+        setTeam,
+    ] = useState('')
 
 
-    const [rm, setRm] =
-        useState('')
+    const [
+        rm,
+        setRm,
+    ] = useState('')
 
 
-    const [agent, setAgent] =
-        useState('')
+    const [
+        agent,
+        setAgent,
+    ] = useState('')
 
 
     // =========================================================
     // OTHER FILTERS
     // =========================================================
 
-    const [direction, setDirection] =
-        useState('')
+    const [
+        direction,
+        setDirection,
+    ] = useState('')
 
 
-    const [callStatus, setCallStatus] =
-        useState('')
+    const [
+        callStatus,
+        setCallStatus,
+    ] = useState('')
 
 
-    const [fromDate, setFromDate] =
-        useState('')
+    // =========================================================
+    // DATE FILTERS
+    // =========================================================
+
+    const [
+        fromDate,
+        setFromDate,
+    ] = useState(today)
 
 
-    const [toDate, setToDate] =
-        useState('')
+    const [
+        toDate,
+        setToDate,
+    ] = useState(today)
 
 
     // =========================================================
     // MODAL
     // =========================================================
 
-    const [selectedAgent, setSelectedAgent] =
-        useState(null)
+    const [
+        selectedAgent,
+        setSelectedAgent,
+    ] = useState(null)
 
 
-    const [showModal, setShowModal] =
-        useState(false)
+    const [
+        showModal,
+        setShowModal,
+    ] = useState(false)
 
 
     // =========================================================
@@ -295,23 +382,48 @@ function Performance() {
 
             setLoading(true)
 
+
             const response =
                 await performanceAPI.getPerformance({
+
+                    // -------------------------------------------------
+                    // EMPLOYEE
+                    // -------------------------------------------------
 
                     employeeId:
                         agent || null,
 
+
+                    // -------------------------------------------------
+                    // DATE
+                    // -------------------------------------------------
+
                     fromDate:
-                        fromDate || null,
+                        fromDate || today,
 
                     toDate:
-                        toDate || null,
+                        toDate || today,
+
+
+                    // -------------------------------------------------
+                    // CALL TYPE
+                    // -------------------------------------------------
 
                     callType:
                         direction || null,
 
+
+                    // -------------------------------------------------
+                    // STATUS
+                    // -------------------------------------------------
+
                     status:
                         callStatus || null,
+
+
+                    // -------------------------------------------------
+                    // CONTEXT
+                    // -------------------------------------------------
 
                     contextId:
                         null,
@@ -346,18 +458,7 @@ function Performance() {
 
 
     // =========================================================
-    // INITIAL LOAD
-    // =========================================================
-
-    useEffect(() => {
-
-        loadData()
-
-    }, [])
-
-
-    // =========================================================
-    // LOAD WHEN BACKEND FILTERS CHANGE
+    // INITIAL LOAD + BACKEND FILTER CHANGES
     // =========================================================
 
     useEffect(() => {
@@ -377,54 +478,63 @@ function Performance() {
     // FILTER PERFORMANCE
     // =========================================================
 
-    const filteredPerformance = useMemo(() => {
+    const filteredPerformance =
+        useMemo(() => {
 
-        return performance.filter((item) => {
+            return performance.filter(
+                (item) => {
 
-            // -------------------------------------------------
-            // TEAM
-            // -------------------------------------------------
+                    // -------------------------------------------------
+                    // TEAM
+                    // -------------------------------------------------
 
-            const matchesTeam =
-                !team ||
-                String(item.teamId) ===
-                    String(team)
-
-
-            // -------------------------------------------------
-            // RM
-            // -------------------------------------------------
-
-            const matchesRm =
-                !rm ||
-                String(item.rmId) ===
-                    String(rm)
+                    const matchesTeam =
+                        !team ||
+                        String(
+                            item?.teamId
+                        ) ===
+                            String(team)
 
 
-            // -------------------------------------------------
-            // AGENT
-            // -------------------------------------------------
+                    // -------------------------------------------------
+                    // RM
+                    // -------------------------------------------------
 
-            const matchesAgent =
-                !agent ||
-                String(item.id) ===
-                    String(agent)
+                    const matchesRm =
+                        !rm ||
+                        String(
+                            item?.rmId
+                        ) ===
+                            String(rm)
 
 
-            return (
-                matchesTeam &&
-                matchesRm &&
-                matchesAgent
+                    // -------------------------------------------------
+                    // AGENT
+                    // -------------------------------------------------
+
+                    const matchesAgent =
+                        !agent ||
+                        String(
+                            item?.id
+                        ) ===
+                            String(agent)
+
+
+                    return (
+                        matchesTeam &&
+                        matchesRm &&
+                        matchesAgent
+                    )
+
+                }
             )
 
-        })
-
-    }, [
-        performance,
-        team,
-        rm,
-        agent,
-    ])
+        }, [
+            performance,
+            team,
+            rm,
+            agent,
+        ])
 
 
     // =========================================================
@@ -434,12 +544,22 @@ function Performance() {
     const handleReset = () => {
 
         setTeam('')
+
         setRm('')
+
         setAgent('')
+
         setDirection('')
+
         setCallStatus('')
-        setFromDate('')
-        setToDate('')
+
+        // ---------------------------------------------------------
+        // Performance default is TODAY
+        // ---------------------------------------------------------
+
+        setFromDate(today)
+
+        setToDate(today)
 
     }
 
@@ -448,7 +568,9 @@ function Performance() {
     // VIEW AGENT
     // =========================================================
 
-    const handleView = (item) => {
+    const handleView = (
+        item
+    ) => {
 
         setSelectedAgent(item)
 
@@ -486,7 +608,9 @@ function Performance() {
                 sm:p-6
             ">
 
-                {/* FILTER */}
+                {/* =================================================
+                    FILTER
+                ================================================= */}
 
                 <div className="
                     h-28
@@ -499,7 +623,9 @@ function Performance() {
                 " />
 
 
-                {/* CARDS */}
+                {/* =================================================
+                    CARDS
+                ================================================= */}
 
                 <div className="
                     grid
@@ -512,26 +638,30 @@ function Performance() {
 
                     {Array.from({
                         length: 6,
-                    }).map((_, index) => (
+                    }).map(
+                        (_, index) => (
 
-                        <div
-                            key={index}
-                            className="
-                                h-24
-                                animate-pulse
-                                rounded-xl
-                                border
-                                border-base-300
-                                bg-base-100
-                            "
-                        />
+                            <div
+                                key={index}
+                                className="
+                                    h-24
+                                    animate-pulse
+                                    rounded-xl
+                                    border
+                                    border-base-300
+                                    bg-base-100
+                                "
+                            />
 
-                    ))}
+                        )
+                    )}
 
                 </div>
 
 
-                {/* TABLE */}
+                {/* =================================================
+                    TABLE
+                ================================================= */}
 
                 <div className="
                     h-[300px]
@@ -602,10 +732,18 @@ function Performance() {
                     ">
 
                         <DateRange
-                            fromDate={fromDate}
-                            toDate={toDate}
-                            onFromChange={setFromDate}
-                            onToChange={setToDate}
+                            fromDate={
+                                fromDate
+                            }
+                            toDate={
+                                toDate
+                            }
+                            onFromChange={
+                                setFromDate
+                            }
+                            onToChange={
+                                setToDate
+                            }
                         />
 
                     </div>
@@ -623,7 +761,9 @@ function Performance() {
                         <TeamLeadDropdown
                             label="Team"
                             value={team}
-                            onChange={setTeam}
+                            onChange={
+                                setTeam
+                            }
                             allLabel="All Teams"
                             placeholder="All Teams"
                             searchPlaceholder="Search team"
@@ -645,7 +785,9 @@ function Performance() {
                         <RmDropdown
                             label="RM"
                             value={rm}
-                            onChange={setRm}
+                            onChange={
+                                setRm
+                            }
                         />
 
                     </div>
@@ -661,9 +803,11 @@ function Performance() {
                     ">
 
                         <AgentDropdown
-                        label="Agent"
+                            label="Agent"
                             value={agent}
-                            onChange={setAgent}
+                            onChange={
+                                setAgent
+                            }
                         />
 
                     </div>
@@ -681,8 +825,12 @@ function Performance() {
                         <FilterDropdown
                             label="Call Direction"
                             value={direction}
-                            options={CALL_DIRECTIONS}
-                            onChange={setDirection}
+                            options={
+                                CALL_DIRECTIONS
+                            }
+                            onChange={
+                                setDirection
+                            }
                         />
 
                     </div>
@@ -700,8 +848,12 @@ function Performance() {
                         <FilterDropdown
                             label="Call Status"
                             value={callStatus}
-                            options={CALL_STATUSES}
-                            onChange={setCallStatus}
+                            options={
+                                CALL_STATUSES
+                            }
+                            onChange={
+                                setCallStatus
+                            }
                         />
 
                     </div>
@@ -719,11 +871,15 @@ function Performance() {
                         gap-2
                     ">
 
-                        {/* RESET */}
+                        {/* =================================================
+                            RESET
+                        ================================================= */}
 
                         <button
                             type="button"
-                            onClick={handleReset}
+                            onClick={
+                                handleReset
+                            }
                             className="
                                 h-10
                                 min-w-0
@@ -745,11 +901,15 @@ function Performance() {
                         </button>
 
 
-                        {/* REFRESH */}
+                        {/* =================================================
+                            REFRESH
+                        ================================================= */}
 
                         <button
                             type="button"
-                            onClick={loadData}
+                            onClick={
+                                loadData
+                            }
                             className="
                                 inline-flex
                                 h-10
@@ -798,7 +958,9 @@ function Performance() {
             ">
 
                 <PerformanceCards
-                    agents={filteredPerformance}
+                    agents={
+                        filteredPerformance
+                    }
                 />
 
             </div>
@@ -814,8 +976,12 @@ function Performance() {
             ">
 
                 <AgentPerformanceTable
-                    agents={filteredPerformance}
-                    onView={handleView}
+                    agents={
+                        filteredPerformance
+                    }
+                    onView={
+                        handleView
+                    }
                 />
 
             </div>
@@ -826,9 +992,15 @@ function Performance() {
             ================================================= */}
 
             <AgentPerformanceModal
-                open={showModal}
-                agent={selectedAgent}
-                onClose={handleCloseModal}
+                open={
+                    showModal
+                }
+                agent={
+                    selectedAgent
+                }
+                onClose={
+                    handleCloseModal
+                }
             />
 
         </div>

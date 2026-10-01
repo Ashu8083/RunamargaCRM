@@ -55,10 +55,15 @@ const getTotalCalls = (
         ) =>
             total +
             Number(
-                agent?.incoming || 0
-            ) +
-            Number(
-                agent?.outgoing || 0
+                agent?.totalCalls ??
+                (
+                    Number(
+                        agent?.incoming || 0
+                    ) +
+                    Number(
+                        agent?.outgoing || 0
+                    )
+                )
             ),
         0
     )
@@ -74,7 +79,7 @@ const getAnswerRate = (
         )
 
 
-    if (!total) {
+    if (total <= 0) {
         return 0
     }
 
@@ -104,18 +109,6 @@ function PerformanceCards({
     const totalAgents =
         agents.length
 
-
-    /*
-     * Calls Handled represents the number of assignments
-     * handled by the visible agents.
-     *
-     * Backend:
-     *
-     * callsHandled = assignments
-     *
-     * Therefore this card must use callsHandled instead
-     * of incoming + outgoing.
-     */
 
     const callsHandled =
         getValue(
@@ -162,6 +155,7 @@ function PerformanceCards({
     // =========================================================
 
     const cards = [
+
         {
             label: 'Total Agents',
 
@@ -221,6 +215,7 @@ function PerformanceCards({
             icon:
                 ArrowTrendingUpIcon,
         },
+
     ]
 
 

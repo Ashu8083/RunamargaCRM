@@ -9,20 +9,35 @@ import {
 // FORMAT DURATION
 // =============================================================
 
-const formatDuration = (seconds) => {
+const formatDuration = (
+    seconds
+) => {
 
-    const totalSeconds = Number(seconds || 0);
+    const totalSeconds =
+        Number(
+            seconds || 0
+        );
 
-    const minutes = Math.floor(
-        totalSeconds / 60
-    );
+    if (totalSeconds <= 0) {
+        return "0m 00s";
+    }
+
+    const minutes =
+        Math.floor(
+            totalSeconds / 60
+        );
 
     const remainingSeconds =
-        totalSeconds % 60;
+        Math.floor(
+            totalSeconds % 60
+        );
 
     return `${minutes}m ${String(
         remainingSeconds
-    ).padStart(2, "0")}s`;
+    ).padStart(
+        2,
+        "0"
+    )}s`;
 };
 
 
@@ -35,13 +50,15 @@ const getPercentage = (
     total
 ) => {
 
-    const numericValue = Number(
-        value || 0
-    );
+    const numericValue =
+        Number(
+            value || 0
+        );
 
-    const numericTotal = Number(
-        total || 0
-    );
+    const numericTotal =
+        Number(
+            total || 0
+        );
 
     if (numericTotal <= 0) {
         return 0;
@@ -51,7 +68,10 @@ const getPercentage = (
         100,
         Math.max(
             0,
-            (numericValue / numericTotal) * 100
+            (
+                numericValue /
+                numericTotal
+            ) * 100
         )
     );
 };
@@ -108,19 +128,24 @@ function PerformanceBar({
     percentage,
 }) {
 
-    const safePercentage = Math.round(
-        Math.min(
-            100,
-            Math.max(
-                0,
-                Number(percentage || 0)
+    const safePercentage =
+        Math.round(
+            Math.min(
+                100,
+                Math.max(
+                    0,
+                    Number(
+                        percentage || 0
+                    )
+                )
             )
-        )
-    );
+        );
 
     return (
 
-        <div className="space-y-2">
+        <div className="
+            space-y-2
+        ">
 
             <div className="
                 flex
@@ -163,7 +188,8 @@ function PerformanceBar({
                         transition-all
                     "
                     style={{
-                        width: `${safePercentage}%`,
+                        width:
+                            `${safePercentage}%`,
                     }}
                 />
 
@@ -185,59 +211,136 @@ function AgentPerformanceModal({
     onClose,
 }) {
 
-    if (!open || !agent) {
+    if (
+        !open ||
+        !agent
+    ) {
         return null;
     }
 
 
-    const incoming = Number(
-        agent.incoming || 0
-    );
+    // =========================================================
+    // CALL METRICS
+    // =========================================================
 
-    const outgoing = Number(
-        agent.outgoing || 0
-    );
+    const incoming =
+        Number(
+            agent?.incoming || 0
+        );
 
-    const answered = Number(
-        agent.answered || 0
-    );
+    const outgoing =
+        Number(
+            agent?.outgoing || 0
+        );
 
-    const missed = Number(
-        agent.missed || 0
-    );
+    const answered =
+        Number(
+            agent?.answered || 0
+        );
 
-    const applications = Number(
-        agent.applications || 0
-    );
-
-    const converted = Number(
-        agent.converted || 0
-    );
-
-    const assignments = Number(
-        agent.assignments || 0
-    );
-
-    const callsHandled = Number(
-        agent.callsHandled || assignments
-    );
-
-    const totalCalls = Number(
-        agent.totalCalls ||
-        (incoming + outgoing)
-    );
+    const missed =
+        Number(
+            agent?.missed || 0
+        );
 
 
-    const answerRate = getPercentage(
-        answered,
-        totalCalls
-    );
+    // =========================================================
+    // APPLICATION METRICS
+    // =========================================================
 
-    const conversionRate = getPercentage(
-        converted,
-        applications
-    );
+    const applications =
+        Number(
+            agent?.applications || 0
+        );
 
+    const converted =
+        Number(
+            agent?.converted || 0
+        );
+
+
+    // =========================================================
+    // ASSIGNMENTS
+    // =========================================================
+
+    const assignments =
+        Number(
+            agent?.assignments || 0
+        );
+
+
+    // =========================================================
+    // CALLS HANDLED
+    // =========================================================
+
+    const callsHandled =
+        Number(
+            agent?.callsHandled || 0
+        );
+
+
+    // =========================================================
+    // TOTAL CALLS
+    // =========================================================
+
+    const totalCalls =
+        Number(
+            agent?.totalCalls ||
+            (
+                incoming +
+                outgoing
+            )
+        );
+
+
+    // =========================================================
+    // TALK TIME
+    // =========================================================
+
+    const avgTalkSeconds =
+        Number(
+            agent?.avgTalkSeconds || 0
+        );
+
+
+    // =========================================================
+    // RATES
+    // =========================================================
+
+    const answerRate =
+        getPercentage(
+            answered,
+            totalCalls
+        );
+
+
+    const conversionRate =
+        getPercentage(
+            converted,
+            applications
+        );
+
+
+    // =========================================================
+    // CLOSE ON ESCAPE
+    // =========================================================
+
+    const handleKeyDown = (
+        event
+    ) => {
+
+        if (
+            event.key === "Escape"
+        ) {
+            onClose?.();
+        }
+
+    };
+
+
+    // =========================================================
+    // RENDER
+    // =========================================================
 
     return (
 
@@ -252,7 +355,13 @@ function AgentPerformanceModal({
                 bg-black/40
                 p-4
             "
-            onClick={onClose}
+            onClick={
+                onClose
+            }
+            onKeyDown={
+                handleKeyDown
+            }
+            role="presentation"
         >
 
             <div
@@ -266,7 +375,9 @@ function AgentPerformanceModal({
                     bg-base-100
                     shadow-xl
                 "
-                onClick={(event) =>
+                onClick={(
+                    event
+                ) =>
                     event.stopPropagation()
                 }
             >
@@ -285,24 +396,29 @@ function AgentPerformanceModal({
                     py-5
                 ">
 
-                    <div>
+                    <div className="
+                        min-w-0
+                    ">
 
                         <div className="
                             flex
+                            flex-wrap
                             items-center
                             gap-3
                         ">
 
                             <h2 className="
+                                truncate
                                 text-lg
                                 font-semibold
                                 text-base-content
                             ">
                                 {
-                                    agent.name ||
+                                    agent?.name ||
                                     "Agent Performance"
                                 }
                             </h2>
+
 
                             <span className="
                                 rounded-full
@@ -314,7 +430,7 @@ function AgentPerformanceModal({
                                 text-[#6FA800]
                             ">
                                 {
-                                    agent.status ||
+                                    agent?.status ||
                                     "active"
                                 }
                             </span>
@@ -322,14 +438,16 @@ function AgentPerformanceModal({
                         </div>
 
 
-                        {agent.team && (
+                        {agent?.team && (
 
                             <p className="
                                 mt-1
                                 text-xs
                                 text-base-content/50
                             ">
-                                {agent.team}
+                                {
+                                    agent.team
+                                }
                             </p>
 
                         )}
@@ -339,11 +457,15 @@ function AgentPerformanceModal({
 
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={
+                            onClose
+                        }
                         className="
+                            ml-3
                             flex
                             h-9
                             w-9
+                            shrink-0
                             items-center
                             justify-center
                             rounded-lg
@@ -352,6 +474,7 @@ function AgentPerformanceModal({
                             hover:bg-base-200
                             hover:text-base-content
                         "
+                        aria-label="Close"
                     >
 
                         <XMarkIcon className="
@@ -388,32 +511,44 @@ function AgentPerformanceModal({
 
                         <Metric
                             label="Calls"
-                            value={totalCalls}
+                            value={
+                                totalCalls
+                            }
                         />
 
                         <Metric
                             label="Calls Handled"
-                            value={callsHandled}
+                            value={
+                                callsHandled
+                            }
                         />
 
                         <Metric
                             label="Answered"
-                            value={answered}
+                            value={
+                                answered
+                            }
                         />
 
                         <Metric
                             label="Missed"
-                            value={missed}
+                            value={
+                                missed
+                            }
                         />
 
                         <Metric
                             label="Applications"
-                            value={applications}
+                            value={
+                                applications
+                            }
                         />
 
                         <Metric
                             label="Converted"
-                            value={converted}
+                            value={
+                                converted
+                            }
                         />
 
                     </div>
@@ -436,6 +571,7 @@ function AgentPerformanceModal({
                             flex
                             items-center
                             justify-between
+                            gap-4
                         ">
 
                             <div>
@@ -456,7 +592,7 @@ function AgentPerformanceModal({
                                 ">
                                     {
                                         formatDuration(
-                                            agent.avgTalkSeconds
+                                            avgTalkSeconds
                                         )
                                     }
                                 </p>
@@ -481,7 +617,9 @@ function AgentPerformanceModal({
                                     font-semibold
                                     text-base-content/70
                                 ">
-                                    {assignments}
+                                    {
+                                        assignments
+                                    }
                                 </p>
 
                             </div>
@@ -520,6 +658,7 @@ function AgentPerformanceModal({
                                 }
                             />
 
+
                             <PerformanceBar
                                 label="Conversion Rate"
                                 percentage={
@@ -556,6 +695,10 @@ function AgentPerformanceModal({
                             gap-3
                         ">
 
+                            {/* =================================================
+                                INCOMING
+                            ================================================= */}
+
                             <div className="
                                 rounded-xl
                                 border
@@ -576,11 +719,17 @@ function AgentPerformanceModal({
                                     font-semibold
                                     text-base-content
                                 ">
-                                    {incoming}
+                                    {
+                                        incoming
+                                    }
                                 </p>
 
                             </div>
 
+
+                            {/* =================================================
+                                OUTGOING
+                            ================================================= */}
 
                             <div className="
                                 rounded-xl
@@ -602,7 +751,9 @@ function AgentPerformanceModal({
                                     font-semibold
                                     text-base-content
                                 ">
-                                    {outgoing}
+                                    {
+                                        outgoing
+                                    }
                                 </p>
 
                             </div>
@@ -629,7 +780,9 @@ function AgentPerformanceModal({
 
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={
+                            onClose
+                        }
                         className="
                             rounded-lg
                             border

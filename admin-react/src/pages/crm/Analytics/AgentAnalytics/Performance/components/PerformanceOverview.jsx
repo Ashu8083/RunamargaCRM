@@ -8,7 +8,9 @@ import ArrowTrendingUpIcon from '@heroicons/react/24/outline/ArrowTrendingUpIcon
 // HELPERS
 // =============================================================
 
-const formatNumber = (value) => {
+const formatNumber = (
+    value
+) => {
 
     return Number(
         value || 0
@@ -17,7 +19,9 @@ const formatNumber = (value) => {
 }
 
 
-const formatCurrency = (value) => {
+const formatCurrency = (
+    value
+) => {
 
     return `₹${Number(
         value || 0
@@ -31,43 +35,46 @@ const formatCurrency = (value) => {
 // =============================================================
 
 const getTotals = (
-    performance
+    rows = []
 ) => {
 
-    return performance.reduce(
-        (result, item) => {
+    return rows.reduce(
+        (
+            totals,
+            item
+        ) => {
 
-            result.inProcess +=
+            totals.inProcess +=
                 Number(
-                    item.inProcess || 0
+                    item?.inProcess || 0
                 )
 
-            result.login +=
+            totals.login +=
                 Number(
-                    item.login || 0
+                    item?.login || 0
                 )
 
-            result.sanctioned +=
+            totals.sanctioned +=
                 Number(
-                    item.sanctioned || 0
+                    item?.sanctioned || 0
                 )
 
-            result.disbursed +=
+            totals.disbursed +=
                 Number(
-                    item.disbursed || 0
+                    item?.disbursed || 0
                 )
 
-            result.rejected +=
+            totals.rejected +=
                 Number(
-                    item.rejected || 0
+                    item?.rejected || 0
                 )
 
-            result.disbursedAmount +=
+            totals.disbursedAmount +=
                 Number(
-                    item.disbursedAmount || 0
+                    item?.disbursedAmount || 0
                 )
 
-            return result
+            return totals
 
         },
         {
@@ -105,8 +112,14 @@ function KpiCard({
             shadow-sm
             ${
                 highlight
-                    ? 'border-[#8BCF00]/30 bg-[#8BCF00]/5'
-                    : 'border-base-300 bg-base-100'
+                    ? `
+                        border-[#8BCF00]/30
+                        bg-[#8BCF00]/5
+                    `
+                    : `
+                        border-base-300
+                        bg-base-100
+                    `
             }
         `}>
 
@@ -117,7 +130,9 @@ function KpiCard({
                 gap-3
             ">
 
-                <div className="min-w-0">
+                <div className="
+                    min-w-0
+                ">
 
                     <p className="
                         truncate
@@ -127,7 +142,6 @@ function KpiCard({
                     ">
                         {label}
                     </p>
-
 
                     <p className={`
                         mt-2
@@ -143,7 +157,6 @@ function KpiCard({
                         {formatNumber(value)}
                     </p>
 
-
                     <p className="
                         mt-1
                         truncate
@@ -154,7 +167,6 @@ function KpiCard({
                     </p>
 
                 </div>
-
 
                 <div className={`
                     flex
@@ -193,6 +205,63 @@ function KpiCard({
 
 
 // =============================================================
+// EMPTY STATE
+// =============================================================
+
+function EmptyState({
+    title,
+}) {
+
+    return (
+
+        <section className="
+            w-full
+            rounded-2xl
+            border
+            border-base-300
+            bg-base-100
+            p-5
+            shadow-sm
+        ">
+
+            <div className="
+                flex
+                items-center
+                gap-2
+            ">
+
+                <ChartBarIcon className="
+                    h-5
+                    w-5
+                    text-[#8BCF00]
+                " />
+
+                <h2 className="
+                    text-sm
+                    font-semibold
+                ">
+                    {title}
+                </h2>
+
+            </div>
+
+            <p className="
+                py-10
+                text-center
+                text-sm
+                text-base-content/40
+            ">
+                No performance data available.
+            </p>
+
+        </section>
+
+    )
+
+}
+
+
+// =============================================================
 // COMPONENT
 // =============================================================
 
@@ -201,100 +270,41 @@ function PerformanceOverview({
     performance = [],
 }) {
 
+    // =========================================================
+    // NORMALIZE
+    // =========================================================
+
+    const rows =
+        Array.isArray(
+            performance
+        )
+            ? performance
+            : []
+
+
+    // =========================================================
+    // TOTALS
+    // =========================================================
+
     const totals =
-        getTotals(performance)
-
-
-    const entityMap =
-        performance.reduce(
-            (result, item) => {
-
-                const id =
-                    mode === 'rm'
-                        ? item.rmId
-                        : item.agentId
-
-                const key =
-                    String(id)
-
-
-                if (!result[key]) {
-
-                    result[key] = {
-
-                        id,
-
-                        name:
-                            mode === 'rm'
-                                ? item.rmName
-                                : item.agentName,
-
-                        teamLeadName:
-                            item.teamLeadName ||
-                            '-',
-
-                        teamName:
-                            item.teamName ||
-                            '-',
-
-                        inProcess: 0,
-                        login: 0,
-                        sanctioned: 0,
-                        disbursed: 0,
-                        rejected: 0,
-
-                    }
-
-                }
-
-
-                result[key].inProcess +=
-                    Number(
-                        item.inProcess || 0
-                    )
-
-                result[key].login +=
-                    Number(
-                        item.login || 0
-                    )
-
-                result[key].sanctioned +=
-                    Number(
-                        item.sanctioned || 0
-                    )
-
-                result[key].disbursed +=
-                    Number(
-                        item.disbursed || 0
-                    )
-
-                result[key].rejected +=
-                    Number(
-                        item.rejected || 0
-                    )
-
-
-                return result
-
-            },
-            {}
+        getTotals(
+            rows
         )
 
 
-    const rows =
-        Object.values(entityMap)
-            .sort(
-                (a, b) =>
-                    b.disbursed -
-                    a.disbursed
-            )
-
+    // =========================================================
+    // ENTITY LABELS
+    // =========================================================
 
     const entityLabel =
         mode === 'rm'
             ? 'RM'
             : 'Agent'
 
+    const entityPlural =
+        mode === 'rm'
+            ? 'RMs'
+            : 'Agents'
 
     const title =
         mode === 'rm'
@@ -303,59 +313,42 @@ function PerformanceOverview({
 
 
     // =========================================================
+    // SORTED ROWS
+    // =========================================================
+
+    const sortedRows =
+        [...rows].sort(
+            (
+                a,
+                b
+            ) =>
+                Number(
+                    b?.disbursed || 0
+                ) -
+                Number(
+                    a?.disbursed || 0
+                )
+        )
+
+
+    // =========================================================
     // EMPTY
     // =========================================================
 
-    if (!performance.length) {
+    if (!rows.length) {
 
         return (
-
-            <section className="
-                rounded-2xl
-                border
-                border-base-300
-                bg-base-100
-                p-5
-                shadow-sm
-            ">
-
-                <div className="
-                    flex
-                    items-center
-                    gap-2
-                ">
-
-                    <ChartBarIcon className="
-                        h-5
-                        w-5
-                        text-[#8BCF00]
-                    " />
-
-                    <h2 className="
-                        text-sm
-                        font-semibold
-                    ">
-                        {title}
-                    </h2>
-
-                </div>
-
-
-                <p className="
-                    py-10
-                    text-center
-                    text-sm
-                    text-base-content/40
-                ">
-                    No performance data available.
-                </p>
-
-            </section>
-
+            <EmptyState
+                title={title}
+            />
         )
 
     }
 
+
+    // =========================================================
+    // RENDER
+    // =========================================================
 
     return (
 
@@ -371,7 +364,9 @@ function PerformanceOverview({
             sm:p-5
         ">
 
-            {/* HEADER */}
+            {/* =================================================
+                HEADER
+            ================================================= */}
 
             <div className="
                 flex
@@ -405,7 +400,6 @@ function PerformanceOverview({
 
                     </div>
 
-
                     <div>
 
                         <h2 className="
@@ -428,7 +422,6 @@ function PerformanceOverview({
 
                 </div>
 
-
                 <div className="
                     rounded-lg
                     bg-base-200/60
@@ -439,16 +432,16 @@ function PerformanceOverview({
                 ">
 
                     {rows.length}{' '}
-                    {mode === 'rm'
-                        ? 'RMs'
-                        : 'Agents'}
+                    {entityPlural}
 
                 </div>
 
             </div>
 
 
-            {/* KPI */}
+            {/* =================================================
+                KPI CARDS
+            ================================================= */}
 
             <div className="
                 mt-5
@@ -460,42 +453,50 @@ function PerformanceOverview({
 
                 <KpiCard
                     label="In Process"
-                    value={totals.inProcess}
+                    value={
+                        totals.inProcess
+                    }
                     description="Currently processing"
                     icon={ChartBarIcon}
                 />
 
-
                 <KpiCard
                     label="Login"
-                    value={totals.login}
+                    value={
+                        totals.login
+                    }
                     description="Applications logged in"
                     icon={ChartBarIcon}
                 />
 
-
                 <KpiCard
                     label="Sanctioned"
-                    value={totals.sanctioned}
+                    value={
+                        totals.sanctioned
+                    }
                     description="Applications sanctioned"
                     icon={ArrowTrendingUpIcon}
                 />
 
-
                 <KpiCard
                     label="Disbursed"
-                    value={totals.disbursed}
-                    description={formatCurrency(
-                        totals.disbursedAmount
-                    )}
+                    value={
+                        totals.disbursed
+                    }
+                    description={
+                        formatCurrency(
+                            totals.disbursedAmount
+                        )
+                    }
                     icon={ArrowTrendingUpIcon}
                     highlight
                 />
 
-
                 <KpiCard
                     label="Rejected"
-                    value={totals.rejected}
+                    value={
+                        totals.rejected
+                    }
                     description="Applications rejected"
                     icon={ChartBarIcon}
                 />
@@ -503,7 +504,9 @@ function PerformanceOverview({
             </div>
 
 
-            {/* TABLE */}
+            {/* =================================================
+                TABLE
+            ================================================= */}
 
             <div className="
                 mt-5
@@ -537,11 +540,17 @@ function PerformanceOverview({
                                 text-base-content/45
                             ">
 
-                                <th className="px-4 py-3">
+                                <th className="
+                                    px-4
+                                    py-3
+                                ">
                                     {entityLabel}
                                 </th>
 
-                                <th className="px-4 py-3">
+                                <th className="
+                                    px-4
+                                    py-3
+                                ">
                                     Team Lead
                                 </th>
 
@@ -589,16 +598,20 @@ function PerformanceOverview({
 
                         </thead>
 
-
                         <tbody>
 
-                            {rows.map(
-                                (item) => (
+                            {sortedRows.map(
+                                (
+                                    item,
+                                    index
+                                ) => (
 
                                     <tr
                                         key={
                                             String(
-                                                item.id
+                                                item?.contextId ??
+                                                item?.id ??
+                                                index
                                             )
                                         }
                                         className="
@@ -615,15 +628,20 @@ function PerformanceOverview({
                                         ">
 
                                             <span className="
+                                                block
+                                                max-w-[220px]
+                                                truncate
                                                 text-sm
                                                 font-medium
                                                 text-base-content
                                             ">
-                                                {item.name}
+                                                {
+                                                    item?.name ||
+                                                    'Unknown'
+                                                }
                                             </span>
 
                                         </td>
-
 
                                         <td className="
                                             px-4
@@ -632,10 +650,10 @@ function PerformanceOverview({
                                             text-base-content/55
                                         ">
                                             {
-                                                item.teamLeadName
+                                                item?.teamLeadName ||
+                                                '-'
                                             }
                                         </td>
-
 
                                         <td className="
                                             px-4
@@ -645,11 +663,10 @@ function PerformanceOverview({
                                         ">
                                             {
                                                 formatNumber(
-                                                    item.inProcess
+                                                    item?.inProcess
                                                 )
                                             }
                                         </td>
-
 
                                         <td className="
                                             px-4
@@ -659,11 +676,10 @@ function PerformanceOverview({
                                         ">
                                             {
                                                 formatNumber(
-                                                    item.login
+                                                    item?.login
                                                 )
                                             }
                                         </td>
-
 
                                         <td className="
                                             px-4
@@ -673,11 +689,10 @@ function PerformanceOverview({
                                         ">
                                             {
                                                 formatNumber(
-                                                    item.sanctioned
+                                                    item?.sanctioned
                                                 )
                                             }
                                         </td>
-
 
                                         <td className="
                                             px-4
@@ -689,11 +704,10 @@ function PerformanceOverview({
                                         ">
                                             {
                                                 formatNumber(
-                                                    item.disbursed
+                                                    item?.disbursed
                                                 )
                                             }
                                         </td>
-
 
                                         <td className="
                                             px-4
@@ -703,7 +717,7 @@ function PerformanceOverview({
                                         ">
                                             {
                                                 formatNumber(
-                                                    item.rejected
+                                                    item?.rejected
                                                 )
                                             }
                                         </td>
