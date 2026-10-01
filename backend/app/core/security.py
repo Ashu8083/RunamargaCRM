@@ -134,6 +134,7 @@ def get_current_employee(
             detail="Account is inactive",
         )
     request.state.employee = employee
+    logger.info("Employee ID {}".format(employee.__dict__))
 
     # Check for x-employee-context-id or x-context-id header
     context_header = request.headers.get("x-employee-context-id") or request.headers.get("x-context-id")
