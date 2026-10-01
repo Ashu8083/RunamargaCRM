@@ -31,11 +31,11 @@ from app.models.bank_processings import BankProcessing
 from app.models.team_chat import TeamChat
 from app.models.call_logs import CallLog
 from app.models.call_assignments import CallAssignment
-
-
 from app.models.duplicate_approvals import DuplicateApproval
 from app.models.phone_numbers import PhoneNumber
 
 
 from app.models.audit_logs import AuditLog
-
+from app.models.loan_shuffle_history import LoanShuffleHistory
+from app.models.loan_type_change_log import LoanTypeChangeLog
+from app.models.bank_processing_logs import BankProcessingLog

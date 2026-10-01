@@ -1108,4 +1108,4 @@ class AgentAnalyticsOverviewService:
             "pipeline": pipeline,
             "filters": filters,
             "visibility": visibility,
-        }
+        }  

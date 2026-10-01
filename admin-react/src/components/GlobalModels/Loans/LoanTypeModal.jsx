@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
-
+import LoanTypeDropdown  from '../Filters/LoanTypeDropdown'
 function LoanTypeModal({
     open,
     application,
@@ -246,31 +246,10 @@ function LoanTypeModal({
                             </label>
 
 
-                            <select
+                            <LoanTypeDropdown
                                 value={loanType}
-                                onChange={(event) =>
-                                    setLoanType(event.target.value)
-                                }
-                                className="
-                                        select
-                                        select-bordered
-                                        w-full
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
-                                    "
-                            >
-                                <option value="">
-                                    Select Loan Type
-                                </option>
-                                {loanTypes.map((loanTypeItem) => (
-                                    <option
-                                        key={loanTypeItem.id}
-                                        value={loanTypeItem.id}
-                                    >
-                                        {loanTypeItem.name}
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={setLoanType}
+                            />
                         </div>
                     </div>
 

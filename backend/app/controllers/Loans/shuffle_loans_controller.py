@@ -4,6 +4,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.models.employees import Employee
 from app.schemas.shuffle_loans_schema import ShuffleLoansAssign
 from app.services.shuffle_loans_service import ShuffleLoansService
 
@@ -17,6 +18,8 @@ class ShuffleLoansController:
     @staticmethod
     def get_shuffle_loans(
         db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
         search: Optional[str] = None,
 
         # EmployeeContext.id for AGENT context
@@ -32,6 +35,8 @@ class ShuffleLoansController:
     ):
         return ShuffleLoansService.get_shuffle_loans(
             db=db,
+            employee=employee,
+            context_id=context_id,
             search=search,
             agent_id=agent_id,
             rm_id=rm_id,
@@ -48,17 +53,16 @@ class ShuffleLoansController:
     @staticmethod
     def assign_shuffle_loans(
         db: Session,
+        employee: Employee,
         payload: ShuffleLoansAssign,
+        shuffled_by_context_id: int,
     ):
         return ShuffleLoansService.assign_shuffle_loans(
             db=db,
+            employee=employee,
             application_ids=payload.application_ids,
-
-            # EmployeeContext.id for AGENT context
+            shuffled_by_context_id=shuffled_by_context_id,
             agent_id=payload.agent_id,
-
-            # EmployeeContext.id for RM context
             rm_id=payload.rm_id,
-
             loan_type_id=payload.loan_type_id,
         )

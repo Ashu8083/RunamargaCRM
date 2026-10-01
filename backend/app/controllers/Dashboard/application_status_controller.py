@@ -1,4 +1,4 @@
-#  backend/app/controllers/Dashboard/application_status_controller.py
+import time
 
 from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
@@ -24,7 +24,9 @@ async def get_application_status(
     """
 
     try:
-        return await get_application_status_data(
+        start = time.perf_counter()
+
+        result = await get_application_status_data(
             db=db,
             employee=employee,
             context_id=context_id,
@@ -32,6 +34,13 @@ async def get_application_status(
             to_date=to_date,
             loan_type_id=loan_type_id,
         )
+        print(
+            f"[ApplicationStatus] SERVICE: "
+            f"{time.perf_counter() - start:.3f}s"
+        )
+
+
+        return result
 
     except HTTPException:
         raise

@@ -3,17 +3,289 @@
 from math import ceil
 from typing import Optional
 
-from sqlalchemy.orm import Session, aliased
 from sqlalchemy import or_, func
+from sqlalchemy.orm import Session, aliased
 
 from app.models.loan_applications import LoanApplication
 from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
 from app.models.contexts import Context
 from app.models.loan_types import LoanType
+from app.models.loan_shuffle_history import LoanShuffleHistory
+
+from app.core.access_control import AccessControl
 
 
 class ShuffleLoansService:
+
+    # =========================================================
+    # ACCESS CONTROL
+    # =========================================================
+
+    @staticmethod
+    def _get_access_scope(
+        db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
+    ):
+        """
+        Resolve the current employee's active context and
+        determine which Agent/RM contexts are visible to them.
+
+        Access rules come entirely from AccessControl.
+
+        Returns:
+            {
+                "context": EmployeeContext,
+                "family": str,
+                "agent_ids": set[int],
+                "rm_ids": set[int],
+            }
+        """
+
+        if not employee:
+            raise PermissionError(
+                "Current employee could not be resolved."
+            )
+
+        # -----------------------------------------------------
+        # ACTIVE CONTEXT
+        # -----------------------------------------------------
+
+        active_context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not active_context:
+            raise PermissionError(
+                "No active context found for the current employee."
+            )
+
+        # -----------------------------------------------------
+        # CONTEXT FAMILY
+        # -----------------------------------------------------
+
+        if not active_context.context:
+            raise PermissionError(
+                "Active context is invalid."
+            )
+
+        family = AccessControl.get_context_family(
+            active_context.context.code
+        )
+
+        if not family:
+            raise PermissionError(
+                "Unable to determine the active context family."
+            )
+
+        # -----------------------------------------------------
+        # VISIBLE AGENTS
+        # -----------------------------------------------------
+
+        visible_agents = AccessControl.get_visible_agents(
+            db=db,
+            employee=employee,
+            context_id=active_context.id,
+        )
+
+        visible_agent_ids = {
+            employee_context.id
+            for employee_context in visible_agents
+        }
+
+        # -----------------------------------------------------
+        # VISIBLE RMs
+        # -----------------------------------------------------
+
+        visible_rms = AccessControl.get_visible_rms(
+            db=db,
+            employee=employee,
+            context_id=active_context.id,
+        )
+
+        visible_rm_ids = {
+            employee_context.id
+            for employee_context in visible_rms
+        }
+
+        return {
+            "context": active_context,
+            "family": family,
+            "agent_ids": visible_agent_ids,
+            "rm_ids": visible_rm_ids,
+        }
+
+    # =========================================================
+    # APPLY APPLICATION DATA ACCESS SCOPE
+    # =========================================================
+
+    @staticmethod
+    def _apply_access_scope(
+        query,
+        scope,
+    ):
+        """
+        Restrict LoanApplication query according to the
+        current employee's AccessControl scope.
+
+        Rules:
+
+        GLOBAL:
+            All applications.
+
+        MANAGER:
+            All applications.
+
+        TEAMLEAD:
+            Applications belonging to visible RMs or Agents.
+
+        RM:
+            Applications belonging to:
+                - current RM
+                - Agents reporting to current RM
+
+        AGENT:
+            Applications belonging to the current Agent context.
+
+        This method MUST be applied before pagination.
+        """
+
+        family = scope["family"]
+        context = scope["context"]
+
+        # -----------------------------------------------------
+        # GLOBAL / MANAGER
+        # -----------------------------------------------------
+
+        if family in {"GLOBAL", "MANAGER"}:
+            return query
+
+        # -----------------------------------------------------
+        # AGENT
+        # -----------------------------------------------------
+
+        if family == "AGENT":
+            return query.filter(
+                LoanApplication.agent_context_id
+                == context.id
+            )
+
+        # -----------------------------------------------------
+        # TEAMLEAD / RM
+        # -----------------------------------------------------
+
+        visible_agent_ids = scope["agent_ids"]
+        visible_rm_ids = scope["rm_ids"]
+
+        access_conditions = []
+
+        if visible_agent_ids:
+            access_conditions.append(
+                LoanApplication.agent_context_id.in_(
+                    visible_agent_ids
+                )
+            )
+
+        if visible_rm_ids:
+            access_conditions.append(
+                LoanApplication.rm_context_id.in_(
+                    visible_rm_ids
+                )
+            )
+
+        # -----------------------------------------------------
+        # No visible contexts
+        # -----------------------------------------------------
+
+        if not access_conditions:
+            return query.filter(False)
+
+        return query.filter(
+            or_(*access_conditions)
+        )
+
+    # =========================================================
+    # VALIDATE TARGET AGENT
+    # =========================================================
+
+    @staticmethod
+    def _validate_agent_access(
+        agent_id: Optional[int],
+        scope,
+    ):
+        """
+        Verify that the current employee is allowed to
+        assign/shuffle to the requested Agent context.
+        """
+
+        if agent_id is None:
+            return
+
+        family = scope["family"]
+
+        # -----------------------------------------------------
+        # GLOBAL / MANAGER
+        # -----------------------------------------------------
+
+        if family in {"GLOBAL", "MANAGER"}:
+            if agent_id not in scope["agent_ids"]:
+                raise PermissionError(
+                    "Selected Agent is not active or accessible."
+                )
+
+            return
+
+        # -----------------------------------------------------
+        # Other roles
+        # -----------------------------------------------------
+
+        if agent_id not in scope["agent_ids"]:
+            raise PermissionError(
+                "You are not allowed to assign loans to this Agent."
+            )
+
+    # =========================================================
+    # VALIDATE TARGET RM
+    # =========================================================
+
+    @staticmethod
+    def _validate_rm_access(
+        rm_id: Optional[int],
+        scope,
+    ):
+        """
+        Verify that the current employee is allowed to
+        assign/shuffle to the requested RM context.
+        """
+
+        if rm_id is None:
+            return
+
+        family = scope["family"]
+
+        # -----------------------------------------------------
+        # GLOBAL / MANAGER
+        # -----------------------------------------------------
+
+        if family in {"GLOBAL", "MANAGER"}:
+            if rm_id not in scope["rm_ids"]:
+                raise PermissionError(
+                    "Selected RM is not active or accessible."
+                )
+
+            return
+
+        # -----------------------------------------------------
+        # Other roles
+        # -----------------------------------------------------
+
+        if rm_id not in scope["rm_ids"]:
+            raise PermissionError(
+                "You are not allowed to assign loans to this RM."
+            )
 
     # =========================================================
     # GET SHUFFLE LOANS
@@ -22,6 +294,8 @@ class ShuffleLoansService:
     @staticmethod
     def get_shuffle_loans(
         db: Session,
+        employee: Employee,
+        context_id: Optional[int] = None,
         search: Optional[str] = None,
         agent_id: Optional[int] = None,
         rm_id: Optional[int] = None,
@@ -42,6 +316,16 @@ class ShuffleLoansService:
 
         if limit > 200:
             limit = 200
+
+        # =====================================================
+        # ACCESS CONTROL
+        # =====================================================
+
+        scope = ShuffleLoansService._get_access_scope(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
 
         # =====================================================
         # ALIASES
@@ -117,13 +401,56 @@ class ShuffleLoansService:
         )
 
         # =====================================================
-        # SEARCH
+        # ACCESS SCOPE
         # =====================================================
-        #
-        # IMPORTANT:
-        #
-        # Search is performed BEFORE pagination.
-        #
+
+        query = ShuffleLoansService._apply_access_scope(
+            query=query,
+            scope=scope,
+        )
+
+        # =====================================================
+        # AGENT FILTER
+        # =====================================================
+
+        if agent_id is not None:
+
+            # -------------------------------------------------
+            # First ensure the requested Agent is accessible.
+            # -------------------------------------------------
+
+            ShuffleLoansService._validate_agent_access(
+                agent_id=agent_id,
+                scope=scope,
+            )
+
+            query = query.filter(
+                LoanApplication.agent_context_id
+                == agent_id
+            )
+
+        # =====================================================
+        # RM FILTER
+        # =====================================================
+
+        if rm_id is not None:
+
+            # -------------------------------------------------
+            # First ensure the requested RM is accessible.
+            # -------------------------------------------------
+
+            ShuffleLoansService._validate_rm_access(
+                rm_id=rm_id,
+                scope=scope,
+            )
+
+            query = query.filter(
+                LoanApplication.rm_context_id
+                == rm_id
+            )
+
+        # =====================================================
+        # SEARCH
         # =====================================================
 
         if search and search.strip():
@@ -140,108 +467,6 @@ class ShuffleLoansService:
                     RM.name.ilike(value),
                     LoanType.name.ilike(value),
                 )
-            )
-
-        # =====================================================
-        # AGENT FILTER
-        # =====================================================
-        #
-        # API receives:
-        #
-        #     agent_id = EmployeeContext.id
-        #
-        # Database stores:
-        #
-        #     LoanApplication.agent_context_id
-        #
-        # Therefore the context ID can be used directly.
-        #
-        # =====================================================
-
-        if agent_id is not None:
-
-            agent_context = (
-                db.query(EmployeeContext)
-                .join(
-                    Context,
-                    EmployeeContext.context_id
-                    == Context.id,
-                )
-                .filter(
-                    EmployeeContext.id == agent_id,
-                    EmployeeContext.is_active.is_(True),
-                    Context.is_active.is_(True),
-                    or_(
-                        func.upper(Context.code) == "AGENT",
-                        func.upper(Context.code).like("AGENT_%"),
-                    ),
-                )
-                .first()
-            )
-
-            if not agent_context:
-                return {
-                    "items": [],
-                    "total": 0,
-                    "page": page,
-                    "limit": limit,
-                    "totalPages": 0,
-                }
-
-            query = query.filter(
-                LoanApplication.agent_context_id
-                == agent_context.id
-            )
-
-        # =====================================================
-        # RM FILTER
-        # =====================================================
-        #
-        # API receives:
-        #
-        #     rm_id = EmployeeContext.id
-        #
-        # Database stores:
-        #
-        #     LoanApplication.rm_context_id
-        #
-        # Therefore the context ID can be used directly.
-        #
-        # =====================================================
-
-        if rm_id is not None:
-
-            rm_context = (
-                db.query(EmployeeContext)
-                .join(
-                    Context,
-                    EmployeeContext.context_id
-                    == Context.id,
-                )
-                .filter(
-                    EmployeeContext.id == rm_id,
-                    EmployeeContext.is_active.is_(True),
-                    Context.is_active.is_(True),
-                    or_(
-                        func.upper(Context.code) == "RM",
-                        func.upper(Context.code).like("RM_%"),
-                    ),
-                )
-                .first()
-            )
-
-            if not rm_context:
-                return {
-                    "items": [],
-                    "total": 0,
-                    "page": page,
-                    "limit": limit,
-                    "totalPages": 0,
-                }
-
-            query = query.filter(
-                LoanApplication.rm_context_id
-                == rm_context.id
             )
 
         # =====================================================
@@ -353,7 +578,9 @@ class ShuffleLoansService:
     @staticmethod
     def assign_shuffle_loans(
         db: Session,
+        employee: Employee,
         application_ids: list[int],
+        shuffled_by_context_id: int,
         agent_id: Optional[int] = None,
         rm_id: Optional[int] = None,
         loan_type_id: Optional[int] = None,
@@ -363,7 +590,6 @@ class ShuffleLoansService:
         # =====================================================
 
         if not application_ids:
-
             raise ValueError(
                 "At least one application must be selected."
             )
@@ -373,23 +599,51 @@ class ShuffleLoansService:
             and rm_id is None
             and loan_type_id is None
         ):
-
             raise ValueError(
                 "Select at least one value to update."
             )
 
         # =====================================================
-        # VALIDATE AGENT CONTEXT
+        # ACCESS CONTROL
         # =====================================================
-        #
-        # agent_id is EmployeeContext.id.
-        #
-        # We validate that the selected context:
-        #
-        #     1. exists
-        #     2. is active
-        #     3. belongs to an AGENT family
-        #
+
+        scope = ShuffleLoansService._get_access_scope(
+            db=db,
+            employee=employee,
+            context_id=shuffled_by_context_id,
+        )
+
+        active_context = scope["context"]
+
+        # =====================================================
+        # VALIDATE SHUFFLED-BY CONTEXT
+        # =====================================================
+
+        if active_context.id != shuffled_by_context_id:
+            raise PermissionError(
+                "Invalid shuffle context."
+            )
+
+        # =====================================================
+        # VALIDATE TARGET AGENT ACCESS
+        # =====================================================
+
+        ShuffleLoansService._validate_agent_access(
+            agent_id=agent_id,
+            scope=scope,
+        )
+
+        # =====================================================
+        # VALIDATE TARGET RM ACCESS
+        # =====================================================
+
+        ShuffleLoansService._validate_rm_access(
+            rm_id=rm_id,
+            scope=scope,
+        )
+
+        # =====================================================
+        # VALIDATE AGENT CONTEXT
         # =====================================================
 
         agent_context = None
@@ -408,31 +662,24 @@ class ShuffleLoansService:
                     EmployeeContext.is_active.is_(True),
                     Context.is_active.is_(True),
                     or_(
-                        func.upper(Context.code) == "AGENT",
-                        func.upper(Context.code).like("AGENT_%"),
+                        func.upper(Context.code)
+                        == "AGENT",
+
+                        func.upper(Context.code)
+                        .like("AGENT_%"),
                     ),
                 )
                 .first()
             )
 
             if not agent_context:
-
                 raise ValueError(
-                    "Selected Agent context was not found or is not an active AGENT context."
+                    "Selected Agent context was not found "
+                    "or is not an active AGENT context."
                 )
 
         # =====================================================
         # VALIDATE RM CONTEXT
-        # =====================================================
-        #
-        # rm_id is EmployeeContext.id.
-        #
-        # We validate that the selected context:
-        #
-        #     1. exists
-        #     2. is active
-        #     3. belongs to an RM family
-        #
         # =====================================================
 
         rm_context = None
@@ -451,17 +698,20 @@ class ShuffleLoansService:
                     EmployeeContext.is_active.is_(True),
                     Context.is_active.is_(True),
                     or_(
-                        func.upper(Context.code) == "RM",
-                        func.upper(Context.code).like("RM_%"),
+                        func.upper(Context.code)
+                        == "RM",
+
+                        func.upper(Context.code)
+                        .like("RM_%"),
                     ),
                 )
                 .first()
             )
 
             if not rm_context:
-
                 raise ValueError(
-                    "Selected RM context was not found or is not an active RM context."
+                    "Selected RM context was not found "
+                    "or is not an active RM context."
                 )
 
         # =====================================================
@@ -479,13 +729,12 @@ class ShuffleLoansService:
             )
 
             if not loan_type:
-
                 raise ValueError(
                     "Selected Loan Type was not found."
                 )
 
         # =====================================================
-        # FETCH APPLICATIONS
+        # FETCH REQUESTED APPLICATIONS
         # =====================================================
 
         applications = (
@@ -500,10 +749,67 @@ class ShuffleLoansService:
         )
 
         if not applications:
-
             raise ValueError(
                 "No valid loan applications were found."
             )
+
+        # =====================================================
+        # IMPORTANT:
+        #
+        # APPLY ACCESS CONTROL TO SELECTED APPLICATIONS
+        #
+        # We cannot simply trust application_ids from the
+        # frontend.
+        # =====================================================
+
+        authorized_query = (
+            db.query(LoanApplication)
+            .filter(
+                LoanApplication.id.in_(
+                    application_ids
+                ),
+                LoanApplication.deleted_at.is_(None),
+            )
+        )
+
+        authorized_query = (
+            ShuffleLoansService._apply_access_scope(
+                query=authorized_query,
+                scope=scope,
+            )
+        )
+
+        authorized_applications = (
+            authorized_query
+            .all()
+        )
+
+        authorized_ids = {
+            application.id
+            for application in authorized_applications
+        }
+
+        # =====================================================
+        # CHECK FOR UNAUTHORIZED APPLICATIONS
+        # =====================================================
+
+        unauthorized_ids = [
+            application_id
+            for application_id in application_ids
+            if application_id not in authorized_ids
+        ]
+
+        if unauthorized_ids:
+            raise PermissionError(
+                "You are not allowed to shuffle one or more "
+                "selected applications."
+            )
+
+        # -----------------------------------------------------
+        # Use only authorized applications from this point.
+        # -----------------------------------------------------
+
+        applications = authorized_applications
 
         # =====================================================
         # ENSURE ALL REQUESTED IDS EXIST
@@ -521,21 +827,82 @@ class ShuffleLoansService:
         ]
 
         if missing_ids:
-
             raise ValueError(
                 "Some selected applications were not found."
             )
 
         # =====================================================
-        # PARTIAL UPDATE
+        # BUILD EXACT SHUFFLE HISTORY
         # =====================================================
-        #
-        # Only a field that is NOT None is changed.
-        #
-        # None means:
-        #
-        #     "User did not select this field."
-        #
+
+        history_items = []
+
+        for application in applications:
+
+            old_agent_context_id = (
+                application.agent_context_id
+            )
+
+            old_rm_context_id = (
+                application.rm_context_id
+            )
+
+            new_agent_context_id = (
+                agent_context.id
+                if agent_context is not None
+                else old_agent_context_id
+            )
+
+            new_rm_context_id = (
+                rm_context.id
+                if rm_context is not None
+                else old_rm_context_id
+            )
+
+            history_items.append(
+                {
+                    "loan_id": application.id,
+
+                    "from_agent_context_id":
+                        old_agent_context_id,
+
+                    "to_agent_context_id":
+                        new_agent_context_id,
+
+                    "from_rm_context_id":
+                        old_rm_context_id,
+
+                    "to_rm_context_id":
+                        new_rm_context_id,
+                }
+            )
+
+        # =====================================================
+        # CREATE SHUFFLE HISTORY
+        # =====================================================
+
+        shuffle_history = LoanShuffleHistory(
+            shuffled_by_context_id=active_context.id,
+
+            to_agent_context_id=(
+                agent_context.id
+                if agent_context is not None
+                else None
+            ),
+
+            to_rm_context_id=(
+                rm_context.id
+                if rm_context is not None
+                else None
+            ),
+
+            loan_ids=history_items,
+        )
+
+        db.add(shuffle_history)
+
+        # =====================================================
+        # PARTIAL UPDATE
         # =====================================================
 
         for application in applications:
@@ -582,7 +949,10 @@ class ShuffleLoansService:
 
         return ShuffleLoansService.get_shuffle_loans_by_ids(
             db=db,
-            application_ids=application_ids,
+            application_ids=[
+                application.id
+                for application in applications
+            ],
         )
 
     # =========================================================
@@ -594,6 +964,15 @@ class ShuffleLoansService:
         db: Session,
         application_ids: list[int],
     ):
+        """
+        Internal helper used after a successful shuffle.
+
+        The caller has already authorized the application IDs
+        before reaching this method.
+        """
+
+        if not application_ids:
+            return []
 
         # =====================================================
         # ALIASES
@@ -643,10 +1022,24 @@ class ShuffleLoansService:
                 == LoanApplication.rm_context_id,
             )
 
+            # IMPORTANT:
+            #
+            # The previous code joined RM using:
+            #
+            #     RM.id == LoanApplication.rm_context_id
+            #
+            # which is incorrect because rm_context_id is an
+            # EmployeeContext.id.
+            #
+            # Correct relationship:
+            #
+            #     RM.id == RMContext.employee_id
+            #
+
             .outerjoin(
                 RM,
                 RM.id
-                == LoanApplication.rm_context_id,
+                == RMContext.employee_id,
             )
 
             # -------------------------------------------------
@@ -676,6 +1069,10 @@ class ShuffleLoansService:
 
             .all()
         )
+
+        # =====================================================
+        # FORMAT
+        # =====================================================
 
         return [
             ShuffleLoansService._format_application(
@@ -717,13 +1114,6 @@ class ShuffleLoansService:
         # =====================================================
         # RESOLVE CONTEXT IDS
         # =====================================================
-        #
-        # The API now exposes EmployeeContext.id.
-        #
-        # Employee.id is only used internally for employee
-        # identity/name resolution.
-        #
-        # =====================================================
 
         agent_context_id = (
             application.agent_context_id
@@ -738,6 +1128,9 @@ class ShuffleLoansService:
         # =====================================================
 
         return {
+            # -------------------------------------------------
+            # APPLICATION
+            # -------------------------------------------------
 
             "id":
                 application.id,
@@ -789,14 +1182,6 @@ class ShuffleLoansService:
             # -------------------------------------------------
             # AGENT
             # -------------------------------------------------
-            #
-            # API returns EmployeeContext.id.
-            #
-            # Database ownership:
-            #
-            #     LoanApplication.agent_context_id
-            #
-            # -------------------------------------------------
 
             "agentId":
                 agent_context_id,
@@ -812,14 +1197,6 @@ class ShuffleLoansService:
 
             # -------------------------------------------------
             # RM
-            # -------------------------------------------------
-            #
-            # API returns EmployeeContext.id.
-            #
-            # Database ownership:
-            #
-            #     LoanApplication.rm_context_id
-            #
             # -------------------------------------------------
 
             "rmId":

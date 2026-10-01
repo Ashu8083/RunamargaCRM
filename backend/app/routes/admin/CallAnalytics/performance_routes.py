@@ -35,24 +35,27 @@ def get_call_analytics_performance(
     employee_id: Optional[int] = Query(
         default=None,
         description=(
-            "Filter performance by selected employee ID. "
-            "This value comes from the Agent/Employee dropdown."
+            "Optional Employee.id filter. "
+            "The selected employee must be visible to the "
+            "authenticated employee."
         ),
     ),
 
     from_date: Optional[date] = Query(
         default=None,
         description=(
-            "Start date for call performance. "
-            "If both dates are omitted, the current month is used."
+            "Start date for performance analytics. "
+            "If both from_date and to_date are omitted, "
+            "TODAY is used."
         ),
     ),
 
     to_date: Optional[date] = Query(
         default=None,
         description=(
-            "End date for call performance. "
-            "If both dates are omitted, the current month is used."
+            "End date for performance analytics. "
+            "If both from_date and to_date are omitted, "
+            "TODAY is used."
         ),
     ),
 
@@ -77,7 +80,9 @@ def get_call_analytics_performance(
         ),
     ),
 
-    db: Session = Depends(get_db),
+    db: Session = Depends(
+        get_db
+    ),
 
     employee: Employee = Depends(
         get_current_employee
@@ -89,61 +94,61 @@ def get_call_analytics_performance(
     Authentication:
         get_current_employee()
 
-    Authorization / hierarchy:
-        Handled inside CallAnalyticsPerformanceService using
-        the authenticated employee's EmployeeContext.
+    Authorization:
+        Handled by CallAnalyticsPerformanceService through
+        AccessControl.
 
     Employee filter:
-        employee_id is passed as a normal selected-agent filter
-        after hierarchy visibility is determined by the service.
+        employee_id is the Employee.id selected from the
+        Agent/RM dropdown.
 
     Date behavior:
-        If from_date and to_date are both omitted,
-        the service automatically uses the current month.
+        No dates supplied:
+            TODAY -> TODAY
 
-    Call filters:
-        call_type and status are applied to call metrics.
+        Explicit dates:
+            supplied date range is used.
+
+    Performance is calculated independently for every visible
+    Agent/RM.
 
     Context:
-        context_id represents the active EmployeeContext ID.
+        context_id represents the active EmployeeContext.
     """
 
     return (
-        CallAnalyticsPerformanceController.get_performance(
+        CallAnalyticsPerformanceController
+        .get_performance(
             db=db,
 
             # --------------------------------------------------------------
-            # Authenticated employee
+            # AUTHENTICATED EMPLOYEE
             # --------------------------------------------------------------
-            #
-            # This is the employee who is actually logged in.
-            #
+
             employee=employee,
 
             # --------------------------------------------------------------
-            # Selected Employee / Agent ID
+            # SELECTED EMPLOYEE
             # --------------------------------------------------------------
-            #
-            # This remains a filter.
-            #
+
             employee_id=employee_id,
 
             # --------------------------------------------------------------
-            # Date filters
+            # DATE FILTERS
             # --------------------------------------------------------------
 
             from_date=from_date,
             to_date=to_date,
 
             # --------------------------------------------------------------
-            # Call filters
+            # CALL FILTERS
             # --------------------------------------------------------------
 
             call_type=call_type,
             status=status,
 
             # --------------------------------------------------------------
-            # Active EmployeeContext
+            # ACTIVE CONTEXT
             # --------------------------------------------------------------
 
             context_id=context_id,

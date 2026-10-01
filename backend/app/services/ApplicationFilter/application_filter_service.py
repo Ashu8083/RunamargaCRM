@@ -11,6 +11,7 @@ from app.models.loan_types import LoanType
 from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
 from app.core.access_control import AccessControl
+from app.services.Loans.application_service import ApplicationService
 
 
 # =========================================================
@@ -275,7 +276,7 @@ def get_application_filter_data(
     # RBAC / CONTEXT SCOPE
     # =====================================================
 
-    query = AccessControl.apply_application_scope(
+    query = ApplicationService.apply_scope(
         query=query,
         db=db,
         employee=employee,

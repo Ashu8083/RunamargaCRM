@@ -12,19 +12,19 @@ import { PERMISSIONS } from '../app/permissions'
 // =========================================================
 
 const Dashboard = lazy(() =>
-    import('../pages/Dashboard/index')
+    import('../pages/crm/Dashboard/index')
 )
 
 const ApplicationFilter = lazy(() =>
-    import('../pages/Applicationfilter/index')
+    import('../pages/crm/Applicationfilter/index')
 )
 
 const Attendance = lazy(() =>
-    import('../pages/Attendance/index')
+    import('../pages/crm/Attendance/index')
 )
 
 const Profile = lazy(() =>
-    import('../pages/Profile')
+    import('../pages/crm/Profile')
 )
 
 
@@ -33,19 +33,19 @@ const Profile = lazy(() =>
 // =========================================================
 
 const Roles = lazy(() =>
-    import('../pages/Roles&Teams/Roles/index')
+    import('../pages/crm/Roles&Teams/Roles/index')
 )
 
 const TeamLead = lazy(() =>
-    import('../pages/Roles&Teams/TeamLead/index')
+    import('../pages/crm/Roles&Teams/TeamLead/index')
 )
 
 const Agents = lazy(() =>
-    import('../pages/Roles&Teams/Agents/index')
+    import('../pages/crm/Roles&Teams/Agents/index')
 )
 
 const Admins = lazy(() =>
-    import('../pages/Roles&Teams/Admins/index')
+    import('../pages/crm/Roles&Teams/Admins/index')
 )
 
 
@@ -54,37 +54,37 @@ const Admins = lazy(() =>
 // =========================================================
 
 const CreateApplication = lazy(
-    () => import('../pages/Loans/CreateApplication/index')
+    () => import('../pages/crm/Loans/CreateApplication/index')
 )
 const Applications = lazy(() =>
-    import('../pages/Loans/CombinedApplications/index')
+    import('../pages/crm/Loans/CombinedApplications/index')
 )
 const ApplicationStatus = lazy(() =>
-    import('../pages/Loans/Application-Status/index')
+    import('../pages/crm/Loans/Application-Status/index')
 )
 
 const PendingApplications = lazy(() =>
-    import('../pages/Loans/PendingApplications/index')
+    import('../pages/crm/Loans/PendingApplications/index')
 )
 
 const ShuffleLoans = lazy(() =>
-    import('../pages/Loans/ShuffleLoans/index')
+    import('../pages/crm/Loans/ShuffleLoans/index')
 )
 
 const RevertedApplications = lazy(() =>
-    import('../pages/Loans/RevertedApplications/index')
+    import('../pages/crm/Loans/RevertedApplications/index')
 )
 
 const LoanAssignment = lazy(() =>
-    import('../pages/Loans/LoanAssignment/index')
+    import('../pages/crm/Loans/LoanAssignment/index')
 )
 
 const DuplicateApproval = lazy(() =>
-    import('../pages/Loans/DuplicateApproval/index')
+    import('../pages/crm/Loans/DuplicateApproval/index')
 )
 
 const ViewApplication = lazy(
-    () => import('../pages/Loans/ViewApplication/index')
+    () => import('../pages/crm/Loans/ViewApplication/index')
 )
 
 
@@ -93,15 +93,15 @@ const ViewApplication = lazy(
 // =========================================================
 
 const CallLogs = lazy(
-    () => import('../pages/CallManagement/CallLogs')
+    () => import('../pages/crm/CallManagement/CallLogs')
 )
 
 const CallAssignment = lazy(
-    () => import('../pages/CallManagement/CallAssignment')
+    () => import('../pages/crm/CallManagement/CallAssignment')
 )
 
 const PhoneNumbers = lazy(
-    () => import('../pages/CallManagement/PhoneNumbers')
+    () => import('../pages/crm/CallManagement/PhoneNumbers')
 )
 
 // =========================================================
@@ -111,27 +111,27 @@ const PhoneNumbers = lazy(
 
 // ******************** Call Analytics *****************************
 const CallAnalyticsOverview = lazy(
-    () => import('../pages/Analytics/CallAnalytics/Overview')
+    () => import('../pages/crm/Analytics/CallAnalytics/Overview')
 )
 
 const CallPerformance = lazy(
-    () => import('../pages/Analytics/CallAnalytics/Performance')
+    () => import('../pages/crm/Analytics/CallAnalytics/Performance')
 )
 
 const CallTrends = lazy(
-    () => import('../pages/Analytics/CallAnalytics/Trends')
+    () => import('../pages/crm/Analytics/CallAnalytics/Trends')
 )
 
 
 // ******************** Agent Analytics *****************************
 const AgentAnalyticsOverview = lazy(
-    () => import('../pages/Analytics/AgentAnalytics/Overview')
+    () => import('../pages/crm/Analytics/AgentAnalytics/Overview')
 )
 const AgentAnalyticsPerformance = lazy(
-    () => import('../pages/Analytics/AgentAnalytics/Performance')
+    () => import('../pages/crm/Analytics/AgentAnalytics/Performance')
 )
 const AgentAnalyticsTrends = lazy(
-    () => import('../pages/Analytics/AgentAnalytics/Trends')
+    () => import('../pages/crm/Analytics/AgentAnalytics/Trends')
 )
 
 // =========================================================
@@ -139,15 +139,15 @@ const AgentAnalyticsTrends = lazy(
 // =========================================================
 
 const Banks = lazy(
-    () => import('../pages/Banks&DSA/Banks/index')
+    () => import('../pages/crm/Banks&DSA/Banks/index')
 )
 
 const BankersDirectory = lazy(
-    () => import('../pages/Banks&DSA/BankersDirectory/index')
+    () => import('../pages/crm/Banks&DSA/BankersDirectory/index')
 )
 
 const DSADirectory = lazy(
-    () => import('../pages/Banks&DSA/DSADirectory/index')
+    () => import('../pages/crm/Banks&DSA/DSADirectory/index')
 )
 
 
@@ -156,18 +156,18 @@ const DSADirectory = lazy(
 // =========================================================
 
 const Employees = lazy(
-    () => import('../pages/EmployeeManagement/Employees')
+    () => import('../pages/crm/EmployeeManagement/Employees')
 )
 
 const EmployeeAttendance = lazy(
-    () => import('../pages/EmployeeManagement/Attendance/index')
+    () => import('../pages/crm/EmployeeManagement/Attendance/index')
 )
 
 // =========================================================
 // Face Enrollment
 // =========================================================
 const FaceEnrollment = lazy(
-    () => import('../pages/EmployeeManagement/FaceEnrollment/index')
+    () => import('../pages/crm/EmployeeManagement/FaceEnrollment/index')
 )
 
 
@@ -176,61 +176,61 @@ const FaceEnrollment = lazy(
 // =========================================================
 
 const AdminLogs = lazy(
-    () => import('../pages/Logs/AdminLogs')
+    () => import('../pages/crm/Logs/AdminLogs')
 )
 const ApplicationStatusLogs = lazy(
-    () => import('../pages/Logs/ApplicationStatusLogs')
+    () => import('../pages/crm/Logs/ApplicationStatusLogs')
 )
 const AgentAssignmentLogs = lazy(
-    () => import('../pages/Logs/AgentAssignmentLogs')
+    () => import('../pages/crm/Logs/AgentAssignmentLogs')
 )
 const LeadCreationLogs = lazy(
-    () => import('../pages/Logs/LeadCreationLogs')
+    () => import('../pages/crm/Logs/LeadCreationLogs')
 )
 const LoanTypeChangeLogs = lazy(
-    () => import('../pages/Logs/LoanTypeChangeLogs')
+    () => import('../pages/crm/Logs/LoanTypeChangeLogs')
 )
 const ApplicationDeleteLogs = lazy(
-    () => import('../pages/Logs/ApplicationDeleteLogs')
+    () => import('../pages/crm/Logs/ApplicationDeleteLogs')
 )
 const ApplicationEditLogs = lazy(
-    () => import('../pages/Logs/ApplicationEditLogs')
+    () => import('../pages/crm/Logs/ApplicationEditLogs')
 )
 const BankProcessingLogs = lazy(
-    () => import('../pages/Logs/BankProcessingLogs')
+    () => import('../pages/crm/Logs/BankProcessingLogs')
 )
 const LoanAssignmentLogs = lazy(
-    () => import('../pages/Logs/LoanAssignmentLogs')
+    () => import('../pages/crm/Logs/LoanAssignmentLogs')
 )
 const DuplicateLeadLogs = lazy(
-    () => import('../pages/Logs/DuplicateLeadLogs')
+    () => import('../pages/crm/Logs/DuplicateLeadLogs')
 )
 const CallAssignmentLogs = lazy(
-    () => import('../pages/Logs/CallAssignmentLogs')
+    () => import('../pages/crm/Logs/CallAssignmentLogs')
 )
 const CallReassignmentLogs = lazy(
-    () => import('../pages/Logs/CallReassignmentLogs')
+    () => import('../pages/crm/Logs/CallReassignmentLogs')
 )
 const EmployeeLogs = lazy(
-    () => import('../pages/Logs/EmployeeLogs')
+    () => import('../pages/crm/Logs/EmployeeLogs')
 )
 const PhoneNumberLogs = lazy(
-    () => import('../pages/Logs/PhoneNumberLogs')
+    () => import('../pages/crm/Logs/PhoneNumberLogs')
 )
 const LoanShuffleLogs = lazy(
-    () => import('../pages/Logs/LoanShuffleLogs')
+    () => import('../pages/crm/Logs/LoanShuffleLogs')
 )
 const RevertedHistoryLogs = lazy(
-    () => import('../pages/Logs/RevertedHistoryLogs')
+    () => import('../pages/crm/Logs/RevertedHistoryLogs')
 )
 const AgentLogs = lazy(
-    () => import('../pages/Logs/AgentLogs')
+    () => import('../pages/crm/Logs/AgentLogs')
 )
 const TeamLeadLogs = lazy(
-    () => import('../pages/Logs/TeamLeadLogs')
+    () => import('../pages/crm/Logs/TeamLeadLogs')
 )
 const RoleLogs = lazy(
-    () => import('../pages/Logs/RoleLogs')
+    () => import('../pages/crm/Logs/RoleLogs')
 )
 
 

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.core.security import get_current_employee
+from app.core.access_control import AccessControl
 from app.models.employees import Employee
 
 from app.controllers.Loans.shuffle_loans_controller import (
@@ -70,7 +71,15 @@ def get_shuffle_loans_route(
         le=200,
     ),
 
+    # =====================================================
+    # DATABASE
+    # =====================================================
+
     db: Session = Depends(get_db),
+
+    # =====================================================
+    # CURRENT EMPLOYEE
+    # =====================================================
 
     employee: Employee = Depends(
         get_current_employee
@@ -80,6 +89,10 @@ def get_shuffle_loans_route(
 
         return ShuffleLoansController.get_shuffle_loans(
             db=db,
+
+            # IMPORTANT
+            employee=employee,
+
             search=search,
             agent_id=agent_id,
             rm_id=rm_id,
@@ -87,6 +100,13 @@ def get_shuffle_loans_route(
             status=status,
             page=page,
             limit=limit,
+        )
+
+    except PermissionError as exc:
+
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
         )
 
     except ValueError as exc:
@@ -105,9 +125,17 @@ def get_shuffle_loans_route(
 def assign_shuffle_loans_route(
     payload: ShuffleLoansAssign,
 
+    # =====================================================
+    # DATABASE
+    # =====================================================
+
     db: Session = Depends(
         get_db
     ),
+
+    # =====================================================
+    # CURRENT EMPLOYEE
+    # =====================================================
 
     employee: Employee = Depends(
         get_current_employee
@@ -115,9 +143,46 @@ def assign_shuffle_loans_route(
 ):
     try:
 
+        # =================================================
+        # GET CURRENT ACTIVE CONTEXT
+        # =================================================
+
+        active_context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+        )
+
+        if not active_context:
+
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "No active employee context found."
+                ),
+            )
+
+        # =================================================
+        # ASSIGN / SHUFFLE
+        # =================================================
+
         return ShuffleLoansController.assign_shuffle_loans(
             db=db,
+
+            # IMPORTANT
+            employee=employee,
+
             payload=payload,
+
+            shuffled_by_context_id=active_context.id,
+        )
+
+    except PermissionError as exc:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
         )
 
     except ValueError as exc:
@@ -128,6 +193,12 @@ def assign_shuffle_loans_route(
             status_code=400,
             detail=str(exc),
         )
+
+    except HTTPException:
+
+        db.rollback()
+
+        raise
 
     except Exception:
 
