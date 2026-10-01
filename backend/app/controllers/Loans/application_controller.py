@@ -12,6 +12,12 @@ def get_applications(
     page: int = 1,
     page_size: int = 10,
     no_chat_for_days: int | None = None,
+    search: str | None = None,
+    loan_type_id: int | None = None,
+    rm_id: int | None = None,
+    team_lead_id: int | None = None,
+    agent_id: int | None = None,
+    status: str | None = None,
 ):
     return ApplicationService.get_applications(
         db=db,
@@ -20,7 +26,15 @@ def get_applications(
         page=page,
         page_size=page_size,
         no_chat_for_days=no_chat_for_days,
+        search=search,
+        loan_type_id=loan_type_id,
+        rm_id=rm_id,
+        team_lead_id=team_lead_id,
+        agent_id=agent_id,
+        status=status,
     )
+
+
 def view_application(
     db: Session,
     employee: Employee,

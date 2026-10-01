@@ -1,4 +1,6 @@
 // admin-react\src\components\GlobalModels\Filters\SearchableFilterDropdown.jsx
+
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
@@ -219,7 +221,7 @@ function SearchableFilterDropdown({
                 ? String(value)
                 : placeholder || allLabel
         )
-
+        console.log(displayValue)
 
     // =========================================================
     // FILTER OPTIONS

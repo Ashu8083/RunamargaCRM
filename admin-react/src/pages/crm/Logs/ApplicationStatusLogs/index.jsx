@@ -53,35 +53,13 @@ function ApplicationStatusLogs() {
     // =========================================================
 
     const statusOptions = [
-        {
-            value: '',
-            label: 'All Statuses',
-        },
-
-        {
-            value: 'IN_PROCESS',
-            label: 'In Process',
-        },
-
-        {
-            value: 'LOGIN',
-            label: 'Login',
-        },
-
-        {
-            value: 'SANCTIONED',
-            label: 'Sanctioned',
-        },
-
-        {
-            value: 'DISBURSED',
-            label: 'Disbursed',
-        },
-
-        {
-            value: 'REJECTED',
-            label: 'Rejected',
-        },
+        { label: 'In Process', value: 'inprocess' },
+        { label: 'Docs Pending', value: 'docspending' },
+        { label: 'Rejected', value: 'rejected' },
+        { label: 'Sanctioned', value: 'sanctioned' },
+        { label: 'Disbursed', value: 'disbursed' },
+        { label: 'Login', value: 'login' },
+        { label: 'Revert Rejected', value: 'revert_rejected' },
     ]
 
 
@@ -604,7 +582,7 @@ function ApplicationStatusLogs() {
                 const matchesChangedBy =
                     !changedById ||
                     String(log.changedById) ===
-                        String(changedById)
+                    String(changedById)
 
 
                 // -------------------------------------------------
@@ -635,9 +613,9 @@ function ApplicationStatusLogs() {
                     (
                         logDate &&
                         logDate >=
-                            new Date(
-                                `${fromDate}T00:00:00`
-                            )
+                        new Date(
+                            `${fromDate}T00:00:00`
+                        )
                     )
 
 
@@ -650,9 +628,9 @@ function ApplicationStatusLogs() {
                     (
                         logDate &&
                         logDate <=
-                            new Date(
-                                `${toDate}T23:59:59`
-                            )
+                        new Date(
+                            `${toDate}T23:59:59`
+                        )
                     )
 
 
@@ -698,10 +676,10 @@ function ApplicationStatusLogs() {
     const paginatedLogs =
         filteredLogs.slice(
             (currentPage - 1) *
-                pageSize,
+            pageSize,
 
             currentPage *
-                pageSize
+            pageSize
         )
 
 
@@ -857,7 +835,7 @@ function ApplicationStatusLogs() {
             sm:p-6
         ">
 
-           
+
 
             {/* =====================================================
                 FILTERS
@@ -1142,7 +1120,7 @@ function ApplicationStatusLogs() {
                         ">
                             {Math.min(
                                 currentPage *
-                                    pageSize,
+                                pageSize,
                                 filteredLogs.length
                             )}
                         </span>
@@ -1216,17 +1194,16 @@ function ApplicationStatusLogs() {
                                     className={`
                                         btn
                                         btn-sm
-                                        ${
-                                            currentPage ===
+                                        ${currentPage ===
                                             page
-                                                ? `
+                                            ? `
                                                     border-[#8BCF00]
                                                     bg-[#8BCF00]
                                                     text-white
                                                     hover:border-[#6FA800]
                                                     hover:bg-[#6FA800]
                                                 `
-                                                : `
+                                            : `
                                                     btn-ghost
                                                 `
                                         }

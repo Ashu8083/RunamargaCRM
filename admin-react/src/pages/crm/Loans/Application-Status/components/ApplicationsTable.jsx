@@ -25,13 +25,14 @@ import apiClient from "../../../../../app/apiClient";
 // =============================================================
 
 const STATUS_OPTIONS = [
-    "Revert Rejected",
-    "Rejected",
-    "In Process",
-    "Docs Pending",
-    "Sanctioned",
-    "Disbursed",
-];
+    { label: 'In Process', value: 'inprocess' },
+    { label: 'Docs Pending', value: 'docspending' },
+    { label: 'Rejected', value: 'rejected' },
+    { label: 'Sanctioned', value: 'sanctioned' },
+    { label: 'Disbursed', value: 'disbursed' },
+    { label: 'Login', value: 'login' },
+    { label: 'Revert Rejected', value: 'revert_rejected' },
+]
 
 
 // =============================================================
@@ -674,7 +675,13 @@ function ApplicationsTable({
     pageSize = 10,
     onPageChange,
 }) {
+    useEffect(() => {
+        console.log("🟢 ApplicationsTable MOUNT");
 
+        return () => {
+            console.log("🔴 ApplicationsTable UNMOUNT");
+        };
+    }, []);
     const [loanTypes, setLoanTypes] =
         useState([]);
 
@@ -1887,17 +1894,7 @@ function ApplicationsTable({
                                                     "
                                                 >
                                                     <RmDropdown
-                                                        value={
-                                                            application.rm?.id ??
-                                                            application.rm_id ??
-                                                            application.rm_context_id ??
-                                                            ""
-                                                        }
-                                                        fallbackLabel={
-                                                            application.rm?.name ??
-                                                            application.rm_name ??
-                                                            ""
-                                                        }
+                                                        value={application.rmId ?? application.rm_context_id ?? ""}
                                                         onChange={(value) =>
                                                             handleRmChange(application, value)
                                                         }
@@ -1907,7 +1904,7 @@ function ApplicationsTable({
                                                 {/* PROCESSING AGENT */}
 
                                                 <td
-                                                        className="
+                                                    className="
                                                         px-3
                                                         py-4
                                                         align-middle
@@ -1915,14 +1912,8 @@ function ApplicationsTable({
                                                 >
                                                     <AgentDropdown
                                                         value={
-                                                            application.agent?.id ??
-                                                            application.agent_id ??
+                                                            application.agentId ??
                                                             application.agent_context_id ??
-                                                            ""
-                                                        }
-                                                        fallbackLabel={
-                                                            application.agent?.name ??
-                                                            application.agent_name ??
                                                             ""
                                                         }
                                                         onChange={(value) =>

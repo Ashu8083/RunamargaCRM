@@ -1,6 +1,7 @@
 // admin-react/src/context/CommonDataContext.jsx
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -97,7 +98,7 @@ export const CommonDataProvider = ({ children }) => {
   // AGENTS
   // =========================================================
 
-  const getAgents = async (
+  const getAgents = useCallback(async (
     teamLeadContextId = null
   ) => {
     if (!activeContext?.id) {
@@ -152,17 +153,17 @@ export const CommonDataProvider = ({ children }) => {
 
         const formattedAgents = Array.isArray(data)
           ? data
-              .filter(
-                (agent) =>
-                  agent &&
-                  agent.id !== undefined &&
-                  agent.id !== null &&
-                  agent.name
-              )
-              .map((agent) => ({
-                id: Number(agent.id),
-                name: agent.name,
-              }))
+            .filter(
+              (agent) =>
+                agent &&
+                agent.id !== undefined &&
+                agent.id !== null &&
+                agent.name
+            )
+            .map((agent) => ({
+              id: Number(agent.id),
+              name: agent.name,
+            }))
           : []
 
         // Save completed result
@@ -202,13 +203,13 @@ export const CommonDataProvider = ({ children }) => {
     )
 
     return request
-  }
+  }, [activeContext?.id])
 
   // =========================================================
   // RMS
   // =========================================================
 
-  const getRms = async (
+  const getRms = useCallback(async (
     teamLeadContextId = null
   ) => {
     if (!activeContext?.id) {
@@ -263,17 +264,17 @@ export const CommonDataProvider = ({ children }) => {
 
         const formattedRms = Array.isArray(data)
           ? data
-              .filter(
-                (rm) =>
-                  rm &&
-                  rm.id !== undefined &&
-                  rm.id !== null &&
-                  rm.name
-              )
-              .map((rm) => ({
-                id: Number(rm.id),
-                name: rm.name,
-              }))
+            .filter(
+              (rm) =>
+                rm &&
+                rm.id !== undefined &&
+                rm.id !== null &&
+                rm.name
+            )
+            .map((rm) => ({
+              id: Number(rm.id),
+              name: rm.name,
+            }))
           : []
 
         // Save completed result
@@ -313,7 +314,7 @@ export const CommonDataProvider = ({ children }) => {
     )
 
     return request
-  }
+  }, [activeContext?.id])
 
   // =========================================================
   // CLEAR CACHE
