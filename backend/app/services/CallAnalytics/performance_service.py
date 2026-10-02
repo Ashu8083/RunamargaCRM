@@ -211,152 +211,9 @@ class CallAnalyticsPerformanceService:
 
         return from_date, to_date
 
-    # =========================================================
-    # ACTIVE CONTEXT
-    # =========================================================
 
-    @staticmethod
-    def _get_active_employee_context(
-        db: Session,
-        employee: Employee,
-        context_id: Optional[int] = None,
-    ) -> Optional[EmployeeContext]:
 
-        if not employee:
-            return None
 
-        query = (
-            db.query(EmployeeContext)
-            .filter(
-                EmployeeContext.employee_id
-                == employee.id,
-                EmployeeContext.is_active.is_(True),
-                EmployeeContext.deleted_at.is_(None),
-            )
-        )
-
-        if context_id is not None:
-
-            selected = (
-                query
-                .filter(
-                    EmployeeContext.id
-                    == context_id,
-                )
-                .first()
-            )
-
-            if selected:
-                return selected
-
-        default_context = (
-            query
-            .filter(
-                EmployeeContext.is_default.is_(True),
-            )
-            .first()
-        )
-
-        if default_context:
-            return default_context
-
-        return (
-            query
-            .order_by(
-                EmployeeContext.id.asc()
-            )
-            .first()
-        )
-
-    # =========================================================
-    # CONTEXT FAMILY
-    # =========================================================
-
-    @staticmethod
-    def _get_context_family(
-        context_code: Optional[str],
-    ) -> str:
-
-        if not context_code:
-            return "UNKNOWN"
-
-        code = str(
-            context_code
-        ).strip().upper()
-
-        if code == "GLOBAL":
-            return "GLOBAL"
-
-        if (
-            code == "AGENT"
-            or code.startswith("AGENT_")
-        ):
-            return "AGENT"
-
-        if (
-            code == "RM"
-            or code.startswith("RM_")
-        ):
-            return "RM"
-
-        if (
-            code == "TEAM_LEAD"
-            or code == "TEAMLEAD"
-            or code.startswith("TEAMLEAD_")
-        ):
-            return "TEAMLEAD"
-
-        if (
-            code == "MANAGER"
-            or code.startswith("MANAGER_")
-        ):
-            return "MANAGER"
-
-        return "UNKNOWN"
-
-    # =========================================================
-    # GET VISIBLE AGENTS
-    # =========================================================
-
-    @staticmethod
-    def _get_visible_agent_contexts(
-        db: Session,
-        employee: Employee,
-        context_id: Optional[int] = None,
-    ) -> list[EmployeeContext]:
-
-        if not employee:
-            return []
-
-        contexts = AccessControl.get_visible_agents(
-            db=db,
-            employee=employee,
-            context_id=context_id,
-        )
-
-        return contexts or []
-
-    # =========================================================
-    # GET VISIBLE RMS
-    # =========================================================
-
-    @staticmethod
-    def _get_visible_rm_contexts(
-        db: Session,
-        employee: Employee,
-        context_id: Optional[int] = None,
-    ) -> list[EmployeeContext]:
-
-        if not employee:
-            return []
-
-        contexts = AccessControl.get_visible_rms(
-            db=db,
-            employee=employee,
-            context_id=context_id,
-        )
-
-        return contexts or []
 
     # =========================================================
     # GET PERFORMANCE CONTEXTS
@@ -387,23 +244,17 @@ class CallAnalyticsPerformanceService:
         AccessControl decides the actual visibility.
         """
 
-        agent_contexts = (
-            CallAnalyticsPerformanceService
-            ._get_visible_agent_contexts(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
-        )
+        agent_contexts = AccessControl.get_visible_agents(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        ) or []
 
-        rm_contexts = (
-            CallAnalyticsPerformanceService
-            ._get_visible_rm_contexts(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
-        )
+        rm_contexts = AccessControl.get_visible_rms(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        ) or []
 
         result = []
 
@@ -533,13 +384,10 @@ class CallAnalyticsPerformanceService:
             .first()
         )
 
-        reporting_family = (
-            CallAnalyticsPerformanceService
-            ._get_context_family(
-                reporting_context_model.code
-                if reporting_context_model
-                else None
-            )
+        reporting_family = AccessControl.get_context_family(
+            reporting_context_model.code
+            if reporting_context_model
+            else None
         )
 
         # -----------------------------------------------------
@@ -618,11 +466,19 @@ class CallAnalyticsPerformanceService:
         if not performance_context:
             return []
 
+        # AccessControl has already determined that this context is visible.
+        # CallLog stores EmployeeContext.id, so analytics must use context IDs
+        # rather than Employee.id. Include the employee's active contexts.
+        authorized_employee_id = performance_context.employee_id
+
+        if authorized_employee_id is None:
+            return []
+
         rows = (
             db.query(EmployeeContext.id)
             .filter(
                 EmployeeContext.employee_id
-                == employee_id,
+                == authorized_employee_id,
                 EmployeeContext.is_active.is_(True),
                 EmployeeContext.deleted_at.is_(None),
             )

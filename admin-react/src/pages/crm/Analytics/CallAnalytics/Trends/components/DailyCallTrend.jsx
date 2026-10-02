@@ -1,6 +1,8 @@
 // admin-react/src/pages/Analytics/CallAnalytics/Trends/components/DailyCallTrend.jsx
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+
+import { fetchDailyCallTrend } from '../api/DailyCallTrend'
 
 
 // =============================================================
@@ -12,11 +14,9 @@ const formatNumber = (value) =>
 
 
 const formatDate = (date) => {
-
     if (!date) return '—'
 
-    const parsed =
-        new Date(`${date}T00:00:00`)
+    const parsed = new Date(`${date}T00:00:00`)
 
     if (Number.isNaN(parsed.getTime())) {
         return date
@@ -29,7 +29,6 @@ const formatDate = (date) => {
             month: 'short',
         }
     )
-
 }
 
 
@@ -76,74 +75,52 @@ const METRICS = [
 // =============================================================
 
 function DailyCallTrend({
-    calls = [],
+    contextId = '',
 }) {
 
-    const [fromDate, setFromDate] =
-        useState('')
+    const [fromDate, setFromDate] = useState('')
+    const [toDate, setToDate] = useState('')
 
+    const [trendData, setTrendData] = useState([])
 
-    const [toDate, setToDate] =
-        useState('')
+    const [summary, setSummary] = useState({
+        total: 0,
+        received: 0,
+        called: 0,
+        missed: 0,
+        uniqueMissed: 0,
+        applications: 0,
+    })
+
+    const [loading, setLoading] = useState(false)
 
 
     // =========================================================
-    // FILTER BY DATE
+    // FETCH DAILY TREND
     // =========================================================
 
-    const filteredCalls = useMemo(() => {
+    const loadData = useCallback(async () => {
 
-        return calls.filter((call) => {
+        try {
 
-            const date =
-                call.date ||
-                call.createdAt?.slice(0, 10)
+            setLoading(true)
+
+            const response = await fetchDailyCallTrend({
+                fromDate: fromDate || '',
+                toDate: toDate || '',
+                contextId: contextId || '',
+            })
 
 
-            if (!date) {
-                return false
-            }
-
-
-            return (
-                (!fromDate || date >= fromDate) &&
-                (!toDate || date <= toDate)
+            setTrendData(
+                Array.isArray(response?.trends)
+                    ? response.trends
+                    : []
             )
 
-        })
 
-    }, [
-        calls,
-        fromDate,
-        toDate,
-    ])
-
-
-    // =========================================================
-    // GROUP BY DAY
-    // =========================================================
-
-    const dailyData = useMemo(() => {
-
-        const grouped = {}
-
-
-        filteredCalls.forEach((call) => {
-
-            const date =
-                call.date ||
-                call.createdAt?.slice(0, 10)
-
-
-            if (!date) {
-                return
-            }
-
-
-            if (!grouped[date]) {
-
-                grouped[date] = {
-                    date,
+            setSummary(
+                response?.summary || {
                     total: 0,
                     received: 0,
                     called: 0,
@@ -151,118 +128,88 @@ function DailyCallTrend({
                     uniqueMissed: 0,
                     applications: 0,
                 }
-
-            }
-
-
-            const item =
-                grouped[date]
-
-
-            item.total += 1
-
-
-            const type =
-                String(
-                    call.type || ''
-                )
-                    .trim()
-                    .toLowerCase()
-
-
-            const status =
-                String(
-                    call.status || ''
-                )
-                    .trim()
-                    .toLowerCase()
-
-
-            // -------------------------------------------------
-            // RECEIVED
-            // -------------------------------------------------
-
-            if (
-                type === 'incoming' &&
-                status === 'received'
-            ) {
-
-                item.received += 1
-
-            }
-
-
-            // -------------------------------------------------
-            // CALLED
-            // -------------------------------------------------
-
-            if (
-                type === 'outgoing' &&
-                status !== 'missed'
-            ) {
-
-                item.called += 1
-
-            }
-
-
-            // -------------------------------------------------
-            // MISSED
-            // -------------------------------------------------
-
-            if (
-                type === 'missed' ||
-                status === 'missed'
-            ) {
-
-                item.missed += 1
-
-            }
-
-
-            // -------------------------------------------------
-            // UNIQUE MISSED
-            // -------------------------------------------------
-
-            if (call.uniqueMissed) {
-
-                item.uniqueMissed += 1
-
-            }
-
-
-            // -------------------------------------------------
-            // APPLICATION
-            // -------------------------------------------------
-
-            if (call.applicationCreated) {
-
-                item.applications += 1
-
-            }
-
-        })
-
-
-        return Object.values(grouped)
-            .sort(
-                (a, b) =>
-                    a.date.localeCompare(
-                        b.date
-                    )
             )
 
+        } catch (error) {
+
+            console.error(
+                'Failed to fetch daily call trend:',
+                error
+            )
+
+            setTrendData([])
+
+            setSummary({
+                total: 0,
+                received: 0,
+                called: 0,
+                missed: 0,
+                uniqueMissed: 0,
+                applications: 0,
+            })
+
+        } finally {
+
+            setLoading(false)
+
+        }
+
     }, [
-        filteredCalls,
+        fromDate,
+        toDate,
+        contextId,
     ])
+
+
+    // =========================================================
+    // LOAD WHEN FILTERS CHANGE
+    // =========================================================
+
+    useEffect(() => {
+        loadData()
+    }, [loadData])
+
+
+    // =========================================================
+    // NORMALIZED DATA
+    // =========================================================
+
+    const dailyData = useMemo(() => {
+
+        return trendData.map((item) => ({
+            date: item.date,
+
+            total: Number(item.total || 0),
+
+            received: Number(item.received || 0),
+
+            called: Number(item.called || 0),
+
+            missed: Number(item.missed || 0),
+
+            uniqueMissed: Number(
+                item.uniqueMissed || 0
+            ),
+
+            applications: Number(
+                item.applications || 0
+            ),
+        }))
+
+    }, [trendData])
 
 
     // =========================================================
     // MAX VALUE
     // =========================================================
 
-    const maxValue =
-        Math.max(
+    const maxValue = useMemo(() => {
+
+        if (!dailyData.length) {
+            return 1
+        }
+
+        return Math.max(
             ...dailyData.map((item) =>
                 Math.max(
                     item.total,
@@ -276,50 +223,17 @@ function DailyCallTrend({
             1
         )
 
-
-    // =========================================================
-    // SUMMARY
-    // =========================================================
-
-    const summary = useMemo(() => {
-
-        return METRICS.reduce(
-            (result, metric) => {
-
-                result[metric.key] =
-                    dailyData.reduce(
-                        (sum, item) =>
-                            sum +
-                            Number(
-                                item[
-                                    metric.key
-                                ] || 0
-                            ),
-                        0
-                    )
-
-                return result
-
-            },
-            {}
-        )
-
-    }, [
-        dailyData,
-    ])
+    }, [dailyData])
 
 
     // =========================================================
     // GRAPH WIDTH
-    // Each day gets its own fixed space.
-    // Large date ranges become horizontally scrollable.
     // =========================================================
 
-    const graphWidth =
-        Math.max(
-            dailyData.length * 90,
-            720
-        )
+    const graphWidth = Math.max(
+        dailyData.length * 90,
+        720
+    )
 
 
     // =========================================================
@@ -338,6 +252,7 @@ function DailyCallTrend({
             bg-base-100
             shadow-sm
         ">
+
 
             {/* =================================================
                 HEADER
@@ -372,7 +287,7 @@ function DailyCallTrend({
                         text-xs
                         text-base-content/45
                     ">
-                        Day-by-day call processing and application activity.
+                        Day-by-day call and application activity.
                     </p>
 
                 </div>
@@ -382,10 +297,13 @@ function DailyCallTrend({
                     text-xs
                     text-base-content/45
                 ">
+
                     {dailyData.length}{' '}
+
                     {dailyData.length === 1
                         ? 'day'
                         : 'days'}
+
                 </div>
 
             </div>
@@ -406,6 +324,7 @@ function DailyCallTrend({
                 sm:grid-cols-2
                 sm:px-5
             ">
+
 
                 {/* FROM */}
 
@@ -532,7 +451,20 @@ function DailyCallTrend({
                 GRAPH
             ================================================= */}
 
-            {dailyData.length ? (
+            {loading ? (
+
+                <div className="
+                    flex
+                    h-[320px]
+                    items-center
+                    justify-center
+                    text-xs
+                    text-base-content/45
+                ">
+                    Loading daily call trend...
+                </div>
+
+            ) : dailyData.length ? (
 
                 <div className="
                     w-full
@@ -558,6 +490,7 @@ function DailyCallTrend({
                             gap-3
                         ">
 
+
                             {/* =====================================
                                 Y AXIS
                             ===================================== */}
@@ -575,16 +508,13 @@ function DailyCallTrend({
                             ">
 
                                 <span>
-                                    {formatNumber(
-                                        maxValue
-                                    )}
+                                    {formatNumber(maxValue)}
                                 </span>
 
                                 <span>
                                     {formatNumber(
                                         Math.round(
-                                            maxValue *
-                                            0.75
+                                            maxValue * 0.75
                                         )
                                     )}
                                 </span>
@@ -592,8 +522,7 @@ function DailyCallTrend({
                                 <span>
                                     {formatNumber(
                                         Math.round(
-                                            maxValue *
-                                            0.5
+                                            maxValue * 0.5
                                         )
                                     )}
                                 </span>
@@ -601,8 +530,7 @@ function DailyCallTrend({
                                 <span>
                                     {formatNumber(
                                         Math.round(
-                                            maxValue *
-                                            0.25
+                                            maxValue * 0.25
                                         )
                                     )}
                                 </span>
@@ -623,6 +551,7 @@ function DailyCallTrend({
                                 min-w-0
                                 flex-1
                             ">
+
 
                                 {/* GRID */}
 
@@ -668,9 +597,7 @@ function DailyCallTrend({
                                         (item) => (
 
                                             <div
-                                                key={
-                                                    item.date
-                                                }
+                                                key={item.date}
                                                 className="
                                                     group
                                                     relative
@@ -683,6 +610,7 @@ function DailyCallTrend({
                                                     px-2
                                                 "
                                             >
+
 
                                                 {/* =====================
                                                     TOOLTIP
@@ -712,18 +640,14 @@ function DailyCallTrend({
                                                         font-semibold
                                                         text-base-content
                                                     ">
-                                                        {
-                                                            formatDate(
-                                                                item.date
-                                                            )
-                                                        }
+                                                        {formatDate(
+                                                            item.date
+                                                        )}
                                                     </p>
 
 
                                                     {METRICS.map(
-                                                        (
-                                                            metric
-                                                        ) => (
+                                                        (metric) => (
 
                                                             <div
                                                                 key={
@@ -761,15 +685,18 @@ function DailyCallTrend({
 
                                                                 </div>
 
+
                                                                 <span className="
                                                                     font-semibold
                                                                     text-base-content
                                                                 ">
+
                                                                     {
                                                                         item[
                                                                             metric.key
                                                                         ]
                                                                     }
+
                                                                 </span>
 
                                                             </div>
@@ -794,16 +721,13 @@ function DailyCallTrend({
                                                 ">
 
                                                     {METRICS.map(
-                                                        (
-                                                            metric
-                                                        ) => {
+                                                        (metric) => {
 
                                                             const value =
                                                                 Number(
                                                                     item[
                                                                         metric.key
-                                                                    ] ||
-                                                                    0
+                                                                    ] || 0
                                                                 )
 
 
@@ -813,8 +737,7 @@ function DailyCallTrend({
                                                                         (
                                                                             value /
                                                                             maxValue
-                                                                        ) *
-                                                                        100,
+                                                                        ) * 100,
                                                                         2
                                                                     )
                                                                     : 1
@@ -889,9 +812,7 @@ function DailyCallTrend({
                                 (item) => (
 
                                     <div
-                                        key={
-                                            item.date
-                                        }
+                                        key={item.date}
                                         className="
                                             w-[90px]
                                             shrink-0
@@ -904,11 +825,9 @@ function DailyCallTrend({
                                             font-medium
                                             text-base-content/55
                                         ">
-                                            {
-                                                formatDate(
-                                                    item.date
-                                                )
-                                            }
+                                            {formatDate(
+                                                item.date
+                                            )}
                                         </span>
 
                                     </div>
@@ -1026,13 +945,9 @@ function DailyCallTrend({
                                     font-semibold
                                     text-base-content
                                 ">
-                                    {
-                                        formatNumber(
-                                            summary[
-                                                metric.key
-                                            ]
-                                        )
-                                    }
+                                    {formatNumber(
+                                        summary[metric.key]
+                                    )}
                                 </p>
 
                             </div>

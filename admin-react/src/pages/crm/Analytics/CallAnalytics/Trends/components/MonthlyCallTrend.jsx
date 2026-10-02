@@ -1,6 +1,8 @@
 // admin-react/src/pages/Analytics/CallAnalytics/Trends/components/MonthlyCallTrend.jsx
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+
+import { fetchMonthlyCallOverview } from '../api/MonthlyCallTrend'
 
 
 // =============================================================
@@ -163,26 +165,45 @@ function DonutChart({
 }) {
 
     const safeTotal =
-        Math.max(Number(total || 0), 1)
+        Math.max(
+            Number(total || 0),
+            1
+        )
+
 
     const receivedPercent =
-        (Number(received || 0) / safeTotal) * 100
+        (
+            Number(received || 0) /
+            safeTotal
+        ) * 100
+
 
     const calledPercent =
-        (Number(called || 0) / safeTotal) * 100
+        (
+            Number(called || 0) /
+            safeTotal
+        ) * 100
+
 
     const missedPercent =
-        (Number(missed || 0) / safeTotal) * 100
+        (
+            Number(missed || 0) /
+            safeTotal
+        ) * 100
 
 
     const receivedEnd =
         receivedPercent
 
+
     const calledEnd =
-        receivedEnd + calledPercent
+        receivedEnd +
+        calledPercent
+
 
     const missedEnd =
-        calledEnd + missedPercent
+        calledEnd +
+        missedPercent
 
 
     const gradient = `
@@ -248,6 +269,7 @@ function DonutChart({
                     Total Calls
                 </span>
 
+
                 <span className="
                     mt-1
                     text-2xl
@@ -258,6 +280,7 @@ function DonutChart({
                 ">
                     {formatNumber(total)}
                 </span>
+
 
                 <span className="
                     mt-0.5
@@ -294,8 +317,12 @@ function LegendItem({
 
     const percentage =
         total > 0
-            ? ((Number(value || 0) / total) * 100)
-                .toFixed(1)
+            ? (
+                (
+                    Number(value || 0) /
+                    total
+                ) * 100
+            ).toFixed(1)
             : '0.0'
 
 
@@ -378,7 +405,7 @@ function LegendItem({
 // =============================================================
 
 function MonthlyCallTrend({
-    calls = [],
+    contextId = '',
 }) {
 
     const currentDate =
@@ -409,145 +436,111 @@ function MonthlyCallTrend({
 
 
     // =========================================================
-    // FILTER CALLS
+    // API STATE
     // =========================================================
 
-    const filteredCalls = useMemo(() => {
-
-        return calls.filter((call) => {
-
-            const date =
-                call.date ||
-                call.createdAt?.slice(0, 10)
-
-
-            if (!date) {
-                return false
-            }
-
-
-            return (
-                date.slice(0, 4) === year &&
-                date.slice(5, 7) === month
-            )
-
-        })
-
-    }, [
-        calls,
-        year,
-        month,
-    ])
-
-
-    // =========================================================
-    // CALCULATE SUMMARY
-    // =========================================================
-
-    const summary = useMemo(() => {
-
-        const result = {
+    const [summary, setSummary] =
+        useState({
             total: 0,
             received: 0,
             called: 0,
             missed: 0,
             uniqueMissed: 0,
             applications: 0,
-        }
-
-
-        filteredCalls.forEach((call) => {
-
-            result.total += 1
-
-
-            const type =
-                String(
-                    call.type || ''
-                )
-                    .trim()
-                    .toLowerCase()
-
-
-            const status =
-                String(
-                    call.status || ''
-                )
-                    .trim()
-                    .toLowerCase()
-
-
-            // -------------------------------------------------
-            // RECEIVED
-            // -------------------------------------------------
-
-            if (
-                type === 'incoming' &&
-                status === 'received'
-            ) {
-
-                result.received += 1
-
-            }
-
-
-            // -------------------------------------------------
-            // CALLED
-            // -------------------------------------------------
-
-            if (
-                type === 'outgoing' &&
-                status !== 'missed'
-            ) {
-
-                result.called += 1
-
-            }
-
-
-            // -------------------------------------------------
-            // MISSED
-            // -------------------------------------------------
-
-            if (
-                type === 'missed' ||
-                status === 'missed'
-            ) {
-
-                result.missed += 1
-
-            }
-
-
-            // -------------------------------------------------
-            // UNIQUE MISSED
-            // -------------------------------------------------
-
-            if (call.uniqueMissed) {
-
-                result.uniqueMissed += 1
-
-            }
-
-
-            // -------------------------------------------------
-            // APPLICATION
-            // -------------------------------------------------
-
-            if (call.applicationCreated) {
-
-                result.applications += 1
-
-            }
-
         })
 
 
-        return result
+    const [records, setRecords] =
+        useState(0)
 
-    }, [
-        filteredCalls,
-    ])
+
+    const [loading, setLoading] =
+        useState(false)
+
+
+    // =========================================================
+    // FETCH MONTHLY OVERVIEW
+    // =========================================================
+
+    const loadData = useCallback(
+        async () => {
+
+            try {
+
+                setLoading(true)
+
+
+                const response =
+                    await fetchMonthlyCallOverview({
+                        year,
+                        month,
+                        contextId:
+                            contextId || '',
+                    })
+
+
+                setSummary(
+                    response?.summary || {
+                        total: 0,
+                        received: 0,
+                        called: 0,
+                        missed: 0,
+                        uniqueMissed: 0,
+                        applications: 0,
+                    }
+                )
+
+
+                setRecords(
+                    Number(
+                        response?.records || 0
+                    )
+                )
+
+            } catch (error) {
+
+                console.error(
+                    'Failed to fetch monthly call overview:',
+                    error
+                )
+
+
+                setSummary({
+                    total: 0,
+                    received: 0,
+                    called: 0,
+                    missed: 0,
+                    uniqueMissed: 0,
+                    applications: 0,
+                })
+
+
+                setRecords(0)
+
+            } finally {
+
+                setLoading(false)
+
+            }
+
+        },
+        [
+            year,
+            month,
+            contextId,
+        ]
+    )
+
+
+    // =========================================================
+    // LOAD WHEN FILTERS CHANGE
+    // =========================================================
+
+    useEffect(() => {
+
+        loadData()
+
+    }, [loadData])
 
 
     // =========================================================
@@ -555,9 +548,13 @@ function MonthlyCallTrend({
     // =========================================================
 
     const selectedMonth =
-        MONTHS.find(
-            (item) =>
-                item.value === month
+        useMemo(
+            () =>
+                MONTHS.find(
+                    (item) =>
+                        item.value === month
+                ),
+            [month]
         )
 
 
@@ -566,9 +563,9 @@ function MonthlyCallTrend({
     // =========================================================
 
     const donutTotal =
-        summary.received +
-        summary.called +
-        summary.missed
+        Number(summary.received || 0) +
+        Number(summary.called || 0) +
+        Number(summary.missed || 0)
 
 
     // =========================================================
@@ -672,6 +669,7 @@ function MonthlyCallTrend({
                         Year
                     </label>
 
+
                     <select
                         value={year}
                         onChange={(event) =>
@@ -721,6 +719,7 @@ function MonthlyCallTrend({
                         Month
                     </label>
 
+
                     <select
                         value={month}
                         onChange={(event) =>
@@ -759,6 +758,27 @@ function MonthlyCallTrend({
 
 
             {/* =================================================
+                LOADING
+            ================================================= */}
+
+            {loading && (
+
+                <div className="
+                    border-b
+                    border-base-300
+                    px-4
+                    py-2
+                    text-center
+                    text-[10px]
+                    text-base-content/40
+                ">
+                    Loading monthly overview...
+                </div>
+
+            )}
+
+
+            {/* =================================================
                 MAIN CONTENT
             ================================================= */}
 
@@ -786,10 +806,18 @@ function MonthlyCallTrend({
                 ">
 
                     <DonutChart
-                        received={summary.received}
-                        called={summary.called}
-                        missed={summary.missed}
-                        total={donutTotal}
+                        received={
+                            summary.received
+                        }
+                        called={
+                            summary.called
+                        }
+                        missed={
+                            summary.missed
+                        }
+                        total={
+                            donutTotal
+                        }
                     />
 
                 </div>
@@ -844,8 +872,12 @@ function MonthlyCallTrend({
                                 (metric) => (
 
                                     <LegendItem
-                                        key={metric.key}
-                                        label={metric.label}
+                                        key={
+                                            metric.key
+                                        }
+                                        label={
+                                            metric.label
+                                        }
                                         value={
                                             summary[
                                                 metric.key
@@ -891,7 +923,9 @@ function MonthlyCallTrend({
                                 (metric) => (
 
                                     <div
-                                        key={metric.key}
+                                        key={
+                                            metric.key
+                                        }
                                         className="
                                             rounded-lg
                                             border
@@ -924,7 +958,9 @@ function MonthlyCallTrend({
                                                 font-medium
                                                 text-base-content/45
                                             ">
-                                                {metric.label}
+                                                {
+                                                    metric.label
+                                                }
                                             </span>
 
                                         </div>
@@ -984,6 +1020,7 @@ function MonthlyCallTrend({
                         text-base-content/40
                     ">
                         Showing data for{' '}
+
                         <span className="
                             font-semibold
                             text-base-content/60
@@ -1001,7 +1038,7 @@ function MonthlyCallTrend({
                         text-base-content/40
                     ">
                         {formatNumber(
-                            filteredCalls.length
+                            records
                         )}{' '}
                         records processed
                     </div>
