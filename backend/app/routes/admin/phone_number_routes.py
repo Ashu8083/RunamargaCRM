@@ -12,6 +12,7 @@ from app.controllers.phone_numbers_controller import (
     get_phone_numbers,
     create_phone_number,
     update_phone_number,
+    delete_phone_number,
 )
 
 from app.models.employees import Employee
@@ -79,4 +80,23 @@ def edit_phone_number(
         employee=employee,
         phone_number_id=phone_number_id,
         data=data,
+    )
+
+
+# =============================================================
+# DELETE PHONE NUMBER
+# =============================================================
+
+@router.delete("/{phone_number_id}")
+def remove_phone_number(
+    phone_number_id: int,
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(
+        get_current_employee
+    ),
+):
+    return delete_phone_number(
+        db=db,
+        employee=employee,
+        phone_number_id=phone_number_id,
     )
