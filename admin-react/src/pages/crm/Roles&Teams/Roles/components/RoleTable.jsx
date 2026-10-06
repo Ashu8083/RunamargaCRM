@@ -247,38 +247,6 @@ function RoleTable({
                         </button>
 
 
-
-                                              {/* =================================================
-                            Show Deleted
-                        ================================================= */}
-
-                        <label className="flex items-center gap-2 cursor-pointer px-2">
-
-                            <input
-                                type="checkbox"
-                                checked={showDeleted}
-                                onChange={(event) =>
-                                    setShowDeleted?.(
-                                        event.target.checked
-                                    )
-                                }
-                                disabled={loading}
-                                className="
-                                    toggle
-                                    toggle-sm
-                                    border-base-300
-                                    [--tglbg:theme(colors.base-300)]
-                                    checked:border-[#8BCF00]
-                                    checked:bg-[#8BCF00]
-                                "
-                            />
-
-                            <span className="text-sm whitespace-nowrap">
-                                Show Deleted
-                            </span>
-
-                        </label>
-
                       </div>
 
                 </div>

@@ -52,7 +52,7 @@ def verify_otp(
             httponly=True,
             secure=False,
             samesite="lax",
-            max_age=60,
+            max_age=60*30,
         )
 
         # Refresh token

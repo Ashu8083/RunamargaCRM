@@ -330,7 +330,22 @@ const ApplicationStatus = () => {
     const location = useLocation();
 
     const navigate = useNavigate();
+    const [search, setSearch] = useState('')
 
+    const [selectedLoanType, setSelectedLoanType] =
+        useState('')
+
+    const [selectedRM, setSelectedRM] =
+        useState('')
+
+    const [selectedTeamLead, setSelectedTeamLead] =
+        useState('')
+
+    const [selectedAgent, setSelectedAgent] =
+        useState('')
+
+    const [selectedStatus, setSelectedStatus] =
+        useState('')
 
     // =========================================================
     // URL PARAMETERS
@@ -414,46 +429,23 @@ const ApplicationStatus = () => {
 
     // =========================================================
     // TABLE FILTERS
+    //
+    // The filter UI/state will live inside ApplicationsTable.
+    // This object only receives the current values from the table
+    // so that this page can perform server-side fetching.
     // =========================================================
 
     const [
-        search,
-        setSearch,
-    ] = useState("");
-
-
-    const [
-        selectedLoanType,
-        setSelectedLoanType,
-    ] = useState(
-        loanType || ""
-    );
-
-
-    const [
-        selectedRM,
-        setSelectedRM,
-    ] = useState("");
-
-
-    const [
-        selectedTeamLead,
-        setSelectedTeamLead,
-    ] = useState("");
-
-
-    const [
-        selectedAgent,
-        setSelectedAgent,
-    ] = useState("");
-
-
-    const [
-        selectedStatus,
-        setSelectedStatus,
-    ] = useState(
-        dashboardStatus || ""
-    );
+        tableFilters,
+        setTableFilters,
+    ] = useState({
+        search: "",
+        selectedLoanType: loanType || "",
+        selectedRM: "",
+        selectedTeamLead: "",
+        selectedAgent: "",
+        selectedStatus: dashboardStatus || "",
+    });
 
 
     // =========================================================
@@ -461,7 +453,8 @@ const ApplicationStatus = () => {
     // =========================================================
 
     const fetchApplications = async (
-        page = currentPage
+        page = currentPage,
+        filters = tableFilters
     ) => {
 
         try {
@@ -479,25 +472,26 @@ const ApplicationStatus = () => {
                     toDate,
 
                     loanType:
-                        selectedLoanType ||
+                        filters?.selectedLoanType ||
                         loanType ||
                         "",
 
                     status:
-                        selectedStatus ||
+                        filters?.selectedStatus ||
                         dashboardStatus ||
                         "",
 
-                    search,
+                    search:
+                        filters?.search || "",
 
                     rmId:
-                        selectedRM,
+                        filters?.selectedRM || "",
 
                     agentId:
-                        selectedAgent,
+                        filters?.selectedAgent || "",
 
                     teamLeadId:
-                        selectedTeamLead,
+                        filters?.selectedTeamLead || "",
 
                     contextId,
 
@@ -579,7 +573,7 @@ const ApplicationStatus = () => {
     };
 
 
-    
+
 
     // =========================================================
     // FETCH WHEN PAGE / FILTER CHANGES
@@ -599,7 +593,8 @@ const ApplicationStatus = () => {
         const timer = setTimeout(() => {
 
             fetchApplications(
-                currentPage
+                currentPage,
+                tableFilters
             );
 
         }, 300);
@@ -622,45 +617,34 @@ const ApplicationStatus = () => {
 
         dashboardStatus,
 
-        search,
-
-        selectedLoanType,
-
-        selectedRM,
-
-        selectedTeamLead,
-
-        selectedAgent,
-
-        selectedStatus,
-
         currentPage,
+
+        tableFilters,
     ]);
 
 
     // =========================================================
-    // RESET LOCAL FILTERS WHEN URL CHANGES
+    // RESET TABLE FILTERS WHEN URL CHANGES
     // =========================================================
 
     useEffect(() => {
 
-        setSelectedLoanType(
-            loanType || ""
-        );
+        setTableFilters({
+            search: "",
 
+            selectedLoanType:
+                loanType || "",
 
-        setSelectedStatus(
-            dashboardStatus || ""
-        );
+            selectedRM: "",
 
+            selectedTeamLead: "",
 
-        setSelectedRM("");
+            selectedAgent: "",
 
-        setSelectedTeamLead("");
+            selectedStatus:
+                dashboardStatus || "",
+        });
 
-        setSelectedAgent("");
-
-        setSearch("");
 
         setCurrentPage(1);
 
@@ -672,29 +656,35 @@ const ApplicationStatus = () => {
 
     // =========================================================
     // CLEAR FILTERS
+    //
+    // This is now delegated to ApplicationsTable.
+    // ApplicationsTable will reset its own filter state and
+    // notify this page through handleTableFiltersChange().
     // =========================================================
 
     const handleClearFilters = () => {
 
-        setSearch("");
+        const clearedFilters = {
+
+            search: "",
+
+            selectedLoanType:
+                loanType || "",
+
+            selectedRM: "",
+
+            selectedTeamLead: "",
+
+            selectedAgent: "",
+
+            selectedStatus:
+                dashboardStatus || "",
+        };
 
 
-        setSelectedLoanType(
-            loanType || ""
+        setTableFilters(
+            clearedFilters
         );
-
-
-        setSelectedRM("");
-
-        setSelectedTeamLead("");
-
-        setSelectedAgent("");
-
-
-        setSelectedStatus(
-            dashboardStatus || ""
-        );
-
 
         setCurrentPage(1);
 
@@ -708,7 +698,8 @@ const ApplicationStatus = () => {
     const handleRefresh = () => {
 
         fetchApplications(
-            currentPage
+            currentPage,
+            tableFilters
         );
 
     };
@@ -818,7 +809,9 @@ const ApplicationStatus = () => {
         }
 
 
-        setCurrentPage(page);
+        setCurrentPage(
+            page
+        );
 
     };
 
