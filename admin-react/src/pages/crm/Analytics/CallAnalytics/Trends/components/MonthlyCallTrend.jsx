@@ -282,7 +282,7 @@ function DonutChart({
                 </span>
 
 
-                <span className="
+                {/* <span className="
                     mt-0.5
                     text-[10px]
                     text-base-content/40
@@ -293,7 +293,7 @@ function DonutChart({
                         Number(missed || 0)
                     )}{' '}
                     tracked
-                </span>
+                </span> */}
 
             </div>
 

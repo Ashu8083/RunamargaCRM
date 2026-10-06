@@ -11,18 +11,6 @@ from app.services.CallAnalytics.Trends.team_lead_call_performance_service import
 )
 
 
-from datetime import date
-from typing import Optional
-
-from sqlalchemy.orm import Session
-
-from app.models.employees import Employee
-
-from app.services.CallAnalytics.Trends.team_lead_call_performance_service import (
-    CallAnalyticsTeamLeadCallPerformanceService,
-)
-
-
 def get_team_lead_call_performance(
     db: Session,
     employee: Employee,
@@ -33,6 +21,7 @@ def get_team_lead_call_performance(
     to_date: Optional[date] = None,
     context_id: Optional[int] = None,
 ):
+
     return (
         CallAnalyticsTeamLeadCallPerformanceService
         .get_performance(

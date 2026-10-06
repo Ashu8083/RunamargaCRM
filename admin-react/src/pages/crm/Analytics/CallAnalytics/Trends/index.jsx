@@ -64,7 +64,7 @@ function Trends() {
           3. TEAM LEAD CALL PERFORMANCE
       ===================================================== */}
 
-      <TeamCallTrend />
+      {/* <TeamCallTrend /> */}
 
 
       {/* =====================================================
