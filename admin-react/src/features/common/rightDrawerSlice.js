@@ -1,3 +1,4 @@
+// admin-react\src\features\common\rightDrawerSlice.js
 import { createSlice } from '@reduxjs/toolkit'
 
 export const rightDrawerSlice = createSlice({

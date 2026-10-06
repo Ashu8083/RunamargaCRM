@@ -10,6 +10,7 @@ from app.services.auth_service import (
     create_login_otp,
     verify_login_otp,
     refresh_access_token,
+    revoke_refresh_token,
 )
 
 
@@ -114,3 +115,29 @@ def refresh_token(
             status_code=401,
             detail=str(exc),
         )
+
+
+def logout(
+    db: Session,
+    refresh_token: str | None,
+    response: Response,
+):
+    if refresh_token:
+        revoke_refresh_token(
+            db=db,
+            refresh_token=refresh_token,
+        )
+
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+    )
+
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+    )
+
+    return {
+        "message": "Logout successful",
+    }
