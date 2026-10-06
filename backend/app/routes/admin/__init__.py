@@ -31,6 +31,9 @@ from .agents_routes import router as agents_router
 from .admins_routes import router as admins_router
 from .admin_log_routes import router as admin_log_router
 from .employee_audit_log_routes import router as employee_audit_log_router
+from .phone_number_audit_log_routes import router as phone_number_audit_log_router
+from .loan_application_audit_log_routes import router as loan_application_audit_log_router
+from .loan_application_status_audit_log_routes import router as loan_application_status_audit_log_router
 
 
 
@@ -49,6 +52,7 @@ from .Loans.reverted_loans_routes import router as reverted_loans_router
 from .phone_number_routes import router as phone_num_router
 from .CallManagement.call_logs import router as call_logs_router
 from .CallManagement.call_assignments import router as call_assignment_router
+from .call_reassignment_audit_log_routes import router as call_reassignment_audit_log_router
 
 # ============================================================================
 # Dashboard
@@ -204,6 +208,9 @@ router.include_router(agents_router)
 router.include_router(admins_router)
 router.include_router(admin_log_router)
 router.include_router(employee_audit_log_router)
+router.include_router(phone_number_audit_log_router)
+router.include_router(loan_application_audit_log_router)
+router.include_router(loan_application_status_audit_log_router)
 
 
 
@@ -243,6 +250,7 @@ router.include_router(face_enrollment_router)
 router.include_router(phone_number_router)
 router.include_router(call_logs_router)
 router.include_router(call_assignment_router)
+router.include_router(call_reassignment_audit_log_router)
 
 # ============================================================================
 # CALL Analytics
