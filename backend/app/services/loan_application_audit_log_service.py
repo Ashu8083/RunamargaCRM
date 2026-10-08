@@ -1,5 +1,3 @@
-# backend/app/services/loan_application_audit_log_service.py
-
 from datetime import datetime
 from typing import Optional, List
 from sqlalchemy.orm import Session
@@ -24,7 +22,7 @@ class LoanApplicationAuditLogService(AuditLogService[LoanApplicationAuditLog]):
         commit: bool = False,
     ) -> LoanApplicationAuditLog:
         """
-        Creates an audit log entry for loan application operations/status changes.
+        Creates an audit log entry for loan application operations.
         Stores employee_context_id for action_by and report_to (NOT employee_id).
         Auto-resolves report_to from EmployeeContext hierarchy if not explicitly provided.
         """
@@ -40,7 +38,7 @@ class LoanApplicationAuditLogService(AuditLogService[LoanApplicationAuditLog]):
                     )
                     .first()
                 )
-                # Fallback: if caller passed employee_id instead of context_id
+                # Fallback: if caller accidentally passed employee_id instead of context_id
                 if not performer_ctx:
                     performer_ctx = (
                         db.query(EmployeeContext)
@@ -77,6 +75,16 @@ class LoanApplicationAuditLogService(AuditLogService[LoanApplicationAuditLog]):
                         )
                         if target_ctx and target_ctx.reports_to_id:
                             report_to = target_ctx.reports_to_id
+        if delete:
+            log_entry = LoanApplicationAuditLog(
+                action=action,
+                action_by_id=action_by,
+                loan_application_id=action_on,
+                report_to_id=report_to,
+                date_and_time=date_and_time or datetime.now(),
+                deleted_at=delete,
+            )
+            db.add(log_entry)
 
         log_entry = LoanApplicationAuditLog(
             action=action,
@@ -84,7 +92,6 @@ class LoanApplicationAuditLogService(AuditLogService[LoanApplicationAuditLog]):
             loan_application_id=action_on,
             report_to_id=report_to,
             date_and_time=date_and_time or datetime.now(),
-            deleted_at=delete,
         )
         db.add(log_entry)
 

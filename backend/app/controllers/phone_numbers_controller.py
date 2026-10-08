@@ -1,4 +1,3 @@
-from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -7,27 +6,6 @@ from app.models.phone_numbers import (
     PhoneNumberStatus,
 )
 from app.models.employees import Employee
-from app.models.employee_contexts import EmployeeContext
-from app.core.access_control import AccessControl
-from app.services.phone_number_audit_log_service import PhoneNumberAuditLogService
-
-
-def _get_active_context_id(db: Session, employee: Employee) -> int | None:
-    ctx = AccessControl.get_active_context(db=db, employee=employee)
-    return ctx.id if ctx else None
-
-
-def _get_employee_context_id_by_employee_id(db: Session, emp_id: int) -> int | None:
-    ctx = (
-        db.query(EmployeeContext)
-        .filter(
-            EmployeeContext.employee_id == emp_id,
-            EmployeeContext.is_active.is_(True),
-            EmployeeContext.deleted_at.is_(None),
-        )
-        .first()
-    )
-    return ctx.id if ctx else None
 
 
 def get_phone_numbers(
@@ -238,21 +216,6 @@ def create_phone_number(
     )
 
     db.add(phone_number)
-    db.flush()
-
-    performer_context_id = _get_active_context_id(db=db, employee=employee)
-    target_context_id = _get_employee_context_id_by_employee_id(db=db, emp_id=int(employee_id))
-
-    PhoneNumberAuditLogService.log_audit_log(
-        db=db,
-        action="create",
-        action_by=performer_context_id,
-        action_on=target_context_id,
-        phone_number_id=phone_number.id,
-        phone=phone_number.phone,
-        commit=False,
-    )
-
     db.commit()
     db.refresh(phone_number)
 
@@ -379,61 +342,7 @@ def update_phone_number(
             else PhoneNumberStatus.inactive
         )
 
-    performer_context_id = _get_active_context_id(db=db, employee=employee)
-    target_context_id = _get_employee_context_id_by_employee_id(db=db, emp_id=phone_number.employee_id)
-
-    PhoneNumberAuditLogService.log_audit_log(
-        db=db,
-        action="update",
-        action_by=performer_context_id,
-        action_on=target_context_id,
-        phone_number_id=phone_number.id,
-        phone=phone_number.phone,
-        commit=False,
-    )
-
     db.commit()
     db.refresh(phone_number)
 
     return phone_number
-
-
-def delete_phone_number(
-    db: Session,
-    employee: Employee,
-    phone_number_id: int,
-):
-    phone_number = (
-        db.query(PhoneNumber)
-        .filter(
-            PhoneNumber.id == phone_number_id,
-            PhoneNumber.deleted_at.is_(None),
-        )
-        .first()
-    )
-
-    if not phone_number:
-        raise HTTPException(
-            status_code=404,
-            detail="Phone number not found.",
-        )
-
-    now = datetime.utcnow()
-    phone_number.deleted_at = now
-
-    performer_context_id = _get_active_context_id(db=db, employee=employee)
-    target_context_id = _get_employee_context_id_by_employee_id(db=db, emp_id=phone_number.employee_id)
-
-    PhoneNumberAuditLogService.log_audit_log(
-        db=db,
-        action="delete",
-        action_by=performer_context_id,
-        action_on=target_context_id,
-        phone_number_id=phone_number.id,
-        phone=phone_number.phone,
-        delete=now,
-        commit=False,
-    )
-
-    db.commit()
-    return {"message": "Phone number deleted successfully"}
