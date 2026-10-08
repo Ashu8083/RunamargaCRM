@@ -1,18 +1,14 @@
 # backend/app/services/auth_service.py
-
 import hashlib
 import secrets
 import resend
-
 from datetime import datetime, timedelta, timezone
-
 from app.config.settings import settings
 from app.models.auth_tokens import AuthToken
-from fastapi.requests import Request
+from fastapi.requests import  Request
 from app.core.security import hash_token
 from sqlalchemy.orm import Session
 from app.models.employees import Employee
-
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -20,60 +16,30 @@ from app.core.security import (
     hash_token,
     REFRESH_TOKEN_EXPIRE_DAYS,
 )
-
 from app.models.employee_contexts import EmployeeContext
 from app.models.employee_context_permissions import EmployeeContextPermission
 from app.models.permissions import Permission
 from app.models.contexts import Context
 from app.services.employee_face_profile_service import logger
 
-
 OTP_EXPIRY_MINUTES = 5
 
-
-# ------------------------------------------------------------------------
-# OTP EXPIRY
-# ------------------------------------------------------------------------
 
 def get_otp_expiry() -> datetime:
     return datetime.now(timezone.utc) + timedelta(
         minutes=OTP_EXPIRY_MINUTES
     )
 
-
-# ------------------------------------------------------------------------
-# GENERATE OTP
-# ------------------------------------------------------------------------
-
 def generate_otp() -> str:
     """Generate a 4 digit OTP"""
-
     return f"{secrets.randbelow(1_0000):04d}"
-
-
-# ------------------------------------------------------------------------
-# HASH OTP
-# ------------------------------------------------------------------------
-
-def hash_otp(
-    otp: str,
-) -> str:
+def hash_otp(otp: str) -> str:
     """Hash OTP before storing it in the database."""
-
-    return hashlib.sha256(
-        otp.encode()
-    ).hexdigest()
-
-
-# ------------------------------------------------------------------------
-# FIND EMPLOYEE
-# ------------------------------------------------------------------------
-
+    return hashlib.sha256(otp.encode()).hexdigest()
 def find_employee_by_email(
     db: Session,
     email: str,
 ) -> Employee | None:
-
     return (
         db.query(Employee)
         .filter(
@@ -84,30 +50,13 @@ def find_employee_by_email(
     )
 
 
-# ------------------------------------------------------------------------
-# VALIDATE EMPLOYEE FOR LOGIN
-# ------------------------------------------------------------------------
-
-def validate_employee_for_login(
-    employee: Employee,
-) -> None:
-
+def validate_employee_for_login(employee: Employee) -> None:
     if employee.deactivate:
-
-        raise ValueError(
-            "Account is deactivated"
-        )
+        raise ValueError("Account is deactivated")
 
     if employee.status != "active":
+        raise ValueError("Account is inactive")
 
-        raise ValueError(
-            "Account is inactive"
-        )
-
-
-# ------------------------------------------------------------------------
-# SAVE LOGIN OTP
-# ------------------------------------------------------------------------
 
 def save_login_otp(
     db: Session,
@@ -115,92 +64,54 @@ def save_login_otp(
     otp: str,
     expires_at: datetime,
 ) -> None:
-
-    employee.login_otp_hash = hash_otp(
-        otp
-    )
-
-    employee.login_otp_expires_at = (
-        expires_at
-    )
-
-    employee.login_otp_sent_at = (
-        datetime.now(timezone.utc)
-    )
+    employee.login_otp_hash = hash_otp(otp)
+    employee.login_otp_expires_at = expires_at
+    employee.login_otp_sent_at = datetime.now(timezone.utc)
 
     db.commit()
-
-
-# ------------------------------------------------------------------------
-# SEND OTP EMAIL
-# ------------------------------------------------------------------------
 
 def send_otp_email(
     email: str,
     otp: str,
 ) -> None:
+    resend.api_key = settings.RESEND_API_KEY
 
-    resend.api_key = (
-        settings.RESEND_API_KEY
-    )
+    resend.Emails.send({
+        "from": f"{settings.MAIL_FROM_NAME} <{settings.MAIL_FROM_ADDRESS}>",
+        "to": [email],
+        "subject": "Your Login OTP - Runamarga",
+        "html": f"""
+            <div style="font-family: Arial, sans-serif;">
+                <h2>Runamarga Login OTP</h2>
 
-    resend.Emails.send(
-        {
-            "from": (
-                f"{settings.MAIL_FROM_NAME} "
-                f"<{settings.MAIL_FROM_ADDRESS}>"
-            ),
-            "to": [email],
-            "subject": "Your Login OTP - Runamarga",
-            "html": f"""
-                <div style="font-family: Arial, sans-serif;">
-                    <h2>Runamarga Login OTP</h2>
+                <p>Your One-Time Password is:</p>
 
-                    <p>Your One-Time Password is:</p>
+                <h1>{otp}</h1>
 
-                    <h1>{otp}</h1>
+                <p>
+                    This OTP is valid for
+                    {OTP_EXPIRY_MINUTES} minutes.
+                </p>
 
-                    <p>
-                        This OTP is valid for
-                        {OTP_EXPIRY_MINUTES} minutes.
-                    </p>
-
-                    <p>
-                        If you did not request this login,
-                        please ignore this email.
-                    </p>
-                </div>
-            """,
-        }
-    )
-
-
-# ------------------------------------------------------------------------
-# CREATE LOGIN OTP
-# ------------------------------------------------------------------------
-
+                <p>
+                    If you did not request this login,
+                    please ignore this email.
+                </p>
+            </div>
+        """,
+    })
 def create_login_otp(
     db: Session,
     email: str,
 ) -> str:
-
-    employee = find_employee_by_email(
-        db,
-        email,
-    )
+    employee = find_employee_by_email(db, email)
 
     if not employee:
+        raise ValueError("Invalid email")
 
-        raise ValueError(
-            "Invalid email"
-        )
-
-    validate_employee_for_login(
-        employee
-    )
+    validate_employee_for_login(employee)
 
     otp = generate_otp()
-
     expires_at = get_otp_expiry()
 
     save_login_otp(
@@ -216,12 +127,6 @@ def create_login_otp(
     )
 
     return otp
-
-
-# ------------------------------------------------------------------------
-# GET EMPLOYEE CONTEXTS
-# ------------------------------------------------------------------------
-
 def get_employee_contexts(
     db: Session,
     employee_id: int,
@@ -231,12 +136,10 @@ def get_employee_contexts(
         db.query(EmployeeContext)
         .join(
             Context,
-            EmployeeContext.context_id
-            == Context.id,
+            EmployeeContext.context_id == Context.id,
         )
         .filter(
-            EmployeeContext.employee_id
-            == employee_id,
+            EmployeeContext.employee_id == employee_id,
             EmployeeContext.is_active.is_(True),
             Context.is_active.is_(True),
         )
@@ -261,11 +164,8 @@ def get_employee_contexts(
             )
             .all()
         )
-
         # logger.info(
-        #     f"Employee context {employee_context.id} "
-        #     f"add to request {request.state}"
-        # )
+        #     f"Employee context {employee_context.id} add to request {request.state} ")
 
         result.append(
             {
@@ -282,71 +182,30 @@ def get_employee_contexts(
         )
 
     return result
-
-
-# ------------------------------------------------------------------------
-# VERIFY LOGIN OTP
-# ------------------------------------------------------------------------
-
 def verify_login_otp(
     db: Session,
     email: str,
     otp: str,
-) -> tuple[
-    Employee,
-    str,
-    str,
-    list[dict],
-]:
+) -> tuple[Employee, str, str, list[dict]]:
 
-    employee = find_employee_by_email(
-        db,
-        email,
-    )
+    employee = find_employee_by_email(db, email)
 
     if not employee:
+        raise ValueError("Invalid email")
 
-        raise ValueError(
-            "Invalid email"
-        )
-
-    validate_employee_for_login(
-        employee
-    )
+    validate_employee_for_login(employee)
 
     if not employee.login_otp_hash:
-
-        raise ValueError(
-            "OTP not requested"
-        )
+        raise ValueError("OTP not requested")
 
     if not employee.login_otp_expires_at:
+        raise ValueError("OTP expired")
 
-        raise ValueError(
-            "OTP expired"
-        )
+    if datetime.now(timezone.utc) > employee.login_otp_expires_at:
+        raise ValueError("OTP expired")
 
-    if (
-        datetime.now(timezone.utc)
-        > employee.login_otp_expires_at
-    ):
-
-        raise ValueError(
-            "OTP expired"
-        )
-
-    if (
-        hash_otp(otp)
-        != employee.login_otp_hash
-    ):
-
-        raise ValueError(
-            "Invalid OTP"
-        )
-
-    # --------------------------------------------------------------------
-    # Clear OTP after successful verification
-    # --------------------------------------------------------------------
+    if hash_otp(otp) != employee.login_otp_hash:
+        raise ValueError("Invalid OTP")
 
     employee.login_otp_hash = None
     employee.login_otp_expires_at = None
@@ -355,48 +214,19 @@ def verify_login_otp(
     db.commit()
     db.refresh(employee)
 
-    # --------------------------------------------------------------------
-    # Create tokens
-    # --------------------------------------------------------------------
-
-    access_token = create_access_token(
-        employee.id
-    )
-
-    refresh_token = create_refresh_token(
-        employee.id
-    )
-
-    # --------------------------------------------------------------------
-    # Save refresh token
-    # --------------------------------------------------------------------
-
+    access_token = create_access_token(employee.id)
+    refresh_token = create_refresh_token(employee.id)
     save_refresh_token(
         db=db,
         employee_id=employee.id,
         refresh_token=refresh_token,
     )
-
-    # --------------------------------------------------------------------
-    # Get employee contexts
-    # --------------------------------------------------------------------
-
     contexts = get_employee_contexts(
         db=db,
         employee_id=employee.id,
     )
 
-    return (
-        employee,
-        access_token,
-        refresh_token,
-        contexts,
-    )
-
-
-# ------------------------------------------------------------------------
-# SAVE REFRESH TOKEN
-# ------------------------------------------------------------------------
+    return employee, access_token, refresh_token, contexts
 
 def save_refresh_token(
     db: Session,
@@ -404,65 +234,34 @@ def save_refresh_token(
     refresh_token: str,
 ) -> AuthToken:
 
-    # --------------------------------------------------------------------
     # Revoke any existing active refresh tokens
-    # --------------------------------------------------------------------
-
     existing_tokens = (
         db.query(AuthToken)
         .filter(
-            AuthToken.employee_id
-            == employee_id,
-            AuthToken.token_type
-            == "refresh",
+            AuthToken.employee_id == employee_id,
+            AuthToken.token_type == "refresh",
             AuthToken.revoked_at.is_(None),
         )
         .all()
     )
 
-    now = datetime.now(
-        timezone.utc
-    )
+    now = datetime.now(timezone.utc)
 
     for token in existing_tokens:
-
         token.revoked_at = now
 
-    # --------------------------------------------------------------------
-    # Create new refresh token session
-    # --------------------------------------------------------------------
-
+    # Create the new refresh token session
     auth_token = AuthToken(
         employee_id=employee_id,
-        token_hash=hash_token(
-            refresh_token
-        ),
+        token_hash=hash_token(refresh_token),
         token_type="refresh",
-        expires_at=(
-            now
-            + timedelta(
-                days=REFRESH_TOKEN_EXPIRE_DAYS
-            )
-        ),
+        expires_at=now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
     )
 
-    db.add(
-        auth_token
-    )
-
+    db.add(auth_token)
     db.commit()
-
-    db.refresh(
-        auth_token
-    )
-
+    db.refresh(auth_token)
     return auth_token
-
-
-# ------------------------------------------------------------------------
-# REFRESH ACCESS TOKEN
-# ------------------------------------------------------------------------
-
 def refresh_access_token(
     db: Session,
     refresh_token: str,
@@ -484,174 +283,47 @@ def refresh_access_token(
     ↓
     NEW access JWT
     """
+    payload = decode_token(refresh_token)
 
-    # --------------------------------------------------------------------
-    # Decode refresh token
-    # --------------------------------------------------------------------
+    if payload.get("type") != "refresh":
+        raise ValueError("Invalid refresh token")
 
-    payload = decode_token(
-        refresh_token
-    )
-
-    if payload.get(
-        "type"
-    ) != "refresh":
-
-        raise ValueError(
-            "Invalid refresh token"
-        )
-
-    employee_id = payload.get(
-        "sub"
-    )
+    employee_id = payload.get("sub")
 
     if not employee_id:
+        raise ValueError("Invalid refresh token")
 
-        raise ValueError(
-            "Invalid refresh token"
-        )
-
-    # --------------------------------------------------------------------
-    # Hash refresh token
-    # --------------------------------------------------------------------
-
-    token_hash = hash_token(
-        refresh_token
-    )
-
-    # --------------------------------------------------------------------
-    # Find active refresh session
-    # --------------------------------------------------------------------
+    token_hash = hash_token(refresh_token)
 
     auth_token = (
         db.query(AuthToken)
         .filter(
-            AuthToken.employee_id
-            == int(employee_id),
-            AuthToken.token_hash
-            == token_hash,
-            AuthToken.token_type
-            == "refresh",
+            AuthToken.employee_id == int(employee_id),
+            AuthToken.token_hash == token_hash,
+            AuthToken.token_type == "refresh",
             AuthToken.revoked_at.is_(None),
         )
         .first()
     )
 
     if not auth_token:
+        raise ValueError("Refresh session is invalid or revoked")
 
-        raise ValueError(
-            "Refresh session is invalid or revoked"
-        )
-
-    # --------------------------------------------------------------------
-    # Check expiration
-    # --------------------------------------------------------------------
-
-    if (
-        datetime.now(timezone.utc)
-        > auth_token.expires_at
-    ):
-
-        raise ValueError(
-            "Refresh session has expired"
-        )
-
-    # --------------------------------------------------------------------
-    # Validate employee
-    # --------------------------------------------------------------------
+    if datetime.now(timezone.utc) > auth_token.expires_at:
+        raise ValueError("Refresh session has expired")
 
     employee = (
         db.query(Employee)
         .filter(
-            Employee.id
-            == int(employee_id),
+            Employee.id == int(employee_id),
             Employee.deleted_at.is_(None),
         )
         .first()
     )
 
     if not employee:
+        raise ValueError("Employee not found")
 
-        raise ValueError(
-            "Employee not found"
-        )
+    validate_employee_for_login(employee)
 
-    validate_employee_for_login(
-        employee
-    )
-
-    # --------------------------------------------------------------------
-    # Create new access token
-    # --------------------------------------------------------------------
-
-    return create_access_token(
-        employee.id
-    )
-
-
-# ------------------------------------------------------------------------
-# REVOKE REFRESH TOKEN
-# ------------------------------------------------------------------------
-
-def revoke_refresh_token(
-    db: Session,
-    refresh_token: str,
-) -> None:
-    """
-    Revoke the exact refresh-token session represented
-    by the provided raw refresh token.
-
-    Only the SHA-256 hash is stored in the database.
-
-    This is used during logout.
-
-    Existing refresh-token functionality is unchanged.
-    """
-
-    if not refresh_token:
-
-        return
-
-    # --------------------------------------------------------------------
-    # Hash the raw refresh token
-    # --------------------------------------------------------------------
-
-    token_hash = hash_token(
-        refresh_token
-    )
-
-    # --------------------------------------------------------------------
-    # Find the exact active refresh session
-    # --------------------------------------------------------------------
-
-    token_record = (
-        db.query(AuthToken)
-        .filter(
-            AuthToken.token_hash
-            == token_hash,
-            AuthToken.token_type
-            == "refresh",
-            AuthToken.revoked_at.is_(None),
-        )
-        .first()
-    )
-
-    # --------------------------------------------------------------------
-    # Token not found / already revoked
-    #
-    # Logout should remain idempotent.
-    # --------------------------------------------------------------------
-
-    if not token_record:
-
-        return
-
-    # --------------------------------------------------------------------
-    # Revoke session
-    # --------------------------------------------------------------------
-
-    token_record.revoked_at = (
-        datetime.now(timezone.utc)
-    )
-
-    db.commit()
+    return create_access_token(employee.id)

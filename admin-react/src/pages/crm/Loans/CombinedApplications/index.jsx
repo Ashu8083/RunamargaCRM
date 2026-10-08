@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+// admin-react/src/pages/crm/Loans/CombinedApplications/index.jsx
+
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getActiveContext, getStoredUser } from '../../../../app/auth'
 
@@ -7,13 +14,11 @@ import ApplicationsTable from './components/ApplicationsTable'
 import LoanTypeModal from '../../../../components/GlobalModels/Loans/LoanTypeModal'
 import StatusModal from '../../../../components/GlobalModels/Loans/StatusModal'
 import ReminderModal from '../../../../components/GlobalModels/Loans/ReminderModal'
-
 import {
     getApplications,
     updateApplicationLoanType,
     updateApplicationStatus,
 } from './Api'
-
 import { useToast } from '../../../../components/Toast/ToastProvider'
 
 function Applications() {
@@ -37,6 +42,7 @@ function Applications() {
         { label: 'Login', value: 'login' },
         { label: 'Revert Rejected', value: 'revert_rejected' },
     ]
+
 
     // =========================================================
     // APPLICATION DATA
@@ -71,12 +77,14 @@ function Applications() {
     const [selectedStatus, setSelectedStatus] =
         useState('')
 
+
     // =========================================================
     // SELECTED APPLICATION
     // =========================================================
 
     const [selectedApplication, setSelectedApplication] =
         useState(null)
+
 
     // =========================================================
     // MODAL STATE
@@ -91,11 +99,13 @@ function Applications() {
     const [showReminderModal, setShowReminderModal] =
         useState(false)
 
+
     // =========================================================
     // STATUS NORMALIZER
     // =========================================================
 
     const normalizeStatus = (status) => {
+
         const value = String(status || '')
             .trim()
             .toLowerCase()
@@ -151,10 +161,10 @@ function Applications() {
         return String(status || '')
     }
 
+
     // =========================================================
     // FETCH APPLICATIONS
     // =========================================================
-
     const fetchApplications = async (
         page = currentPage,
         size = pageSize,
@@ -209,19 +219,15 @@ function Applications() {
                 email: application.email ?? '',
 
                 gender: application.gender,
-
                 alternatePhone:
                     application.alternate_phone ??
                     application.alternatePhone,
-
                 alternateEmail:
                     application.alternate_email ??
                     application.alternateEmail,
-
                 maritalStatus:
                     application.marital_status ??
                     application.maritalStatus,
-
                 dob: application.dob,
 
                 loanTypeId:
@@ -431,6 +437,7 @@ function Applications() {
             setTotalPages(
                 Number(response?.total_pages ?? 1)
             )
+
         } catch (error) {
             console.error(
                 'Failed to fetch applications:',
@@ -440,6 +447,7 @@ function Applications() {
             setApplications([])
             setTotalApplications(0)
             setTotalPages(1)
+
         } finally {
             setLoading(false)
         }
@@ -517,231 +525,6 @@ function Applications() {
         }
     }, [])
 
-    // =========================================================
-    // FILTER APPLICATIONS
-    // =========================================================
-
-    const filteredApplications = useMemo(() => {
-
-        const searchValue =
-            search
-                .trim()
-                .toLowerCase()
-
-        return applications.filter(
-            (application) => {
-
-                // =================================================
-                // SEARCH
-                // =================================================
-
-                if (searchValue) {
-
-                    const searchableFields = [
-
-                        application.name,
-
-                        application.phone,
-
-                        application.email,
-
-                        application.loanType,
-
-                        application.status,
-
-                        application.loanId,
-
-                        application.id,
-
-                        application.appliedBy,
-
-                        application.applied_by,
-
-                        application.referral,
-
-                        application.referralName,
-
-                        application.referral_name,
-
-                        application.referredBy,
-
-                        application.referred_by,
-
-                        application.rmName,
-
-                        application.rm_name,
-
-                        application.rm?.name,
-
-                        application.processingAgent,
-
-                        application.processing_agent,
-
-                        application.agentName,
-
-                        application.agent_name,
-
-                        application.agent?.name,
-
-                        application.teamLeadName,
-
-                        application.team_lead_name,
-
-                        application.teamLead?.name,
-
-                        application.team_lead?.name,
-                    ]
-
-                    const matchesSearch =
-                        searchableFields.some(
-                            (field) =>
-                                field !== null &&
-                                field !== undefined &&
-                                String(field)
-                                    .toLowerCase()
-                                    .includes(searchValue)
-                        )
-
-                    if (!matchesSearch) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // LOAN TYPE
-                // =================================================
-
-                if (selectedLoanType) {
-
-                    const applicationLoanType =
-                        application.loanTypeId ??
-                        application.loan_type_id ??
-                        application.loanType?.id ??
-                        application.loanType
-
-                    if (
-                        String(applicationLoanType) !==
-                        String(selectedLoanType)
-                    ) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // RM
-                // =================================================
-
-                if (selectedRM) {
-
-                    const applicationRM =
-                        application.rmId ??
-                        application.rm_id ??
-                        application.rm?.id ??
-                        application.rmName ??
-                        application.rm_name ??
-                        application.rm
-
-                    if (
-                        String(applicationRM) !==
-                        String(selectedRM)
-                    ) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // TEAM LEAD
-                // =================================================
-
-                if (selectedTeamLead) {
-
-                    const applicationTeamLead =
-                        application.teamLeadId ??
-                        application.team_lead_id ??
-                        application.teamLead?.id ??
-                        application.teamLeadName ??
-                        application.team_lead_name ??
-                        application.team_lead
-
-                    if (
-                        String(applicationTeamLead) !==
-                        String(selectedTeamLead)
-                    ) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // AGENT
-                // =================================================
-
-                if (selectedAgent) {
-
-                    const applicationAgent =
-                        application.agentId ??
-                        application.agent_id ??
-                        application.processingAgentId ??
-                        application.processing_agent_id ??
-                        application.agent?.id ??
-                        application.processingAgent?.id ??
-                        application.agentName ??
-                        application.agent_name ??
-                        application.processingAgent ??
-                        application.processing_agent
-
-                    if (
-                        String(applicationAgent) !==
-                        String(selectedAgent)
-                    ) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // STATUS
-                // =================================================
-
-                if (selectedStatus) {
-                    const applicationStatus =
-                        normalizeStatus(
-                            application.status
-                        ) === 'Rejected' &&
-                            application.revertedReason
-                            ? 'Revert Rejected'
-                            : normalizeStatus(
-                                application.status
-                            )
-                    if (
-                        applicationStatus !==
-                        selectedStatus
-                    ) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // MATCH
-                // =================================================
-
-                return true
-            }
-        )
-
-    }, [
-        applications,
-        search,
-        selectedLoanType,
-        selectedRM,
-        selectedTeamLead,
-        selectedAgent,
-        selectedStatus,
-    ])
 
 
     // =========================================================
@@ -752,15 +535,7 @@ function Applications() {
     // memory. Local filtering can therefore only filter that page.
     // Server-side filtering should be added to the API before using
     // these filters for cross-page searching.
-    const displayApplications = filteredApplications
-
-    const hasLocalFilters =
-        Boolean(search.trim()) ||
-        Boolean(selectedLoanType) ||
-        Boolean(selectedRM) ||
-        Boolean(selectedTeamLead) ||
-        Boolean(selectedAgent) ||
-        Boolean(selectedStatus)
+    const displayApplications = applications
 
     const displayTotalApplications = totalApplications
 
@@ -770,36 +545,50 @@ function Applications() {
     // =========================================================
 
     const handleClearFilters = () => {
+
         setSearch('')
         setSelectedLoanType('')
         setSelectedRM('')
         setSelectedTeamLead('')
         setSelectedAgent('')
         setSelectedStatus('')
+
     }
+
 
     // =========================================================
     // LOAN TYPE MODAL
     // =========================================================
 
     const handleLoanTypeChange = (application) => {
+
         setSelectedApplication(application)
+
         setShowLoanTypeModal(true)
+
     }
 
+
     const handleCloseLoanTypeModal = () => {
+
         setShowLoanTypeModal(false)
+
         setSelectedApplication(null)
+
     }
 
     const handleLoanTypeSubmit = async (data) => {
-        try {
-            const response = await updateApplicationLoanType(
-                data.applicationId,
-                data.loanTypeId
-            )
 
-            const updatedApplication = response?.data
+        try {
+
+            const response =
+                await updateApplicationLoanType(
+                    data.applicationId,
+                    data.loanTypeId
+                )
+
+            const updatedApplication =
+                response?.data
 
             setApplications((previous) =>
                 previous.map((application) =>
@@ -818,11 +607,12 @@ function Applications() {
             )
 
             handleCloseLoanTypeModal()
-
             showSuccess(
                 'Loan type updated successfully'
             )
+
         } catch (error) {
+
             console.error(
                 'Failed to update loan type:',
                 error
@@ -835,23 +625,32 @@ function Applications() {
             )
         }
     }
-
     // =========================================================
     // STATUS MODAL
     // =========================================================
 
     const handleStatusChange = (application) => {
+
         setSelectedApplication(application)
+
         setShowStatusModal(true)
+
     }
+
 
     const handleCloseStatusModal = () => {
+
         setShowStatusModal(false)
+
         setSelectedApplication(null)
+
     }
 
+
     const handleStatusSubmit = async (data) => {
+
         try {
+
             const isRevertRejected =
                 data.status === 'Revert Rejected'
 
@@ -867,14 +666,16 @@ function Applications() {
                     ? data.revertRejectedDate
                     : null
 
-            const response = await updateApplicationStatus(
-                data.id,
-                data.status,
-                rejectedRemarks,
-                revertRejectionDate
-            )
+            const response =
+                await updateApplicationStatus(
+                    data.id,
+                    data.status,
+                    rejectedRemarks,
+                    revertRejectionDate
+                )
 
-            const updatedApplication = response?.data
+            const updatedApplication =
+                response?.data
 
             setApplications((previous) =>
                 previous.map((application) =>
@@ -883,7 +684,7 @@ function Applications() {
                             ...application,
 
                             // Revert Rejected is stored
-                            // as rejected in the database.
+                            // as rejected in DB.
                             status:
                                 updatedApplication?.status ??
                                 (
@@ -923,13 +724,16 @@ function Applications() {
                     ? 'Application rejection reverted successfully'
                     : 'Application status updated successfully'
             )
+
         } catch (error) {
+
             console.error(
                 'Failed to update application status:',
                 error
             )
 
-            const detail = error?.response?.data?.detail
+            const detail =
+                error?.response?.data?.detail
 
             const errorMessage =
                 Array.isArray(detail)
@@ -941,7 +745,10 @@ function Applications() {
                         ? detail
                         : 'Failed to update application status'
 
-            showError(errorMessage, 'error')
+            showError(
+                errorMessage,
+                'error'
+            )
         }
     }
 
@@ -950,23 +757,40 @@ function Applications() {
     // =========================================================
 
     const handleReminder = (application) => {
+
         setSelectedApplication(application)
+
         setShowReminderModal(true)
+
     }
+
 
     const handleCloseReminderModal = () => {
+
         setShowReminderModal(false)
+
         setSelectedApplication(null)
+
     }
 
-    const handleReminderSubmit = (reminder) => {
-        // Reminder creation is handled directly inside
-        // ReminderModal.jsx. This callback runs after success.
+
+    const handleReminderSubmit = (data) => {
+
+        /*
+         * Later:
+         *
+         * POST /applications/{applicationId}/reminders
+         */
+
         console.log(
-            'Reminder created successfully:',
-            reminder
+            'Application Reminder:',
+            data
         )
+
+        handleCloseReminderModal()
+
     }
+
 
     // =========================================================
     // VIEW APPLICATION
@@ -983,6 +807,7 @@ function Applications() {
     // =========================================================
 
     const handleChat = (application) => {
+
         console.log(
             'Open Application Chat:',
             {
@@ -995,7 +820,9 @@ function Applications() {
                     application.agent_id,
             }
         )
+
     }
+
 
     // =========================================================
     // REFRESH
@@ -1004,7 +831,6 @@ function Applications() {
     const handleRefresh = () => {
         fetchApplications(currentPage, pageSize)
     }
-
     // =========================================================
     // ASSIGNMENT CHANGE
     // =========================================================
@@ -1013,9 +839,13 @@ function Applications() {
         applicationId,
         updatedApplication
     ) => {
+
         setApplications((previous) =>
             previous.map((application) => {
-                if (application.id !== applicationId) {
+
+                if (
+                    application.id !== applicationId
+                ) {
                     return application
                 }
 
@@ -1070,7 +900,15 @@ function Applications() {
     // =========================================================
 
     return (
-        <div className="p-4 sm:p-6 space-y-5">
+
+        <div
+            className="
+                p-4
+                sm:p-6
+                space-y-5
+            "
+        >
+
             <ApplicationsTable
                 applications={displayApplications}
 
@@ -1086,44 +924,112 @@ function Applications() {
                 search={search}
                 setSearch={setSearch}
 
-                statuses={STATUS_OPTIONS}
 
+                statuses={
+                    STATUS_OPTIONS
+                }
+
+                // =============================================
                 // LOAN TYPE
+                // =============================================
 
-                selectedLoanType={selectedLoanType}
-                setSelectedLoanType={setSelectedLoanType}
+                selectedLoanType={
+                    selectedLoanType
+                }
 
+                setSelectedLoanType={
+                    setSelectedLoanType
+                }
+
+
+                // =============================================
                 // RM
+                // =============================================
 
-                selectedRM={selectedRM}
-                setSelectedRM={setSelectedRM}
+                selectedRM={
+                    selectedRM
+                }
 
+                setSelectedRM={
+                    setSelectedRM
+                }
+
+
+                // =============================================
                 // TEAM LEAD
+                // =============================================
 
-                selectedTeamLead={selectedTeamLead}
-                setSelectedTeamLead={setSelectedTeamLead}
+                selectedTeamLead={
+                    selectedTeamLead
+                }
 
+                setSelectedTeamLead={
+                    setSelectedTeamLead
+                }
+
+
+                // =============================================
                 // AGENT
+                // =============================================
 
-                selectedAgent={selectedAgent}
-                setSelectedAgent={setSelectedAgent}
+                selectedAgent={
+                    selectedAgent
+                }
 
+                setSelectedAgent={
+                    setSelectedAgent
+                }
+
+
+                // =============================================
                 // STATUS
+                // =============================================
 
-                selectedStatus={selectedStatus}
-                setSelectedStatus={setSelectedStatus}
+                selectedStatus={
+                    selectedStatus
+                }
 
+                setSelectedStatus={
+                    setSelectedStatus
+                }
+
+
+                // =============================================
                 // ACTIONS
+                // =============================================
 
-                onClearFilters={handleClearFilters}
-                onLoanTypeChange={handleLoanTypeChange}
-                onStatusChange={handleStatusChange}
-                onReminder={handleReminder}
-                onChat={handleChat}
-                onViewApplication={handleViewApplication}
-                onRefresh={handleRefresh}
-                onAssignmentChange={handleAssignmentChange}
+                onClearFilters={
+                    handleClearFilters
+                }
+
+                onLoanTypeChange={
+                    handleLoanTypeChange
+                }
+
+                onStatusChange={
+                    handleStatusChange
+                }
+
+                onReminder={
+                    handleReminder
+                }
+
+                onChat={
+                    handleChat
+                }
+
+                onViewApplication={
+                    handleViewApplication
+                }
+
+                onRefresh={
+                    handleRefresh
+                }
+                onAssignmentChange={
+                    handleAssignmentChange
+                }
             />
+
 
             {/* =================================================
                 LOAN TYPE MODAL
@@ -1136,35 +1042,60 @@ function Applications() {
                 onSubmit={handleLoanTypeSubmit}
             />
 
+
             {/* =================================================
                 STATUS MODAL
             ================================================= */}
 
             <StatusModal
-                open={showStatusModal}
-                application={selectedApplication}
-                onClose={handleCloseStatusModal}
-                onSubmit={handleStatusSubmit}
+
+                open={
+                    showStatusModal
+                }
+
+                application={
+                    selectedApplication
+                }
+
+                onClose={
+                    handleCloseStatusModal
+                }
+
+                onSubmit={
+                    handleStatusSubmit
+                }
+
             />
+
 
             {/* =================================================
                 REMINDER MODAL
             ================================================= */}
 
             <ReminderModal
-                open={showReminderModal}
 
-                applicationId={
-                    selectedApplication?.id ?? null
+                open={
+                    showReminderModal
                 }
 
-                application={selectedApplication}
+                application={
+                    selectedApplication
+                }
 
-                onClose={handleCloseReminderModal}
-                onSubmit={handleReminderSubmit}
+                onClose={
+                    handleCloseReminderModal
+                }
+
+                onSubmit={
+                    handleReminderSubmit
+                }
+
             />
+
         </div>
+
     )
 }
+
 
 export default Applications
