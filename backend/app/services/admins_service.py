@@ -2,8 +2,10 @@
 
 from datetime import datetime
 
+from fastapi import logger
 from sqlalchemy.orm import Session
 
+from app.core.log_config import logger
 from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
 from app.models.contexts import Context
@@ -292,6 +294,8 @@ class AdminsService:
         is_active = AdminsService._validate_status(
             status
         )
+
+        logger.info("<================ action_by=%s =====================>", action_by)
 
         # --------------------------------------------------------------------
         # GET GLOBAL CONTEXT

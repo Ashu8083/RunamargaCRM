@@ -23,6 +23,9 @@ from app.models.loan_addresses import LoanAddress
 from app.models.loan_document import LoanDocument
 from app.services.Loans.application_service import ApplicationService
 from app.models.loan_type_change_log import LoanTypeChangeLog
+from app.services.loan_application_audit_log_service import LoanApplicationAuditLogService
+from app.services.loan_application_status_audit_log_service import LoanApplicationStatusAuditLogService
+
 
 
 # =============================================================
@@ -144,6 +147,14 @@ def update_application_loan_type(
     )
 
     db.add(loan_type_change_log)
+
+    LoanApplicationAuditLogService.log_audit_log(
+        db=db,
+        action="update_loan_type",
+        action_by=active_context.id,
+        action_on=application.id,
+        commit=False,
+    )
 
     # Both happen in one transaction
     db.commit()
@@ -298,6 +309,7 @@ def update_application_status(
     # UPDATE STATUS
     # =========================================================
 
+    from_status = application.status.value if application.status else None
     application.status = database_status
 
     # =========================================================
@@ -430,6 +442,32 @@ def update_application_status(
         application.loggedin_date = today
 
     # =========================================================
+    # AUDIT LOGS
+    # =========================================================
+
+    active_context = AccessControl.get_active_context(db=db, employee=employee)
+    action_by_id = active_context.id if active_context else None
+    to_status_str = database_status.value if database_status else None
+
+    LoanApplicationStatusAuditLogService.log_audit_log(
+        db=db,
+        action=f"status_update:{to_status_str}",
+        action_by=action_by_id,
+        action_on=application.id,
+        from_status=from_status,
+        to_status=to_status_str,
+        commit=False,
+    )
+
+    LoanApplicationAuditLogService.log_audit_log(
+        db=db,
+        action=f"status_update:{to_status_str}",
+        action_by=action_by_id,
+        action_on=application.id,
+        commit=False,
+    )
+
+    # =========================================================
     # SAVE
     # =========================================================
 
@@ -503,6 +541,17 @@ def update_application_header(
     if payload.referral is not None:
         application.referral = payload.referral
 
+    active_context = AccessControl.get_active_context(db=db, employee=employee)
+    action_by_id = active_context.id if active_context else None
+
+    LoanApplicationAuditLogService.log_audit_log(
+        db=db,
+        action="update_header",
+        action_by=action_by_id,
+        action_on=application.id,
+        commit=False,
+    )
+
     db.commit()
     db.refresh(application)
 
@@ -570,6 +619,17 @@ def update_application_loan_details(
 
     if payload.ifsc_code is not None:
         application.ifsc_code = payload.ifsc_code
+
+    active_context = AccessControl.get_active_context(db=db, employee=employee)
+    action_by_id = active_context.id if active_context else None
+
+    LoanApplicationAuditLogService.log_audit_log(
+        db=db,
+        action="update_loan_details",
+        action_by=action_by_id,
+        action_on=application.id,
+        commit=False,
+    )
 
     db.commit()
     db.refresh(application)
@@ -650,6 +710,18 @@ def add_application_address(
     )
 
     db.add(address)
+
+    active_context = AccessControl.get_active_context(db=db, employee=employee)
+    action_by_id = active_context.id if active_context else None
+
+    LoanApplicationAuditLogService.log_audit_log(
+        db=db,
+        action="add_address",
+        action_by=action_by_id,
+        action_on=application.id,
+        commit=False,
+    )
+
     db.commit()
     db.refresh(address)
 
@@ -718,6 +790,18 @@ def add_application_reference(
     )
 
     db.add(reference)
+
+    active_context = AccessControl.get_active_context(db=db, employee=employee)
+    action_by_id = active_context.id if active_context else None
+
+    LoanApplicationAuditLogService.log_audit_log(
+        db=db,
+        action="add_reference",
+        action_by=action_by_id,
+        action_on=application.id,
+        commit=False,
+    )
+
     db.commit()
     db.refresh(reference)
 
@@ -788,6 +872,18 @@ def add_application_co_applicant(
     )
 
     db.add(co_applicant)
+
+    active_context = AccessControl.get_active_context(db=db, employee=employee)
+    action_by_id = active_context.id if active_context else None
+
+    LoanApplicationAuditLogService.log_audit_log(
+        db=db,
+        action="add_co_applicant",
+        action_by=action_by_id,
+        action_on=application.id,
+        commit=False,
+    )
+
     db.commit()
     db.refresh(co_applicant)
 
@@ -1001,6 +1097,17 @@ async def upload_application_document(
                 datetime.utcnow()
             )
 
+            active_context = AccessControl.get_active_context(db=db, employee=employee)
+            action_by_id = active_context.id if active_context else None
+
+            LoanApplicationAuditLogService.log_audit_log(
+                db=db,
+                action="upload_document",
+                action_by=action_by_id,
+                action_on=application.id,
+                commit=False,
+            )
+
             db.commit()
             db.refresh(
                 existing_document
@@ -1023,6 +1130,17 @@ async def upload_application_document(
             )
 
             db.add(document)
+
+            active_context = AccessControl.get_active_context(db=db, employee=employee)
+            action_by_id = active_context.id if active_context else None
+
+            LoanApplicationAuditLogService.log_audit_log(
+                db=db,
+                action="upload_document",
+                action_by=action_by_id,
+                action_on=application.id,
+                commit=False,
+            )
 
             db.commit()
 

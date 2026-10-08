@@ -85,6 +85,7 @@ def create_admin(
         result = AdminsController.create_admin(
             db=db,
             payload=payload,
+            action_by= employee.id,
         )
 
         db.commit()
@@ -132,6 +133,7 @@ def update_admin(
             db=db,
             admin_id=admin_id,
             payload=payload,
+            action_by=employee.id,
         )
 
         db.commit()
@@ -169,6 +171,7 @@ def delete_admin(
         result = AdminsController.delete_admin(
             db=db,
             admin_id=admin_id,
+            action_by=employee.id,
         )
 
         db.commit()

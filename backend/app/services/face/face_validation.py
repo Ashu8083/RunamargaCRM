@@ -220,7 +220,7 @@ def validate_face_blur(
         x1:x2,
     ]
 
-    if  .size == 0:
+    if  size == 0:
         return (
             False,
             "FACE_CROP_INVALID",

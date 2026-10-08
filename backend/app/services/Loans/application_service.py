@@ -21,6 +21,8 @@ from app.models.bank import Bank
 from app.models.employee_contexts import EmployeeContext
 from app.models.contexts import Context
 from app.services.loan_application_audit_log_service import LoanApplicationAuditLogService
+from app.services.loan_application_status_audit_log_service import LoanApplicationStatusAuditLogService
+
 
 
 
@@ -767,8 +769,7 @@ class ApplicationService:
         db.flush()
 
         application.unique_id = f"LN{application.id}"
-        db.commit()
-        db.refresh(application)
+
         LoanApplicationAuditLogService.log_audit_log(
             db=db,
             action="create",
@@ -776,6 +777,20 @@ class ApplicationService:
             action_on=application.id,
             commit=False,
         )
+
+        LoanApplicationStatusAuditLogService.log_audit_log(
+            db=db,
+            action="create",
+            action_by=current_context.id,
+            action_on=application.id,
+            from_status=None,
+            to_status=LoanStatus.inprocess.value,
+            commit=False,
+        )
+
+        db.commit()
+        db.refresh(application)
+
 
         return {
             "success": True,

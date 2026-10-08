@@ -286,6 +286,13 @@ class TeamLeadService:
 
             db.flush()
 
+            TeamLeadAuditLogService.log_audit_log(
+                db=db,
+                action="create",
+                action_by=action_by_ctx,
+                action_on=existing.id,
+            )
+
             return {
                 "id":
                     existing.id,
@@ -318,17 +325,17 @@ class TeamLeadService:
             is_active=is_active,
         )
 
-
-
         db.add(team_lead)
         db.flush()
 
-        team_lead_service = TeamLeadAuditLogService.log_audit_log(
+        TeamLeadAuditLogService.log_audit_log(
             db=db,
             action="create",
             action_by=action_by_ctx,
             action_on=team_lead.id,
         )
+
+        
 
         return {
             "id":

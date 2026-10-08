@@ -29,7 +29,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 TEMPORARY_ENROLLMENT_EXPIRE_MINUTES = 5
 
-
 # ------------------------------------------------------------------------
 # TOKEN TYPES
 # ------------------------------------------------------------------------
@@ -37,7 +36,6 @@ TEMPORARY_ENROLLMENT_EXPIRE_MINUTES = 5
 ACCESS_TOKEN_TYPE = "access"
 REFRESH_TOKEN_TYPE = "refresh"
 FACE_ENROLLMENT_TOKEN_TYPE = "face_enrollment"
-
 
 # ------------------------------------------------------------------------
 # TOKEN HASH
@@ -48,10 +46,8 @@ def hash_token(
 ) -> str:
     """
     Hash a token before storing it in the database.
-
     The raw token is NEVER stored in auth_tokens.
     """
-
     return hashlib.sha256(
         token.encode()
     ).hexdigest()
@@ -212,7 +208,6 @@ def get_employee_id_from_access_token(
 ) -> int:
     """
     Extract employee ID from a normal access token.
-
     Only token type = access is accepted.
     """
 
