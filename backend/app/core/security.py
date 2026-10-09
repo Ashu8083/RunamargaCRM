@@ -144,4 +144,6 @@ def get_current_employee(
     else:
         default_context = next((ctx for ctx in getattr(employee, "contexts", []) if getattr(ctx, "is_default", False)), None)
         request.state.employee_context_id = default_context.id if default_context else None
+
+    logger.info("Employee ID {}".format(employee.__dict__))
     return employee
