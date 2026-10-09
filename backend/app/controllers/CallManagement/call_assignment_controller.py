@@ -29,12 +29,12 @@ def get_call_assignments(
             data.append({
                 "id": assignment.id,
                 "phone_number": assignment.phone_number,
+
                 "assigned_to_id": assignment.assigned_to_id,
 
                 "assigned_to_name": (
-                    assignment.assigned_to.employee.name
+                    assignment.assigned_to.name
                     if assignment.assigned_to
-                    and assignment.assigned_to.employee
                     else None
                 ),
 
@@ -68,7 +68,7 @@ def get_call_assignments(
             detail=str(e),
         )
 
-
+        
 # =============================================================
 # CREATE CALL ASSIGNMENT
 # =============================================================
@@ -135,54 +135,16 @@ def get_available_call_numbers(
     employee: Employee,
 ):
     try:
-        call_logs = CallAssignmentService.get_available_call_numbers(
+        return CallAssignmentService.get_available_call_numbers(
             db=db,
             employee=employee,
         )
-
-        data = []
-
-        for call in call_logs:
-            data.append({
-                "id": call.id,
-                "phone_number": call.phone_number,
-
-                "call_type": (
-                    call.call_type.value
-                    if call.call_type
-                    else None
-                ),
-
-                "mobile_status": (
-                    call.mobile_status.value
-                    if call.mobile_status
-                    else None
-                ),
-
-                "call_started_at": call.call_started_at,
-                "call_ended_at": call.call_ended_at,
-                "duration_seconds": call.duration_seconds,
-
-                "employee_id": call.employee_id,
-
-                "employee_name": (
-                    call.employee.name
-                    if call.employee
-                    else None
-                ),
-            })
-
-        return {
-            "success": True,
-            "data": data,
-        }
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=str(e),
         )
-
 
 # =============================================================
 # EXCHANGE CALL ASSIGNMENT

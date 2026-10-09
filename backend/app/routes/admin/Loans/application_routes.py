@@ -27,6 +27,14 @@ def get_applications_route(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
     no_chat_for_days: int | None = Query(default=None, ge=1),
+
+    search: str | None = Query(default=None),
+    loan_type_id: int | None = Query(default=None),
+    rm_id: int | None = Query(default=None),
+    team_lead_id: int | None = Query(default=None),
+    agent_id: int | None = Query(default=None),
+    status: str | None = Query(default=None),
+
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -36,8 +44,14 @@ def get_applications_route(
         context_id=context_id,
         page=page,
         page_size=page_size,
+        no_chat_for_days=no_chat_for_days,
+        search=search,
+        loan_type_id=loan_type_id,
+        rm_id=rm_id,
+        team_lead_id=team_lead_id,
+        agent_id=agent_id,
+        status=status,
     )
-
 
 @router.get("/{application_id}")
 def view_application_route(

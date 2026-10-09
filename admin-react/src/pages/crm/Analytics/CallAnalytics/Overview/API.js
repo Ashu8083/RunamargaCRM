@@ -74,44 +74,6 @@ export const getApiErrorMessage = (
 // ============================================================================
 // NORMALIZE CALL
 // ============================================================================
-//
-// Backend:
-//
-// {
-//     id,
-//     employee_id,
-//     employee,
-//     phone_number,
-//     call_type,
-//     mobile_status,
-//     call_started_at,
-//     call_ended_at,
-//     duration_seconds
-// }
-//
-// Frontend:
-//
-// {
-//     id,
-//     employee_id,
-//     employeeId,
-//     employee,
-//     phone,
-//     phone_number,
-//     type,
-//     call_type,
-//     status,
-//     mobile_status,
-//     date,
-//     call_started_at,
-//     callStartedAt,
-//     call_ended_at,
-//     callEndedAt,
-//     duration_seconds,
-//     durationSeconds
-// }
-//
-// ============================================================================
 
 const normalizeCall = (call) => {
 
@@ -139,6 +101,22 @@ const normalizeCall = (call) => {
             ? Number(call.employee_id)
             : call.employeeId != null
                 ? Number(call.employeeId)
+                : null
+
+
+    // ------------------------------------------------------------
+    // EMPLOYEE CONTEXT ID
+    // ------------------------------------------------------------
+
+    const employeeContextId =
+        call.employee_context_id != null
+            ? Number(
+                call.employee_context_id
+            )
+            : call.employeeContextId != null
+                ? Number(
+                    call.employeeContextId
+                )
                 : null
 
 
@@ -227,6 +205,12 @@ const normalizeCall = (call) => {
             employeeId,
 
         employeeId,
+
+
+        employee_context_id:
+            employeeContextId,
+
+        employeeContextId,
 
 
         // --------------------------------------------------------
@@ -422,6 +406,20 @@ const normalizeOverview = (
 // call_type
 // status
 // context_id
+// team_lead_context_id
+//
+// IMPORTANT:
+//
+// If fromDate and toDate are not provided,
+// the backend defaults to TODAY.
+//
+// The frontend currently sends today's dates by default,
+// so the initial request is explicitly:
+//
+// from_date = today
+// to_date   = today
+//
+// Reset also restores today's dates.
 //
 // ============================================================================
 
@@ -434,12 +432,6 @@ export const getCallAnalyticsOverview = async (
 
     // ------------------------------------------------------------
     // EMPLOYEE
-    // ------------------------------------------------------------
-    //
-    // EmployeeDropdown returns the selected employee ID.
-    //
-    // Do not send an empty employee_id.
-    //
     // ------------------------------------------------------------
 
     if (
@@ -473,7 +465,9 @@ export const getCallAnalyticsOverview = async (
     // ------------------------------------------------------------
 
     if (
-        filters.fromDate
+        filters.fromDate !== undefined &&
+        filters.fromDate !== null &&
+        filters.fromDate !== ''
     ) {
 
         params.from_date =
@@ -487,7 +481,9 @@ export const getCallAnalyticsOverview = async (
     // ------------------------------------------------------------
 
     if (
-        filters.toDate
+        filters.toDate !== undefined &&
+        filters.toDate !== null &&
+        filters.toDate !== ''
     ) {
 
         params.to_date =
@@ -501,7 +497,9 @@ export const getCallAnalyticsOverview = async (
     // ------------------------------------------------------------
 
     if (
-        filters.callType
+        filters.callType !== undefined &&
+        filters.callType !== null &&
+        filters.callType !== ''
     ) {
 
         params.call_type =
@@ -515,7 +513,9 @@ export const getCallAnalyticsOverview = async (
     // ------------------------------------------------------------
 
     if (
-        filters.status
+        filters.status !== undefined &&
+        filters.status !== null &&
+        filters.status !== ''
     ) {
 
         params.status =
@@ -526,16 +526,6 @@ export const getCallAnalyticsOverview = async (
 
     // ------------------------------------------------------------
     // CONTEXT ID
-    // ------------------------------------------------------------
-    //
-    // Optional.
-    //
-    // Overview/index.jsx currently does not send this value,
-    // so it will normally remain absent.
-    //
-    // It is supported here so the API layer matches the backend
-    // route without forcing a frontend context selector.
-    //
     // ------------------------------------------------------------
 
     if (
@@ -558,6 +548,36 @@ export const getCallAnalyticsOverview = async (
 
             params.context_id =
                 contextId
+
+        }
+
+    }
+
+
+    // ------------------------------------------------------------
+    // TEAM LEAD CONTEXT ID
+    // ------------------------------------------------------------
+
+    if (
+        filters.teamLeadContextId !== undefined &&
+        filters.teamLeadContextId !== null &&
+        filters.teamLeadContextId !== ''
+    ) {
+
+        const teamLeadContextId =
+            Number(
+                filters.teamLeadContextId
+            )
+
+
+        if (
+            Number.isFinite(
+                teamLeadContextId
+            )
+        ) {
+
+            params.team_lead_context_id =
+                teamLeadContextId
 
         }
 

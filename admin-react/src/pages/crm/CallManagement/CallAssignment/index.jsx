@@ -15,7 +15,7 @@ import CallHistoryModal from './components/CallHistoryModal'
 import CreateLeadModal from './components/CreateLeadModal'
 import LoanApplicationModal from './components/LoanApplicationModal'
 import ExchangeNumberModal from './components/ExchangeNumberModal'
-import {
+import {    
     getCallAssignments,
     getAvailableCallNumbers,
     createCallAssignment,

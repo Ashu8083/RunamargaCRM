@@ -3,9 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
+
 import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import { getApplicationStatusData } from "./API";
-import { getActiveContext, getStoredUser } from '../../../../../app/auth'
+import { getActiveContext } from "../../../../../app/auth";
+
 /* =============================================================
    STATUS CONFIGURATION
    ============================================================= */
@@ -20,6 +23,7 @@ const STATUS_CONFIG = {
         text: "#365314",
         darkText: "#D9F99D",
     },
+
     Rejected: {
         background: "rgb(253 231 239 / 0.95)",
         darkBackground: "rgb(100 35 57 / 0.55)",
@@ -29,6 +33,7 @@ const STATUS_CONFIG = {
         text: "#9D174D",
         darkText: "#FBCFE8",
     },
+
     Login: {
         background: "rgb(231 240 252 / 0.95)",
         darkBackground: "rgb(28 61 104 / 0.55)",
@@ -38,6 +43,7 @@ const STATUS_CONFIG = {
         text: "#1E40AF",
         darkText: "#BFDBFE",
     },
+
     Sanctioned: {
         background: "rgb(241 232 248 / 0.95)",
         darkBackground: "rgb(76 42 91 / 0.55)",
@@ -47,6 +53,7 @@ const STATUS_CONFIG = {
         text: "#6B21A8",
         darkText: "#E9D5FF",
     },
+
     Disbursed: {
         background: "rgb(231 245 236 / 0.95)",
         darkBackground: "rgb(31 78 49 / 0.55)",
@@ -156,55 +163,96 @@ const calculateTreemap = (items, width, height) => {
 
     const firstRow = sortedItems.slice(0, 2);
     const secondRow = sortedItems.slice(2);
-    const firstRowHeight = height * FIRST_ROW_RATIO;
-    const secondRowHeight = height - firstRowHeight;
+
+    const firstRowHeight =
+        height * FIRST_ROW_RATIO;
+
+    const secondRowHeight =
+        height - firstRowHeight;
+
     const result = [];
 
-    const createRow = (row, y, rowHeight) => {
+    const createRow = (
+        row,
+        y,
+        rowHeight
+    ) => {
         if (!row.length) {
             return;
         }
 
-        const counts = row.map((item) => item.count);
-        const minCount = Math.min(...counts);
-        const maxCount = Math.max(...counts);
-
-        const weighted = row.map((item) => ({
-            ...item,
-            weight: getControlledWeight(
-                item.count,
-                minCount,
-                maxCount
-            ),
-        }));
-
-        const totalWeight = weighted.reduce(
-            (sum, item) => sum + item.weight,
-            0
+        const counts = row.map(
+            (item) => item.count
         );
+
+        const minCount = Math.min(
+            ...counts
+        );
+
+        const maxCount = Math.max(
+            ...counts
+        );
+
+        const weighted = row.map(
+            (item) => ({
+                ...item,
+                weight:
+                    getControlledWeight(
+                        item.count,
+                        minCount,
+                        maxCount
+                    ),
+            })
+        );
+
+        const totalWeight =
+            weighted.reduce(
+                (sum, item) =>
+                    sum + item.weight,
+                0
+            );
 
         let currentX = 0;
 
-        weighted.forEach((item, index) => {
-            const isLast = index === weighted.length - 1;
-            const itemWidth = isLast
-                ? Math.max(width - currentX, 0)
-                : width * (item.weight / totalWeight);
+        weighted.forEach(
+            (item, index) => {
+                const isLast =
+                    index ===
+                    weighted.length - 1;
 
-            result.push({
-                x: currentX,
-                y,
-                width: itemWidth,
-                height: rowHeight,
-                item,
-            });
+                const itemWidth = isLast
+                    ? Math.max(
+                        width - currentX,
+                        0
+                    )
+                    : width *
+                    (item.weight /
+                        totalWeight);
 
-            currentX += itemWidth;
-        });
+                result.push({
+                    x: currentX,
+                    y,
+                    width: itemWidth,
+                    height: rowHeight,
+                    item,
+                });
+
+                currentX += itemWidth;
+            }
+        );
     };
 
-    createRow(firstRow, 0, firstRowHeight);
-    createRow(secondRow, firstRowHeight, secondRowHeight);
+    createRow(
+        firstRow,
+        0,
+        firstRowHeight
+    );
+
+    createRow(
+        secondRow,
+        firstRowHeight,
+        secondRowHeight
+    );
 
     return result;
 };
@@ -217,41 +265,61 @@ function ApplicationStatus() {
     const navigate = useNavigate();
     const chartRef = useRef(null);
 
-    const [fromDate, setFromDate] = useState("");
-    const [toDate, setToDate] = useState("");
-    const [loanType, setLoanType] = useState("");
-    const [hoveredStatus, setHoveredStatus] = useState(null);
-    const activeContext = getActiveContext();
-    const contextId = activeContext?.id;
-    const [chartSize, setChartSize] = useState({
-        width: 0,
-        height: 0,
-    });
+    const [fromDate, setFromDate] =
+        useState("");
 
-    const [apiState, setApiState] = useState({
-        data: [],
-        summary: {
-            totalApplications: 0,
-            pendingApplications: 0,
-            totalAmount: 0,
-        },
-        loading: true,
-        error: null,
-    });
+    const [toDate, setToDate] =
+        useState("");
+
+    const [loanType, setLoanType] =
+        useState("");
+
+    const [hoveredStatus, setHoveredStatus] =
+        useState(null);
+
+    const activeContext =
+        getActiveContext();
+
+    const contextId =
+        activeContext?.id;
+
+    const [chartSize, setChartSize] =
+        useState({
+            width: 0,
+            height: 0,
+        });
+
+    const [apiState, setApiState] =
+        useState({
+            data: [],
+            summary: {
+                totalApplications: 0,
+                pendingApplications: 0,
+                totalAmount: 0,
+            },
+            loading: true,
+            error: null,
+        });
 
     /* =========================================================
        OBSERVE TREEMAP SIZE
        ========================================================= */
 
     useEffect(() => {
-        const element = chartRef.current;
+        const element =
+            chartRef.current;
 
-        if (!element || typeof ResizeObserver === "undefined") {
+        if (
+            !element ||
+            typeof ResizeObserver ===
+                "undefined"
+        ) {
             return undefined;
         }
 
         const updateSize = () => {
-            const rect = element.getBoundingClientRect();
+            const rect =
+                element.getBoundingClientRect();
 
             setChartSize({
                 width: rect.width,
@@ -261,10 +329,15 @@ function ApplicationStatus() {
 
         updateSize();
 
-        const observer = new ResizeObserver(updateSize);
+        const observer =
+            new ResizeObserver(
+                updateSize
+            );
+
         observer.observe(element);
 
-        return () => observer.disconnect();
+        return () =>
+            observer.disconnect();
     }, []);
 
     /* =========================================================
@@ -273,6 +346,7 @@ function ApplicationStatus() {
 
     useEffect(() => {
         let active = true;
+
         if (!contextId) {
             return () => {
                 active = false;
@@ -280,45 +354,60 @@ function ApplicationStatus() {
         }
 
         const fetchData = async () => {
-            setApiState((previous) => ({
-                ...previous,
-                loading: true,
-                error: null,
-            }));
+            setApiState(
+                (previous) => ({
+                    ...previous,
+                    loading: true,
+                    error: null,
+                })
+            );
 
             try {
                 const response =
-                    await getApplicationStatusData({
-                        fromDate,
-                        toDate,
-                        loanType,
-                        contextId,
-                    });
+                    await getApplicationStatusData(
+                        {
+                            fromDate,
+                            toDate,
+                            loanType,
+                            contextId,
+                        }
+                    );
 
                 if (!active) {
                     return;
                 }
 
                 setApiState({
-                    data: Array.isArray(response?.data)
-                        ? response.data
-                        : [],
+                    data:
+                        Array.isArray(
+                            response?.data
+                        )
+                            ? response.data
+                            : [],
+
                     summary: {
                         totalApplications:
                             Number(
-                                response?.summary
+                                response
+                                    ?.summary
                                     ?.totalApplications
                             ) || 0,
+
                         pendingApplications:
                             Number(
-                                response?.summary
+                                response
+                                    ?.summary
                                     ?.pendingApplications
                             ) || 0,
+
                         totalAmount:
                             Number(
-                                response?.summary?.totalAmount
+                                response
+                                    ?.summary
+                                    ?.totalAmount
                             ) || 0,
                     },
+
                     loading: false,
                     error: null,
                 });
@@ -329,12 +418,15 @@ function ApplicationStatus() {
 
                 setApiState({
                     data: [],
+
                     summary: {
                         totalApplications: 0,
                         pendingApplications: 0,
                         totalAmount: 0,
                     },
+
                     loading: false,
+
                     error:
                         error?.message ||
                         "Unable to load application status.",
@@ -347,83 +439,126 @@ function ApplicationStatus() {
         return () => {
             active = false;
         };
-    }, [contextId, fromDate, toDate, loanType]);
+    }, [
+        contextId,
+        fromDate,
+        toDate,
+        loanType,
+    ]);
 
     /* =========================================================
        DATA
        ========================================================= */
 
-    const data = apiState.data;
+    const data =
+        apiState.data;
 
-    const treemap = useMemo(() => {
-        if (
-            !chartSize.width ||
-            !chartSize.height ||
-            !data.length
-        ) {
-            return [];
-        }
+    const treemap =
+        useMemo(() => {
+            if (
+                !chartSize.width ||
+                !chartSize.height ||
+                !data.length
+            ) {
+                return [];
+            }
 
-        return calculateTreemap(
+            return calculateTreemap(
+                data,
+                chartSize.width,
+                chartSize.height
+            );
+        }, [
             data,
-            chartSize.width,
-            chartSize.height
-        );
-    }, [data, chartSize]);
-    const handleClearFilters = () => {
-        setFromDate("");
-        setToDate("");
-        setLoanType("");
-        setHoveredStatus(null);
-    };
+            chartSize,
+        ]);
+
+    /* =========================================================
+       FILTER CLEAR
+       ========================================================= */
+
+    const handleClearFilters =
+        () => {
+            setFromDate("");
+            setToDate("");
+            setLoanType("");
+            setHoveredStatus(null);
+        };
+
     /* =========================================================
        NAVIGATION
        ========================================================= */
 
-    const handleApplicationNavigation = (status = "") => {
-        const params = new URLSearchParams();
+    const handleApplicationNavigation =
+        (status = "") => {
+            const params =
+                new URLSearchParams();
 
-        if (fromDate) {
-            params.set("fromDate", fromDate);
-        }
+            if (fromDate) {
+                params.set(
+                    "fromDate",
+                    fromDate
+                );
+            }
 
-        if (toDate) {
-            params.set("toDate", toDate);
-        }
+            if (toDate) {
+                params.set(
+                    "toDate",
+                    toDate
+                );
+            }
 
-        if (loanType) {
-            params.set("loanType", loanType);
-        }
+            if (loanType) {
+                params.set(
+                    "loanType",
+                    loanType
+                );
+            }
 
-        if (status) {
-            params.set("status", status);
-        }
+            if (status) {
+                params.set(
+                    "status",
+                    status
+                );
+            }
 
-        const queryString = params.toString();
+            const queryString =
+                params.toString();
 
-        navigate(
-            `/crm/application-status${queryString ? `?${queryString}` : ""
-            }`
-        );
-    };
+            navigate(
+                `/crm/application-status${
+                    queryString
+                        ? `?${queryString}`
+                        : ""
+                }`
+            );
+        };
 
-    const handleCardClick = (status) => {
-        handleApplicationNavigation(status);
-    };
+    const handleCardClick =
+        (status) => {
+            handleApplicationNavigation(
+                status
+            );
+        };
 
-    const handleSummaryKeyDown = (event, status = "") => {
-        if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            handleApplicationNavigation(status);
-        }
-    };
+    const handleCardKeyDown =
+        (
+            event,
+            status
+        ) => {
+            if (
+                event.key ===
+                    "Enter" ||
+                event.key ===
+                    " "
+            ) {
+                event.preventDefault();
 
-    const handleCardKeyDown = (event, status) => {
-        if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            handleCardClick(status);
-        }
-    };
+                handleCardClick(
+                    status
+                );
+            }
+        };
 
     /* =========================================================
        RENDER
@@ -439,425 +574,1040 @@ function ApplicationStatus() {
                 min-w-0
                 flex-col
                 overflow-visible
-                rounded-xl
+                rounded-2xl
                 border
-                border-gray-200
+                border-gray-200/80
                 bg-white
-                shadow-sm
-                dark:border-gray-700
+                shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)]
+                dark:border-gray-700/80
                 dark:bg-gray-900
                 dark:shadow-black/20
             "
         >
-            {/* TITLE + FILTERS */}
+            {/* =================================================
+                HEADER
+               ================================================= */}
 
-            <div className="shrink-0 px-4 pt-3.5 pb-2">
-                <h2 className="m-0 text-[16px] font-semibold leading-5 text-gray-900 dark:text-gray-100">
-                    Application Status
-                </h2>
+            <div
+                className="
+                    shrink-0
+                    px-4
+                    pt-4
+                    pb-3
+                "
+            >
+                {/* TITLE */}
 
-                <div className="mt-2 flex w-full flex-wrap items-center gap-2">
-                    <div className="min-w-[135px] flex-1">
-                        <input
-                            type="date"
-                            value={fromDate}
-                            max={toDate || undefined}
-                            onChange={(event) => {
-                                setFromDate(event.target.value);
-                                setHoveredStatus(null);
-                            }}
-                            aria-label="From date"
+                <div
+                    className="
+                        flex
+                        min-h-[32px]
+                        items-start
+                        justify-between
+                        gap-3
+                    "
+                >
+                    <div className="min-w-0">
+                        <h2
                             className="
-                h-8
-                w-full
-                rounded-md
-                border
-                border-gray-300
-                bg-white
-                px-2.5
-                text-[11px]
-                text-gray-700
-                outline-none
-                transition
-                placeholder:text-gray-400
-                focus:border-indigo-500
-                focus:ring-2
-                focus:ring-indigo-100
-                dark:border-gray-600
-                dark:bg-gray-800
-                dark:text-gray-200
-                dark:[color-scheme:dark]
-                dark:focus:border-indigo-400
-                dark:focus:ring-indigo-900/40
-            "
-                        />
-                    </div>
+                                m-0
+                                text-[16px]
+                                font-semibold
+                                leading-5
+                                tracking-[-0.01em]
+                                text-gray-900
+                                dark:text-gray-100
+                            "
+                        >
+                            Application Status
+                        </h2>
 
-                    <span className="shrink-0 text-[10px] text-gray-400 dark:text-gray-500">
-                        to
-                    </span>
-
-                    <div className="min-w-[135px] flex-1">
-                        <input
-                            type="date"
-                            value={toDate}
-                            min={fromDate || undefined}
-                            onChange={(event) => {
-                                setToDate(event.target.value);
-                                setHoveredStatus(null);
-                            }}
-                            aria-label="To date"
+                        <p
                             className="
-                h-8
-                w-full
-                rounded-md
-                border
-                border-gray-300
-                bg-white
-                px-2.5
-                text-[11px]
-                text-gray-700
-                outline-none
-                transition
-                placeholder:text-gray-400
-                focus:border-indigo-500
-                focus:ring-2
-                focus:ring-indigo-100
-                dark:border-gray-600
-                dark:bg-gray-800
-                dark:text-gray-200
-                dark:[color-scheme:dark]
-                dark:focus:border-indigo-400
-                dark:focus:ring-indigo-900/40
-            "
-                        />
+                                mt-0.5
+                                text-[10px]
+                                leading-4
+                                text-gray-400
+                                dark:text-gray-500
+                            "
+                        >
+                            Application pipeline overview
+                        </p>
                     </div>
 
-                    <div className="min-w-[155px] flex-1">
-                        <LoanTypeDropdown
-                            label=""
-                            value={loanType}
-                            onChange={(value) => {
-                                setLoanType(value);
-                                setHoveredStatus(null);
-                            }}
-                        />
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={handleClearFilters}
+                    <div
                         className="
-            h-8
-            shrink-0
-            rounded-md
-            border
-            border-gray-300
-            bg-white
-            px-3
-            text-[11px]
-            font-medium
-            text-gray-600
-            transition
-            hover:bg-gray-50
-            hover:text-gray-900
-            focus:border-indigo-500
-            focus:outline-none
-            focus:ring-2
-            focus:ring-indigo-100
-            dark:border-gray-600
-            dark:bg-gray-800
-            dark:text-gray-300
-            dark:hover:bg-gray-700
-            dark:hover:text-gray-100
-            dark:focus:border-indigo-400
-            dark:focus:ring-indigo-900/40
-        "
+                            hidden
+                            h-7
+                            shrink-0
+                            items-center
+                            rounded-md
+                            border
+                            border-gray-200
+                            bg-gray-50
+                            px-2
+                            text-[9px]
+                            font-medium
+                            uppercase
+                            tracking-wide
+                            text-gray-500
+                            sm:flex
+                            dark:border-gray-700
+                            dark:bg-gray-800
+                            dark:text-gray-400
+                        "
                     >
-                        Clear
-                    </button>
+                        Live Overview
+                    </div>
                 </div>
-            </div>
-            {/* SUMMARY */}
 
-            <div className="mx-4 mt-1 grid shrink-0 grid-cols-2 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                {/* FILTER BAR */}
+
                 <div
                     className="
-            border-r
-            border-gray-200
-            px-3
-            py-2
-            dark:border-gray-700
-        "
+                        mt-3
+                        w-full
+                        rounded-xl
+                        border
+                        border-gray-200
+                        bg-gray-50/80
+                        p-2
+                        dark:border-gray-700
+                        dark:bg-gray-800/60
+                    "
                 >
-                    <div className="text-[9px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        Total Applications
+                    <div
+                        className="
+                            grid
+                            w-full
+                            grid-cols-1
+                            gap-2
+                            sm:grid-cols-[minmax(130px,1fr)_minmax(130px,1fr)]
+                            lg:grid-cols-[minmax(135px,1fr)_minmax(135px,1fr)_minmax(155px,1.1fr)_36px]
+                            lg:items-center
+                        "
+                    >
+                        {/* FROM DATE */}
+
+                        <div
+                            className="
+                                min-w-0
+                                w-full
+                            "
+                        >
+                            <input
+                                type="date"
+                                value={fromDate}
+                                max={
+                                    toDate ||
+                                    undefined
+                                }
+                                onChange={(
+                                    event
+                                ) => {
+                                    setFromDate(
+                                        event
+                                            .target
+                                            .value
+                                    );
+
+                                    setHoveredStatus(
+                                        null
+                                    );
+                                }}
+                                aria-label="From date"
+                                className="
+                                    block
+                                    h-9
+                                    w-full
+                                    appearance-none
+                                    rounded-lg
+                                    border
+                                    border-gray-200
+                                    bg-white
+                                    px-3
+                                    text-[11px]
+                                    font-medium
+                                    leading-none
+                                    text-gray-700
+                                    outline-none
+                                    transition-all
+                                    duration-150
+                                    hover:border-gray-300
+                                    focus:border-indigo-500
+                                    focus:ring-2
+                                    focus:ring-indigo-100
+                                    dark:border-gray-600
+                                    dark:bg-gray-800
+                                    dark:text-gray-200
+                                    dark:[color-scheme:dark]
+                                    dark:hover:border-gray-500
+                                    dark:focus:border-indigo-400
+                                    dark:focus:ring-indigo-900/40
+                                "
+                            />
+                        </div>
+
+                        {/* TO DATE */}
+
+                        <div
+                            className="
+                                min-w-0
+                                w-full
+                            "
+                        >
+                            <input
+                                type="date"
+                                value={toDate}
+                                min={
+                                    fromDate ||
+                                    undefined
+                                }
+                                onChange={(
+                                    event
+                                ) => {
+                                    setToDate(
+                                        event
+                                            .target
+                                            .value
+                                    );
+
+                                    setHoveredStatus(
+                                        null
+                                    );
+                                }}
+                                aria-label="To date"
+                                className="
+                                    block
+                                    h-9
+                                    w-full
+                                    appearance-none
+                                    rounded-lg
+                                    border
+                                    border-gray-200
+                                    bg-white
+                                    px-3
+                                    text-[11px]
+                                    font-medium
+                                    leading-none
+                                    text-gray-700
+                                    outline-none
+                                    transition-all
+                                    duration-150
+                                    hover:border-gray-300
+                                    focus:border-indigo-500
+                                    focus:ring-2
+                                    focus:ring-indigo-100
+                                    dark:border-gray-600
+                                    dark:bg-gray-800
+                                    dark:text-gray-200
+                                    dark:[color-scheme:dark]
+                                    dark:hover:border-gray-500
+                                    dark:focus:border-indigo-400
+                                    dark:focus:ring-indigo-900/40
+                                "
+                            />
+                        </div>
+
+                        {/* LOAN TYPE */}
+
+                        <div
+                            className="
+                                min-w-0
+                                w-full
+                            "
+                        >
+                            <div
+                                className="
+                                    h-9
+                                    w-full
+                                "
+                            >
+                                <LoanTypeDropdown
+                                    label=""
+                                    value={
+                                        loanType
+                                    }
+                                    onChange={(
+                                        value
+                                    ) => {
+                                        setLoanType(
+                                            value
+                                        );
+
+                                        setHoveredStatus(
+                                            null
+                                        );
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* CLEAR */}
+
+                        <button
+                            type="button"
+                            onClick={
+                                handleClearFilters
+                            }
+                            aria-label="Clear all filters"
+                            title="Clear all filters"
+                            className="
+                                group
+                                flex
+                                h-9
+                                w-full
+                                shrink-0
+                                items-center
+                                justify-center
+                                self-center
+                                rounded-lg
+                                border
+                                border-gray-200
+                                bg-white
+                                text-gray-500
+                                shadow-sm
+                                outline-none
+                                transition-all
+                                duration-150
+                                hover:border-red-200
+                                hover:bg-red-50
+                                hover:text-red-500
+                                hover:shadow-sm
+                                focus:border-indigo-500
+                                focus:outline-none
+                                focus:ring-2
+                                focus:ring-indigo-100
+                                active:scale-95
+                                lg:w-9
+                                dark:border-gray-600
+                                dark:bg-gray-800
+                                dark:text-gray-400
+                                dark:hover:border-red-900/60
+                                dark:hover:bg-red-950/40
+                                dark:hover:text-red-400
+                                dark:focus:border-indigo-400
+                                dark:focus:ring-indigo-900/40
+                            "
+                        >
+                            <TrashIcon
+                                className="
+                                    h-4
+                                    w-4
+                                    transition-transform
+                                    duration-150
+                                    group-hover:scale-105
+                                "
+                                aria-hidden="true"
+                            />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* =================================================
+                SUMMARY
+               ================================================= */}
+
+            <div
+                className="
+                    mx-4
+                    mt-0
+                    grid
+                    shrink-0
+                    grid-cols-2
+                    gap-px
+                    overflow-hidden
+                    rounded-xl
+                    border
+                    border-gray-200
+                    bg-gray-200
+                    shadow-sm
+                    dark:border-gray-700
+                    dark:bg-gray-700
+                "
+            >
+                <div
+                    className="
+                        bg-gray-50
+                        px-3.5
+                        py-2.5
+                        transition-colors
+                        dark:bg-gray-800
+                    "
+                >
+                    <div
+                        className="
+                            flex
+                            items-center
+                            justify-between
+                            gap-2
+                        "
+                    >
+                        <div
+                            className="
+                                text-[9px]
+                                font-semibold
+                                uppercase
+                                tracking-[0.08em]
+                                text-gray-500
+                                dark:text-gray-400
+                            "
+                        >
+                            Total Applications
+                        </div>
+
+                        <span
+                            className="
+                                h-1.5
+                                w-1.5
+                                rounded-full
+                                bg-indigo-500/80
+                            "
+                        />
                     </div>
 
-                    <div className="mt-0.5 text-lg font-bold leading-6 text-gray-900 dark:text-gray-100">
+                    <div
+                        className="
+                            mt-1
+                            text-lg
+                            font-bold
+                            leading-6
+                            tracking-tight
+                            text-gray-900
+                            dark:text-gray-100
+                        "
+                    >
                         {formatCount(
-                            apiState.summary.totalApplications
+                            apiState
+                                .summary
+                                .totalApplications
                         )}
                     </div>
                 </div>
 
                 <div
                     className="
-            px-3
-            py-2
-        "
+                        bg-gray-50
+                        px-3.5
+                        py-2.5
+                        transition-colors
+                        dark:bg-gray-800
+                    "
                 >
-                    <div className="text-[9px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                        Pending Applications
+                    <div
+                        className="
+                            flex
+                            items-center
+                            justify-between
+                            gap-2
+                        "
+                    >
+                        <div
+                            className="
+                                text-[9px]
+                                font-semibold
+                                uppercase
+                                tracking-[0.08em]
+                                text-gray-500
+                                dark:text-gray-400
+                            "
+                        >
+                            Pending Applications
+                        </div>
+
+                        <span
+                            className="
+                                h-1.5
+                                w-1.5
+                                rounded-full
+                                bg-amber-500/80
+                            "
+                        />
                     </div>
 
-                    <div className="mt-0.5 text-lg font-bold leading-6 text-gray-900 dark:text-gray-100">
+                    <div
+                        className="
+                            mt-1
+                            text-lg
+                            font-bold
+                            leading-6
+                            tracking-tight
+                            text-gray-900
+                            dark:text-gray-100
+                        "
+                    >
                         {formatCount(
-                            apiState.summary.pendingApplications
+                            apiState
+                                .summary
+                                .pendingApplications
                         )}
                     </div>
                 </div>
             </div>
-            {/* TREEMAP */}
+
+            {/* =================================================
+                TREEMAP
+               ================================================= */}
 
             <div
                 ref={chartRef}
                 className="
                     relative
                     mx-4
-                    mt-2
+                    mt-3
                     mb-4
                     min-h-[300px]
                     flex-1
                     w-auto
                     overflow-visible
-                    rounded-lg
+                    rounded-xl
                     border
                     border-gray-200
-                    bg-white
+                    bg-gray-50/40
+                    shadow-inner
                     dark:border-gray-700
-                    dark:bg-gray-900
+                    dark:bg-gray-950/30
                 "
             >
                 {apiState.loading ? (
-                    <div className="flex h-full min-h-[300px] items-center justify-center text-xs text-gray-400 dark:text-gray-500">
-                        Loading application status...
+                    <div
+                        className="
+                            flex
+                            h-full
+                            min-h-[300px]
+                            flex-col
+                            items-center
+                            justify-center
+                            gap-2
+                            text-xs
+                            text-gray-400
+                            dark:text-gray-500
+                        "
+                    >
+                        <div
+                            className="
+                                h-5
+                                w-5
+                                animate-spin
+                                rounded-full
+                                border-2
+                                border-gray-200
+                                border-t-indigo-500
+                                dark:border-gray-700
+                                dark:border-t-indigo-400
+                            "
+                        />
+
+                        <span>
+                            Loading application status...
+                        </span>
                     </div>
                 ) : apiState.error ? (
-                    <div className="flex h-full min-h-[300px] items-center justify-center px-4 text-center text-xs text-red-500 dark:text-red-400">
-                        {apiState.error}
+                    <div
+                        className="
+                            flex
+                            h-full
+                            min-h-[300px]
+                            items-center
+                            justify-center
+                            px-4
+                            text-center
+                            text-xs
+                            text-red-500
+                            dark:text-red-400
+                        "
+                    >
+                        <div
+                            className="
+                                rounded-lg
+                                border
+                                border-red-100
+                                bg-red-50
+                                px-4
+                                py-3
+                                dark:border-red-900/40
+                                dark:bg-red-950/20
+                            "
+                        >
+                            {apiState.error}
+                        </div>
                     </div>
                 ) : treemap.length ? (
-                    treemap.map((tile) => {
-                        const item = tile.item;
-                        const config =
-                            STATUS_CONFIG[item.status] ||
-                            DEFAULT_STATUS_CONFIG;
+                    treemap.map(
+                        (tile) => {
+                            const item =
+                                tile.item;
 
-                        const isHovered =
-                            hoveredStatus === item.status;
+                            const config =
+                                STATUS_CONFIG[
+                                    item.status
+                                ] ||
+                                DEFAULT_STATUS_CONFIG;
 
-                        const area =
-                            tile.width * tile.height;
+                            const isHovered =
+                                hoveredStatus ===
+                                item.status;
 
-                        const isLarge = area >= 18000;
-                        const isMedium = area >= 8000;
+                            const area =
+                                tile.width *
+                                tile.height;
 
-                        return (
-                            <div
-                                key={item.status}
-                                role="button"
-                                tabIndex={0}
-                                aria-label={`View ${item.status} applications`}
-                                className="absolute cursor-pointer outline-none"
-                                style={{
-                                    left: `${tile.x}px`,
-                                    top: `${tile.y}px`,
-                                    width: `${tile.width}px`,
-                                    height: `${tile.height}px`,
-                                    zIndex: isHovered ? 50 : 1,
-                                }}
-                                onClick={() =>
-                                    handleCardClick(item.status)
-                                }
-                                onKeyDown={(event) =>
-                                    handleCardKeyDown(
-                                        event,
-                                        item.status
-                                    )
-                                }
-                                onMouseEnter={() =>
-                                    setHoveredStatus(item.status)
-                                }
-                                onMouseLeave={() =>
-                                    setHoveredStatus(null)
-                                }
-                            >
+                            const isLarge =
+                                area >=
+                                18000;
+
+                            const isMedium =
+                                area >=
+                                8000;
+
+                            return (
                                 <div
+                                    key={
+                                        item.status
+                                    }
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`View ${item.status} applications`}
                                     className="
-                                        relative
-                                        flex
-                                        h-full
-                                        w-full
-                                        flex-col
-                                        items-center
-                                        justify-center
-                                        overflow-hidden
-                                        border
-                                        text-center
-                                        transition-all
-                                        duration-200
+                                        absolute
+                                        cursor-pointer
+                                        outline-none
                                     "
                                     style={{
-                                        backgroundColor:
-                                            `light-dark(${config.background}, ${config.darkBackground})`,
-                                        borderColor:
-                                            `light-dark(${config.border}, ${config.darkBorder})`,
-                                        boxShadow: isHovered
-                                            ? `inset 0 0 0 2px ${config.accent}, 0 6px 16px rgba(0,0,0,0.18)`
-                                            : "none",
-                                        transform: isHovered
-                                            ? "scale(0.995)"
-                                            : "scale(1)",
+                                        left: `${tile.x}px`,
+                                        top: `${tile.y}px`,
+                                        width: `${tile.width}px`,
+                                        height: `${tile.height}px`,
+                                        zIndex:
+                                            isHovered
+                                                ? 50
+                                                : 1,
                                     }}
+                                    onClick={() =>
+                                        handleCardClick(
+                                            item.status
+                                        )
+                                    }
+                                    onKeyDown={(
+                                        event
+                                    ) =>
+                                        handleCardKeyDown(
+                                            event,
+                                            item.status
+                                        )
+                                    }
+                                    onMouseEnter={() =>
+                                        setHoveredStatus(
+                                            item.status
+                                        )
+                                    }
+                                    onMouseLeave={() =>
+                                        setHoveredStatus(
+                                            null
+                                        )
+                                    }
                                 >
-                                    <div className="flex max-w-[90%] items-center justify-center gap-1.5">
-                                        <span
-                                            className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                    <div
+                                        className="
+                                            relative
+                                            flex
+                                            h-full
+                                            w-full
+                                            flex-col
+                                            items-center
+                                            justify-center
+                                            overflow-hidden
+                                            border
+                                            text-center
+                                            transition-all
+                                            duration-200
+                                        "
+                                        style={{
+                                            backgroundColor:
+                                                `light-dark(${config.background}, ${config.darkBackground})`,
+
+                                            borderColor:
+                                                `light-dark(${config.border}, ${config.darkBorder})`,
+
+                                            boxShadow:
+                                                isHovered
+                                                    ? `inset 0 0 0 2px ${config.accent}, 0 8px 20px rgba(0,0,0,0.16)`
+                                                    : "none",
+
+                                            transform:
+                                                isHovered
+                                                    ? "scale(0.995)"
+                                                    : "scale(1)",
+                                        }}
+                                    >
+                                        <div
+                                            className="
+                                                flex
+                                                max-w-[90%]
+                                                items-center
+                                                justify-center
+                                                gap-1.5
+                                            "
+                                        >
+                                            <span
+                                                className="
+                                                    h-1.5
+                                                    w-1.5
+                                                    shrink-0
+                                                    rounded-full
+                                                    shadow-sm
+                                                "
+                                                style={{
+                                                    backgroundColor:
+                                                        config.accent,
+                                                }}
+                                            />
+
+                                            <span
+                                                className="
+                                                    truncate
+                                                    font-bold
+                                                    uppercase
+                                                    tracking-wide
+                                                "
+                                                style={{
+                                                    color:
+                                                        `light-dark(${config.text}, ${config.darkText})`,
+
+                                                    fontSize:
+                                                        isLarge
+                                                            ? "11px"
+                                                            : isMedium
+                                                                ? "10px"
+                                                                : "8px",
+                                                }}
+                                            >
+                                                {
+                                                    item.status
+                                                }
+                                            </span>
+                                        </div>
+
+                                        <div
+                                            className="
+                                                mt-1
+                                                font-bold
+                                                leading-none
+                                                tracking-tight
+                                            "
+                                            style={{
+                                                color:
+                                                    `light-dark(${config.text}, ${config.darkText})`,
+
+                                                fontSize:
+                                                    isLarge
+                                                        ? "22px"
+                                                        : isMedium
+                                                            ? "17px"
+                                                            : "12px",
+                                            }}
+                                        >
+                                            {formatCount(
+                                                item.count
+                                            )}
+                                        </div>
+
+                                        <div
+                                            className="
+                                                mt-1
+                                                max-w-[90%]
+                                                truncate
+                                                font-medium
+                                            "
+                                            style={{
+                                                color:
+                                                    `light-dark(${config.text}, ${config.darkText})`,
+
+                                                opacity:
+                                                    0.72,
+
+                                                fontSize:
+                                                    isLarge
+                                                        ? "10px"
+                                                        : "8px",
+                                            }}
+                                        >
+                                            {formatAmount(
+                                                item.amount
+                                            )}
+                                        </div>
+
+                                        <div
+                                            className="
+                                                absolute
+                                                bottom-0
+                                                left-0
+                                                right-0
+                                                h-[3px]
+                                            "
                                             style={{
                                                 backgroundColor:
                                                     config.accent,
                                             }}
                                         />
+                                    </div>
 
-                                        <span
-                                            className="truncate font-bold uppercase tracking-wide"
-                                            style={{
-                                                color:
-                                                    `light-dark(${config.text}, ${config.darkText})`,
-                                                fontSize: isLarge
-                                                    ? "11px"
-                                                    : isMedium
-                                                        ? "10px"
-                                                        : "8px",
-                                            }}
+                                    {isHovered && (
+                                        <div
+                                            className="
+                                                pointer-events-none
+                                                absolute
+                                                bottom-[calc(100%+8px)]
+                                                left-1/2
+                                                z-[100]
+                                                w-[200px]
+                                                -translate-x-1/2
+                                                rounded-xl
+                                                border
+                                                border-gray-200
+                                                bg-white/95
+                                                p-3
+                                                text-left
+                                                shadow-[0_12px_32px_rgba(0,0,0,0.16)]
+                                                backdrop-blur-sm
+                                                dark:border-gray-600
+                                                dark:bg-gray-800/95
+                                            "
                                         >
-                                            {item.status}
-                                        </span>
-                                    </div>
+                                            <div
+                                                className="
+                                                    mb-2
+                                                    flex
+                                                    items-center
+                                                    justify-between
+                                                    gap-2
+                                                    border-b
+                                                    border-gray-100
+                                                    pb-2
+                                                    dark:border-gray-700
+                                                "
+                                            >
+                                                <div
+                                                    className="
+                                                        flex
+                                                        min-w-0
+                                                        items-center
+                                                        gap-1.5
+                                                    "
+                                                >
+                                                    <span
+                                                        className="
+                                                            h-1.5
+                                                            w-1.5
+                                                            shrink-0
+                                                            rounded-full
+                                                        "
+                                                        style={{
+                                                            backgroundColor:
+                                                                config.accent,
+                                                        }}
+                                                    />
 
-                                    <div
-                                        className="mt-1 font-bold leading-none"
-                                        style={{
-                                            color:
-                                                `light-dark(${config.text}, ${config.darkText})`,
-                                            fontSize: isLarge
-                                                ? "22px"
-                                                : isMedium
-                                                    ? "17px"
-                                                    : "12px",
-                                        }}
-                                    >
-                                        {formatCount(item.count)}
-                                    </div>
+                                                    <span
+                                                        className="
+                                                            truncate
+                                                            text-[10px]
+                                                            font-semibold
+                                                            text-gray-900
+                                                            dark:text-gray-100
+                                                        "
+                                                    >
+                                                        {
+                                                            item.status
+                                                        }
+                                                    </span>
+                                                </div>
 
-                                    <div
-                                        className="mt-1 max-w-[90%] truncate font-medium"
-                                        style={{
-                                            color:
-                                                `light-dark(${config.text}, ${config.darkText})`,
-                                            opacity: 0.72,
-                                            fontSize: isLarge
-                                                ? "10px"
-                                                : "8px",
-                                        }}
-                                    >
-                                        {formatAmount(item.amount)}
-                                    </div>
+                                                <span
+                                                    className="
+                                                        shrink-0
+                                                        rounded
+                                                        bg-gray-100
+                                                        px-1.5
+                                                        py-0.5
+                                                        text-[8px]
+                                                        font-medium
+                                                        text-gray-400
+                                                        dark:bg-gray-700
+                                                        dark:text-gray-500
+                                                    "
+                                                >
+                                                    View
+                                                </span>
+                                            </div>
 
-                                    <div
-                                        className="absolute bottom-0 left-0 right-0 h-[3px]"
-                                        style={{
-                                            backgroundColor:
-                                                config.accent,
-                                        }}
-                                    />
-                                </div>
-
-                                {isHovered && (
-                                    <div
-                                        className="
-                                            pointer-events-none
-                                            absolute
-                                            bottom-[calc(100%+6px)]
-                                            left-1/2
-                                            z-[100]
-                                            w-[190px]
-                                            -translate-x-1/2
-                                            rounded-lg
-                                            border
-                                            border-gray-200
-                                            bg-white
-                                            p-2.5
-                                            text-left
-                                            shadow-xl
-                                            dark:border-gray-600
-                                            dark:bg-gray-800
-                                        "
-                                    >
-                                        <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-gray-100 pb-1.5 dark:border-gray-700">
-                                            <span className="text-[10px] font-semibold text-gray-900 dark:text-gray-100">
-                                                {item.status}
-                                            </span>
-
-                                            <span className="text-[8px] font-medium text-gray-400 dark:text-gray-500">
-                                                View
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center justify-between gap-2 py-0.5 text-[10px]">
-                                            <span className="text-gray-500 dark:text-gray-400">
-                                                Applications
-                                            </span>
-
-                                            <strong className="text-gray-900 dark:text-gray-100">
-                                                {formatCount(item.count)}
-                                            </strong>
-                                        </div>
-
-                                        <div className="flex items-center justify-between gap-2 py-0.5 text-[10px]">
-                                            <span className="text-gray-500 dark:text-gray-400">
-                                                Loan Amount
-                                            </span>
-
-                                            <strong className="text-gray-900 dark:text-gray-100">
-                                                {formatAmount(item.amount)}
-                                            </strong>
-                                        </div>
-
-                                        {loanType && (
-                                            <div className="mt-1 flex items-center justify-between gap-2 border-t border-gray-100 pt-1.5 text-[10px] dark:border-gray-700">
-                                                <span className="text-gray-500 dark:text-gray-400">
-                                                    Loan Type
+                                            <div
+                                                className="
+                                                    flex
+                                                    items-center
+                                                    justify-between
+                                                    gap-2
+                                                    py-0.5
+                                                    text-[10px]
+                                                "
+                                            >
+                                                <span
+                                                    className="
+                                                        text-gray-500
+                                                        dark:text-gray-400
+                                                    "
+                                                >
+                                                    Applications
                                                 </span>
 
-                                                <strong className="max-w-[100px] truncate text-gray-900 dark:text-gray-100">
-                                                    {loanType}
+                                                <strong
+                                                    className="
+                                                        text-gray-900
+                                                        dark:text-gray-100
+                                                    "
+                                                >
+                                                    {formatCount(
+                                                        item.count
+                                                    )}
                                                 </strong>
                                             </div>
-                                        )}
 
-                                        <div className="mt-1.5 text-[8px] font-medium text-gray-400 dark:text-gray-500">
-                                            Click to view applications
+                                            <div
+                                                className="
+                                                    flex
+                                                    items-center
+                                                    justify-between
+                                                    gap-2
+                                                    py-0.5
+                                                    text-[10px]
+                                                "
+                                            >
+                                                <span
+                                                    className="
+                                                        text-gray-500
+                                                        dark:text-gray-400
+                                                    "
+                                                >
+                                                    Loan Amount
+                                                </span>
+
+                                                <strong
+                                                    className="
+                                                        text-gray-900
+                                                        dark:text-gray-100
+                                                    "
+                                                >
+                                                    {formatAmount(
+                                                        item.amount
+                                                    )}
+                                                </strong>
+                                            </div>
+
+                                            {loanType && (
+                                                <div
+                                                    className="
+                                                        mt-1.5
+                                                        flex
+                                                        items-center
+                                                        justify-between
+                                                        gap-2
+                                                        border-t
+                                                        border-gray-100
+                                                        pt-1.5
+                                                        text-[10px]
+                                                        dark:border-gray-700
+                                                    "
+                                                >
+                                                    <span
+                                                        className="
+                                                            text-gray-500
+                                                            dark:text-gray-400
+                                                        "
+                                                    >
+                                                        Loan Type
+                                                    </span>
+
+                                                    <strong
+                                                        className="
+                                                            max-w-[110px]
+                                                            truncate
+                                                            text-gray-900
+                                                            dark:text-gray-100
+                                                        "
+                                                    >
+                                                        {
+                                                            loanType
+                                                        }
+                                                    </strong>
+                                                </div>
+                                            )}
+
+                                            <div
+                                                className="
+                                                    mt-2
+                                                    border-t
+                                                    border-gray-100
+                                                    pt-1.5
+                                                    text-[8px]
+                                                    font-medium
+                                                    text-gray-400
+                                                    dark:border-gray-700
+                                                    dark:text-gray-500
+                                                "
+                                            >
+                                                Click to view applications
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })
+                                    )}
+                                </div>
+                            );
+                        }
+                    )
                 ) : (
-                    <div className="flex h-full min-h-[300px] items-center justify-center text-xs text-gray-400 dark:text-gray-500">
-                        No application data available
+                    <div
+                        className="
+                            flex
+                            h-full
+                            min-h-[300px]
+                            flex-col
+                            items-center
+                            justify-center
+                            gap-2
+                            text-xs
+                            text-gray-400
+                            dark:text-gray-500
+                        "
+                    >
+                        <div
+                            className="
+                                flex
+                                h-9
+                                w-9
+                                items-center
+                                justify-center
+                                rounded-full
+                                border
+                                border-gray-200
+                                bg-white
+                                dark:border-gray-700
+                                dark:bg-gray-800
+                            "
+                        >
+                            <span
+                                className="
+                                    h-2
+                                    w-2
+                                    rounded-full
+                                    bg-gray-300
+                                    dark:bg-gray-600
+                                "
+                            />
+                        </div>
+
+                        <span>
+                            No application data available
+                        </span>
                     </div>
                 )}
             </div>

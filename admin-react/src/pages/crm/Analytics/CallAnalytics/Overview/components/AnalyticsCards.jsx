@@ -138,46 +138,6 @@ function AnalyticsCards({
 
 
     // =========================================================
-    // BACKEND SUMMARY
-    // =========================================================
-
-    const total =
-        Number(
-            safeSummary.total || 0
-        )
-
-
-    const answered =
-        Number(
-            safeSummary.answered || 0
-        )
-
-
-    const missed =
-        Number(
-            safeSummary.missed || 0
-        )
-
-
-    const unknown =
-        Number(
-            safeSummary.unknown || 0
-        )
-
-
-    const assigned =
-        Number(
-            safeSummary.assigned || 0
-        )
-
-
-    const converted =
-        Number(
-            safeSummary.converted || 0
-        )
-
-
-    // =========================================================
     // CARDS
     // =========================================================
 
@@ -186,42 +146,42 @@ function AnalyticsCards({
         {
             key: 'total',
             title: 'Total Calls',
-            value: total,
+            value: safeSummary.total,
             icon: PhoneIcon,
         },
 
         {
             key: 'answered',
             title: 'Answered',
-            value: answered,
+            value: safeSummary.answered,
             icon: PhoneArrowDownLeftIcon,
         },
 
         {
             key: 'missed',
             title: 'Missed',
-            value: missed,
+            value: safeSummary.missed,
             icon: PhoneXMarkIcon,
         },
 
         {
             key: 'unknown',
             title: 'Unknown',
-            value: unknown,
+            value: safeSummary.unknown,
             icon: QuestionMarkCircleIcon,
         },
 
         {
             key: 'assigned',
             title: 'Assigned',
-            value: assigned,
+            value: safeSummary.assigned,
             icon: UserGroupIcon,
         },
 
         {
             key: 'converted',
             title: 'Converted',
-            value: converted,
+            value: safeSummary.converted,
             icon: CheckCircleIcon,
         },
 

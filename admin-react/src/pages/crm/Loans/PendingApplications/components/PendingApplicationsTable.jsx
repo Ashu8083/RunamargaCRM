@@ -64,13 +64,14 @@ function PendingApplicationsTable({
   // =============================================================
 
   const STATUS_OPTIONS = [
-    "Revert Rejected",
-    "Rejected",
-    "In Process",
-    "Docs Pending",
-    "Sanctioned",
-    "Disbursed",
-  ];
+    { label: 'In Process', value: 'inprocess' },
+    { label: 'Docs Pending', value: 'docspending' },
+    { label: 'Rejected', value: 'rejected' },
+    { label: 'Sanctioned', value: 'sanctioned' },
+    { label: 'Disbursed', value: 'disbursed' },
+    { label: 'Login', value: 'login' },
+    { label: 'Revert Rejected', value: 'revert_rejected' },
+  ]
 
   // =========================================================
   // CHAT
@@ -433,10 +434,10 @@ function PendingApplicationsTable({
   const getAppliedDate = (application) =>
     formatDate(
       application.appliedDate ??
-        application.applied_date ??
-        application.applied_at ??
-        application.createdAt ??
-        application.created_at,
+      application.applied_date ??
+      application.applied_at ??
+      application.createdAt ??
+      application.created_at,
     );
 
   // =========================================================
@@ -1083,12 +1084,10 @@ function PendingApplicationsTable({
                           {application.phone && (
                             <a
                               href={`tel:${application.phone}`}
-                              title={`Call ${
-                                application.name || application.phone
-                              }`}
-                              aria-label={`Call ${
-                                application.name || application.phone
-                              }`}
+                              title={`Call ${application.name || application.phone
+                                }`}
+                              aria-label={`Call ${application.name || application.phone
+                                }`}
                               className="
                                                                     btn
                                                                     btn-ghost
@@ -1229,8 +1228,8 @@ function PendingApplicationsTable({
                                                                 truncate
                                                                 hover:opacity-80
                                                                 ${getStatusClass(
-                                                                  displayStatus,
-                                                                )}
+                              displayStatus,
+                            )}
                                                             `}
                           >
                             <span
@@ -1408,8 +1407,9 @@ function PendingApplicationsTable({
               {totalApplications}
             </div>
 
-            {/* RIGHT */}
             <div className="flex items-center gap-1">
+
+              {/* PREVIOUS */}
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
@@ -1419,27 +1419,73 @@ function PendingApplicationsTable({
                 Previous
               </button>
 
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                (page) => (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => setCurrentPage(page)}
-                    className={`
-                                        btn
-                                        btn-sm
-                                        ${
-                                          currentPage === page
-                                            ? "btn-primary"
-                                            : "btn-ghost"
-                                        }
-                                    `}
-                  >
-                    {page}
-                  </button>
-                ),
+              {/* FIRST PAGE */}
+              <button
+                type="button"
+                className={`btn btn-sm ${currentPage === 1 ? "btn-primary" : "btn-ghost"
+                  }`}
+                onClick={() => setCurrentPage(1)}
+              >
+                1
+              </button>
+
+              {/* LEFT ELLIPSIS */}
+              {currentPage > 3 && (
+                <span className="px-2">...</span>
               )}
 
+              {/* PREVIOUS PAGE */}
+              {currentPage > 2 && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                >
+                  {currentPage - 1}
+                </button>
+              )}
+
+              {/* CURRENT PAGE */}
+              {currentPage !== 1 && currentPage !== totalPages && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                >
+                  {currentPage}
+                </button>
+              )}
+
+              {/* NEXT PAGE */}
+              {currentPage < totalPages - 1 && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                >
+                  {currentPage + 1}
+                </button>
+              )}
+
+              {/* RIGHT ELLIPSIS */}
+              {currentPage < totalPages - 2 && (
+                <span className="px-2">...</span>
+              )}
+
+              {/* LAST PAGE */}
+              {totalPages > 1 && (
+                <button
+                  type="button"
+                  className={`btn btn-sm ${currentPage === totalPages
+                      ? "btn-primary"
+                      : "btn-ghost"
+                    }`}
+                  onClick={() => setCurrentPage(totalPages)}
+                >
+                  {totalPages}
+                </button>
+              )}
+
+              {/* NEXT */}
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
@@ -1448,6 +1494,7 @@ function PendingApplicationsTable({
               >
                 Next
               </button>
+
             </div>
           </div>
         )}

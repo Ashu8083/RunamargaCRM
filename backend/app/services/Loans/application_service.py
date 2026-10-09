@@ -100,6 +100,12 @@ class ApplicationService:
         page: int = 1,
         page_size: int = 10,
         no_chat_for_days: int | None = None,
+        search: str | None = None,
+        loan_type_id: int | None = None,
+        rm_id: int | None = None,
+        team_lead_id: int | None = None,
+        agent_id: int | None = None,
+        status: str | None = None,
     ):
         query = db.query(LoanApplication)
 
@@ -117,7 +123,45 @@ class ApplicationService:
         query = query.filter(
             LoanApplication.deleted_at.is_(None)
         )
+        # ---------------------------------------------------------
+        # DROPDOWN FILTERS
+        # ---------------------------------------------------------
 
+        if loan_type_id is not None:
+            query = query.filter(
+                LoanApplication.loan_type_id == loan_type_id
+            )
+
+        if rm_id is not None:
+            query = query.filter(
+                LoanApplication.rm_context_id == rm_id
+            )
+
+        if agent_id is not None:
+            query = query.filter(
+                LoanApplication.agent_context_id == agent_id
+            )
+
+        if status:
+            query = query.filter(
+                LoanApplication.status == status
+            )
+        # ----  -----------------------------------------------------
+        # SEARCH
+        # ---------------------------------------------------------
+
+        if search:
+            search_value = search.strip()
+
+            if search_value:
+                search_pattern = f"%{search_value}%"
+
+                query = query.filter(
+                    LoanApplication.name.ilike(search_pattern)
+                    | LoanApplication.phone.ilike(search_pattern)
+                    | LoanApplication.email.ilike(search_pattern)
+                    | LoanApplication.unique_id.ilike(search_pattern)
+                )
         # Pending/no-chat filter
         if no_chat_for_days is not None:
             cutoff_datetime = datetime.now(timezone.utc) - timedelta(
@@ -130,7 +174,7 @@ class ApplicationService:
                     TeamChat.loan_application_id == LoanApplication.id
                 ),
             )
-
+        
         # Count AFTER filtering
         total_count = query.count()
 

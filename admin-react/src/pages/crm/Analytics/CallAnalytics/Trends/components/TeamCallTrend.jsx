@@ -1,37 +1,16 @@
-// admin-react/src/pages/Analytics/CallAnalytics/Trends/components/TeamCallTrend.jsx
+import { useEffect, useMemo, useState } from 'react'
 
-import { useMemo, useState } from 'react'
+import TeamLeadDropdown from '../../../../../../components/GlobalModels/Filters/TeamLeadDropdown'
 
-
+import {
+    fetchTeamLeadCallPerformance,
+} from '../api/TeamCallTrend'
 // =============================================================
 // HELPERS
 // =============================================================
 
 const formatNumber = (value) =>
     Number(value || 0).toLocaleString('en-IN')
-
-
-const formatDate = (date) => {
-
-    if (!date) return '—'
-
-    const parsed =
-        new Date(`${date}T00:00:00`)
-
-    if (Number.isNaN(parsed.getTime())) {
-        return date
-    }
-
-    return parsed.toLocaleDateString(
-        'en-IN',
-        {
-            day: '2-digit',
-            month: 'short',
-        }
-    )
-
-}
-
 
 // =============================================================
 // METRICS
@@ -70,7 +49,6 @@ const METRICS = [
     },
 ]
 
-
 // =============================================================
 // COMPONENT
 // =============================================================
@@ -79,38 +57,70 @@ function TeamCallTrend({
     calls = [],
 }) {
 
-    const [view, setView] =
-        useState('daily')
+    // =========================================================
+    // FILTER STATE
+    // =========================================================
 
-
-    const [fromDate, setFromDate] =
+    const [teamLeadContextId, setTeamLeadContextId] =
         useState('')
 
+    const [performanceData, setPerformanceData] =
+        useState(null)
 
-    const [toDate, setToDate] =
-        useState('')
+    const [loading, setLoading] =
+        useState(false)
+
+    const [error, setError] =
+        useState(null)
+
+    const [fromDate, setFromDate] = useState('')
+
+    const [toDate, setToDate] = useState('')
 
 
     // =========================================================
-    // DATE FILTER
+    // FILTER CALLS BY DATE + AGENT + RM
     // =========================================================
 
-    const dateFilteredCalls = useMemo(() => {
+    const filteredCalls = useMemo(() => {
+
+        if (!Array.isArray(calls)) {
+            return []
+        }
 
         return calls.filter((call) => {
 
             const date =
                 call.date ||
-                call.createdAt?.slice(0, 10)
+                call.createdAt?.slice(0, 10) ||
+                call.created_at?.slice(0, 10)
 
             if (!date) {
                 return false
             }
 
-            return (
-                (!fromDate || date >= fromDate) &&
-                (!toDate || date <= toDate)
-            )
+            // -------------------------------------------------
+            // DATE
+            // -------------------------------------------------
+
+            if (
+                fromDate &&
+                date < fromDate
+            ) {
+                return false
+            }
+
+            if (
+                toDate &&
+                date > toDate
+            ) {
+                return false
+            }
+
+
+
+
+            return true
 
         })
 
@@ -130,11 +140,15 @@ function TeamCallTrend({
         const grouped = {}
 
 
-        dateFilteredCalls.forEach((call) => {
+        filteredCalls.forEach((call) => {
 
             const teamId =
                 call.reportingToId ??
+                call.reporting_to_id ??
                 call.teamLeadId ??
+                call.team_lead_id ??
+                call.teamLeadContextId ??
+                call.team_lead_context_id ??
                 call.teamLeadName ??
                 'unknown'
 
@@ -146,13 +160,19 @@ function TeamCallTrend({
 
                     name:
                         call.teamLeadName ||
+                        call.team_lead_name ||
                         `Team Lead ${teamId}`,
 
                     total: 0,
+
                     received: 0,
+
                     called: 0,
+
                     missed: 0,
+
                     uniqueMissed: 0,
+
                     applications: 0,
                 }
 
@@ -163,12 +183,18 @@ function TeamCallTrend({
                 grouped[teamId]
 
 
+            // -------------------------------------------------
+            // TOTAL
+            // -------------------------------------------------
+
             item.total += 1
 
 
             const type =
                 String(
-                    call.type || ''
+                    call.type ??
+                    call.direction ??
+                    ''
                 )
                     .trim()
                     .toLowerCase()
@@ -176,7 +202,8 @@ function TeamCallTrend({
 
             const status =
                 String(
-                    call.status || ''
+                    call.status ??
+                    ''
                 )
                     .trim()
                     .toLowerCase()
@@ -187,8 +214,11 @@ function TeamCallTrend({
             // -------------------------------------------------
 
             if (
-                type === 'incoming' &&
-                status === 'received'
+                (
+                    type === 'incoming' ||
+                    type === 'received'
+                ) &&
+                status !== 'missed'
             ) {
 
                 item.received += 1
@@ -201,7 +231,10 @@ function TeamCallTrend({
             // -------------------------------------------------
 
             if (
-                type === 'outgoing' &&
+                (
+                    type === 'outgoing' ||
+                    type === 'called'
+                ) &&
                 status !== 'missed'
             ) {
 
@@ -228,7 +261,10 @@ function TeamCallTrend({
             // UNIQUE MISSED
             // -------------------------------------------------
 
-            if (call.uniqueMissed) {
+            if (
+                call.uniqueMissed === true ||
+                call.unique_missed === true
+            ) {
 
                 item.uniqueMissed += 1
 
@@ -239,7 +275,10 @@ function TeamCallTrend({
             // APPLICATIONS
             // -------------------------------------------------
 
-            if (call.applicationCreated) {
+            if (
+                call.applicationCreated === true ||
+                call.application_created === true
+            ) {
 
                 item.applications += 1
 
@@ -255,7 +294,7 @@ function TeamCallTrend({
             )
 
     }, [
-        dateFilteredCalls,
+        filteredCalls,
     ])
 
 
@@ -293,7 +332,9 @@ function TeamCallTrend({
                         (sum, item) =>
                             sum +
                             Number(
-                                item[metric.key] || 0
+                                item[
+                                metric.key
+                                ] || 0
                             ),
                         0
                     )
@@ -307,6 +348,60 @@ function TeamCallTrend({
     }, [
         teamData,
     ])
+    useEffect(() => {
+        const loadPerformance = async () => {
+            try {
+                setLoading(true)
+                setError(null)
+
+                const data =
+                    await fetchTeamLeadCallPerformance({
+                        teamLeadContextId,
+                        fromDate,
+                        toDate,
+                    })
+
+                setPerformanceData(data)
+            } catch (err) {
+                console.error(
+                    'Failed to fetch team lead performance:',
+                    err
+                )
+
+                setError(err)
+                setPerformanceData(null)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadPerformance()
+    }, [
+        teamLeadContextId,
+        fromDate,
+        toDate,
+    ])
+    const handleTeamLeadChange = (value) => {
+        console.log(
+            'SELECTED TEAM LEAD VALUE:',
+            value,
+            typeof value
+        )
+
+        setTeamLeadContextId(value)
+    }
+    // =========================================================
+    // RESET
+    // =========================================================
+
+    const handleReset = () => {
+        setTeamLeadContextId('')
+
+        setFromDate('')
+
+        setToDate('')
+
+    }
 
 
     // =========================================================
@@ -315,192 +410,194 @@ function TeamCallTrend({
 
     return (
 
-        <section className="
-            w-full
-            min-w-0
-            overflow-hidden
-            rounded-xl
-            border
-            border-base-300
-            bg-base-100
-            shadow-sm
-        ">
+        <section
+            className="
+                w-full
+                min-w-0
+                overflow-hidden
+                rounded-xl
+                border
+                border-base-300
+                bg-base-100
+                shadow-sm
+            "
+        >
 
             {/* =================================================
                 HEADER
             ================================================= */}
 
-            <div className="
-                flex
-                flex-col
-                gap-3
-                border-b
-                border-base-300
-                px-4
-                py-4
-                sm:px-5
-                md:flex-row
-                md:items-center
-                md:justify-between
-            ">
+            <div
+                className="
+                    flex
+                    flex-col
+                    gap-3
+                    border-b
+                    border-base-300
+                    px-4
+                    py-4
+                    sm:px-5
+                "
+            >
 
                 <div className="min-w-0">
 
-                    <h2 className="
-                        text-sm
-                        font-semibold
-                        text-base-content
-                    ">
+                    <h2
+                        className="
+                            text-sm
+                            font-semibold
+                            text-base-content
+                        "
+                    >
                         Team Lead Call Performance
                     </h2>
 
-                    <p className="
-                        mt-0.5
-                        text-xs
-                        text-base-content/45
-                    ">
+                    <p
+                        className="
+                            mt-0.5
+                            text-xs
+                            text-base-content/45
+                        "
+                    >
                         Call volume and outcomes by team lead.
                     </p>
 
                 </div>
 
 
-                {/* DAILY / MONTHLY */}
+                {/* =================================================
+                    FILTERS
+                ================================================= */}
 
-                <div className="
-                    flex
-                    shrink-0
-                    rounded-lg
-                    border
-                    border-base-300
-                    bg-base-200/40
-                    p-1
-                ">
+                <div
+                    className="
+                        grid
+                        w-full
+                        grid-cols-1
+                        gap-3
+                        sm:grid-cols-2
+                        lg:grid-cols-5
+                    "
+                >
 
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setView('daily')
-                        }
-                        className={[
-                            'rounded-md',
-                            'px-3',
-                            'py-1.5',
-                            'text-xs',
-                            'font-medium',
-                            'transition',
-                            view === 'daily'
-                                ? 'bg-base-100 text-base-content shadow-sm'
-                                : 'text-base-content/50 hover:text-base-content',
-                        ].join(' ')}
-                    >
-                        Daily
-                    </button>
+                    {/* AGENT */}
+
+                    <div className="min-w-0">
+
+                        <TeamLeadDropdown
+                            label="Team Lead"
+                            value={teamLeadContextId}
+                            onChange={handleTeamLeadChange}
+                        />
+
+                    </div>
+
+                    {/* FROM */}
+
+                    <div className="min-w-0">
+
+                        <label
+                            className="
+                                mb-1.5
+                                block
+                                text-xs
+                                font-medium
+                                text-base-content/60
+                            "
+                        >
+                            From
+                        </label>
+
+                        <input
+                            type="date"
+                            value={fromDate}
+                            onChange={(event) =>
+                                setFromDate(
+                                    event.target.value
+                                )
+                            }
+                            className="
+                                input
+                                input-bordered
+                                h-9
+                                min-h-9
+                                w-full
+                                text-xs
+                            "
+                        />
+
+                    </div>
 
 
-                    <button
-                        type="button"
-                        onClick={() =>
-                            setView('monthly')
-                        }
-                        className={[
-                            'rounded-md',
-                            'px-3',
-                            'py-1.5',
-                            'text-xs',
-                            'font-medium',
-                            'transition',
-                            view === 'monthly'
-                                ? 'bg-base-100 text-base-content shadow-sm'
-                                : 'text-base-content/50 hover:text-base-content',
-                        ].join(' ')}
-                    >
-                        Monthly
-                    </button>
+                    {/* TO */}
 
-                </div>
+                    <div className="min-w-0">
 
-            </div>
+                        <label
+                            className="
+                                mb-1.5
+                                block
+                                text-xs
+                                font-medium
+                                text-base-content/60
+                            "
+                        >
+                            To
+                        </label>
+
+                        <input
+                            type="date"
+                            value={toDate}
+                            onChange={(event) =>
+                                setToDate(
+                                    event.target.value
+                                )
+                            }
+                            className="
+                                input
+                                input-bordered
+                                h-9
+                                min-h-9
+                                w-full
+                                text-xs
+                            "
+                        />
+
+                    </div>
 
 
-            {/* =================================================
-                DATE FILTER
-            ================================================= */}
+                    {/* RESET */}
 
-            <div className="
-                grid
-                grid-cols-1
-                gap-3
-                border-b
-                border-base-300
-                px-4
-                py-3
-                sm:grid-cols-2
-                sm:px-5
-            ">
-
-                <div>
-
-                    <label className="
-                        mb-1.5
-                        block
-                        text-xs
-                        font-medium
-                        text-base-content/60
-                    ">
-                        From
-                    </label>
-
-                    <input
-                        type="date"
-                        value={fromDate}
-                        onChange={(event) =>
-                            setFromDate(
-                                event.target.value
-                            )
-                        }
+                    <div
                         className="
-                            input
-                            input-bordered
-                            h-9
-                            min-h-9
-                            w-full
-                            text-xs
+                            flex
+                            items-end
                         "
-                    />
+                    >
 
-                </div>
+                        <button
+                            type="button"
+                            onClick={handleReset}
+                            className="
+                                h-9
+                                w-full
+                                rounded-lg
+                                border
+                                border-base-300
+                                bg-base-100
+                                px-4
+                                text-xs
+                                font-medium
+                                text-base-content/60
+                                transition
+                                hover:bg-base-200
+                                hover:text-base-content
+                            "
+                        >
+                            Reset
+                        </button>
 
-
-                <div>
-
-                    <label className="
-                        mb-1.5
-                        block
-                        text-xs
-                        font-medium
-                        text-base-content/60
-                    ">
-                        To
-                    </label>
-
-                    <input
-                        type="date"
-                        value={toDate}
-                        onChange={(event) =>
-                            setToDate(
-                                event.target.value
-                            )
-                        }
-                        className="
-                            input
-                            input-bordered
-                            h-9
-                            min-h-9
-                            w-full
-                            text-xs
-                        "
-                    />
+                    </div>
 
                 </div>
 
@@ -511,17 +608,19 @@ function TeamCallTrend({
                 LEGEND
             ================================================= */}
 
-            <div className="
-                flex
-                flex-wrap
-                gap-x-5
-                gap-y-2
-                border-b
-                border-base-300
-                px-4
-                py-3
-                sm:px-5
-            ">
+            <div
+                className="
+                    flex
+                    flex-wrap
+                    gap-x-5
+                    gap-y-2
+                    border-b
+                    border-base-300
+                    px-4
+                    py-3
+                    sm:px-5
+                "
+            >
 
                 {METRICS.map((metric) => (
 
@@ -558,38 +657,50 @@ function TeamCallTrend({
                 GRAPH
             ================================================= */}
 
-            <div className="
-                overflow-x-auto
-                px-4
-                py-5
-                sm:px-5
-            ">
+            <div
+                className="
+                    overflow-x-auto
+                    px-4
+                    py-5
+                    sm:px-5
+                "
+            >
 
                 {teamData.length ? (
 
-                    <div className="
-                        min-w-[760px]
-                    ">
+                    <div
+                        className="
+                            min-w-[760px]
+                        "
+                    >
 
-                        <div className="
-                            flex
-                            h-[320px]
-                            gap-3
-                        ">
+                        {/* =================================================
+                            GRAPH
+                        ================================================= */}
+
+                        <div
+                            className="
+                                flex
+                                h-[320px]
+                                gap-3
+                            "
+                        >
 
                             {/* Y AXIS */}
 
-                            <div className="
-                                flex
-                                w-10
-                                shrink-0
-                                flex-col
-                                justify-between
-                                pb-1
-                                text-right
-                                text-[10px]
-                                text-base-content/35
-                            ">
+                            <div
+                                className="
+                                    flex
+                                    w-10
+                                    shrink-0
+                                    flex-col
+                                    justify-between
+                                    pb-1
+                                    text-right
+                                    text-[10px]
+                                    text-base-content/35
+                                "
+                            >
 
                                 <span>
                                     {formatNumber(maxValue)}
@@ -626,24 +737,28 @@ function TeamCallTrend({
                             </div>
 
 
-                            {/* GRAPH */}
+                            {/* GRAPH BODY */}
 
-                            <div className="
-                                relative
-                                min-w-0
-                                flex-1
-                            ">
+                            <div
+                                className="
+                                    relative
+                                    min-w-0
+                                    flex-1
+                                "
+                            >
 
                                 {/* GRID */}
 
-                                <div className="
-                                    pointer-events-none
-                                    absolute
-                                    inset-0
-                                    flex
-                                    flex-col
-                                    justify-between
-                                ">
+                                <div
+                                    className="
+                                        pointer-events-none
+                                        absolute
+                                        inset-0
+                                        flex
+                                        flex-col
+                                        justify-between
+                                    "
+                                >
 
                                     {[0, 1, 2, 3, 4].map(
                                         (line) => (
@@ -665,14 +780,16 @@ function TeamCallTrend({
 
                                 {/* BAR GROUPS */}
 
-                                <div className="
-                                    absolute
-                                    inset-0
-                                    flex
-                                    items-end
-                                    gap-5
-                                    px-3
-                                ">
+                                <div
+                                    className="
+                                        absolute
+                                        inset-0
+                                        flex
+                                        items-end
+                                        gap-5
+                                        px-3
+                                    "
+                                >
 
                                     {teamData.map((item) => (
 
@@ -692,30 +809,34 @@ function TeamCallTrend({
 
                                             {/* TOOLTIP */}
 
-                                            <div className="
-                                                pointer-events-none
-                                                absolute
-                                                bottom-4
-                                                left-1/2
-                                                z-30
-                                                hidden
-                                                w-44
-                                                -translate-x-1/2
-                                                rounded-lg
-                                                border
-                                                border-base-300
-                                                bg-base-100
-                                                p-3
-                                                shadow-xl
-                                                group-hover:block
-                                            ">
+                                            <div
+                                                className="
+                                                    pointer-events-none
+                                                    absolute
+                                                    bottom-4
+                                                    left-1/2
+                                                    z-30
+                                                    hidden
+                                                    w-48
+                                                    -translate-x-1/2
+                                                    rounded-lg
+                                                    border
+                                                    border-base-300
+                                                    bg-base-100
+                                                    p-3
+                                                    shadow-xl
+                                                    group-hover:block
+                                                "
+                                            >
 
-                                                <p className="
-                                                    mb-2
-                                                    text-xs
-                                                    font-semibold
-                                                    text-base-content
-                                                ">
+                                                <p
+                                                    className="
+                                                        mb-2
+                                                        text-xs
+                                                        font-semibold
+                                                        text-base-content
+                                                    "
+                                                >
                                                     {item.name}
                                                 </p>
 
@@ -737,15 +858,19 @@ function TeamCallTrend({
                                                         >
 
                                                             <span>
-                                                                {metric.label}
+                                                                {
+                                                                    metric.label
+                                                                }
                                                             </span>
 
-                                                            <b className="
-                                                                text-base-content
-                                                            ">
+                                                            <b
+                                                                className="
+                                                                    text-base-content
+                                                                "
+                                                            >
                                                                 {
                                                                     item[
-                                                                        metric.key
+                                                                    metric.key
                                                                     ]
                                                                 }
                                                             </b>
@@ -760,15 +885,17 @@ function TeamCallTrend({
 
                                             {/* BARS */}
 
-                                            <div className="
-                                                flex
-                                                h-full
-                                                w-full
-                                                max-w-[115px]
-                                                items-end
-                                                justify-center
-                                                gap-1
-                                            ">
+                                            <div
+                                                className="
+                                                    flex
+                                                    h-full
+                                                    w-full
+                                                    max-w-[115px]
+                                                    items-end
+                                                    justify-center
+                                                    gap-1
+                                                "
+                                            >
 
                                                 {METRICS.map(
                                                     (metric) => {
@@ -776,7 +903,7 @@ function TeamCallTrend({
                                                         const value =
                                                             Number(
                                                                 item[
-                                                                    metric.key
+                                                                metric.key
                                                                 ] || 0
                                                             )
 
@@ -850,12 +977,14 @@ function TeamCallTrend({
                             X AXIS
                         ================================================= */}
 
-                        <div className="
-                            mt-2
-                            flex
-                            gap-5
-                            pl-[52px]
-                        ">
+                        <div
+                            className="
+                                mt-2
+                                flex
+                                gap-5
+                                pl-[52px]
+                            "
+                        >
 
                             {teamData.map((item) => (
 
@@ -868,12 +997,14 @@ function TeamCallTrend({
                                     "
                                 >
 
-                                    <p className="
-                                        truncate
-                                        text-[10px]
-                                        font-medium
-                                        text-base-content/65
-                                    ">
+                                    <p
+                                        className="
+                                            truncate
+                                            text-[10px]
+                                            font-medium
+                                            text-base-content/65
+                                        "
+                                    >
                                         {item.name}
                                     </p>
 
@@ -888,14 +1019,16 @@ function TeamCallTrend({
                             SUMMARY
                         ================================================= */}
 
-                        <div className="
-                            mt-5
-                            grid
-                            grid-cols-2
-                            gap-2
-                            sm:grid-cols-3
-                            lg:grid-cols-6
-                        ">
+                        <div
+                            className="
+                                mt-5
+                                grid
+                                grid-cols-2
+                                gap-2
+                                sm:grid-cols-3
+                                lg:grid-cols-6
+                            "
+                        >
 
                             {METRICS.map((metric) => (
 
@@ -911,11 +1044,13 @@ function TeamCallTrend({
                                     "
                                 >
 
-                                    <div className="
-                                        flex
-                                        items-center
-                                        gap-1.5
-                                    ">
+                                    <div
+                                        className="
+                                            flex
+                                            items-center
+                                            gap-1.5
+                                        "
+                                    >
 
                                         <span
                                             className={[
@@ -926,24 +1061,28 @@ function TeamCallTrend({
                                             ].join(' ')}
                                         />
 
-                                        <span className="
-                                            text-[10px]
-                                            text-base-content/45
-                                        ">
+                                        <span
+                                            className="
+                                                text-[10px]
+                                                text-base-content/45
+                                            "
+                                        >
                                             {metric.label}
                                         </span>
 
                                     </div>
 
-                                    <p className="
-                                        mt-1
-                                        text-sm
-                                        font-semibold
-                                        text-base-content
-                                    ">
+                                    <p
+                                        className="
+                                            mt-1
+                                            text-sm
+                                            font-semibold
+                                            text-base-content
+                                        "
+                                    >
                                         {formatNumber(
                                             summary[
-                                                metric.key
+                                            metric.key
                                             ]
                                         )}
                                     </p>
@@ -958,29 +1097,35 @@ function TeamCallTrend({
 
                 ) : (
 
-                    <div className="
-                        flex
-                        h-[320px]
-                        items-center
-                        justify-center
-                        text-center
-                    ">
+                    <div
+                        className="
+                            flex
+                            h-[320px]
+                            items-center
+                            justify-center
+                            text-center
+                        "
+                    >
 
                         <div>
 
-                            <p className="
-                                text-sm
-                                font-medium
-                                text-base-content/60
-                            ">
+                            <p
+                                className="
+                                    text-sm
+                                    font-medium
+                                    text-base-content/60
+                                "
+                            >
                                 No team lead call data
                             </p>
 
-                            <p className="
-                                mt-1
-                                text-xs
-                                text-base-content/40
-                            ">
+                            <p
+                                className="
+                                    mt-1
+                                    text-xs
+                                    text-base-content/40
+                                "
+                            >
                                 Try changing the selected filters or date range.
                             </p>
 

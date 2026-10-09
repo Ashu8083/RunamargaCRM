@@ -1,6 +1,6 @@
 // admin-react/src/components/GlobalModels/Filters/AgentDropdown.jsx
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'
 import { useCommonData } from '../../../context/CommonDataContext'
@@ -14,6 +14,9 @@ const AgentDropdown = ({
   label = '',
   error = '',
   required = false,
+
+  // Selected agent name when value is not in loaded options
+  fallbackLabel = '',
 
   // Optional Team Lead EmployeeContext ID
   teamLeadContextId = null,
@@ -83,6 +86,42 @@ const AgentDropdown = ({
   ])
 
   // =========================================================
+  // INCLUDE CURRENT SELECTED AGENT IF NOT IN OPTIONS
+  // =========================================================
+
+  const dropdownAgents = useMemo(() => {
+    if (
+      value === '' ||
+      value === null ||
+      value === undefined ||
+      !fallbackLabel
+    ) {
+      return agents
+    }
+
+    const exists = agents.some(
+      (agent) =>
+        String(agent.id) === String(value)
+    )
+
+    if (exists) {
+      return agents
+    }
+
+    return [
+      {
+        id: value,
+        name: fallbackLabel,
+      },
+      ...agents,
+    ]
+  }, [
+    agents,
+    value,
+    fallbackLabel,
+  ])
+
+  // =========================================================
   // HANDLE CHANGE
   // =========================================================
 
@@ -137,7 +176,7 @@ const AgentDropdown = ({
 
       <SearchableFilterDropdown
         value={value}
-        options={agents}
+        options={dropdownAgents}
         onChange={handleChange}
         includeAllOption={false}
         searchPlaceholder="Search Agent"

@@ -21,7 +21,11 @@ class CallAnalyticsPerformanceController:
     Responsibilities:
     - Receive the authenticated employee.
     - Pass request filters to the service.
-    - Convert the service result into the response schema.
+    - Return the validated response schema.
+
+    Date behavior:
+    - If from_date and to_date are omitted,
+      the service defaults to TODAY.
     """
 
     # =========================================================
@@ -45,6 +49,7 @@ class CallAnalyticsPerformanceController:
         # -----------------------------------------------------
 
         if not employee:
+
             raise PermissionError(
                 "Authenticated employee is required."
             )

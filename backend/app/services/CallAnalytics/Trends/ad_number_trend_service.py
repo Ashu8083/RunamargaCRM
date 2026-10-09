@@ -3,7 +3,7 @@
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import func , and_
 from sqlalchemy.orm import Session
 
 from app.core.access_control import AccessControl
@@ -12,37 +12,11 @@ from app.models.call_logs import (
     CallTypeEnum,
     MobileStatusEnum,
 )
-from app.models.employee_contexts import EmployeeContext
 from app.models.employees import Employee
 from app.models.phone_numbers import PhoneNumber
-
+from app.models.employee_contexts import EmployeeContext
 
 class CallAnalyticsAdNumberTrendService:
-    """
-    Service for Call Analytics -> Call Trends -> Ad Number.
-
-    Data visibility is controlled using the application's
-    existing AccessControl hierarchy.
-
-    Filters:
-
-        team_lead_id
-        rm_id
-        phone_id
-        from_date
-        to_date
-
-    Date behavior:
-
-        No dates:
-            current month
-
-        Only from_date:
-            from_date -> today
-
-        Only to_date:
-            first day of current month -> to_date
-    """
 
     # =========================================================
     # DATE HELPERS
@@ -83,221 +57,6 @@ class CallAnalyticsAdNumberTrendService:
         )
 
     # =========================================================
-    # ACTIVE CONTEXT
-    # =========================================================
-
-    @staticmethod
-    def _get_active_context(
-        db: Session,
-        employee: Employee,
-        context_id: Optional[int] = None,
-    ):
-        return AccessControl.get_active_context(
-            db=db,
-            employee=employee,
-            context_id=context_id,
-        )
-
-    # =========================================================
-    # CONTEXT FAMILY
-    # =========================================================
-
-    @staticmethod
-    def _get_context_family(
-        db: Session,
-        employee: Employee,
-        context_id: Optional[int] = None,
-    ) -> Optional[str]:
-        return AccessControl.get_active_context_family(
-            db=db,
-            employee=employee,
-            context_id=context_id,
-        )
-
-    # =========================================================
-    # VISIBLE EMPLOYEES
-    # =========================================================
-
-    @staticmethod
-    def _get_visible_employee_ids(
-        db: Session,
-        employee: Employee,
-        team_lead_id: Optional[int] = None,
-        rm_id: Optional[int] = None,
-        context_id: Optional[int] = None,
-    ) -> set[int]:
-        """
-        Resolve visible employees using the existing
-        AccessControl hierarchy.
-
-        Team Lead and RM filters are applied on top of the
-        authenticated employee's visibility.
-        """
-
-        family = (
-            CallAnalyticsAdNumberTrendService
-            ._get_context_family(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
-        )
-
-        if not family:
-            return set()
-
-        active_context = (
-            CallAnalyticsAdNumberTrendService
-            ._get_active_context(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
-        )
-
-        if not active_context:
-            return set()
-
-        # -----------------------------------------------------
-        # GLOBAL / MANAGER
-        # -----------------------------------------------------
-
-        if family in {"GLOBAL", "MANAGER"}:
-
-            visible_rms = AccessControl.get_visible_rms(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
-
-            visible_agents = AccessControl.get_visible_agents(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
-
-            visible_employee_ids = {
-                item.id
-                for item in visible_rms
-            }
-
-            visible_employee_ids.update(
-                item.id
-                for item in visible_agents
-            )
-
-            # Include authenticated employee where appropriate.
-            visible_employee_ids.add(employee.id)
-
-        # -----------------------------------------------------
-        # TEAM LEAD
-        # -----------------------------------------------------
-
-        elif family == "TEAMLEAD":
-
-            visible_rms = AccessControl.get_visible_rms(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
-
-            visible_employee_ids = {
-                item.id
-                for item in visible_rms
-            }
-
-            # Team Lead itself is not normally the owner of
-            # the phone number used by RM call analytics.
-            #
-            # The actual call data comes from visible RMs.
-
-        # -----------------------------------------------------
-        # RM
-        # -----------------------------------------------------
-
-        elif family == "RM":
-
-            visible_employee_ids = {
-                employee.id
-            }
-
-        # -----------------------------------------------------
-        # AGENT
-        # -----------------------------------------------------
-
-        elif family == "AGENT":
-
-            visible_employee_ids = {
-                employee.id
-            }
-
-        else:
-            return set()
-
-        # =====================================================
-        # TEAM LEAD FILTER
-        # =====================================================
-
-        if team_lead_id is not None:
-
-            team_lead_contexts = (
-                db.query(
-                    EmployeeContext.id
-                )
-                .filter(
-                    EmployeeContext.employee_id
-                    == team_lead_id,
-                    EmployeeContext.is_active.is_(True),
-                    EmployeeContext.deleted_at.is_(None),
-                )
-                .all()
-            )
-
-            team_lead_context_ids = {
-                row.id
-                for row in team_lead_contexts
-            }
-
-            if not team_lead_context_ids:
-                return set()
-
-            rm_rows = (
-                db.query(
-                    EmployeeContext.employee_id
-                )
-                .filter(
-                    EmployeeContext.reports_to_id.in_(
-                        team_lead_context_ids
-                    ),
-                    EmployeeContext.is_active.is_(True),
-                    EmployeeContext.deleted_at.is_(None),
-                )
-                .all()
-            )
-
-            team_lead_rm_ids = {
-                row.employee_id
-                for row in rm_rows
-            }
-
-            visible_employee_ids &= team_lead_rm_ids
-
-        # =====================================================
-        # RM FILTER
-        # =====================================================
-
-        if rm_id is not None:
-
-            if rm_id not in visible_employee_ids:
-                return set()
-
-            visible_employee_ids = {
-                rm_id
-            }
-
-        return visible_employee_ids
-
-    # =========================================================
     # VISIBLE PHONE NUMBERS
     # =========================================================
 
@@ -309,29 +68,51 @@ class CallAnalyticsAdNumberTrendService:
         rm_id: Optional[int] = None,
         context_id: Optional[int] = None,
     ) -> set[int]:
-        """
-        Get phone_numbers belonging to employees visible
-        through the hierarchy and selected filters.
-        """
 
-        visible_employee_ids = (
-            CallAnalyticsAdNumberTrendService
-            ._get_visible_employee_ids(
-                db=db,
-                employee=employee,
-                team_lead_id=team_lead_id,
-                rm_id=rm_id,
-                context_id=context_id,
-            )
+        visible_rms = AccessControl.get_visible_rms(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+            team_lead_context_id=team_lead_id,
         )
+
+        visible_employee_ids = {
+            rm.employee_id
+            for rm in visible_rms
+        }
+
+        # RM's own phone numbers
+        active_context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if active_context:
+            visible_employee_ids.add(
+                active_context.employee_id
+            )
+
+        # -----------------------------------------------------
+        # RM FILTER
+        # -----------------------------------------------------
+
+        if rm_id is not None:
+
+            if rm_id not in visible_employee_ids:
+                return set()
+
+            visible_employee_ids = {rm_id}
 
         if not visible_employee_ids:
             return set()
 
+        # -----------------------------------------------------
+        # PHONE NUMBERS
+        # -----------------------------------------------------
+
         rows = (
-            db.query(
-                PhoneNumber.id
-            )
+            db.query(PhoneNumber.id)
             .filter(
                 PhoneNumber.employee_id.in_(
                     visible_employee_ids
@@ -361,6 +142,7 @@ class CallAnalyticsAdNumberTrendService:
         rm_id: Optional[int] = None,
         context_id: Optional[int] = None,
     ):
+
         if not employee:
             raise PermissionError(
                 "Authenticated employee is required."
@@ -394,7 +176,7 @@ class CallAnalyticsAdNumberTrendService:
             )
 
         # =====================================================
-        # VISIBLE PHONE NUMBERS
+        # VISIBLE PHONES
         # =====================================================
 
         visible_phone_ids = (
@@ -438,9 +220,7 @@ class CallAnalyticsAdNumberTrendService:
                     "trends": [],
                 }
 
-            selected_phone_ids = {
-                phone_id
-            }
+            selected_phone_ids = {phone_id}
 
         else:
             selected_phone_ids = visible_phone_ids
@@ -467,8 +247,10 @@ class CallAnalyticsAdNumberTrendService:
             )
             .join(
                 PhoneNumber,
-                PhoneNumber.id
-                == CallLog.phone_id,
+                and_(
+                    PhoneNumber.id == CallLog.phone_id,
+                    PhoneNumber.trackable == "active",
+                ),
             )
             .filter(
                 CallLog.phone_id.in_(
@@ -493,7 +275,6 @@ class CallAnalyticsAdNumberTrendService:
             )
             .all()
         )
-
         # =====================================================
         # GROUP
         # =====================================================

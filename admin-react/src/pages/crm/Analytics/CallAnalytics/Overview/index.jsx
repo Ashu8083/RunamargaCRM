@@ -5,7 +5,9 @@ import { useCallback, useEffect, useState } from 'react'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 
-import EmployeeDropdown from '../../../../../components/GlobalModels/Filters/EmployeeDropdown'
+import AgentDropdown from '../../../../../components/GlobalModels/Filters/AgentDropdown'
+import RmDropdown from '../../../../../components/GlobalModels/Filters/RmDropdown'
+import TeamLeadDropdown from '../../../../../components/GlobalModels/Filters/TeamLeadDropdown'
 
 import AnalyticsCards from './components/AnalyticsCards'
 import CallActivityGraph from './components/CallActivityGraph'
@@ -30,32 +32,34 @@ const STATUSES = [
     'received',
     'missed',
     'rejected',
-    'not_reached...',
+    'not_reached',
 ]
 
 
 // =============================================================
-// CURRENT MONTH DATE
-// =============================================================
-//
-// Default frontend date range:
-//
-// From = first day of current month
-// To   = today
-//
-// The backend also has current-month protection when dates
-// are not supplied. Here we explicitly select the month in
-// the UI so the user can see exactly what is being filtered.
-//
+// DEFAULT SUMMARY
 // =============================================================
 
-const getCurrentMonthDateRange = () => {
+const DEFAULT_SUMMARY = {
+    total: 0,
+    answered: 0,
+    missed: 0,
+    unknown: 0,
+    assigned: 0,
+    converted: 0,
+}
+
+
+// =============================================================
+// TODAY DATE RANGE
+// =============================================================
+
+const getTodayDateRange = () => {
 
     const now = new Date()
 
     const year =
         now.getFullYear()
-
 
     const month =
         String(
@@ -65,7 +69,6 @@ const getCurrentMonthDateRange = () => {
             '0'
         )
 
-
     const day =
         String(
             now.getDate()
@@ -74,14 +77,16 @@ const getCurrentMonthDateRange = () => {
             '0'
         )
 
+    const today =
+        `${year}-${month}-${day}`
 
     return {
 
         fromDate:
-            `${year}-${month}-01`,
+            today,
 
         toDate:
-            `${year}-${month}-${day}`,
+            today,
 
     }
 
@@ -97,7 +102,6 @@ const formatLabel = (value) => {
     if (!value) {
         return 'All'
     }
-
 
     return String(value)
         .replace(/_/g, ' ')
@@ -221,10 +225,6 @@ function DateRange({
             gap-2
         ">
 
-            {/* =================================================
-                FROM
-            ================================================= */}
-
             <div>
 
                 <label className="
@@ -258,10 +258,6 @@ function DateRange({
 
             </div>
 
-
-            {/* =================================================
-                TO
-            ================================================= */}
 
             <div>
 
@@ -310,11 +306,11 @@ function DateRange({
 function Overview() {
 
     // =========================================================
-    // DEFAULT CURRENT MONTH
+    // DEFAULT TODAY
     // =========================================================
 
-    const currentMonth =
-        getCurrentMonthDateRange()
+    const today =
+        getTodayDateRange()
 
 
     // =========================================================
@@ -326,14 +322,9 @@ function Overview() {
 
 
     const [summary, setSummary] =
-        useState({
-            total: 0,
-            answered: 0,
-            missed: 0,
-            unknown: 0,
-            assigned: 0,
-            converted: 0,
-        })
+        useState(
+            DEFAULT_SUMMARY
+        )
 
 
     // =========================================================
@@ -356,7 +347,15 @@ function Overview() {
     // FILTERS
     // =========================================================
 
-    const [employee, setEmployee] =
+    const [agent, setAgent] =
+        useState('')
+
+
+    const [rm, setRm] =
+        useState('')
+
+
+    const [teamLead, setTeamLead] =
         useState('')
 
 
@@ -368,31 +367,15 @@ function Overview() {
         useState('')
 
 
-    // ---------------------------------------------------------
-    // DATE FILTER
-    // ---------------------------------------------------------
-    //
-    // IMPORTANT:
-    // The date fields are initialized to the current month.
-    //
-    // Example:
-    //
-    // September 2026
-    //
-    // From = 2026-09-01
-    // To   = 2026-09-14
-    //
-    // ---------------------------------------------------------
-
     const [fromDate, setFromDate] =
         useState(
-            currentMonth.fromDate
+            today.fromDate
         )
 
 
     const [toDate, setToDate] =
         useState(
-            currentMonth.toDate
+            today.toDate
         )
 
 
@@ -402,6 +385,59 @@ function Overview() {
 
     const [activeKpi, setActiveKpi] =
         useState('')
+
+
+    // =========================================================
+    // AGENT CHANGE
+    // =========================================================
+
+    const handleAgentChange = (
+        selectedValue
+    ) => {
+
+        setAgent(
+            selectedValue
+        )
+
+        setRm('')
+
+    }
+
+
+    // =========================================================
+    // RM CHANGE
+    // =========================================================
+
+    const handleRmChange = (
+        selectedValue
+    ) => {
+
+        setRm(
+            selectedValue
+        )
+
+        setAgent('')
+
+    }
+
+
+    // =========================================================
+    // TEAM LEAD CHANGE
+    // =========================================================
+
+    const handleTeamLeadChange = (
+        selectedValue
+    ) => {
+
+        setTeamLead(
+            selectedValue
+        )
+
+        setAgent('')
+
+        setRm('')
+
+    }
 
 
     // =========================================================
@@ -419,24 +455,22 @@ function Overview() {
 
 
                 // -------------------------------------------------
-                // SEND ALL ACTIVE FILTERS
+                // EMPLOYEE FILTER
                 // -------------------------------------------------
-                //
-                // These values are converted by API.js into:
-                //
-                // employee_id
-                // from_date
-                // to_date
-                // call_type
-                // status
-                //
+
+                const employeeId =
+                    agent || rm || ''
+
+
+                // -------------------------------------------------
+                // API REQUEST
                 // -------------------------------------------------
 
                 const response =
                     await getCallAnalyticsOverview({
 
                         employeeId:
-                            employee,
+                            employeeId,
 
                         fromDate:
                             fromDate,
@@ -449,6 +483,9 @@ function Overview() {
 
                         status:
                             status,
+
+                        teamLeadContextId:
+                            teamLead || '',
 
                     })
 
@@ -470,16 +507,10 @@ function Overview() {
                 // SUMMARY
                 // -------------------------------------------------
 
-                setSummary(
-                    response.summary || {
-                        total: 0,
-                        answered: 0,
-                        missed: 0,
-                        unknown: 0,
-                        assigned: 0,
-                        converted: 0,
-                    }
-                )
+                setSummary({
+                    ...DEFAULT_SUMMARY,
+                    ...(response.summary || {}),
+                })
 
             } catch (requestError) {
 
@@ -491,15 +522,9 @@ function Overview() {
 
                 setCalls([])
 
-
-                setSummary({
-                    total: 0,
-                    answered: 0,
-                    missed: 0,
-                    unknown: 0,
-                    assigned: 0,
-                    converted: 0,
-                })
+                setSummary(
+                    DEFAULT_SUMMARY
+                )
 
 
                 setError(
@@ -517,11 +542,13 @@ function Overview() {
 
         },
         [
-            employee,
+            agent,
+            rm,
             fromDate,
             toDate,
             direction,
             status,
+            teamLead,
         ]
     )
 
@@ -541,16 +568,6 @@ function Overview() {
 
     // =========================================================
     // KPI FILTER
-    // =========================================================
-    //
-    // The backend already returns the correct KPI totals.
-    //
-    // For the graph / displayed records, KPI filtering is kept
-    // on the frontend.
-    //
-    // Unknown / assigned / converted are represented by the
-    // backend summary and are not individual call-log statuses.
-    //
     // =========================================================
 
     const displayedCalls =
@@ -580,7 +597,9 @@ function Overview() {
     // KPI CLICK
     // =========================================================
 
-    const handleKpiClick = (key) => {
+    const handleKpiClick = (
+        key
+    ) => {
 
         setActiveKpi(
             (current) =>
@@ -595,36 +614,29 @@ function Overview() {
     // =========================================================
     // RESET
     // =========================================================
-    //
-    // Reset means:
-    //
-    // Employee    = All
-    // Direction   = All
-    // Status      = All
-    // From        = current month's first day
-    // To          = today
-    // KPI         = none
-    //
-    // =========================================================
 
     const handleReset = () => {
 
-        const current =
-            getCurrentMonthDateRange()
+        const today =
+            getTodayDateRange()
 
 
-        setEmployee('')
+        setAgent('')
+
+        setRm('')
+
+        setTeamLead('')
 
         setDirection('')
 
         setStatus('')
 
         setFromDate(
-            current.fromDate
+            today.fromDate
         )
 
         setToDate(
-            current.toDate
+            today.toDate
         )
 
         setActiveKpi('')
@@ -646,10 +658,6 @@ function Overview() {
                 sm:p-6
             ">
 
-                {/* =================================================
-                    FILTER SKELETON
-                ================================================= */}
-
                 <div className="
                     h-40
                     animate-pulse
@@ -659,10 +667,6 @@ function Overview() {
                     bg-base-100
                 " />
 
-
-                {/* =================================================
-                    KPI SKELETON
-                ================================================= */}
 
                 <div className="
                     grid
@@ -694,10 +698,6 @@ function Overview() {
 
                 </div>
 
-
-                {/* =================================================
-                    GRAPH SKELETON
-                ================================================= */}
 
                 <div className="
                     h-[420px]
@@ -775,16 +775,51 @@ function Overview() {
                     xl:items-end
                 ">
 
-
                     {/* =================================================
-                        EMPLOYEE
+                        TEAM LEAD
                     ================================================= */}
 
-                    <EmployeeDropdown
-                        label="Employee"
-                        value={employee}
-                        onChange={setEmployee}
-                        placeholder="Select Employee"
+                    <TeamLeadDropdown
+                        label="Team Lead"
+                        value={teamLead}
+                        onChange={
+                            handleTeamLeadChange
+                        }
+                        placeholder="Select Team Lead"
+                    />
+
+
+                    {/* =================================================
+                        AGENT
+                    ================================================= */}
+
+                    <AgentDropdown
+                        label="Agent"
+                        value={agent}
+                        onChange={
+                            handleAgentChange
+                        }
+                        placeholder="Select Agent"
+                        teamLeadContextId={
+                            teamLead || null
+                        }
+                    />
+
+
+                    {/* =================================================
+                        RM
+                    ================================================= */}
+
+                    <RmDropdown
+                        label="RM"
+                        value={rm}
+                        onChange={
+                            handleRmChange
+                        }
+                        placeholder="Select RM"
+                        teamLeadContextId={
+                            teamLead || null
+                        }
                     />
 
 
@@ -796,7 +831,9 @@ function Overview() {
                         label="Call Direction"
                         value={direction}
                         options={DIRECTIONS}
-                        onChange={setDirection}
+                        onChange={
+                            setDirection
+                        }
                     />
 
 
@@ -808,7 +845,9 @@ function Overview() {
                         label="Call Status"
                         value={status}
                         options={STATUSES}
-                        onChange={setStatus}
+                        onChange={
+                            setStatus
+                        }
                     />
 
                 </div>
@@ -830,8 +869,12 @@ function Overview() {
                     <DateRange
                         fromDate={fromDate}
                         toDate={toDate}
-                        onFromChange={setFromDate}
-                        onToChange={setToDate}
+                        onFromChange={
+                            setFromDate
+                        }
+                        onToChange={
+                            setToDate
+                        }
                     />
 
 
@@ -841,7 +884,9 @@ function Overview() {
 
                     <button
                         type="button"
-                        onClick={handleReset}
+                        onClick={
+                            handleReset
+                        }
                         className="
                             h-10
                             rounded-lg
@@ -867,7 +912,9 @@ function Overview() {
 
                     <button
                         type="button"
-                        onClick={loadData}
+                        onClick={
+                            loadData
+                        }
                         className="
                             inline-flex
                             h-10
@@ -904,9 +951,15 @@ function Overview() {
             ================================================= */}
 
             <AnalyticsCards
-                summary={summary}
-                activeKpi={activeKpi}
-                onKpiClick={handleKpiClick}
+                summary={
+                    summary
+                }
+                activeKpi={
+                    activeKpi
+                }
+                onKpiClick={
+                    handleKpiClick
+                }
             />
 
 
@@ -939,7 +992,11 @@ function Overview() {
                             font-semibold
                             text-base-content
                         ">
-                            {formatLabel(activeKpi)}
+                            {
+                                formatLabel(
+                                    activeKpi
+                                )
+                            }
                         </span>
 
                         {' '}calls
@@ -972,7 +1029,9 @@ function Overview() {
             ================================================= */}
 
             <CallActivityGraph
-                calls={displayedCalls}
+                calls={
+                    displayedCalls
+                }
             />
 
         </div>

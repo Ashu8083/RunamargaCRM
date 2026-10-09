@@ -1,12 +1,14 @@
 # backend/app/services/CallManagement/call_assignment_service.py
 
 from typing import Optional
-
+from sqlalchemy import func
 from sqlalchemy.orm import Session, Query
-
 from app.core.access_control import AccessControl
 from app.models.call_assignments import CallAssignment
+from app.models.loan_applications import LoanApplication
+from app.models.call_logs import CallLog
 from app.models.employees import Employee
+
 
 
 class CallAssignmentService:
@@ -50,7 +52,9 @@ class CallAssignmentService:
                 employee=employee,
                 context_id=context_id,
             )
-
+            
+            print("DEBUG rms:", rms)
+            print("DEBUG rms types:", [type(rm) for rm in rms])
             rm_context_ids = [rm.id for rm in rms]
 
             if not rm_context_ids:
@@ -268,3 +272,137 @@ class CallAssignmentService:
             )
             .all()
         )
+
+    @staticmethod
+    def get_available_call_numbers(
+        db: Session,
+        employee: Employee,
+    ):
+        # ---------------------------------------------------------
+        # Find phone numbers that have EXACTLY ONE call
+        # ---------------------------------------------------------
+
+        call_count_subquery = (
+            db.query(
+                CallLog.phone_number.label("phone_number"),
+                func.count(CallLog.id).label("call_count"),
+            )
+            .filter(
+                CallLog.phone_number.isnot(None),
+            )
+            .group_by(
+                CallLog.phone_number,
+            )
+            .having(
+                func.count(CallLog.id) == 1,
+            )
+            .subquery()
+        )
+
+        # ---------------------------------------------------------
+        # Get the actual call belonging to those phone numbers
+        # ---------------------------------------------------------
+
+        query = (
+            db.query(CallLog)
+            .join(
+                call_count_subquery,
+                call_count_subquery.c.phone_number
+                == CallLog.phone_number,
+            )
+            .filter(
+                # The only call must be MISSED
+                CallLog.mobile_status == "MISSED",
+            )
+        )
+
+        # ---------------------------------------------------------
+        # Apply centralized access-control scope
+        # ---------------------------------------------------------
+
+        query = CallAssignmentService.apply_scope(
+            query=query,
+            db=db,
+            employee=employee,
+        )
+
+        # ---------------------------------------------------------
+        # Exclude phone numbers already in loan applications
+        # ---------------------------------------------------------
+
+        application_numbers = (
+            db.query(LoanApplication.phone)
+            .filter(
+                LoanApplication.phone.isnot(None),
+            )
+            .distinct()
+            .all()
+        )
+
+        application_numbers = {
+            row[0]
+            for row in application_numbers
+        }
+
+        # ---------------------------------------------------------
+        # Get eligible calls
+        # ---------------------------------------------------------
+
+        call_logs = (
+            query
+            .order_by(
+                CallLog.call_started_at.asc(),
+                CallLog.id.asc(),
+            )
+            .all()
+        )
+
+        # ---------------------------------------------------------
+        # Build response
+        # ---------------------------------------------------------
+
+        data = []
+
+        for call in call_logs:
+
+            # -----------------------------------------------------
+            # Number already exists in loan applications
+            # -----------------------------------------------------
+
+            if call.phone_number in application_numbers:
+                continue
+
+            data.append({
+                "id": call.id,
+                "phone_number": call.phone_number,
+
+                "call_type": (
+                    call.call_type.value
+                    if call.call_type
+                    else None
+                ),
+
+                "mobile_status": (
+                    call.mobile_status.value
+                    if call.mobile_status
+                    else None
+                ),
+
+                "call_started_at": call.call_started_at,
+                "call_ended_at": call.call_ended_at,
+                "duration_seconds": call.duration_seconds,
+
+                "employee_context_id": call.employee_context_id,
+
+                "employee_name": (
+                    call.employee_context.employee.name
+                    if call.employee_context
+                    and call.employee_context.employee
+                    else None
+                ),
+            })
+
+        return {
+            "success": True,
+            "data": data,
+        } 

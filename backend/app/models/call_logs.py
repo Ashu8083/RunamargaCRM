@@ -1,5 +1,4 @@
 # app/models/call_logs.py
-
 from sqlalchemy import (
     Column,
     Integer,
@@ -7,7 +6,6 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     TIMESTAMP,
-    Text,
     BigInteger,
     Index,
     desc,
@@ -15,7 +13,6 @@ from sqlalchemy import (
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.models.base import Base
-from app.models.employees import Employee
 import enum
 
 
@@ -36,9 +33,9 @@ class CallLog(Base):
 
     __table_args__ = (
         Index(
-            "idx_call_logs_phone_employee_started_at_id",
+            "idx_call_logs_phone_context_started_at_id",
             "phone_number",
-            "employee_id",
+            "employee_context_id",
             desc("call_started_at"),
             desc("id"),
         ),
@@ -47,13 +44,13 @@ class CallLog(Base):
             desc("call_started_at"),
         ),
         Index(
-            "idx_call_logs_employee_started_at",
-            "employee_id",
+            "idx_call_logs_context_started_at",
+            "employee_context_id",
             desc("call_started_at"),
         ),
         Index(
-            "idx_call_logs_employee_id_lookup",
-            "employee_id",
+            "idx_call_logs_context_id_lookup",
+            "employee_context_id",
         ),
         Index(
             "idx_call_logs_phone_number_lookup",
@@ -67,10 +64,10 @@ class CallLog(Base):
         index=True,
     )
 
-    employee_id = Column(
-        BigInteger,
+    employee_context_id = Column(
+        Integer,
         ForeignKey(
-            "employees.id",
+            "employee_contexts.id",
             ondelete="CASCADE",
         ),
         nullable=False,
@@ -116,36 +113,8 @@ class CallLog(Base):
         nullable=True,
     )
 
-    recording_path = Column(
-        String(255),
-        nullable=True,
-    )
-
-    recording_size_kb = Column(
-        Integer,
-        nullable=True,
-    )
-
-    recording_duration_seconds = Column(
-        Integer,
-        nullable=True,
-    )
-
     attended_at = Column(
         TIMESTAMP(timezone=True),
-        nullable=True,
-    )
-
-    attended_by = Column(
-        BigInteger,
-        ForeignKey(
-            "employees.id",
-        ),
-        nullable=True,
-    )
-
-    remarks = Column(
-        Text,
         nullable=True,
     )
 
@@ -165,16 +134,9 @@ class CallLog(Base):
         backref="call_logs",
     )
 
-    employee = relationship(
-        "Employee",
-        foreign_keys=[employee_id],
-        backref="call_logs_created",
-        lazy="joined",
-    )
-
-    attended_employee = relationship(
-        "Employee",
-        foreign_keys=[attended_by],
-        backref="call_logs_attended",
+    employee_context = relationship(
+        "EmployeeContext",
+        foreign_keys=[employee_context_id],
+        backref="call_logs",
         lazy="joined",
     )

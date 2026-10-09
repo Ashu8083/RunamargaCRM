@@ -29,7 +29,6 @@ class TeamLeadController:
             employee_id=payload.employee_id,
             context_id=payload.context_id,
             status=payload.status,
-
         )
 
     @staticmethod

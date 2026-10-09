@@ -28,20 +28,38 @@ const getPerformance = async ({
         employeeId !== undefined &&
         employeeId !== ""
     ) {
-        params.employee_id = Number(employeeId);
+
+        params.employee_id =
+            Number(employeeId);
+
     }
 
 
     // =========================================================
-    // DATE
+    // DATE RANGE
     // =========================================================
 
-    if (fromDate) {
-        params.from_date = fromDate;
+    if (
+        fromDate !== null &&
+        fromDate !== undefined &&
+        fromDate !== ""
+    ) {
+
+        params.from_date =
+            fromDate;
+
     }
 
-    if (toDate) {
-        params.to_date = toDate;
+
+    if (
+        toDate !== null &&
+        toDate !== undefined &&
+        toDate !== ""
+    ) {
+
+        params.to_date =
+            toDate;
+
     }
 
 
@@ -49,8 +67,15 @@ const getPerformance = async ({
     // CALL TYPE
     // =========================================================
 
-    if (callType) {
-        params.call_type = callType;
+    if (
+        callType !== null &&
+        callType !== undefined &&
+        callType !== ""
+    ) {
+
+        params.call_type =
+            callType;
+
     }
 
 
@@ -58,8 +83,15 @@ const getPerformance = async ({
     // STATUS
     // =========================================================
 
-    if (status) {
-        params.status = status;
+    if (
+        status !== null &&
+        status !== undefined &&
+        status !== ""
+    ) {
+
+        params.status =
+            status;
+
     }
 
 
@@ -72,7 +104,10 @@ const getPerformance = async ({
         contextId !== undefined &&
         contextId !== ""
     ) {
-        params.context_id = Number(contextId);
+
+        params.context_id =
+            Number(contextId);
+
     }
 
 
@@ -80,15 +115,17 @@ const getPerformance = async ({
     // REQUEST
     // =========================================================
 
-    const response = await apiClient.get(
-        "/call-analytics/performance",
-        {
-            params,
-        }
-    );
+    const response =
+        await apiClient.get(
+            "/call-analytics/performance",
+            {
+                params,
+            }
+        );
 
 
-    const data = response?.data || {};
+    const data =
+        response?.data || {};
 
 
     // =========================================================
@@ -96,164 +133,200 @@ const getPerformance = async ({
     // =========================================================
 
     const summary = {
-        totalAgents: Number(
-            data?.summary?.totalAgents || 0
-        ),
 
-        totalAssignments: Number(
-            data?.summary?.totalAssignments || 0
-        ),
+        totalAgents:
+            Number(
+                data?.summary?.totalAgents || 0
+            ),
 
-        totalCalls: Number(
-            data?.summary?.totalCalls || 0
-        ),
+        totalAssignments:
+            Number(
+                data?.summary?.totalAssignments || 0
+            ),
 
-        totalIncoming: Number(
-            data?.summary?.totalIncoming || 0
-        ),
+        totalCalls:
+            Number(
+                data?.summary?.totalCalls || 0
+            ),
 
-        totalOutgoing: Number(
-            data?.summary?.totalOutgoing || 0
-        ),
+        totalIncoming:
+            Number(
+                data?.summary?.totalIncoming || 0
+            ),
 
-        totalAnswered: Number(
-            data?.summary?.totalAnswered || 0
-        ),
+        totalOutgoing:
+            Number(
+                data?.summary?.totalOutgoing || 0
+            ),
 
-        totalMissed: Number(
-            data?.summary?.totalMissed || 0
-        ),
+        totalAnswered:
+            Number(
+                data?.summary?.totalAnswered || 0
+            ),
 
-        totalApplications: Number(
-            data?.summary?.totalApplications || 0
-        ),
+        totalMissed:
+            Number(
+                data?.summary?.totalMissed || 0
+            ),
 
-        totalConverted: Number(
-            data?.summary?.totalConverted || 0
-        ),
+        totalApplications:
+            Number(
+                data?.summary?.totalApplications || 0
+            ),
 
-        avgTalkSeconds: Number(
-            data?.summary?.avgTalkSeconds || 0
-        ),
+        totalConverted:
+            Number(
+                data?.summary?.totalConverted || 0
+            ),
+
+        avgTalkSeconds:
+            Number(
+                data?.summary?.avgTalkSeconds || 0
+            ),
+
     };
 
 
     // =========================================================
-    // AGENTS
+    // AGENTS / RMS
     // =========================================================
 
-    const agents = Array.isArray(data?.agents)
-        ? data.agents.map((agent) => ({
+    const agents =
+        Array.isArray(
+            data?.agents
+        )
+            ? data.agents.map(
+                (agent) => ({
 
-            id: Number(
-                agent?.id
-            ),
+                    // -------------------------------------------------
+                    // EMPLOYEE
+                    // -------------------------------------------------
 
-            name:
-                agent?.name ||
-                "",
+                    id:
+                        Number(
+                            agent?.id || 0
+                        ),
 
-
-            // -------------------------------------------------
-            // TEAM
-            // -------------------------------------------------
-
-            teamId:
-                agent?.teamId !== null &&
-                agent?.teamId !== undefined
-                    ? Number(agent.teamId)
-                    : null,
-
-            team:
-                agent?.team ||
-                null,
+                    name:
+                        agent?.name ||
+                        "",
 
 
-            // -------------------------------------------------
-            // RM
-            // -------------------------------------------------
+                    // -------------------------------------------------
+                    // TEAM
+                    // -------------------------------------------------
 
-            rmId:
-                agent?.rmId !== null &&
-                agent?.rmId !== undefined
-                    ? Number(agent.rmId)
-                    : null,
+                    teamId:
+                        agent?.teamId !== null &&
+                        agent?.teamId !== undefined
+                            ? Number(
+                                agent.teamId
+                            )
+                            : null,
 
-            rmName:
-                agent?.rmName ||
-                null,
-
-
-            // -------------------------------------------------
-            // CALL METRICS
-            // -------------------------------------------------
-
-            incoming: Number(
-                agent?.incoming || 0
-            ),
-
-            outgoing: Number(
-                agent?.outgoing || 0
-            ),
-
-            answered: Number(
-                agent?.answered || 0
-            ),
-
-            missed: Number(
-                agent?.missed || 0
-            ),
+                    team:
+                        agent?.team ||
+                        null,
 
 
-            // -------------------------------------------------
-            // APPLICATIONS / CONVERSIONS
-            // -------------------------------------------------
+                    // -------------------------------------------------
+                    // RM
+                    // -------------------------------------------------
 
-            applications: Number(
-                agent?.applications || 0
-            ),
+                    rmId:
+                        agent?.rmId !== null &&
+                        agent?.rmId !== undefined
+                            ? Number(
+                                agent.rmId
+                            )
+                            : null,
 
-            converted: Number(
-                agent?.converted || 0
-            ),
-
-
-            // -------------------------------------------------
-            // ASSIGNMENTS
-            // -------------------------------------------------
-
-            assignments: Number(
-                agent?.assignments || 0
-            ),
-
-            callsHandled: Number(
-                agent?.callsHandled || 0
-            ),
-
-            totalCalls: Number(
-                agent?.totalCalls || 0
-            ),
+                    rmName:
+                        agent?.rmName ||
+                        null,
 
 
-            // -------------------------------------------------
-            // TALK TIME
-            // -------------------------------------------------
+                    // -------------------------------------------------
+                    // CALL COUNTS
+                    // -------------------------------------------------
 
-            avgTalkSeconds: Number(
-                agent?.avgTalkSeconds || 0
-            ),
+                    incoming:
+                        Number(
+                            agent?.incoming || 0
+                        ),
+
+                    outgoing:
+                        Number(
+                            agent?.outgoing || 0
+                        ),
+
+                    answered:
+                        Number(
+                            agent?.answered || 0
+                        ),
+
+                    missed:
+                        Number(
+                            agent?.missed || 0
+                        ),
+
+                    totalCalls:
+                        Number(
+                            agent?.totalCalls || 0
+                        ),
+
+                    callsHandled:
+                        Number(
+                            agent?.callsHandled || 0
+                        ),
 
 
-            // -------------------------------------------------
-            // STATUS
-            // -------------------------------------------------
+                    // -------------------------------------------------
+                    // APPLICATIONS
+                    // -------------------------------------------------
 
-            status:
-                agent?.status ||
-                "active",
+                    applications:
+                        Number(
+                            agent?.applications || 0
+                        ),
 
-        }))
-        : [];
+                    converted:
+                        Number(
+                            agent?.converted || 0
+                        ),
+
+
+                    // -------------------------------------------------
+                    // ASSIGNMENTS
+                    // -------------------------------------------------
+
+                    assignments:
+                        Number(
+                            agent?.assignments || 0
+                        ),
+
+
+                    // -------------------------------------------------
+                    // TALK TIME
+                    // -------------------------------------------------
+
+                    avgTalkSeconds:
+                        Number(
+                            agent?.avgTalkSeconds || 0
+                        ),
+
+
+                    // -------------------------------------------------
+                    // STATUS
+                    // -------------------------------------------------
+
+                    status:
+                        agent?.status ||
+                        "active",
+
+                })
+            )
+            : [];
 
 
     // =========================================================
@@ -264,6 +337,7 @@ const getPerformance = async ({
         summary,
         agents,
     };
+
 };
 
 

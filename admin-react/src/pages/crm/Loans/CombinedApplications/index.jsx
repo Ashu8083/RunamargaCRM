@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+// admin-react/src/pages/crm/Loans/CombinedApplications/index.jsx
+
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getActiveContext, getStoredUser } from '../../../../app/auth'
 
@@ -27,12 +34,13 @@ function Applications() {
     // =========================================================
 
     const STATUS_OPTIONS = [
-        'Revert Rejected',
-        'Rejected',
-        'In Process',
-        'Docs Pending',
-        'Sanctioned',
-        'Disbursed',
+        { label: 'In Process', value: 'inprocess' },
+        { label: 'Docs Pending', value: 'docspending' },
+        { label: 'Rejected', value: 'rejected' },
+        { label: 'Sanctioned', value: 'sanctioned' },
+        { label: 'Disbursed', value: 'disbursed' },
+        { label: 'Login', value: 'login' },
+        { label: 'Revert Rejected', value: 'revert_rejected' },
     ]
 
 
@@ -47,12 +55,6 @@ function Applications() {
 
     const [totalApplications, setTotalApplications] = useState(0)
     const [totalPages, setTotalPages] = useState(1)
-
-    // =========================================================
-    // FILTER DATA
-    // =========================================================
-
-
 
     // =========================================================
     // FILTER STATE
@@ -166,6 +168,7 @@ function Applications() {
     const fetchApplications = async (
         page = currentPage,
         size = pageSize,
+        searchValue = search,
     ) => {
         const activeContext = getActiveContext()
 
@@ -183,7 +186,14 @@ function Applications() {
                 activeContext.id,
                 page,
                 size,
-            )
+                null,
+                searchValue,
+                selectedLoanType,
+                selectedRM,
+                selectedTeamLead,
+                selectedAgent,
+                selectedStatus,
+            );
 
             const data = Array.isArray(response?.data)
                 ? response.data
@@ -442,7 +452,26 @@ function Applications() {
             setLoading(false)
         }
     }
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setCurrentPage(1)
 
+            fetchApplications(
+                1,
+                pageSize,
+                search,
+            )
+        }, 400)
+
+        return () => clearTimeout(timer)
+    }, [
+        search,
+        selectedLoanType,
+        selectedRM,
+        selectedTeamLead,
+        selectedAgent,
+        selectedStatus,
+    ])
     // =========================================================
     // PAGE CONTROLS
     // =========================================================
@@ -470,7 +499,6 @@ function Applications() {
     // =========================================================
 
     useEffect(() => {
-        fetchApplications(1, pageSize)
 
         const handleContextChange = () => {
             setSearch('')
@@ -497,231 +525,6 @@ function Applications() {
         }
     }, [])
 
-    // =========================================================
-    // FILTER APPLICATIONS
-    // =========================================================
-
-    const filteredApplications = useMemo(() => {
-
-        const searchValue =
-            search
-                .trim()
-                .toLowerCase()
-
-        return applications.filter(
-            (application) => {
-
-                // =================================================
-                // SEARCH
-                // =================================================
-
-                if (searchValue) {
-
-                    const searchableFields = [
-
-                        application.name,
-
-                        application.phone,
-
-                        application.email,
-
-                        application.loanType,
-
-                        application.status,
-
-                        application.loanId,
-
-                        application.id,
-
-                        application.appliedBy,
-
-                        application.applied_by,
-
-                        application.referral,
-
-                        application.referralName,
-
-                        application.referral_name,
-
-                        application.referredBy,
-
-                        application.referred_by,
-
-                        application.rmName,
-
-                        application.rm_name,
-
-                        application.rm?.name,
-
-                        application.processingAgent,
-
-                        application.processing_agent,
-
-                        application.agentName,
-
-                        application.agent_name,
-
-                        application.agent?.name,
-
-                        application.teamLeadName,
-
-                        application.team_lead_name,
-
-                        application.teamLead?.name,
-
-                        application.team_lead?.name,
-                    ]
-
-                    const matchesSearch =
-                        searchableFields.some(
-                            (field) =>
-                                field !== null &&
-                                field !== undefined &&
-                                String(field)
-                                    .toLowerCase()
-                                    .includes(searchValue)
-                        )
-
-                    if (!matchesSearch) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // LOAN TYPE
-                // =================================================
-
-                if (selectedLoanType) {
-
-                    const applicationLoanType =
-                        application.loanTypeId ??
-                        application.loan_type_id ??
-                        application.loanType?.id ??
-                        application.loanType
-
-                    if (
-                        String(applicationLoanType) !==
-                        String(selectedLoanType)
-                    ) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // RM
-                // =================================================
-
-                if (selectedRM) {
-
-                    const applicationRM =
-                        application.rmId ??
-                        application.rm_id ??
-                        application.rm?.id ??
-                        application.rmName ??
-                        application.rm_name ??
-                        application.rm
-
-                    if (
-                        String(applicationRM) !==
-                        String(selectedRM)
-                    ) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // TEAM LEAD
-                // =================================================
-
-                if (selectedTeamLead) {
-
-                    const applicationTeamLead =
-                        application.teamLeadId ??
-                        application.team_lead_id ??
-                        application.teamLead?.id ??
-                        application.teamLeadName ??
-                        application.team_lead_name ??
-                        application.team_lead
-
-                    if (
-                        String(applicationTeamLead) !==
-                        String(selectedTeamLead)
-                    ) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // AGENT
-                // =================================================
-
-                if (selectedAgent) {
-
-                    const applicationAgent =
-                        application.agentId ??
-                        application.agent_id ??
-                        application.processingAgentId ??
-                        application.processing_agent_id ??
-                        application.agent?.id ??
-                        application.processingAgent?.id ??
-                        application.agentName ??
-                        application.agent_name ??
-                        application.processingAgent ??
-                        application.processing_agent
-
-                    if (
-                        String(applicationAgent) !==
-                        String(selectedAgent)
-                    ) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // STATUS
-                // =================================================
-
-                if (selectedStatus) {
-                    const applicationStatus =
-                        normalizeStatus(
-                            application.status
-                        ) === 'Rejected' &&
-                            application.revertedReason
-                            ? 'Revert Rejected'
-                            : normalizeStatus(
-                                application.status
-                            )
-                    if (
-                        applicationStatus !==
-                        selectedStatus
-                    ) {
-                        return false
-                    }
-                }
-
-
-                // =================================================
-                // MATCH
-                // =================================================
-
-                return true
-            }
-        )
-
-    }, [
-        applications,
-        search,
-        selectedLoanType,
-        selectedRM,
-        selectedTeamLead,
-        selectedAgent,
-        selectedStatus,
-    ])
 
 
     // =========================================================
@@ -732,26 +535,11 @@ function Applications() {
     // memory. Local filtering can therefore only filter that page.
     // Server-side filtering should be added to the API before using
     // these filters for cross-page searching.
-    const displayApplications = filteredApplications
+    const displayApplications = applications
 
-    const hasLocalFilters =
-        Boolean(search.trim()) ||
-        Boolean(selectedLoanType) ||
-        Boolean(selectedRM) ||
-        Boolean(selectedTeamLead) ||
-        Boolean(selectedAgent) ||
-        Boolean(selectedStatus)
+    const displayTotalApplications = totalApplications
 
-    const displayTotalApplications =
-        hasLocalFilters
-            ? displayApplications.length
-            : totalApplications
-
-    const displayTotalPages =
-        hasLocalFilters
-            ? 1
-            : totalPages
-
+    const displayTotalPages = totalPages
     // =========================================================
     // CLEAR FILTERS
     // =========================================================

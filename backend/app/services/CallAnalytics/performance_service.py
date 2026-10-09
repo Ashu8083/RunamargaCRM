@@ -1,18 +1,12 @@
-# backend/app/services/CallAnalytics/performance_service.py
-
-from calendar import monthrange
 from datetime import date, datetime, time, timedelta
 from typing import Optional
 
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
+from app.core.access_control import AccessControl
 from app.models.call_assignments import CallAssignment
-from app.models.call_logs import (
-    CallLog,
-    CallTypeEnum,
-    MobileStatusEnum,
-)
+from app.models.call_logs import CallLog
 from app.models.contexts import Context
 from app.models.employee_contexts import EmployeeContext
 from app.models.employees import Employee
@@ -21,24 +15,78 @@ from app.models.loan_applications import LoanApplication
 
 class CallAnalyticsPerformanceService:
     """
-    Service for Call Analytics Agent-wise Performance.
+    Call Analytics Performance Service.
 
-    Responsibilities:
-    - Determine agents visible to the logged-in employee.
-    - Apply employee / date / direction / status filters.
-    - Calculate call performance.
-    - Calculate application volume.
-    - Calculate conversions.
-    - Calculate average talk duration.
-    - Build the summary required by the Performance page.
+    Default:
+        If no dates are supplied:
+            TODAY -> TODAY
+
+    Agent-wise / RM-wise:
+        The returned performance is calculated for each visible
+        employee independently.
+
+    Metrics:
+
+        Calls
+        Incoming
+        Outgoing
+        Answered
+        Missed
+        Applications
+        Converted
+        Assignments
+        Calls Handled
+        Average Talk Seconds
+
+    Classification:
+
+        CONVERTED
+            Call/application phone number exists in
+            loan_applications.
+
+        ASSIGNED
+            Phone number exists in an active call_assignment
+            but does not exist in loan_applications.
+
+        UNKNOWN
+            Phone number exists in call_logs but is neither
+            assigned nor present in loan_applications.
+
+    Access control:
+        AccessControl is the source of hierarchy visibility.
     """
+
+    # =========================================================
+    # EMPTY RESPONSE
+    # =========================================================
+
+    @staticmethod
+    def _empty_response() -> dict:
+        return {
+            "summary": {
+                "totalAgents": 0,
+                "totalAssignments": 0,
+                "totalCalls": 0,
+                "totalIncoming": 0,
+                "totalOutgoing": 0,
+                "totalAnswered": 0,
+                "totalMissed": 0,
+                "totalApplications": 0,
+                "totalConverted": 0,
+                "avgTalkSeconds": 0,
+            },
+            "agents": [],
+        }
 
     # =========================================================
     # PHONE NORMALIZATION
     # =========================================================
 
     @staticmethod
-    def _normalize_phone(value: Optional[str]) -> str:
+    def _normalize_phone(
+        value: Optional[str],
+    ) -> str:
+
         if value is None:
             return ""
 
@@ -47,11 +95,16 @@ class CallAnalyticsPerformanceService:
         if not value:
             return ""
 
-        return "".join(
+        value = "".join(
             character
             for character in value
             if character.isdigit()
         )
+
+        if len(value) > 10:
+            value = value[-10:]
+
+        return value
 
     # =========================================================
     # SQL PHONE NORMALIZATION
@@ -59,6 +112,7 @@ class CallAnalyticsPerformanceService:
 
     @staticmethod
     def _phone_sql_expression(column):
+
         return func.regexp_replace(
             column,
             r"[^0-9]",
@@ -71,7 +125,10 @@ class CallAnalyticsPerformanceService:
     # =========================================================
 
     @staticmethod
-    def _date_start(value: date) -> datetime:
+    def _date_start(
+        value: date,
+    ) -> datetime:
+
         return datetime.combine(
             value,
             time.min,
@@ -82,286 +139,157 @@ class CallAnalyticsPerformanceService:
     # =========================================================
 
     @staticmethod
-    def _date_end(value: date) -> datetime:
+    def _date_end(
+        value: date,
+    ) -> datetime:
+
         return datetime.combine(
             value + timedelta(days=1),
             time.min,
         )
 
     # =========================================================
-    # CURRENT MONTH
+    # DEFAULT DATES
     # =========================================================
 
     @staticmethod
-    def _get_current_month_dates():
+    def _get_default_dates() -> tuple[date, date]:
+
         today = date.today()
 
-        first_day = date(
-            today.year,
-            today.month,
-            1,
-        )
-
-        last_day = date(
-            today.year,
-            today.month,
-            monthrange(
-                today.year,
-                today.month,
-            )[1],
-        )
-
-        return (
-            first_day,
-            last_day,
-        )
+        return today, today
 
     # =========================================================
-    # ACTIVE CONTEXT
+    # RESOLVE DATES
     # =========================================================
 
     @staticmethod
-    def _get_active_employee_context(
-        db: Session,
-        employee: Employee,
-        context_id: Optional[int] = None,
-    ) -> Optional[EmployeeContext]:
+    def _resolve_dates(
+        from_date: Optional[date],
+        to_date: Optional[date],
+    ) -> tuple[date, date]:
 
-        if not employee:
-            return None
+        # -----------------------------------------------------
+        # NO DATE FILTER
+        # -----------------------------------------------------
 
-        query = (
-            db.query(EmployeeContext)
-            .filter(
-                EmployeeContext.employee_id
-                == employee.id,
-                EmployeeContext.is_active.is_(True),
-                EmployeeContext.deleted_at.is_(None),
-            )
-        )
+        if (
+            from_date is None
+            and to_date is None
+        ):
 
-        if context_id is not None:
-
-            selected = (
-                query
-                .filter(
-                    EmployeeContext.id
-                    == context_id,
-                )
-                .first()
+            return (
+                CallAnalyticsPerformanceService
+                ._get_default_dates()
             )
 
-            if selected:
-                return selected
+        # -----------------------------------------------------
+        # ONLY FROM DATE
+        # -----------------------------------------------------
 
-        default_context = (
-            query
-            .filter(
-                EmployeeContext.is_default.is_(True),
+        if to_date is None:
+
+            to_date = from_date
+
+        # -----------------------------------------------------
+        # ONLY TO DATE
+        # -----------------------------------------------------
+
+        if from_date is None:
+
+            from_date = to_date
+
+        # -----------------------------------------------------
+        # VALIDATION
+        # -----------------------------------------------------
+
+        if from_date > to_date:
+
+            raise ValueError(
+                "from_date cannot be greater than to_date."
             )
-            .first()
-        )
 
-        if default_context:
-            return default_context
+        return from_date, to_date
 
-        return (
-            query
-            .order_by(
-                EmployeeContext.id.asc()
-            )
-            .first()
-        )
+
+
+
 
     # =========================================================
-    # CONTEXT FAMILY
-    # =========================================================
-
-    @staticmethod
-    def _get_context_family(
-        context_code: Optional[str],
-    ) -> str:
-
-        if not context_code:
-            return "UNKNOWN"
-
-        code = str(
-            context_code
-        ).strip().upper()
-
-        if code == "GLOBAL":
-            return "GLOBAL"
-
-        if (
-            code == "AGENT"
-            or code.startswith("AGENT_")
-        ):
-            return "AGENT"
-
-        if (
-            code == "RM"
-            or code.startswith("RM_")
-        ):
-            return "RM"
-
-        if (
-            code == "TEAM_LEAD"
-            or code == "TEAMLEAD"
-            or code.startswith("TEAMLEAD_")
-        ):
-            return "TEAMLEAD"
-
-        if (
-            code == "MANAGER"
-            or code.startswith("MANAGER_")
-        ):
-            return "MANAGER"
-
-        return "UNKNOWN"
-
-    # =========================================================
-    # GET VISIBLE AGENT CONTEXTS
+    # GET PERFORMANCE CONTEXTS
     # =========================================================
 
     @staticmethod
-    def _get_visible_agent_contexts(
+    def _get_visible_performance_contexts(
         db: Session,
         employee: Employee,
         context_id: Optional[int] = None,
     ) -> list[EmployeeContext]:
+        """
+        Get all employee contexts that should appear in
+        Performance.
 
-        if not employee:
-            return []
+        GLOBAL / MANAGER:
+            visible Agents + visible RMs
 
-        current_context = (
-            CallAnalyticsPerformanceService
-            ._get_active_employee_context(
-                db=db,
-                employee=employee,
-                context_id=context_id,
-            )
-        )
+        TEAMLEAD:
+            visible Agents + visible RMs
 
-        if not current_context:
-            return []
+        RM:
+            visible Agents
 
-        # Context model does NOT have deleted_at.
-        context = (
-            db.query(Context)
-            .filter(
-                Context.id
-                == current_context.context_id,
-                Context.is_active.is_(True),
-            )
-            .first()
-        )
+        AGENT:
+            current Agent
 
-        if not context:
-            return []
+        AccessControl decides the actual visibility.
+        """
 
-        family = (
-            CallAnalyticsPerformanceService
-            ._get_context_family(
-                context.code
-            )
-        )
+        agent_contexts = AccessControl.get_visible_agents(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        ) or []
 
-        # -----------------------------------------------------
-        # AGENT CONTEXT QUERY
-        # -----------------------------------------------------
+        rm_contexts = AccessControl.get_visible_rms(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        ) or []
 
-        agent_context_query = (
-            db.query(EmployeeContext)
-            .join(
-                Context,
-                Context.id
-                == EmployeeContext.context_id,
-            )
-            .filter(
-                EmployeeContext.is_active.is_(True),
-                EmployeeContext.deleted_at.is_(None),
-                Context.is_active.is_(True),
-            )
-            .filter(
-                or_(
-                    Context.code == "AGENT",
-                    Context.code.ilike("AGENT_%"),
-                )
-            )
-        )
+        result = []
 
-        # -----------------------------------------------------
-        # GLOBAL
-        # -----------------------------------------------------
+        seen = set()
 
-        if family == "GLOBAL":
+        for employee_context in [
+            *(agent_contexts or []),
+            *(rm_contexts or []),
+        ]:
 
-            return (
-                agent_context_query
-                .order_by(
-                    EmployeeContext.id.asc()
-                )
-                .all()
+            if not employee_context:
+                continue
+
+            if employee_context.id is None:
+                continue
+
+            if employee_context.id in seen:
+                continue
+
+            seen.add(
+                employee_context.id
             )
 
-        # -----------------------------------------------------
-        # MANAGER
-        # -----------------------------------------------------
-
-        if family == "MANAGER":
-
-            return (
-                agent_context_query
-                .order_by(
-                    EmployeeContext.id.asc()
-                )
-                .all()
+            result.append(
+                employee_context
             )
 
-        # -----------------------------------------------------
-        # AGENT
-        # -----------------------------------------------------
-
-        if family == "AGENT":
-
-            return (
-                agent_context_query
-                .filter(
-                    EmployeeContext.id
-                    == current_context.id
-                )
-                .all()
-            )
-
-        # -----------------------------------------------------
-        # RM / TEAM LEAD
-        # -----------------------------------------------------
-
-        if family in {
-            "RM",
-            "TEAMLEAD",
-        }:
-
-            return (
-                agent_context_query
-                .filter(
-                    EmployeeContext.reports_to_id
-                    == current_context.id
-                )
-                .order_by(
-                    EmployeeContext.id.asc()
-                )
-                .all()
-            )
-
-        return []
+        return result
 
     # =========================================================
-    # GET AGENT CONTEXT MAP
+    # GET EMPLOYEE CONTEXT MAP
     # =========================================================
 
     @staticmethod
-    def _get_agent_context_map(
+    def _get_performance_context_map(
         db: Session,
         employee: Employee,
         context_id: Optional[int] = None,
@@ -369,7 +297,7 @@ class CallAnalyticsPerformanceService:
 
         contexts = (
             CallAnalyticsPerformanceService
-            ._get_visible_agent_contexts(
+            ._get_visible_performance_contexts(
                 db=db,
                 employee=employee,
                 context_id=context_id,
@@ -378,28 +306,30 @@ class CallAnalyticsPerformanceService:
 
         result = {}
 
-        for agent_context in contexts:
+        for employee_context in contexts:
 
-            if agent_context.employee_id is None:
+            if employee_context.employee_id is None:
                 continue
 
-            if agent_context.employee_id not in result:
+            # One employee can potentially have multiple
+            # contexts. Keep the first authorized context.
+            if employee_context.employee_id not in result:
 
                 result[
-                    agent_context.employee_id
-                ] = agent_context
+                    employee_context.employee_id
+                ] = employee_context
 
         return result
 
     # =========================================================
-    # GET TEAM / RM INFORMATION
+    # GET EMPLOYEE CONTEXT DETAILS
     # =========================================================
 
     @staticmethod
     def _get_employee_context_details(
         db: Session,
         employee_context: Optional[EmployeeContext],
-    ):
+    ) -> dict:
 
         if not employee_context:
 
@@ -415,9 +345,7 @@ class CallAnalyticsPerformanceService:
         if employee_context.reports_to_id:
 
             reporting_context = (
-                db.query(
-                    EmployeeContext
-                )
+                db.query(EmployeeContext)
                 .filter(
                     EmployeeContext.id
                     == employee_context.reports_to_id,
@@ -446,7 +374,6 @@ class CallAnalyticsPerformanceService:
             .first()
         )
 
-        # Context model does NOT have deleted_at.
         reporting_context_model = (
             db.query(Context)
             .filter(
@@ -457,13 +384,10 @@ class CallAnalyticsPerformanceService:
             .first()
         )
 
-        reporting_family = (
-            CallAnalyticsPerformanceService
-            ._get_context_family(
-                reporting_context_model.code
-                if reporting_context_model
-                else None
-            )
+        reporting_family = AccessControl.get_context_family(
+            reporting_context_model.code
+            if reporting_context_model
+            else None
         )
 
         # -----------------------------------------------------
@@ -494,14 +418,21 @@ class CallAnalyticsPerformanceService:
         if reporting_family == "TEAMLEAD":
 
             return {
-                "team_id": reporting_context.id,
-                "team": (
-                    reporting_employee.name
-                    if reporting_employee
-                    else None
-                ),
-                "rm_id": None,
-                "rm_name": None,
+                "team_id":
+                    reporting_context.id,
+
+                "team":
+                    (
+                        reporting_employee.name
+                        if reporting_employee
+                        else None
+                    ),
+
+                "rm_id":
+                    None,
+
+                "rm_name":
+                    None,
             }
 
         return {
@@ -512,20 +443,69 @@ class CallAnalyticsPerformanceService:
         }
 
     # =========================================================
+    # GET EMPLOYEE CALL CONTEXT IDS
+    # =========================================================
+
+    @staticmethod
+    def _get_employee_call_context_ids(
+        db: Session,
+        employee_id: int,
+        performance_context: Optional[EmployeeContext],
+    ) -> list[int]:
+        """
+        Return all authorized EmployeeContext IDs belonging
+        to this employee.
+
+        This is important because CallLog stores:
+
+            employee_context_id
+
+        rather than Employee.id.
+        """
+
+        if not performance_context:
+            return []
+
+        # AccessControl has already determined that this context is visible.
+        # CallLog stores EmployeeContext.id, so analytics must use context IDs
+        # rather than Employee.id. Include the employee's active contexts.
+        authorized_employee_id = performance_context.employee_id
+
+        if authorized_employee_id is None:
+            return []
+
+        rows = (
+            db.query(EmployeeContext.id)
+            .filter(
+                EmployeeContext.employee_id
+                == authorized_employee_id,
+                EmployeeContext.is_active.is_(True),
+                EmployeeContext.deleted_at.is_(None),
+            )
+            .all()
+        )
+
+        return [
+            int(row[0])
+            for row in rows
+            if row[0] is not None
+        ]
+
+    # =========================================================
     # BUILD CALL QUERY
     # =========================================================
 
     @staticmethod
     def _build_call_query(
         db: Session,
-        employee_ids: set[int],
+        employee_context_ids: list[int],
         from_date: date,
         to_date: date,
         direction: Optional[str] = None,
         status: Optional[str] = None,
     ):
 
-        if not employee_ids:
+        if not employee_context_ids:
 
             return (
                 db.query(CallLog)
@@ -535,22 +515,28 @@ class CallAnalyticsPerformanceService:
         query = (
             db.query(CallLog)
             .filter(
-                CallLog.employee_id.in_(
-                    employee_ids
+                CallLog.employee_context_id.in_(
+                    employee_context_ids
                 ),
                 CallLog.call_started_at
-                >= CallAnalyticsPerformanceService._date_start(
-                    from_date
+                >= (
+                    CallAnalyticsPerformanceService
+                    ._date_start(
+                        from_date
+                    )
                 ),
                 CallLog.call_started_at
-                < CallAnalyticsPerformanceService._date_end(
-                    to_date
+                < (
+                    CallAnalyticsPerformanceService
+                    ._date_end(
+                        to_date
+                    )
                 ),
             )
         )
 
         # -----------------------------------------------------
-        # DIRECTION
+        # CALL DIRECTION
         # -----------------------------------------------------
 
         if direction:
@@ -561,30 +547,20 @@ class CallAnalyticsPerformanceService:
                 .lower()
             )
 
-            if direction_value in {
+            if direction_value not in {
                 "incoming",
                 "outgoing",
             }:
 
-                try:
+                return query.filter(False)
 
-                    direction_enum = (
-                        CallTypeEnum(
-                            direction_value
-                        )
-                    )
-
-                    query = query.filter(
-                        CallLog.call_type
-                        == direction_enum
-                    )
-
-                except ValueError:
-
-                    return query.filter(False)
+            query = query.filter(
+                CallLog.call_type
+                == direction_value
+            )
 
         # -----------------------------------------------------
-        # STATUS
+        # CALL STATUS
         # -----------------------------------------------------
 
         if status:
@@ -598,22 +574,22 @@ class CallAnalyticsPerformanceService:
             if status_value == "answered":
                 status_value = "received"
 
-            try:
+            valid_statuses = {
+                "received",
+                "missed",
+                "rejected",
+                "in_progress",
+                "not_reached",
+            }
 
-                status_enum = (
-                    MobileStatusEnum(
-                        status_value
-                    )
-                )
-
-                query = query.filter(
-                    CallLog.mobile_status
-                    == status_enum
-                )
-
-            except ValueError:
+            if status_value not in valid_statuses:
 
                 return query.filter(False)
+
+            query = query.filter(
+                CallLog.mobile_status
+                == status_value
+            )
 
         return query
 
@@ -624,7 +600,7 @@ class CallAnalyticsPerformanceService:
     @staticmethod
     def _get_call_metrics(
         db: Session,
-        employee_id: int,
+        employee_context_ids: list[int],
         from_date: date,
         to_date: date,
         direction: Optional[str] = None,
@@ -635,9 +611,7 @@ class CallAnalyticsPerformanceService:
             CallAnalyticsPerformanceService
             ._build_call_query(
                 db=db,
-                employee_ids={
-                    employee_id
-                },
+                employee_context_ids=employee_context_ids,
                 from_date=from_date,
                 to_date=to_date,
                 direction=direction,
@@ -658,28 +632,28 @@ class CallAnalyticsPerformanceService:
         for call in rows:
 
             call_type = (
-                call.call_type.value
-                if hasattr(
+                getattr(
                     call.call_type,
                     "value",
+                    call.call_type,
                 )
-                else str(
-                    call.call_type
-                    or ""
-                ).lower()
             )
 
+            call_type = str(
+                call_type or ""
+            ).lower()
+
             mobile_status = (
-                call.mobile_status.value
-                if hasattr(
+                getattr(
                     call.mobile_status,
                     "value",
+                    call.mobile_status,
                 )
-                else str(
-                    call.mobile_status
-                    or ""
-                ).lower()
             )
+
+            mobile_status = str(
+                mobile_status or ""
+            ).lower()
 
             # -------------------------------------------------
             # DIRECTION
@@ -737,33 +711,51 @@ class CallAnalyticsPerformanceService:
             "answered": answered,
             "missed": missed,
             "avg_talk_seconds": avg_talk_seconds,
+            "calls": rows,
         }
 
     # =========================================================
-    # GET APPLICATION COUNT
+    # GET APPLICATIONS FOR EMPLOYEE
     # =========================================================
 
     @staticmethod
     def _get_application_count(
         db: Session,
         employee_id: int,
+        employee_context: Optional[EmployeeContext],
         from_date: date,
         to_date: date,
     ) -> int:
+        """
+        Count applications belonging to this employee.
 
-        start_datetime = (
+        Application assignment is based on:
+
+            LoanApplication.agent_context_id
+
+        The application date is:
+
+            applied_date
+
+        Fallback to created_at is intentionally NOT used because
+        applied_date is the application business date in the
+        supplied model.
+        """
+
+        if not employee_context:
+            return 0
+
+        context_ids = (
             CallAnalyticsPerformanceService
-            ._date_start(
-                from_date
+            ._get_employee_call_context_ids(
+                db=db,
+                employee_id=employee_id,
+                performance_context=employee_context,
             )
         )
 
-        end_datetime = (
-            CallAnalyticsPerformanceService
-            ._date_end(
-                to_date
-            )
-        )
+        if not context_ids:
+            return 0
 
         return int(
             (
@@ -773,13 +765,14 @@ class CallAnalyticsPerformanceService:
                     )
                 )
                 .filter(
-                    LoanApplication.agent_id
-                    == employee_id,
+                    LoanApplication.agent_context_id.in_(
+                        context_ids
+                    ),
                     LoanApplication.deleted_at.is_(None),
-                    LoanApplication.created_at
-                    >= start_datetime,
-                    LoanApplication.created_at
-                    < end_datetime,
+                    LoanApplication.applied_date
+                    >= from_date,
+                    LoanApplication.applied_date
+                    <= to_date,
                 )
                 .scalar()
                 or 0
@@ -797,6 +790,9 @@ class CallAnalyticsPerformanceService:
         from_date: date,
         to_date: date,
     ) -> int:
+        """
+        Count active assignments received by the employee.
+        """
 
         start_datetime = (
             CallAnalyticsPerformanceService
@@ -841,9 +837,87 @@ class CallAnalyticsPerformanceService:
     def _get_conversion_count(
         db: Session,
         employee_id: int,
+        employee_context: Optional[EmployeeContext],
         from_date: date,
         to_date: date,
     ) -> int:
+        """
+        Count converted applications for this employee.
+
+        Conversion means:
+
+            Call/assignment phone number
+            exists in loan_applications.
+
+        The application must belong to this employee through:
+
+            LoanApplication.agent_context_id
+
+        and must be created/applied inside the requested
+        date range.
+
+        Distinct phone numbers are counted so multiple call
+        records for the same customer do not inflate conversion.
+        """
+
+        if not employee_context:
+            return 0
+
+        context_ids = (
+            CallAnalyticsPerformanceService
+            ._get_employee_call_context_ids(
+                db=db,
+                employee_id=employee_id,
+                performance_context=employee_context,
+            )
+        )
+
+        if not context_ids:
+            return 0
+
+        return int(
+            (
+                db.query(
+                    func.count(
+                        func.distinct(
+                            CallAnalyticsPerformanceService
+                            ._phone_sql_expression(
+                                LoanApplication.phone
+                            )
+                        )
+                    )
+                )
+                .filter(
+                    LoanApplication.agent_context_id.in_(
+                        context_ids
+                    ),
+                    LoanApplication.deleted_at.is_(None),
+                    LoanApplication.applied_date
+                    >= from_date,
+                    LoanApplication.applied_date
+                    <= to_date,
+                    LoanApplication.phone.isnot(None),
+                )
+                .scalar()
+                or 0
+            )
+        )
+
+    # =========================================================
+    # GET ASSIGNMENT PHONE NUMBERS
+    # =========================================================
+
+    @staticmethod
+    def _get_assignment_phone_numbers(
+        db: Session,
+        employee_id: int,
+        from_date: date,
+        to_date: date,
+    ) -> set[str]:
+        """
+        Get active assignment phone numbers belonging to
+        this employee during the selected date range.
+        """
 
         start_datetime = (
             CallAnalyticsPerformanceService
@@ -859,35 +933,9 @@ class CallAnalyticsPerformanceService:
             )
         )
 
-        assignment_phone_expression = (
-            CallAnalyticsPerformanceService
-            ._phone_sql_expression(
-                CallAssignment.phone_number
-            )
-        )
-
-        application_phone_expression = (
-            CallAnalyticsPerformanceService
-            ._phone_sql_expression(
-                LoanApplication.phone
-            )
-        )
-
-        query = (
+        rows = (
             db.query(
-                func.count(
-                    func.distinct(
-                        assignment_phone_expression
-                    )
-                )
-            )
-            .select_from(
-                CallAssignment
-            )
-            .join(
-                LoanApplication,
-                application_phone_expression
-                == assignment_phone_expression,
+                CallAssignment.phone_number
             )
             .filter(
                 CallAssignment.assigned_to_id
@@ -897,16 +945,278 @@ class CallAnalyticsPerformanceService:
                 >= start_datetime,
                 CallAssignment.created_at
                 < end_datetime,
-                LoanApplication.deleted_at.is_(None),
-                LoanApplication.created_at
-                >= CallAssignment.created_at,
+                CallAssignment.phone_number.isnot(None),
+            )
+            .all()
+        )
+
+        result = set()
+
+        for row in rows:
+
+            normalized = (
+                CallAnalyticsPerformanceService
+                ._normalize_phone(
+                    row.phone_number
+                )
+            )
+
+            if normalized:
+
+                result.add(
+                    normalized
+                )
+
+        return result
+
+    # =========================================================
+    # GET APPLICATION PHONE NUMBERS
+    # =========================================================
+
+    @staticmethod
+    def _get_application_phone_numbers(
+        db: Session,
+        employee_context: Optional[EmployeeContext],
+        employee_id: int,
+        from_date: date,
+        to_date: date,
+    ) -> set[str]:
+        """
+        Get application phone numbers belonging to this employee.
+        """
+
+        if not employee_context:
+            return set()
+
+        context_ids = (
+            CallAnalyticsPerformanceService
+            ._get_employee_call_context_ids(
+                db=db,
+                employee_id=employee_id,
+                performance_context=employee_context,
             )
         )
 
-        return int(
-            query.scalar()
-            or 0
+        if not context_ids:
+            return set()
+
+        rows = (
+            db.query(
+                LoanApplication.phone,
+                LoanApplication.alternate_phone,
+            )
+            .filter(
+                LoanApplication.agent_context_id.in_(
+                    context_ids
+                ),
+                LoanApplication.deleted_at.is_(None),
+                LoanApplication.applied_date
+                >= from_date,
+                LoanApplication.applied_date
+                <= to_date,
+            )
+            .all()
         )
+
+        result = set()
+
+        for row in rows:
+
+            phone = (
+                CallAnalyticsPerformanceService
+                ._normalize_phone(
+                    row.phone
+                )
+            )
+
+            alternate_phone = (
+                CallAnalyticsPerformanceService
+                ._normalize_phone(
+                    row.alternate_phone
+                )
+            )
+
+            if phone:
+                result.add(phone)
+
+            if alternate_phone:
+                result.add(alternate_phone)
+
+        return result
+
+    # =========================================================
+    # GET CALL CLASSIFICATION
+    # =========================================================
+
+    @staticmethod
+    def _get_call_classification(
+        db: Session,
+        employee_id: int,
+        employee_context: Optional[EmployeeContext],
+        calls: list[CallLog],
+        from_date: date,
+        to_date: date,
+    ) -> dict:
+        """
+        Classify calls belonging to one employee.
+
+        Priority:
+
+            CONVERTED
+                phone exists in applications
+
+            ASSIGNED
+                phone exists in assignments
+
+            UNKNOWN
+                phone exists in calls but neither application
+                nor assignment exists
+        """
+
+        phone_numbers = set()
+
+        for call in calls:
+
+            phone = (
+                CallAnalyticsPerformanceService
+                ._normalize_phone(
+                    call.phone_number
+                )
+            )
+
+            if phone:
+
+                phone_numbers.add(
+                    phone
+                )
+
+        assignment_numbers = (
+            CallAnalyticsPerformanceService
+            ._get_assignment_phone_numbers(
+                db=db,
+                employee_id=employee_id,
+                from_date=from_date,
+                to_date=to_date,
+            )
+        )
+
+        application_numbers = (
+            CallAnalyticsPerformanceService
+            ._get_application_phone_numbers(
+                db=db,
+                employee_context=employee_context,
+                employee_id=employee_id,
+                from_date=from_date,
+                to_date=to_date,
+            )
+        )
+
+        converted_numbers = (
+            phone_numbers
+            & application_numbers
+        )
+
+        assigned_numbers = (
+            phone_numbers
+            & assignment_numbers
+            - converted_numbers
+        )
+
+        unknown_numbers = (
+            phone_numbers
+            - converted_numbers
+            - assigned_numbers
+        )
+
+        return {
+            "converted_numbers":
+                converted_numbers,
+
+            "assigned_numbers":
+                assigned_numbers,
+
+            "unknown_numbers":
+                unknown_numbers,
+        }
+
+    # =========================================================
+    # GET CLASSIFICATION COUNTS
+    # =========================================================
+
+    @staticmethod
+    def _get_classification_counts(
+        db: Session,
+        employee_id: int,
+        employee_context: Optional[EmployeeContext],
+        calls: list[CallLog],
+        from_date: date,
+        to_date: date,
+    ) -> dict:
+
+        classification = (
+            CallAnalyticsPerformanceService
+            ._get_call_classification(
+                db=db,
+                employee_id=employee_id,
+                employee_context=employee_context,
+                calls=calls,
+                from_date=from_date,
+                to_date=to_date,
+            )
+        )
+
+        converted_numbers = (
+            classification[
+                "converted_numbers"
+            ]
+        )
+
+        assigned_numbers = (
+            classification[
+                "assigned_numbers"
+            ]
+        )
+
+        unknown_numbers = (
+            classification[
+                "unknown_numbers"
+            ]
+        )
+
+        converted = 0
+        assigned = 0
+        unknown = 0
+
+        for call in calls:
+
+            phone = (
+                CallAnalyticsPerformanceService
+                ._normalize_phone(
+                    call.phone_number
+                )
+            )
+
+            if not phone:
+
+                unknown += 1
+
+            elif phone in converted_numbers:
+
+                converted += 1
+
+            elif phone in assigned_numbers:
+
+                assigned += 1
+
+            elif phone in unknown_numbers:
+
+                unknown += 1
+
+        return {
+            "unknown": unknown,
+            "assigned": assigned,
+            "converted": converted,
+        }
 
     # =========================================================
     # GET PERFORMANCE
@@ -924,6 +1234,10 @@ class CallAnalyticsPerformanceService:
         context_id: Optional[int] = None,
     ) -> dict:
 
+        # =====================================================
+        # AUTHENTICATION
+        # =====================================================
+
         if not employee:
 
             raise PermissionError(
@@ -931,74 +1245,44 @@ class CallAnalyticsPerformanceService:
             )
 
         # =====================================================
-        # DATE DEFAULT
+        # DATES
         # =====================================================
 
-        if (
-            from_date is None
-            and to_date is None
-        ):
-
-            (
-                from_date,
-                to_date,
-            ) = (
-                CallAnalyticsPerformanceService
-                ._get_current_month_dates()
-            )
-
-        elif from_date is None:
-
-            from_date = to_date
-
-        elif to_date is None:
-
-            to_date = from_date
-
-        if from_date > to_date:
-
-            raise ValueError(
-                "from_date cannot be greater than to_date."
-            )
-
-        # =====================================================
-        # VISIBLE AGENTS
-        # =====================================================
-
-        agent_context_map = (
+        from_date, to_date = (
             CallAnalyticsPerformanceService
-            ._get_agent_context_map(
+            ._resolve_dates(
+                from_date=from_date,
+                to_date=to_date,
+            )
+        )
+
+        # =====================================================
+        # VISIBLE EMPLOYEE CONTEXTS
+        # =====================================================
+
+        performance_context_map = (
+            CallAnalyticsPerformanceService
+            ._get_performance_context_map(
                 db=db,
                 employee=employee,
                 context_id=context_id,
             )
         )
 
-        if not agent_context_map:
+        if not performance_context_map:
 
-            return {
-                "summary": {
-                    "totalAgents": 0,
-                    "totalAssignments": 0,
-                    "totalCalls": 0,
-                    "totalIncoming": 0,
-                    "totalOutgoing": 0,
-                    "totalAnswered": 0,
-                    "totalMissed": 0,
-                    "totalApplications": 0,
-                    "totalConverted": 0,
-                    "avgTalkSeconds": 0,
-                },
-                "agents": [],
-            }
-
-        visible_employee_ids = set(
-            agent_context_map.keys()
-        )
+            return (
+                CallAnalyticsPerformanceService
+                ._empty_response()
+            )
 
         # =====================================================
         # EMPLOYEE FILTER
         # =====================================================
+
+        visible_employee_ids = set(
+            performance_context_map.keys()
+        )
 
         if employee_id is not None:
 
@@ -1007,21 +1291,10 @@ class CallAnalyticsPerformanceService:
                 not in visible_employee_ids
             ):
 
-                return {
-                    "summary": {
-                        "totalAgents": 0,
-                        "totalAssignments": 0,
-                        "totalCalls": 0,
-                        "totalIncoming": 0,
-                        "totalOutgoing": 0,
-                        "totalAnswered": 0,
-                        "totalMissed": 0,
-                        "totalApplications": 0,
-                        "totalConverted": 0,
-                        "avgTalkSeconds": 0,
-                    },
-                    "agents": [],
-                }
+                return (
+                    CallAnalyticsPerformanceService
+                    ._empty_response()
+                )
 
             target_employee_ids = {
                 employee_id
@@ -1052,13 +1325,13 @@ class CallAnalyticsPerformanceService:
         )
 
         # =====================================================
-        # AGENT RESULTS
+        # RESULT
         # =====================================================
 
         agents = []
 
         # =====================================================
-        # SUMMARY ACCUMULATORS
+        # SUMMARY
         # =====================================================
 
         total_assignments = 0
@@ -1071,25 +1344,30 @@ class CallAnalyticsPerformanceService:
         total_converted = 0
 
         total_talk_seconds = 0
-        agents_with_talk = 0
+        total_answered_calls = 0
 
         # =====================================================
-        # BUILD AGENT PERFORMANCE
+        # EACH EMPLOYEE
         # =====================================================
 
         for agent in employees:
 
-            agent_context = (
-                agent_context_map.get(
+            employee_context = (
+                performance_context_map.get(
                     agent.id
                 )
             )
 
-            context_details = (
+            # -------------------------------------------------
+            # CALL CONTEXT IDS
+            # -------------------------------------------------
+
+            employee_context_ids = (
                 CallAnalyticsPerformanceService
-                ._get_employee_context_details(
+                ._get_employee_call_context_ids(
                     db=db,
-                    employee_context=agent_context,
+                    employee_id=agent.id,
+                    performance_context=employee_context,
                 )
             )
 
@@ -1101,13 +1379,17 @@ class CallAnalyticsPerformanceService:
                 CallAnalyticsPerformanceService
                 ._get_call_metrics(
                     db=db,
-                    employee_id=agent.id,
+                    employee_context_ids=employee_context_ids,
                     from_date=from_date,
                     to_date=to_date,
                     direction=direction,
                     status=status,
                 )
             )
+
+            calls = call_metrics[
+                "calls"
+            ]
 
             # -------------------------------------------------
             # APPLICATIONS
@@ -1118,6 +1400,7 @@ class CallAnalyticsPerformanceService:
                 ._get_application_count(
                     db=db,
                     employee_id=agent.id,
+                    employee_context=employee_context,
                     from_date=from_date,
                     to_date=to_date,
                 )
@@ -1146,6 +1429,23 @@ class CallAnalyticsPerformanceService:
                 ._get_conversion_count(
                     db=db,
                     employee_id=agent.id,
+                    employee_context=employee_context,
+                    from_date=from_date,
+                    to_date=to_date,
+                )
+            )
+
+            # -------------------------------------------------
+            # CLASSIFICATION
+            # -------------------------------------------------
+
+            classification_counts = (
+                CallAnalyticsPerformanceService
+                ._get_classification_counts(
+                    db=db,
+                    employee_id=agent.id,
+                    employee_context=employee_context,
+                    calls=calls,
                     from_date=from_date,
                     to_date=to_date,
                 )
@@ -1155,9 +1455,79 @@ class CallAnalyticsPerformanceService:
             # TOTAL CALLS
             # -------------------------------------------------
 
-            total_agent_calls = (
-                call_metrics["incoming"]
-                + call_metrics["outgoing"]
+            total_agent_calls = len(
+                calls
+            )
+
+            # -------------------------------------------------
+            # CONTEXT DETAILS
+            # -------------------------------------------------
+
+            context_details = (
+                CallAnalyticsPerformanceService
+                ._get_employee_context_details(
+                    db=db,
+                    employee_context=employee_context,
+                )
+            )
+
+            # -------------------------------------------------
+            # TALK TIME
+            # -------------------------------------------------
+
+            agent_talk_seconds = 0
+            agent_answered_calls = 0
+
+            for call in calls:
+
+                mobile_status = (
+                    getattr(
+                        call.mobile_status,
+                        "value",
+                        call.mobile_status,
+                    )
+                )
+
+                mobile_status = str(
+                    mobile_status or ""
+                ).lower()
+
+                if (
+                    mobile_status == "received"
+                    and call.duration_seconds is not None
+                ):
+
+                    duration = int(
+                        call.duration_seconds
+                        or 0
+                    )
+
+                    if duration >= 0:
+
+                        agent_talk_seconds += duration
+                        agent_answered_calls += 1
+
+            avg_talk_seconds = (
+                round(
+                    agent_talk_seconds
+                    / agent_answered_calls
+                )
+                if agent_answered_calls
+                else 0
+            )
+
+            # -------------------------------------------------
+            # STATUS
+            # -------------------------------------------------
+
+            agent_status = (
+                getattr(
+                    agent.status,
+                    "value",
+                    agent.status,
+                )
+                if agent.status is not None
+                else "active"
             )
 
             # -------------------------------------------------
@@ -1166,106 +1536,148 @@ class CallAnalyticsPerformanceService:
 
             agents.append(
                 {
-                    "id": agent.id,
-                    "name": agent.name,
+                    "id":
+                        agent.id,
 
-                    "teamId": context_details[
-                        "team_id"
-                    ],
+                    "name":
+                        agent.name,
 
-                    "team": context_details[
-                        "team"
-                    ],
+                    "teamId":
+                        context_details[
+                            "team_id"
+                        ],
 
-                    "rmId": context_details[
-                        "rm_id"
-                    ],
+                    "team":
+                        context_details[
+                            "team"
+                        ],
 
-                    "rmName": context_details[
-                        "rm_name"
-                    ],
+                    "rmId":
+                        context_details[
+                            "rm_id"
+                        ],
 
-                    "incoming": call_metrics[
-                        "incoming"
-                    ],
+                    "rmName":
+                        context_details[
+                            "rm_name"
+                        ],
 
-                    "outgoing": call_metrics[
-                        "outgoing"
-                    ],
+                    "incoming":
+                        call_metrics[
+                            "incoming"
+                        ],
 
-                    "answered": call_metrics[
-                        "answered"
-                    ],
+                    "outgoing":
+                        call_metrics[
+                            "outgoing"
+                        ],
 
-                    "missed": call_metrics[
-                        "missed"
-                    ],
+                    "answered":
+                        call_metrics[
+                            "answered"
+                        ],
 
-                    "applications": applications,
+                    "missed":
+                        call_metrics[
+                            "missed"
+                        ],
 
-                    "converted": converted,
+                    "applications":
+                        applications,
 
-                    "assignments": assignments,
+                    "converted":
+                        converted,
 
-                    "callsHandled": assignments,
+                    "assignments":
+                        assignments,
 
-                    "totalCalls": total_agent_calls,
+                    "callsHandled":
+                        classification_counts[
+                            "assigned"
+                        ],
 
-                    "avgTalkSeconds": call_metrics[
-                        "avg_talk_seconds"
-                    ],
+                    "totalCalls":
+                        total_agent_calls,
 
-                    "status": (
-                        agent.status
-                        if agent.status is not None
-                        else "active"
-                    ),
+                    "avgTalkSeconds":
+                        avg_talk_seconds,
+
+                    "status":
+                        agent_status,
+
+                    # Additional values available to the
+                    # frontend if required.
+                    "unknown":
+                        classification_counts[
+                            "unknown"
+                        ],
+
+                    "assignedCalls":
+                        classification_counts[
+                            "assigned"
+                        ],
+
+                    "convertedCalls":
+                        classification_counts[
+                            "converted"
+                        ],
                 }
             )
 
             # -------------------------------------------------
-            # SUMMARY
+            # SUMMARY ACCUMULATION
             # -------------------------------------------------
 
             total_assignments += assignments
+
             total_calls += total_agent_calls
-            total_incoming += call_metrics[
-                "incoming"
-            ]
-            total_outgoing += call_metrics[
-                "outgoing"
-            ]
-            total_answered += call_metrics[
-                "answered"
-            ]
-            total_missed += call_metrics[
-                "missed"
-            ]
+
+            total_incoming += (
+                call_metrics[
+                    "incoming"
+                ]
+            )
+
+            total_outgoing += (
+                call_metrics[
+                    "outgoing"
+                ]
+            )
+
+            total_answered += (
+                call_metrics[
+                    "answered"
+                ]
+            )
+
+            total_missed += (
+                call_metrics[
+                    "missed"
+                ]
+            )
+
             total_applications += applications
+
             total_converted += converted
 
-            if call_metrics[
-                "avg_talk_seconds"
-            ] > 0:
+            total_talk_seconds += (
+                agent_talk_seconds
+            )
 
-                total_talk_seconds += (
-                    call_metrics[
-                        "avg_talk_seconds"
-                    ]
-                )
-
-                agents_with_talk += 1
+            total_answered_calls += (
+                agent_answered_calls
+            )
 
         # =====================================================
-        # SUMMARY AVERAGE
+        # SUMMARY AVG TALK
         # =====================================================
 
         avg_talk_seconds = (
             round(
                 total_talk_seconds
-                / agents_with_talk
+                / total_answered_calls
             )
-            if agents_with_talk
+            if total_answered_calls
             else 0
         )
 
@@ -1275,16 +1687,37 @@ class CallAnalyticsPerformanceService:
 
         return {
             "summary": {
-                "totalAgents": len(agents),
-                "totalAssignments": total_assignments,
-                "totalCalls": total_calls,
-                "totalIncoming": total_incoming,
-                "totalOutgoing": total_outgoing,
-                "totalAnswered": total_answered,
-                "totalMissed": total_missed,
-                "totalApplications": total_applications,
-                "totalConverted": total_converted,
-                "avgTalkSeconds": avg_talk_seconds,
+                "totalAgents":
+                    len(agents),
+
+                "totalAssignments":
+                    total_assignments,
+
+                "totalCalls":
+                    total_calls,
+
+                "totalIncoming":
+                    total_incoming,
+
+                "totalOutgoing":
+                    total_outgoing,
+
+                "totalAnswered":
+                    total_answered,
+
+                "totalMissed":
+                    total_missed,
+
+                "totalApplications":
+                    total_applications,
+
+                "totalConverted":
+                    total_converted,
+
+                "avgTalkSeconds":
+                    avg_talk_seconds,
             },
-            "agents": agents,
+
+            "agents":
+                agents,
         }

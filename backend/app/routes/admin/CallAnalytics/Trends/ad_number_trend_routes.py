@@ -1,11 +1,11 @@
+
 # Path: backend/app/routes/admin/CallAnalytics/Trends/ad_number_trend_routes.py
 
 from datetime import date
 from typing import Optional
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-
+from app.models.phone_numbers import PhoneNumber
 from app.config.database import get_db
 from app.core.security import get_current_employee
 from app.controllers.CallAnalytics.Trends.ad_number_trend_controller import (
@@ -21,6 +21,18 @@ router = APIRouter(
     prefix="/call-analytics",
     tags=["Call Analytics"],
 )
+@router.get('/active-ad-numbers')
+def get_active_ad_numbers(   
+     db: Session = Depends(get_db),
+):
+    return (
+        db.query(PhoneNumber)
+        .filter(PhoneNumber.status == 'active')
+        .filter(PhoneNumber.trackable == 'active')
+        .order_by(PhoneNumber.id)
+        .all()
+    )
+
 
 
 @router.get(

@@ -1,156 +1,126 @@
 // admin-react/src/pages/Applicationfilter/index.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from "react";
 
-import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
-import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
-import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
-import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
+import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
+import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
+import CalendarDaysIcon from "@heroicons/react/24/outline/CalendarDaysIcon";
+import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
 
-import AgentDropdown from '../../../components/GlobalModels/Filters/AgentDropdown'
-import LoanTypeDropdown from '../../../components/GlobalModels/Filters/LoanTypeDropdown'
-import RmDropdown from '../../../components/GlobalModels/Filters/RmDropdown'
+import AgentDropdown from "../../../components/GlobalModels/Filters/AgentDropdown";
+import LoanTypeDropdown from "../../../components/GlobalModels/Filters/LoanTypeDropdown";
+import RmDropdown from "../../../components/GlobalModels/Filters/RmDropdown";
 
-import ApplicationFilterTable from './components/ApplicationFilterTable'
-import ApplicationDisbursementModal from './components/ApplicationDisbursementModal'
+import ApplicationFilterTable from "./components/ApplicationFilterTable";
+import ApplicationDisbursementModal from "./components/ApplicationDisbursementModal";
 
-import { getApplicationFilter } from './Api'
-import { getActiveContext } from '../../../app/auth'
+import { getApplicationFilter } from "./Api";
+import { getActiveContext } from "../../../app/auth";
 
 // =============================================================
 // STATUS
 // =============================================================
 
 const STATUSES = [
-    { value: '', label: 'All Statuses' },
-    { value: 'inprocess', label: 'In Process' },
-    { value: 'login', label: 'Login' },
-    { value: 'sanctioned', label: 'Sanctioned' },
-    { value: 'disbursed', label: 'Disbursed' },
-    { value: 'rejected', label: 'Rejected' },
-]
-
+  { value: "", label: "All Statuses" },
+  { value: "inprocess", label: "In Process" },
+  { value: "login", label: "Login" },
+  { value: "sanctioned", label: "Sanctioned" },
+  { value: "disbursed", label: "Disbursed" },
+  { value: "rejected", label: "Rejected" },
+];
 
 // =============================================================
 // MONTHS
 // =============================================================
 
 const MONTHS = [
-    { value: '', label: 'All Months' },
-    { value: '01', label: 'January' },
-    { value: '02', label: 'February' },
-    { value: '03', label: 'March' },
-    { value: '04', label: 'April' },
-    { value: '05', label: 'May' },
-    { value: '06', label: 'June' },
-    { value: '07', label: 'July' },
-    { value: '08', label: 'August' },
-    { value: '09', label: 'September' },
-    { value: '10', label: 'October' },
-    { value: '11', label: 'November' },
-    { value: '12', label: 'December' },
-]
-
+  { value: "", label: "All Months" },
+  { value: "01", label: "January" },
+  { value: "02", label: "February" },
+  { value: "03", label: "March" },
+  { value: "04", label: "April" },
+  { value: "05", label: "May" },
+  { value: "06", label: "June" },
+  { value: "07", label: "July" },
+  { value: "08", label: "August" },
+  { value: "09", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
 
 // =============================================================
 // YEARS
 // =============================================================
 
 const YEARS = [
-    { value: '', label: 'All Years' },
-    { value: '2026', label: '2026' },
-    { value: '2025', label: '2025' },
-    { value: '2024', label: '2024' },
-]
-
+  { value: "", label: "All Years" },
+  { value: "2026", label: "2026" },
+  { value: "2025", label: "2025" },
+  { value: "2024", label: "2024" },
+];
 
 // =============================================================
 // SEARCHABLE DROPDOWN
 // =============================================================
 
 function SearchableDropdown({
-    label,
-    value,
-    options = [],
-    placeholder = 'Select',
-    onChange,
+  label,
+  value,
+  options = [],
+  placeholder = "Select",
+  onChange,
 }) {
+  const [open, setOpen] = useState(false);
 
-    const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState("");
 
-    const [search, setSearch] = useState('')
+  const filteredOptions = useMemo(() => {
+    const searchValue = search.trim().toLowerCase();
 
+    if (!searchValue) {
+      return options;
+    }
 
-    const filteredOptions =
-        useMemo(() => {
+    return options.filter((option) =>
+      String(option.label).toLowerCase().includes(searchValue),
+    );
+  }, [options, search]);
 
-            const searchValue =
-                search
-                    .trim()
-                    .toLowerCase()
+  const selectedOption = options.find(
+    (option) => String(option.value) === String(value),
+  );
 
+  const displayValue = selectedOption?.label || placeholder;
 
-            if (!searchValue) {
-                return options
-            }
-
-
-            return options.filter(
-                (option) =>
-                    String(option.label)
-                        .toLowerCase()
-                        .includes(searchValue)
-            )
-
-        }, [
-            options,
-            search,
-        ])
-
-
-    const selectedOption =
-        options.find(
-            (option) =>
-                String(option.value) === String(value)
-        )
-
-
-    const displayValue =
-        selectedOption?.label ||
-        placeholder
-
-
-    return (
-
-        <div className="
+  return (
+    <div
+      className="
             relative
             min-w-0
-        ">
-
-            <label className="
+        "
+    >
+      <label
+        className="
                 mb-1.5
                 block
                 text-xs
                 font-medium
                 text-base-content/60
-            ">
-                {label}
-            </label>
+            "
+      >
+        {label}
+      </label>
 
+      <button
+        type="button"
+        onClick={() => {
+          setOpen((previous) => !previous);
 
-            <button
-                type="button"
-                onClick={() => {
-
-                    setOpen(
-                        (previous) =>
-                            !previous
-                    )
-
-                    setSearch('')
-
-                }}
-                className="
+          setSearch("");
+        }}
+        className="
                     flex
                     h-10
                     w-full
@@ -168,42 +138,38 @@ function SearchableDropdown({
                     transition
                     hover:border-base-content/20
                 "
-            >
-
-                <span className="
+      >
+        <span
+          className="
                     truncate
-                ">
-                    {displayValue}
-                </span>
+                "
+        >
+          {displayValue}
+        </span>
 
-
-                <ChevronDownIcon className="
+        <ChevronDownIcon
+          className="
                     h-4
                     w-4
                     shrink-0
                     text-base-content/40
-                " />
+                "
+        />
+      </button>
 
-            </button>
-
-
-            {open && (
-
-                <>
-
-                    <div
-                        className="
+      {open && (
+        <>
+          <div
+            className="
                             fixed
                             inset-0
                             z-40
                         "
-                        onClick={() =>
-                            setOpen(false)
-                        }
-                    />
+            onClick={() => setOpen(false)}
+          />
 
-
-                    <div className="
+          <div
+            className="
                         absolute
                         left-0
                         right-0
@@ -215,21 +181,24 @@ function SearchableDropdown({
                         border-base-300
                         bg-base-100
                         shadow-xl
-                    ">
+                    "
+          >
+            {/* SEARCH */}
 
-                        {/* SEARCH */}
-
-                        <div className="
+            <div
+              className="
                             border-b
                             border-base-300
                             p-2
-                        ">
-
-                            <div className="
+                        "
+            >
+              <div
+                className="
                                 relative
-                            ">
-
-                                <MagnifyingGlassIcon className="
+                            "
+              >
+                <MagnifyingGlassIcon
+                  className="
                                     pointer-events-none
                                     absolute
                                     left-2.5
@@ -238,20 +207,16 @@ function SearchableDropdown({
                                     w-4
                                     -translate-y-1/2
                                     text-base-content/35
-                                " />
+                                "
+                />
 
-
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    value={search}
-                                    onChange={(event) =>
-                                        setSearch(
-                                            event.target.value
-                                        )
-                                    }
-                                    placeholder={`Search ${label.toLowerCase()}...`}
-                                    className="
+                <input
+                  autoFocus
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={`Search ${label.toLowerCase()}...`}
+                  className="
                                         h-9
                                         w-full
                                         rounded-lg
@@ -264,459 +229,314 @@ function SearchableDropdown({
                                         outline-none
                                         focus:border-[#8BCF00]
                                     "
-                                />
+                />
+              </div>
+            </div>
 
-                            </div>
+            {/* OPTIONS */}
 
-                        </div>
-
-
-                        {/* OPTIONS */}
-
-                        <div className="
+            <div
+              className="
                             max-h-52
                             overflow-y-auto
                             p-1
-                        ">
+                        "
+            >
+              {filteredOptions.length ? (
+                filteredOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(option.value);
 
-                            {filteredOptions.length ? (
+                      setOpen(false);
 
-                                filteredOptions.map(
-                                    (option) => (
-
-                                        <button
-                                            key={option.value}
-                                            type="button"
-                                            onClick={() => {
-
-                                                onChange(
-                                                    option.value
-                                                )
-
-                                                setOpen(false)
-
-                                                setSearch('')
-
-                                            }}
-                                            className={[
-                                                'flex',
-                                                'w-full',
-                                                'items-center',
-                                                'rounded-lg',
-                                                'px-3',
-                                                'py-2',
-                                                'text-left',
-                                                'text-xs',
-                                                'transition',
-                                                String(option.value) === String(value)
-                                                    ? 'bg-[#8BCF00]/10 text-[#6FA800]'
-                                                    : 'text-base-content/70 hover:bg-base-200',
-                                            ].join(' ')}
-                                        >
-                                            {option.label}
-                                        </button>
-
-                                    )
-                                )
-
-                            ) : (
-
-                                <div className="
+                      setSearch("");
+                    }}
+                    className={[
+                      "flex",
+                      "w-full",
+                      "items-center",
+                      "rounded-lg",
+                      "px-3",
+                      "py-2",
+                      "text-left",
+                      "text-xs",
+                      "transition",
+                      String(option.value) === String(value)
+                        ? "bg-[#8BCF00]/10 text-[#6FA800]"
+                        : "text-base-content/70 hover:bg-base-200",
+                    ].join(" ")}
+                  >
+                    {option.label}
+                  </button>
+                ))
+              ) : (
+                <div
+                  className="
                                     px-3
                                     py-4
                                     text-center
                                     text-xs
                                     text-base-content/40
-                                ">
-                                    No results found
-                                </div>
-
-                            )}
-
-                        </div>
-
-                    </div>
-
-                </>
-
-            )}
-
-        </div>
-
-    )
-
+                                "
+                >
+                  No results found
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
-
 
 // =============================================================
 // MAIN COMPONENT
 // =============================================================
 
 function ApplicationFilter() {
+  const activeContext = getActiveContext();
+  const contextId = activeContext?.id;
 
-    const activeContext = getActiveContext()
-    const contextId = activeContext?.id
+  // =========================================================
+  // DATA
+  // =========================================================
 
-    // =========================================================
-    // DATA
-    // =========================================================
+  const [applications, setApplications] = useState([]);
 
-    const [applications, setApplications] =
-        useState([])
+  const [loading, setLoading] = useState(false);
 
-    const [loading, setLoading] =
-        useState(false)
+  const [total, setTotal] = useState(0);
 
-    const [total, setTotal] =
-        useState(0)
+  // =========================================================
+  // FILTER STATE
+  // =========================================================
 
+  const [search, setSearch] = useState("");
 
-    // =========================================================
-    // FILTER STATE
-    // =========================================================
+  const [agent, setAgent] = useState("");
 
-    const [search, setSearch] =
-        useState('')
+  const [rm, setRm] = useState("");
 
+  const [loanType, setLoanType] = useState("");
 
-    const [agent, setAgent] =
-        useState('')
+  const [status, setStatus] = useState("");
 
+  const [month, setMonth] = useState("");
 
-    const [rm, setRm] =
-        useState('')
+  const [year, setYear] = useState("");
 
+  const [fromDate, setFromDate] = useState("");
 
-    const [loanType, setLoanType] =
-        useState('')
+  const [toDate, setToDate] = useState("");
 
+  // =========================================================
+  // PAGINATION
+  // =========================================================
 
-    const [status, setStatus] =
-        useState('')
+  const [currentPage, setCurrentPage] = useState(1);
 
+  const [rowsPerPage, setRowsPerPage] = useState(20);
 
-    const [month, setMonth] =
-        useState('')
+  // =========================================================
+  // MODAL
+  // =========================================================
 
+  const [showModal, setShowModal] = useState(false);
 
-    const [year, setYear] =
-        useState('')
+  const [selectedApplication, setSelectedApplication] = useState(null);
 
+  // =========================================================
+  // FILTER OPTIONS
+  // =========================================================
 
-    const [fromDate, setFromDate] =
-        useState('')
+  /*
+   * These are intentionally kept compatible with the existing
+   * dropdown components.
+   *
+   * If these options are already supplied elsewhere in your
+   * actual file/project, keep those values instead.
+   */
 
+  const [agentOptions, setAgentOptions] = useState([]);
 
-    const [toDate, setToDate] =
-        useState('')
+  const [rmOptions, setRmOptions] = useState([]);
 
+  const [loanTypeOptions, setLoanTypeOptions] = useState([]);
 
-    // =========================================================
-    // PAGINATION
-    // =========================================================
+  // =========================================================
+  // FETCH APPLICATIONS
+  // =========================================================
 
-    const [currentPage, setCurrentPage] =
-        useState(1)
+  const fetchApplications = async () => {
+    try {
+      setLoading(true);
 
-    const [rowsPerPage, setRowsPerPage] =
-        useState(20)
+      const params = {
+        search: search.trim() || undefined,
 
+        agent_context_id: agent || undefined,
 
-    // =========================================================
-    // MODAL
-    // =========================================================
+        rm_context_id: rm || undefined,
 
-    const [showModal, setShowModal] =
-        useState(false)
+        loan_type_id: loanType || undefined,
 
+        status: status || undefined,
 
-    const [selectedApplication, setSelectedApplication] =
-        useState(null)
+        month: month || undefined,
 
+        year: year || undefined,
 
-    // =========================================================
-    // FILTER OPTIONS
-    // =========================================================
+        from_date: fromDate || undefined,
 
-    /*
-     * These are intentionally kept compatible with the existing
-     * dropdown components.
-     *
-     * If these options are already supplied elsewhere in your
-     * actual file/project, keep those values instead.
-     */
+        to_date: toDate || undefined,
 
-    const [agentOptions, setAgentOptions] =
-        useState([])
+        page: currentPage,
 
-    const [rmOptions, setRmOptions] =
-        useState([])
+        limit: rowsPerPage,
+      };
 
-    const [loanTypeOptions, setLoanTypeOptions] =
-        useState([])
-
-
-    // =========================================================
-    // FETCH APPLICATIONS
-    // =========================================================
-
-    const fetchApplications = async () => {
-
-        try {
-
-            setLoading(true)
-
-
-            const params = {
-
-                search:
-                    search.trim() ||
-                    undefined,
-
-                agent_context_id:
-                    agent ||
-                    undefined,
-
-                rm_context_id:
-                    rm ||
-                    undefined,
-
-                loan_type_id:
-                    loanType ||
-                    undefined,
-
-                status:
-                    status ||
-                    undefined,
-
-                month:
-                    month ||
-                    undefined,
-
-                year:
-                    year ||
-                    undefined,
-
-                from_date:
-                    fromDate ||
-                    undefined,
-
-                to_date:
-                    toDate ||
-                    undefined,
-
-                page:
-                    currentPage,
-
-                limit:
-                    rowsPerPage,
-
-            }
-
-
-            const data =
-                await getApplicationFilter(
-                    params
-                )
-
-
-            /*
-             * Backend response is expected to be:
-             *
-             * {
-             *     items: [],
-             *     total: number,
-             *     page: number,
-             *     limit: number
-             * }
-             */
-
-            setApplications(
-                data?.items || []
-            )
-
-
-            setTotal(
-                Number(data?.total || 0)
-            )
-
-
-        } catch (error) {
-
-            console.error(
-                'Failed to fetch applications:',
-                error
-            )
-
-            setApplications([])
-
-            setTotal(0)
-
-        } finally {
-
-            setLoading(false)
-
-        }
-
+      const data = await getApplicationFilter(params);
+
+      /*
+       * Backend response is expected to be:
+       *
+       * {
+       *     items: [],
+       *     total: number,
+       *     page: number,
+       *     limit: number
+       * }
+       */
+
+      setApplications(data?.items || []);
+
+      setTotal(Number(data?.total || 0));
+    } catch (error) {
+      console.error("Failed to fetch applications:", error);
+
+      setApplications([]);
+
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =========================================================
+  // FETCH WHEN FILTERS / PAGINATION CHANGE
+  // =========================================================
+
+  useEffect(() => {
+    if (!contextId) {
+      return;
     }
 
+    fetchApplications();
+  }, [
+    contextId,
+    search,
+    agent,
+    rm,
+    loanType,
+    status,
+    month,
+    year,
+    fromDate,
+    toDate,
+    currentPage,
+    rowsPerPage,
+  ]);
 
-    // =========================================================
-    // FETCH WHEN FILTERS / PAGINATION CHANGE
-    // =========================================================
+  // =========================================================
+  // RESET
+  // =========================================================
 
-    useEffect(() => {
+  const handleReset = () => {
+    setSearch("");
+    setAgent("");
+    setRm("");
+    setLoanType("");
+    setStatus("");
+    setMonth("");
+    setYear("");
+    setFromDate("");
+    setToDate("");
 
-        if (!contextId) {
-            return
-        }
+    setCurrentPage(1);
+  };
 
-        fetchApplications()
+  // =========================================================
+  // REFRESH
+  // =========================================================
 
-    }, [
-        contextId,
-        search,
-        agent,
-        rm,
-        loanType,
-        status,
-        month,
-        year,
-        fromDate,
-        toDate,
-        currentPage,
-        rowsPerPage,
-    ])
+  const handleRefresh = () => {
+    fetchApplications();
+  };
 
-    // =========================================================
-    // RESET
-    // =========================================================
+  // =========================================================
+  // VIEW DISBURSEMENT
+  // =========================================================
 
-    const handleReset = () => {
+  const handleView = (application) => {
+    setSelectedApplication(application);
 
-        setSearch('')
-        setAgent('')
-        setRm('')
-        setLoanType('')
-        setStatus('')
-        setMonth('')
-        setYear('')
-        setFromDate('')
-        setToDate('')
+    setShowModal(true);
+  };
 
-        setCurrentPage(1)
+  // =========================================================
+  // CLOSE MODAL
+  // =========================================================
 
-    }
+  const handleCloseModal = () => {
+    setShowModal(false);
 
+    setSelectedApplication(null);
+  };
 
-    // =========================================================
-    // REFRESH
-    // =========================================================
+  // =========================================================
+  // PAGINATION
+  // =========================================================
 
-    const handleRefresh = () => {
+  const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
 
-        fetchApplications()
+  const handlePreviousPage = () => {
+    setCurrentPage((previous) => Math.max(1, previous - 1));
+  };
 
-    }
+  const handleNextPage = () => {
+    setCurrentPage((previous) => Math.min(totalPages, previous + 1));
+  };
 
+  // =========================================================
+  // RENDER
+  // =========================================================
 
-    // =========================================================
-    // VIEW DISBURSEMENT
-    // =========================================================
-
-    const handleView = (
-        application
-    ) => {
-
-        setSelectedApplication(
-            application
-        )
-
-        setShowModal(true)
-
-    }
-
-
-    // =========================================================
-    // CLOSE MODAL
-    // =========================================================
-
-    const handleCloseModal = () => {
-
-        setShowModal(false)
-
-        setSelectedApplication(
-            null
-        )
-
-    }
-
-
-    // =========================================================
-    // PAGINATION
-    // =========================================================
-
-    const totalPages =
-        Math.max(
-            1,
-            Math.ceil(
-                total /
-                rowsPerPage
-            )
-        )
-
-
-    const handlePreviousPage = () => {
-
-        setCurrentPage(
-            (previous) =>
-                Math.max(
-                    1,
-                    previous - 1
-                )
-        )
-
-    }
-
-
-    const handleNextPage = () => {
-
-        setCurrentPage(
-            (previous) =>
-                Math.min(
-                    totalPages,
-                    previous + 1
-                )
-        )
-
-    }
-
-
-    // =========================================================
-    // RENDER
-    // =========================================================
-
-    return (
-
-        <div className="
+  return (
+    <div
+      className="
             p-4
             sm:p-6
-        ">
-
-
-            {/* =====================================================
+        "
+    >
+      {/* =====================================================
                 FILTER CARD
             ===================================================== */}
 
-            <div className="
+      <div
+        className="
                 rounded-xl
                 border
                 border-base-300
                 bg-base-100
                 shadow-sm
-            ">
-
-                <div className="
+            "
+      >
+        <div
+          className="
                     grid
                     grid-cols-1
                     gap-3
@@ -724,35 +544,38 @@ function ApplicationFilter() {
                     md:grid-cols-2
                     xl:grid-cols-4
                     2xl:grid-cols-5
-                ">
-
-
-                    {/* =================================================
+                "
+        >
+          {/* =================================================
                         SEARCH
                     ================================================= */}
 
-                    <div className="
+          <div
+            className="
                         min-w-0
                         xl:col-span-2
                         2xl:col-span-2
-                    ">
-
-                        <label className="
+                    "
+          >
+            <label
+              className="
                             mb-1.5
                             block
                             text-xs
                             font-medium
                             text-base-content/60
-                        ">
-                            Search
-                        </label>
+                        "
+            >
+              Search
+            </label>
 
-
-                        <div className="
+            <div
+              className="
                             relative
-                        ">
-
-                            <MagnifyingGlassIcon className="
+                        "
+            >
+              <MagnifyingGlassIcon
+                className="
                                 pointer-events-none
                                 absolute
                                 left-3
@@ -761,23 +584,19 @@ function ApplicationFilter() {
                                 w-4
                                 -translate-y-1/2
                                 text-base-content/35
-                            " />
+                            "
+              />
 
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
 
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(event) => {
-
-                                    setSearch(
-                                        event.target.value
-                                    )
-
-                                    setCurrentPage(1)
-
-                                }}
-                                placeholder="Search ID, name, phone, email..."
-                                className="
+                  setCurrentPage(1);
+                }}
+                placeholder="Search ID, name, phone, email..."
+                className="
                                     input
                                     input-bordered
                                     h-10
@@ -785,140 +604,124 @@ function ApplicationFilter() {
                                     w-full
                                     pl-9
                                 "
-                            />
+              />
+            </div>
+          </div>
 
-                        </div>
-
-                    </div>
-
-
-                    {/* =================================================
+          {/* =================================================
                         AGENT
                     ================================================= */}
 
-                    <AgentDropdown
-                        value={agent}
-                        options={agentOptions}
-                        onChange={(value) => {
+          <AgentDropdown
+            label="Agent"
+            value={agent}
+            options={agentOptions}
+            onChange={(value) => {
+              setAgent(value);
+              setCurrentPage(1);
+            }}
+            className="min-w-0"
+          />
 
-                            setAgent(value)
-                            setCurrentPage(1)
-
-                        }}
-                        className="min-w-0"
-                    />
-
-
-                    {/* =================================================
+          {/* =================================================
                         RM
                     ================================================= */}
 
-                    <RmDropdown
-                        value={rm}
-                        options={rmOptions}
-                        onChange={(value) => {
+          <RmDropdown
+            label="RM"
+            value={rm}
+            options={rmOptions}
+            onChange={(value) => {
+              setRm(value);
+              setCurrentPage(1);
+            }}
+            className="min-w-0"
+          />
 
-                            setRm(value)
-                            setCurrentPage(1)
-
-                        }}
-                        className="min-w-0"
-                    />
-
-
-                    {/* =================================================
+          {/* =================================================
                         LOAN TYPE
                     ================================================= */}
 
-                    <LoanTypeDropdown
-                        value={loanType}
-                        options={loanTypeOptions}
-                        onChange={(value) => {
+          <LoanTypeDropdown
+          label="Loan Type"
+            value={loanType}
+            options={loanTypeOptions}
+            onChange={(value) => {
+              setLoanType(value);
+              setCurrentPage(1);
+            }}
+            className="min-w-0"
+          />
 
-                            setLoanType(value)
-                            setCurrentPage(1)
-
-                        }}
-                        className="min-w-0"
-                    />
-
-
-                    {/* =================================================
+          {/* =================================================
                         STATUS
                     ================================================= */}
 
-                    <SearchableDropdown
-                        label="Status"
-                        value={status}
-                        options={STATUSES}
-                        placeholder="All Statuses"
-                        onChange={(value) => {
+          <SearchableDropdown
+            label="Status"
+            value={status}
+            options={STATUSES}
+            placeholder="All Statuses"
+            onChange={(value) => {
+              setStatus(value);
+              setCurrentPage(1);
+            }}
+          />
 
-                            setStatus(value)
-                            setCurrentPage(1)
-
-                        }}
-                    />
-
-
-                    {/* =================================================
+          {/* =================================================
                         MONTH
                     ================================================= */}
 
-                    <SearchableDropdown
-                        label="Month"
-                        value={month}
-                        options={MONTHS}
-                        placeholder="All Months"
-                        onChange={(value) => {
+          <SearchableDropdown
+            label="Month"
+            value={month}
+            options={MONTHS}
+            placeholder="All Months"
+            onChange={(value) => {
+              setMonth(value);
+              setCurrentPage(1);
+            }}
+          />
 
-                            setMonth(value)
-                            setCurrentPage(1)
-
-                        }}
-                    />
-
-
-                    {/* =================================================
+          {/* =================================================
                         YEAR
                     ================================================= */}
 
-                    <SearchableDropdown
-                        label="Year"
-                        value={year}
-                        options={YEARS}
-                        placeholder="All Years"
-                        onChange={(value) => {
+          <SearchableDropdown
+            label="Year"
+            value={year}
+            options={YEARS}
+            placeholder="All Years"
+            onChange={(value) => {
+              setYear(value);
+              setCurrentPage(1);
+            }}
+          />
 
-                            setYear(value)
-                            setCurrentPage(1)
-
-                        }}
-                    />
-
-
-                    {/* =================================================
+          {/* =================================================
                         FROM DATE
                     ================================================= */}
 
-                    <div>
-
-                        <label className="
+          <div>
+            <label
+              className="
                             mb-1.5
                             block
                             text-xs
                             font-medium
                             text-base-content/60
-                        ">
-                            From Date
-                        </label>
+                        "
+            >
+              From Date
+            </label>
 
-
-                        <div className="
+            <div
+              className="
                             relative
-                        ">
-
-                            <CalendarDaysIcon className="
+                        "
+            >
+              <CalendarDaysIcon
+                className="
                                 pointer-events-none
                                 absolute
                                 left-3
@@ -927,22 +730,18 @@ function ApplicationFilter() {
                                 w-4
                                 -translate-y-1/2
                                 text-base-content/35
-                            " />
+                            "
+              />
 
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(event) => {
+                  setFromDate(event.target.value);
 
-                            <input
-                                type="date"
-                                value={fromDate}
-                                onChange={(event) => {
-
-                                    setFromDate(
-                                        event.target.value
-                                    )
-
-                                    setCurrentPage(1)
-
-                                }}
-                                className="
+                  setCurrentPage(1);
+                }}
+                className="
                                     input
                                     input-bordered
                                     h-10
@@ -951,35 +750,34 @@ function ApplicationFilter() {
                                     pl-9
                                     text-xs
                                 "
-                            />
+              />
+            </div>
+          </div>
 
-                        </div>
-
-                    </div>
-
-
-                    {/* =================================================
+          {/* =================================================
                         TO DATE
                     ================================================= */}
 
-                    <div>
-
-                        <label className="
+          <div>
+            <label
+              className="
                             mb-1.5
                             block
                             text-xs
                             font-medium
                             text-base-content/60
-                        ">
-                            To Date
-                        </label>
+                        "
+            >
+              To Date
+            </label>
 
-
-                        <div className="
+            <div
+              className="
                             relative
-                        ">
-
-                            <CalendarDaysIcon className="
+                        "
+            >
+              <CalendarDaysIcon
+                className="
                                 pointer-events-none
                                 absolute
                                 left-3
@@ -988,26 +786,19 @@ function ApplicationFilter() {
                                 w-4
                                 -translate-y-1/2
                                 text-base-content/35
-                            " />
+                            "
+              />
 
+              <input
+                type="date"
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={(event) => {
+                  setToDate(event.target.value);
 
-                            <input
-                                type="date"
-                                value={toDate}
-                                min={
-                                    fromDate ||
-                                    undefined
-                                }
-                                onChange={(event) => {
-
-                                    setToDate(
-                                        event.target.value
-                                    )
-
-                                    setCurrentPage(1)
-
-                                }}
-                                className="
+                  setCurrentPage(1);
+                }}
+                className="
                                     input
                                     input-bordered
                                     h-10
@@ -1016,28 +807,24 @@ function ApplicationFilter() {
                                     pl-9
                                     text-xs
                                 "
-                            />
+              />
+            </div>
+          </div>
 
-                        </div>
-
-                    </div>
-
-
-                    {/* =================================================
+          {/* =================================================
                         RESET
                     ================================================= */}
 
-                    <div className="
+          <div
+            className="
                         flex
                         items-end
-                    ">
-
-                        <button
-                            type="button"
-                            onClick={
-                                handleReset
-                            }
-                            className="
+                    "
+          >
+            <button
+              type="button"
+              onClick={handleReset}
+              className="
                                 inline-flex
                                 h-10
                                 w-full
@@ -1056,27 +843,24 @@ function ApplicationFilter() {
                                 hover:bg-base-200
                                 hover:text-base-content
                             "
-                        >
-
-                            <ArrowPathIcon className="
+            >
+              <ArrowPathIcon
+                className="
                                 h-4
                                 w-4
-                            " />
+                            "
+              />
+              Reset
+            </button>
+          </div>
+        </div>
 
-                            Reset
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-
-                {/* =====================================================
+        {/* =====================================================
                     FILTER FOOTER
                 ===================================================== */}
 
-                <div className="
+        <div
+          className="
                     flex
                     items-center
                     justify-between
@@ -1084,29 +868,22 @@ function ApplicationFilter() {
                     border-base-300
                     px-4
                     py-3
-                ">
-
-                    <p className="
+                "
+        >
+          <p
+            className="
                         text-xs
                         text-base-content/45
-                    ">
+                    "
+          >
+            {total} {total === 1 ? "application" : "applications"} found
+          </p>
 
-                        {total}{' '}
-
-                        {total === 1
-                            ? 'application'
-                            : 'applications'}{' '}
-
-                        found
-
-                    </p>
-
-
-                    <button
-                        type="button"
-                        onClick={handleRefresh}
-                        disabled={loading}
-                        className="
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="
                             inline-flex
                             items-center
                             gap-1.5
@@ -1118,51 +895,34 @@ function ApplicationFilter() {
                             disabled:cursor-not-allowed
                             disabled:opacity-50
                         "
-                    >
+          >
+            <ArrowPathIcon
+              className={["h-4", "w-4", loading ? "animate-spin" : ""].join(
+                " ",
+              )}
+            />
+            Refresh
+          </button>
+        </div>
+      </div>
 
-                        <ArrowPathIcon
-                            className={[
-                                'h-4',
-                                'w-4',
-                                loading
-                                    ? 'animate-spin'
-                                    : '',
-                            ].join(' ')}
-                        />
-
-                        Refresh
-
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            {/* =====================================================
+      {/* =====================================================
                 TABLE
             ===================================================== */}
 
-            <ApplicationFilterTable
-                entries={
-                    applications
-                }
-                loading={
-                    loading
-                }
-                onView={
-                    handleView
-                }
-            />
+      <ApplicationFilterTable
+        entries={applications}
+        loading={loading}
+        onView={handleView}
+      />
 
-
-            {/* =====================================================
+      {/* =====================================================
                 PAGINATION
             ===================================================== */}
 
-            {total > 0 && (
-
-                <div className="
+      {total > 0 && (
+        <div
+          className="
                     flex
                     items-center
                     justify-between
@@ -1172,34 +932,29 @@ function ApplicationFilter() {
                     bg-base-100
                     px-4
                     py-3
-                ">
-
-                    <p className="
+                "
+        >
+          <p
+            className="
                         text-xs
                         text-base-content/50
-                    ">
+                    "
+          >
+            Page {currentPage} of {totalPages}
+          </p>
 
-                        Page {currentPage} of {totalPages}
-
-                    </p>
-
-
-                    <div className="
+          <div
+            className="
                         flex
                         items-center
                         gap-2
-                    ">
-
-                        <button
-                            type="button"
-                            disabled={
-                                loading ||
-                                currentPage <= 1
-                            }
-                            onClick={
-                                handlePreviousPage
-                            }
-                            className="
+                    "
+          >
+            <button
+              type="button"
+              disabled={loading || currentPage <= 1}
+              onClick={handlePreviousPage}
+              className="
                                 rounded-lg
                                 border
                                 border-base-300
@@ -1212,21 +967,15 @@ function ApplicationFilter() {
                                 disabled:cursor-not-allowed
                                 disabled:opacity-40
                             "
-                        >
-                            Previous
-                        </button>
+            >
+              Previous
+            </button>
 
-
-                        <button
-                            type="button"
-                            disabled={
-                                loading ||
-                                currentPage >= totalPages
-                            }
-                            onClick={
-                                handleNextPage
-                            }
-                            className="
+            <button
+              type="button"
+              disabled={loading || currentPage >= totalPages}
+              onClick={handleNextPage}
+              className="
                                 rounded-lg
                                 border
                                 border-base-300
@@ -1239,38 +988,24 @@ function ApplicationFilter() {
                                 disabled:cursor-not-allowed
                                 disabled:opacity-40
                             "
-                        >
-                            Next
-                        </button>
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
-                    </div>
-
-                </div>
-
-            )}
-
-
-            {/* =====================================================
+      {/* =====================================================
                 DISBURSEMENT MODAL
             ===================================================== */}
 
-            <ApplicationDisbursementModal
-                open={
-                    showModal
-                }
-                application={
-                    selectedApplication
-                }
-                onClose={
-                    handleCloseModal
-                }
-            />
-
-        </div>
-
-    )
-
+      <ApplicationDisbursementModal
+        open={showModal}
+        application={selectedApplication}
+        onClose={handleCloseModal}
+      />
+    </div>
+  );
 }
 
-
-export default ApplicationFilter
+export default ApplicationFilter;

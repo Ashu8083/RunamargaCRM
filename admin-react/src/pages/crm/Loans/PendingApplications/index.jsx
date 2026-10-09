@@ -19,32 +19,14 @@ import { useToast } from '../../../../components/Toast/ToastProvider'
 // =============================================================
 // STATUS OPTIONS
 // =============================================================
-
 const STATUS_OPTIONS = [
-    {
-        value: 'revert rejected',
-        label: 'Revert Rejected',
-    },
-    {
-        value: 'rejected',
-        label: 'Rejected',
-    },
-    {
-        value: 'inprocess',
-        label: 'In Process',
-    },
-    {
-        value: 'docspending',
-        label: 'Docs Pending',
-    },
-    {
-        value: 'sanctioned',
-        label: 'Sanctioned',
-    },
-    {
-        value: 'disbursed',
-        label: 'Disbursed',
-    },
+    { label: 'In Process', value: 'inprocess' },
+    { label: 'Docs Pending', value: 'docspending' },
+    { label: 'Rejected', value: 'rejected' },
+    { label: 'Sanctioned', value: 'sanctioned' },
+    { label: 'Disbursed', value: 'disbursed' },
+    { label: 'Login', value: 'login' },
+    { label: 'Revert Rejected', value: 'revert_rejected' },
 ]
 
 

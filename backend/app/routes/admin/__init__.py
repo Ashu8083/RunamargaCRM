@@ -119,7 +119,18 @@ from .CallManagement.call_assignments import (
 from .CallAnalytics.overview_routes import router as call_analytics_overview_router
 from .CallAnalytics.performance_routes import router as call_analytics_performance_router
 from .CallAnalytics.Trends.ad_number_trend_routes import router as call_analytics_trends_ad_number_trend_router
+from .CallAnalytics.Trends.performance_trend_routes import router as call_analytics_trends_performance_trend_router
+from .CallAnalytics.Trends.team_lead_call_performance_routes import router as call_analytics_trends_team_lead_performance_trend_router
+from .CallAnalytics.Trends.daily_call_trend_routes import router as call_analytics_trends_daily_call_trend_router
+from .CallAnalytics.Trends.monthly_call_overview_routes import router as call_analytics_monthly_call_overview_router
 
+
+# ============================================================================
+# Agent Analytics
+# ============================================================================
+from .AgentAnalytics.overview_routes import router as agent_analytics_overview
+from .AgentAnalytics.performance_routes import router as agent_analytics_performance
+from .AgentAnalytics.trends_routes import router as agent_analytics_trends
 
 # ============================================================================
 # Application Filter
@@ -242,7 +253,20 @@ router.include_router(call_reassignment_audit_log_router)
 router.include_router(call_analytics_overview_router)
 router.include_router(call_analytics_performance_router)
 router.include_router(call_analytics_trends_ad_number_trend_router)
+router.include_router(call_analytics_trends_performance_trend_router)
+router.include_router(call_analytics_trends_team_lead_performance_trend_router)
+router.include_router(call_analytics_trends_daily_call_trend_router)
+router.include_router(
+    call_analytics_monthly_call_overview_router
+)
 
+
+# ============================================================================
+# Agent Analytics
+# ============================================================================
+router.include_router(agent_analytics_overview)
+router.include_router(agent_analytics_performance)
+router.include_router(agent_analytics_trends)
 
 # ============================================================================
 # Dashboard 

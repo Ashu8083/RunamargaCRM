@@ -200,11 +200,14 @@ def assign_shuffle_loans_route(
 
         raise
 
-    except Exception:
+    except Exception as exc:
 
         db.rollback()
 
+        import traceback
+        traceback.print_exc()
+
         raise HTTPException(
             status_code=500,
-            detail="Failed to assign selected loans.",
+            detail=str(exc),
         )

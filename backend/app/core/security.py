@@ -1,3 +1,4 @@
+# backend\app\core\security.py
 import os
 from datetime import datetime, timedelta, timezone
 import hashlib  
@@ -91,7 +92,6 @@ def get_current_employee(
     db: Session = Depends(get_db),
     access_token: str | None = Cookie(default=None),
 ) -> Employee:
-    # print(access_token)
 
     if not access_token:
         raise HTTPException(
@@ -138,7 +138,6 @@ def get_current_employee(
 
     # Check for x-employee-context-id or x-context-id header
     context_header = request.headers.get("x-employee-context-id") or request.headers.get("x-context-id")
-
 
     if context_header and context_header.isdigit():
         request.state.employee_context_id = int(context_header)

@@ -17,6 +17,11 @@ const formatDuration = (
         )
 
 
+    if (totalSeconds <= 0) {
+        return '0m 00s'
+    }
+
+
     const minutes =
         Math.floor(
             totalSeconds / 60
@@ -24,7 +29,9 @@ const formatDuration = (
 
 
     const remainingSeconds =
-        totalSeconds % 60
+        Math.floor(
+            totalSeconds % 60
+        )
 
 
     return `${minutes}m ${String(
@@ -121,7 +128,7 @@ function AgentPerformanceTable({
             shadow-sm
         ">
 
-            {agents.length ? (
+            {agents.length > 0 ? (
 
                 <div className="
                     w-full
@@ -161,7 +168,7 @@ function AgentPerformanceTable({
                                 </th>
 
 
-                                {/* AGENT */}
+                                {/* EMPLOYEE */}
 
                                 <th className="
                                     px-4
@@ -318,11 +325,47 @@ function AgentPerformanceTable({
                                     index
                                 ) => {
 
+                                    const incoming =
+                                        Number(
+                                            agent?.incoming || 0
+                                        )
+
+
+                                    const outgoing =
+                                        Number(
+                                            agent?.outgoing || 0
+                                        )
+
+
+                                    const answered =
+                                        Number(
+                                            agent?.answered || 0
+                                        )
+
+
+                                    const missed =
+                                        Number(
+                                            agent?.missed || 0
+                                        )
+
+
+                                    const applications =
+                                        Number(
+                                            agent?.applications || 0
+                                        )
+
+
+                                    const converted =
+                                        Number(
+                                            agent?.converted || 0
+                                        )
+
+
                                     return (
 
                                         <tr
                                             key={
-                                                agent.id ??
+                                                agent?.id ??
                                                 index
                                             }
                                             className="
@@ -352,7 +395,7 @@ function AgentPerformanceTable({
 
 
                                             {/* =================================================
-                                                AGENT NAME
+                                                EMPLOYEE NAME
                                             ================================================= */}
 
                                             <td className="
@@ -360,17 +403,26 @@ function AgentPerformanceTable({
                                                 py-4
                                             ">
 
-                                                <p className="
-                                                    whitespace-nowrap
-                                                    text-sm
-                                                    font-medium
-                                                    text-base-content
+                                                <div className="
+                                                    flex
+                                                    min-w-0
+                                                    items-center
+                                                    gap-2
                                                 ">
-                                                    {
-                                                        agent.name ||
-                                                        '—'
-                                                    }
-                                                </p>
+
+                                                    <p className="
+                                                        whitespace-nowrap
+                                                        text-sm
+                                                        font-medium
+                                                        text-base-content
+                                                    ">
+                                                        {
+                                                            agent?.name ||
+                                                            '—'
+                                                        }
+                                                    </p>
+
+                                                </div>
 
                                             </td>
 
@@ -390,7 +442,7 @@ function AgentPerformanceTable({
                                                     text-base-content/60
                                                 ">
                                                     {
-                                                        agent.team ||
+                                                        agent?.team ||
                                                         '—'
                                                     }
                                                 </span>
@@ -413,10 +465,7 @@ function AgentPerformanceTable({
                                                     text-base-content/80
                                                 ">
                                                     {
-                                                        Number(
-                                                            agent.incoming ||
-                                                            0
-                                                        )
+                                                        incoming
                                                     }
                                                 </span>
 
@@ -438,10 +487,7 @@ function AgentPerformanceTable({
                                                     text-base-content/80
                                                 ">
                                                     {
-                                                        Number(
-                                                            agent.outgoing ||
-                                                            0
-                                                        )
+                                                        outgoing
                                                     }
                                                 </span>
 
@@ -464,10 +510,7 @@ function AgentPerformanceTable({
                                                     text-[#6FA800]
                                                 ">
                                                     {
-                                                        Number(
-                                                            agent.answered ||
-                                                            0
-                                                        )
+                                                        answered
                                                     }
                                                 </span>
 
@@ -490,10 +533,7 @@ function AgentPerformanceTable({
                                                     text-red-500
                                                 ">
                                                     {
-                                                        Number(
-                                                            agent.missed ||
-                                                            0
-                                                        )
+                                                        missed
                                                     }
                                                 </span>
 
@@ -515,10 +555,7 @@ function AgentPerformanceTable({
                                                     text-base-content/80
                                                 ">
                                                     {
-                                                        Number(
-                                                            agent.applications ||
-                                                            0
-                                                        )
+                                                        applications
                                                     }
                                                 </span>
 
@@ -541,10 +578,7 @@ function AgentPerformanceTable({
                                                     text-[#6FA800]
                                                 ">
                                                     {
-                                                        Number(
-                                                            agent.converted ||
-                                                            0
-                                                        )
+                                                        converted
                                                     }
                                                 </span>
 
@@ -568,7 +602,7 @@ function AgentPerformanceTable({
                                                 ">
                                                     {
                                                         formatDuration(
-                                                            agent.avgTalkSeconds
+                                                            agent?.avgTalkSeconds
                                                         )
                                                     }
                                                 </span>

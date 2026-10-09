@@ -90,7 +90,7 @@ def get_call_history(
         data.append({
             "id": call.id,
 
-            "employee_id": call.employee_id,
+            "employee_id": call.employee_context_id,
 
             "phone_number": call.phone_number,
 
@@ -112,23 +112,11 @@ def get_call_history(
             "duration_seconds":
                 call.duration_seconds,
 
-            "recording_path":
-                call.recording_path,
-
-            "recording_size_kb":
-                call.recording_size_kb,
-
-            "recording_duration_seconds":
-                call.recording_duration_seconds,
+           
 
             "attended_at":
                 call.attended_at,
 
-            "attended_by":
-                call.attended_by,
-
-            "remarks":
-                call.remarks,
 
             "created_at":
                 call.created_at,
