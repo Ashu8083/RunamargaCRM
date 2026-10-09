@@ -1,20 +1,15 @@
 # app/services/face/face_embedding.py
-
 import numpy as np
-
 from insightface.app import FaceAnalysis
-
 
 # ---------------------------------------------------------
 # InsightFace Configuration
 # ---------------------------------------------------------
 
 MODEL_NAME = "buffalo_l"
-
 MODEL_PROVIDERS = [
     "CPUExecutionProvider",
 ]
-
 DETECTION_SIZE = (
     320,
     320,
