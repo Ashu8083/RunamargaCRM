@@ -1,6 +1,8 @@
 from fastapi.responses import  JSONResponse
 from fastapi import HTTPException,APIRouter,Depends,Request
 from sqlalchemy.orm import Session
+from starlette import status
+
 from app.config.database import get_db
 from app.dependency.get_access_control_dependency import  check_permission
 from app.controllers.profile_controller import get_employee_profile_controller
@@ -28,12 +30,27 @@ def get_employee_profile_route(
         employee=request.state.employee
     )
 
+    if not employee_details:
+        profile_response = EmployeeProfileResponse(
+            name=employee.name,
+            email=employee.email,
+            phone=employee.phone,
+            role=employee.role.name,
+            employee_code=employee.employee_code,
+            gender=employee_details.gender if employee_details else None,
+            joining_date=employee_details.joining_date if employee_details else None,
+            aadhar_card=employee_details.aadhar_card if employee_details else None,
+            pan_card=employee_details.pan_card if employee_details else None,
+        )
+        return profile_response
+
+
     profile_response = EmployeeProfileResponse(
         name=employee.name,
         email=employee.email,
         phone=employee.phone,
         role =employee.role.name,
-        employee_code=employee.employee_code,
+        employee_code=employee.employee_code ,
         gender=employee_details.gender if employee_details else None,
         joining_date=employee_details.joining_date if employee_details else None,
         aadhar_card=employee_details.aadhar_card if employee_details else None,

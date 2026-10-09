@@ -69,6 +69,10 @@ from .Dashboard.application_status_applications_routes import (
     router as application_status_applications_router,
 )
 
+
+
+
+
 # ============================================================================
 # BANKS AND DSA DIRECTORY
 # ============================================================================
@@ -277,6 +281,7 @@ router.include_router(loan_type_distribution_router)
 router.include_router(monthly_trend_router)
 router.include_router(application_funnel_router)
 router.include_router(application_status_applications_router)
+router.include_router(profile_router)
 
 # ============================================================================
 # Application Filter 
