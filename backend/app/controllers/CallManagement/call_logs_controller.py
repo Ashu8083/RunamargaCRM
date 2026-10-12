@@ -3,8 +3,11 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.models import EmployeeContext
 from app.models.employees import Employee
+from app.schemas.CallAnalytics.call_logs_scheema import CallLogsCreateSchema,CallLogsResponseSchema
 from app.services.CallManagement.call_log_service import CallLogService
+
 
 
 def get_call_logs(
@@ -129,3 +132,25 @@ def get_call_history(
         "success": True,
         "data": data,
     }
+
+
+def create_call_logs(
+        db: Session,
+        employee: Employee,
+        call_log_schema : CallLogsCreateSchema
+):
+    call_logs = CallLogService.create_call_log(
+        db=db,
+        employee=employee,
+        call_log_schema=call_log_schema,)
+
+    return CallLogsResponseSchema(
+        employee_context_id = call_logs.employee_context_id,
+        call_type = call_logs.call_type,
+        mobile_status = call_logs.mobile_status,
+        call_started_at = call_logs.call_started_at,
+        call_ended_at = call_logs.call_ended_at,
+        duration_seconds = call_logs.duration_seconds,
+        attended_at = call_logs.attended_at,
+        phone_number = call_logs.phone_number,
+    )

@@ -3,7 +3,7 @@
 import cv2
 
 from insightface.app import FaceAnalysis
-
+from numpy import size
 
 # ---------------------------------------------------------
 # Face Detection Model

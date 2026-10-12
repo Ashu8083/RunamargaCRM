@@ -2,12 +2,17 @@
 
 from typing import Optional
 
+from fastapi import logger
 from sqlalchemy.orm import Session, Query
 
 from app.core.access_control import AccessControl
+from app.models.phone_numbers import PhoneNumber
 from app.models.call_logs import CallLog
 from app.models.employees import Employee
+from app.schemas import employee
+from app.core.log_config import logger
 
+from app.schemas.CallAnalytics.call_logs_scheema import CallLogsCreateSchema
 
 class CallLogService:
 
@@ -125,4 +130,36 @@ class CallLogService:
             .all()
         )
 
+
+    def create_call_log(
+            db: Session,
+            call_log_schema : CallLogsCreateSchema,
+            employee: Employee,
+
+    ):
+        """Create a call log."""
+
+
+
+        phone_numbers : PhoneNumber  = db.query(PhoneNumber).filter(
+            PhoneNumber.employee_id == employee.id,
+            PhoneNumber.id == call_log_schema.phone_id,
+        ).first()
+        logger.info(f"<==================== Creating call log for phone number{phone_numbers.id} ===================>")
+
+        call_log = CallLog(
+            phone_number=call_log_schema.phone_number,
+            call_type=call_log_schema.call_type,
+            mobile_status=call_log_schema.mobile_status,
+            call_started_at=call_log_schema.call_started_at,
+            call_ended_at=call_log_schema.call_ended_at,
+            duration_seconds=call_log_schema.duration_seconds,
+            attended_at=call_log_schema.attended_at,
+            phone_id = phone_numbers.id,
+            employee_context_id = call_log_schema.employee_context_id,
+
+        )
+        db.add(call_log)
+        db.commit()
+        return call_log
 
