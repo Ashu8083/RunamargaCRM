@@ -1,9 +1,8 @@
 // admin-react/src/pages/EmployeeManagement/FaceEnrollment/index.jsx
 
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 
 import FaceEnrollmentTable from './components/FaceEnrollmentTable'
-import FaceEnrollmentModal from './components/FaceEnrollmentModal'
 
 import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
 
@@ -13,6 +12,10 @@ import {
     deleteFaceEnrollment,
     getFaceImageUrl,
 } from './API'
+
+const FaceEnrollmentModal = lazy(
+    () => import('./components/FaceEnrollmentModal')
+)
 
 
 function FaceEnrollment() {
@@ -548,39 +551,43 @@ function FaceEnrollment() {
                 FACE ENROLLMENT MODAL
             ================================================= */}
 
-            <FaceEnrollmentModal
+            <Suspense fallback={null}>
+                {Boolean(selectedEmployee) && (
+                    <FaceEnrollmentModal
 
-                open={
-                    Boolean(
-                        selectedEmployee
-                    )
-                }
+                        open={
+                            Boolean(
+                                selectedEmployee
+                            )
+                        }
 
-                employee={
-                    modalEmployee
-                }
+                        employee={
+                            modalEmployee
+                        }
 
-                onClose={
-                    handleCloseEnrollment
-                }
+                        onClose={
+                            handleCloseEnrollment
+                        }
 
-                onUpload={
-                    handleUpload
-                }
+                        onUpload={
+                            handleUpload
+                        }
 
-                onDelete={
-                    handleDelete
-                }
+                        onDelete={
+                            handleDelete
+                        }
 
-                loading={
-                    modalLoading
-                }
+                        loading={
+                            modalLoading
+                        }
 
-                deletingType={
-                    deletingType
-                }
+                        deletingType={
+                            deletingType
+                        }
 
-            />
+                    />
+                )}
+            </Suspense>
 
 
             {/* =================================================

@@ -1,4 +1,5 @@
-# backend\app\schemas\reminders_schema.py
+# backend/app/schemas/reminders_schema.py
+
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -69,6 +70,86 @@ class ReminderListResponseSchema(BaseModel):
     items: list[ReminderResponseSchema]
 
     total: int
+
+
+# ============================================================
+# NEW - REMINDER MANAGEMENT EMPLOYEE
+# ============================================================
+
+class ReminderManagementEmployeeSchema(BaseModel):
+    id: int
+
+    name: str
+
+    employee_code: str | None = None
+
+    phone: str | None = None
+
+
+# ============================================================
+# NEW - REMINDER MANAGEMENT APPLICATION
+# ============================================================
+
+class ReminderManagementApplicationSchema(BaseModel):
+    id: int
+
+    unique_id: str | None = None
+
+    name: str | None = None
+
+    phone: str | None = None
+
+
+# ============================================================
+# NEW - REMINDER MANAGEMENT ITEM
+# ============================================================
+
+class ReminderManagementItemSchema(BaseModel):
+    id: int
+
+    employee: ReminderManagementEmployeeSchema
+
+    application: ReminderManagementApplicationSchema
+
+    reminder_at: datetime
+
+    note: str
+
+    status: str
+
+    completed_at: datetime | None = None
+
+    created_at: datetime
+
+    updated_at: datetime | None = None
+
+
+# ============================================================
+# NEW - REMINDER MANAGEMENT PAGINATION
+# ============================================================
+
+class ReminderManagementPaginationSchema(BaseModel):
+    page: int
+
+    page_size: int
+
+    total: int
+
+    total_pages: int
+
+    has_next: bool
+
+    has_previous: bool
+
+
+# ============================================================
+# NEW - REMINDER MANAGEMENT RESPONSE
+# ============================================================
+
+class ReminderManagementResponseSchema(BaseModel):
+    items: list[ReminderManagementItemSchema]
+
+    pagination: ReminderManagementPaginationSchema
 
 
 # ============================================================

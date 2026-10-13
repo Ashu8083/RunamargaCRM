@@ -1,6 +1,8 @@
-// admin-react/src/pages/CallManagement/CallLogs/index.jsx
+// admin-react/src/pages/crm/CallManagement/CallLogs/index.jsx
 
 import {
+    lazy,
+    Suspense,
     useEffect,
     useMemo,
     useState,
@@ -14,12 +16,16 @@ import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
 import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
 
 import CallLogsTable from './components/CallLogsTable'
-import CallHistoryModal from './components/CallHistoryModal'
 
 import {
     getCallLogs,
     getCallHistory,
 } from './Api'
+
+// Lazy-load CallHistoryModal only when it is rendered.
+const CallHistoryModal = lazy(
+    () => import('./components/CallHistoryModal')
+)
 
 
 // =============================================================
@@ -1307,20 +1313,28 @@ function CallLogs() {
                 CALL HISTORY MODAL
             ===================================================== */}
 
-            <CallHistoryModal
-                open={
-                    showHistoryModal
-                }
-                call={
-                    selectedCall
-                }
-                history={
-                    callHistory
-                }
-                onClose={
-                    handleCloseHistory
-                }
-            />
+            {showHistoryModal && (
+
+                <Suspense fallback={null}>
+
+                    <CallHistoryModal
+                        open={
+                            showHistoryModal
+                        }
+                        call={
+                            selectedCall
+                        }
+                        history={
+                            callHistory
+                        }
+                        onClose={
+                            handleCloseHistory
+                        }
+                    />
+
+                </Suspense>
+
+            )}
 
         </div>
 

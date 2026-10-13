@@ -1,6 +1,12 @@
-// admin-react/src/pages/Loans/PendingApplications/components/PendingApplicationsTable.jsx
+// admin-react/src/pages/crm/Loans/PendingApplications/components/PendingApplicationsTable.jsx
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 
 import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
@@ -11,14 +17,25 @@ import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
 
-import GlobalChat from "../../../../../components/GlobalModels/Loans/GlobalChat";
-
 import AgentDropdown from "../../../../../components/GlobalModels/Filters/AgentDropdown";
 import RmDropdown from "../../../../../components/GlobalModels/Filters/RmDropdown";
 import TeamLeadDropdown from "../../../../../components/GlobalModels/Filters/TeamLeadDropdown";
 import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import StatusDropdown from "../../../../../components/GlobalModels/Filters/StatusDropdown";
 import apiClient from "../../../../../app/apiClient";
+
+
+// =============================================================
+// LAZY-LOADED GLOBAL CHAT
+// =============================================================
+
+const GlobalChat = lazy(
+  () =>
+    import(
+      "../../../../../components/GlobalModels/Loans/GlobalChat"
+    )
+);
+
 
 function PendingApplicationsTable({
   applications = [],
@@ -59,6 +76,7 @@ function PendingApplicationsTable({
 }) {
   const [loanTypes, setLoanTypes] = useState([]);
   const [expandedPhoneId, setExpandedPhoneId] = useState(null);
+
   // =============================================================
   // CONSTANTS
   // =============================================================
@@ -78,22 +96,26 @@ function PendingApplicationsTable({
 
   const [chatOpen, setChatOpen] = useState(false);
 
-  const [selectedChatApplication, setSelectedChatApplication] = useState(null);
+  const [selectedChatApplication, setSelectedChatApplication] =
+    useState(null);
 
   // =========================================================
   // REJECTION INFO POPUP
   // =========================================================
 
-  const [selectedInfoApplication, setSelectedInfoApplication] = useState(null);
+  const [selectedInfoApplication, setSelectedInfoApplication] =
+    useState(null);
 
   const [infoPopupPosition, setInfoPopupPosition] = useState(null);
 
   // =========================================================
   // HELPERS
   // =========================================================
+
   const handleLoanTypesLoaded = useCallback((options) => {
     setLoanTypes(options || []);
   }, []);
+
   // =========================================================
   // AGENT CHANGE
   // =========================================================
@@ -171,16 +193,23 @@ function PendingApplicationsTable({
       console.error("Failed to update RM:", error);
     }
   };
+
   // =============================================================
   // LOAN TYPE
   // =============================================================
 
   const getLoanTypeName = (application, loanTypes = []) => {
-    if (application.loanType && typeof application.loanType === "string") {
+    if (
+      application.loanType &&
+      typeof application.loanType === "string"
+    ) {
       return application.loanType;
     }
 
-    if (application.loan_type && typeof application.loan_type === "string") {
+    if (
+      application.loan_type &&
+      typeof application.loan_type === "string"
+    ) {
       return application.loan_type;
     }
 
@@ -190,7 +219,11 @@ function PendingApplicationsTable({
       application.loanType?.id ??
       application.loan_type?.id;
 
-    if (loanTypeId === null || loanTypeId === undefined || loanTypeId === "") {
+    if (
+      loanTypeId === null ||
+      loanTypeId === undefined ||
+      loanTypeId === ""
+    ) {
       return "Not Assigned";
     }
 
@@ -236,15 +269,24 @@ function PendingApplicationsTable({
   };
 
   const getReferralName = (application) => {
-    if (application.referral && typeof application.referral === "object") {
+    if (
+      application.referral &&
+      typeof application.referral === "object"
+    ) {
       return application.referral.name || "N/A";
     }
 
-    if (application.referredBy && typeof application.referredBy === "object") {
+    if (
+      application.referredBy &&
+      typeof application.referredBy === "object"
+    ) {
       return application.referredBy.name || "N/A";
     }
 
-    if (application.referrer && typeof application.referrer === "object") {
+    if (
+      application.referrer &&
+      typeof application.referrer === "object"
+    ) {
       return application.referrer.name || "N/A";
     }
 
@@ -283,10 +325,14 @@ function PendingApplicationsTable({
   // =========================================================
 
   const getRevertedReason = (application) =>
-    application.reverted_reason ?? application.revertedReason ?? null;
+    application.reverted_reason ??
+    application.revertedReason ??
+    null;
 
   const getRevertedDate = (application) =>
-    application.reverted_date ?? application.revertedDate ?? null;
+    application.reverted_date ??
+    application.revertedDate ??
+    null;
 
   const getRevertedByName = (application) =>
     application.reverted_by_name ??
@@ -303,7 +349,9 @@ function PendingApplicationsTable({
     null;
 
   const getRejectedDate = (application) =>
-    application.rejection_date ?? application.rejectionDate ?? null;
+    application.rejection_date ??
+    application.rejectionDate ??
+    null;
 
   const getRejectedByName = (application) =>
     application.rejected_by_name ??
@@ -337,7 +385,8 @@ function PendingApplicationsTable({
 
     if (
       status === "rejected" &&
-      (getRevertedReason(application) || getRevertedDate(application))
+      (getRevertedReason(application) ||
+        getRevertedDate(application))
     ) {
       return "Revert Rejected";
     }
@@ -376,11 +425,17 @@ function PendingApplicationsTable({
   const isRejectedApplication = (application) => {
     const status = getApplicationStatus(application);
 
-    return status === "Rejected" || status === "Revert Rejected";
+    return (
+      status === "Rejected" ||
+      status === "Revert Rejected"
+    );
   };
 
   const isRevertRejectedApplication = (application) => {
-    return getApplicationStatus(application) === "Revert Rejected";
+    return (
+      getApplicationStatus(application) ===
+      "Revert Rejected"
+    );
   };
 
   // =========================================================
@@ -395,12 +450,18 @@ function PendingApplicationsTable({
       application.loan_amount ??
       application.amount;
 
-    if (amount === null || amount === undefined || amount === "") {
+    if (
+      amount === null ||
+      amount === undefined ||
+      amount === ""
+    ) {
       return "N/A";
     }
 
     const numericAmount = Number(
-      String(amount).replace(/,/g, "").replace(/₹/g, ""),
+      String(amount)
+        .replace(/,/g, "")
+        .replace(/₹/g, ""),
     );
 
     return Number.isNaN(numericAmount)
@@ -508,16 +569,21 @@ function PendingApplicationsTable({
                 `;
     }
   };
+
   // =========================================================
   // PHONE
   // =========================================================
 
   const handlePhoneClick = (application) => {
     const applicationId =
-      application.id ?? application.loanId ?? application.loan_id;
+      application.id ??
+      application.loanId ??
+      application.loan_id;
 
     setExpandedPhoneId((currentId) =>
-      currentId === applicationId ? null : applicationId,
+      currentId === applicationId
+        ? null
+        : applicationId,
     );
   };
 
@@ -533,13 +599,17 @@ function PendingApplicationsTable({
      * closes the popup.
      */
 
-    if (selectedInfoApplication?.id === application.id) {
+    if (
+      selectedInfoApplication?.id ===
+      application.id
+    ) {
       setSelectedInfoApplication(null);
       setInfoPopupPosition(null);
       return;
     }
 
-    const rect = event.currentTarget.getBoundingClientRect();
+    const rect =
+      event.currentTarget.getBoundingClientRect();
 
     const popupWidth = 320;
     const popupHeight = 230;
@@ -557,8 +627,14 @@ function PendingApplicationsTable({
      * move it to the left.
      */
 
-    if (left + popupWidth > window.innerWidth - viewportPadding) {
-      left = rect.left - popupWidth - spacing;
+    if (
+      left + popupWidth >
+      window.innerWidth - viewportPadding
+    ) {
+      left =
+        rect.left -
+        popupWidth -
+        spacing;
     }
 
     if (left < viewportPadding) {
@@ -572,15 +648,23 @@ function PendingApplicationsTable({
 
     let top = rect.top - 15;
 
-    if (top + popupHeight > window.innerHeight - viewportPadding) {
-      top = window.innerHeight - popupHeight - viewportPadding;
+    if (
+      top + popupHeight >
+      window.innerHeight - viewportPadding
+    ) {
+      top =
+        window.innerHeight -
+        popupHeight -
+        viewportPadding;
     }
 
     if (top < viewportPadding) {
       top = viewportPadding;
     }
 
-    setSelectedInfoApplication(application);
+    setSelectedInfoApplication(
+      application,
+    );
 
     setInfoPopupPosition({
       top,
@@ -602,14 +686,28 @@ function PendingApplicationsTable({
       setInfoPopupPosition(null);
     };
 
-    window.addEventListener("scroll", closePopup, true);
+    window.addEventListener(
+      "scroll",
+      closePopup,
+      true,
+    );
 
-    window.addEventListener("resize", closePopup);
+    window.addEventListener(
+      "resize",
+      closePopup,
+    );
 
     return () => {
-      window.removeEventListener("scroll", closePopup, true);
+      window.removeEventListener(
+        "scroll",
+        closePopup,
+        true,
+      );
 
-      window.removeEventListener("resize", closePopup);
+      window.removeEventListener(
+        "resize",
+        closePopup,
+      );
     };
   }, [selectedInfoApplication]);
 
@@ -628,11 +726,15 @@ function PendingApplicationsTable({
   const handleSearchChange = (event) => {
     setSearch(event.target.value);
   };
+
   // =========================================================
   // FILTER STATUS OPTIONS
   // =========================================================
 
-  const statusOptions = statuses?.length ? statuses : STATUS_OPTIONS;
+  const statusOptions = statuses?.length
+    ? statuses
+    : STATUS_OPTIONS;
+
   // =========================================================
   // CHAT
   // =========================================================
@@ -655,9 +757,15 @@ function PendingApplicationsTable({
   // TABLE CELL
   // =========================================================
 
-  const Cell = ({ children, title, className = "" }) => (
+  const Cell = ({
+    children,
+    title,
+    className = "",
+  }) => (
     <span
-      title={title ?? String(children ?? "")}
+      title={
+        title ?? String(children ?? "")
+      }
       className={`
                 block
                 min-w-0
@@ -989,22 +1097,41 @@ function PendingApplicationsTable({
                     application.loanId ??
                     application.loan_id ??
                     index;
-                  const loanTypeName = getLoanTypeName(application, loanTypes);
-                  const phone = application.phone || "N/A";
 
-                  const phoneExpanded = expandedPhoneId === applicationId;
+                  const loanTypeName =
+                    getLoanTypeName(
+                      application,
+                      loanTypes,
+                    );
 
-                  const referralName = getReferralName(application);
+                  const phone =
+                    application.phone || "N/A";
 
-                  const amount = getAmount(application);
+                  const phoneExpanded =
+                    expandedPhoneId ===
+                    applicationId;
 
-                  const appliedDate = getAppliedDate(application);
+                  const referralName =
+                    getReferralName(application);
 
-                  const displayStatus = getApplicationStatus(application);
+                  const amount =
+                    getAmount(application);
+
+                  const appliedDate =
+                    getAppliedDate(application);
+
+                  const displayStatus =
+                    getApplicationStatus(
+                      application,
+                    );
 
                   return (
                     <tr
-                      key={application.id ?? application.loanId ?? index}
+                      key={
+                        application.id ??
+                        application.loanId ??
+                        index
+                      }
                       className="
                                                     border-b
                                                     border-base-300
@@ -1021,7 +1148,10 @@ function PendingApplicationsTable({
                                                             text-base-content/70
                                                         "
                         >
-                          {(currentPage - 1) * pageSize + index + 1}
+                          {(currentPage - 1) *
+                            pageSize +
+                            index +
+                            1}
                         </Cell>
                       </td>
 
@@ -1035,7 +1165,8 @@ function PendingApplicationsTable({
                                                             font-medium
                                                         "
                         >
-                          {application.name || "N/A"}
+                          {application.name ||
+                            "N/A"}
                         </Cell>
                       </td>
 
@@ -1057,7 +1188,11 @@ function PendingApplicationsTable({
                         >
                           <button
                             type="button"
-                            onClick={() => handlePhoneClick(application)}
+                            onClick={() =>
+                              handlePhoneClick(
+                                application,
+                              )
+                            }
                             title={
                               phoneExpanded
                                 ? "Collapse phone number"
@@ -1073,7 +1208,9 @@ function PendingApplicationsTable({
                           >
                             <span
                               className={
-                                phoneExpanded ? "break-all" : "block truncate"
+                                phoneExpanded
+                                  ? "break-all"
+                                  : "block truncate"
                               }
                             >
                               {phone}
@@ -1084,10 +1221,12 @@ function PendingApplicationsTable({
                             <a
                               href={`tel:${application.phone}`}
                               title={`Call ${
-                                application.name || application.phone
+                                application.name ||
+                                application.phone
                               }`}
                               aria-label={`Call ${
-                                application.name || application.phone
+                                application.name ||
+                                application.phone
                               }`}
                               className="
                                                                     btn
@@ -1116,7 +1255,11 @@ function PendingApplicationsTable({
                       <td className="px-3 py-4 align-middle">
                         <button
                           type="button"
-                          onClick={() => onLoanTypeChange?.(application)}
+                          onClick={() =>
+                            onLoanTypeChange?.(
+                              application,
+                            )
+                          }
                           title={loanTypeName}
                           className="
                                                             max-w-full
@@ -1156,7 +1299,10 @@ function PendingApplicationsTable({
                       {/* APPLIED DATE */}
 
                       <td className="px-3 py-4 align-middle">
-                        <Cell title={appliedDate} className="text-sm">
+                        <Cell
+                          title={appliedDate}
+                          className="text-sm"
+                        >
                           {appliedDate}
                         </Cell>
                       </td>
@@ -1164,7 +1310,10 @@ function PendingApplicationsTable({
                       {/* REFERRAL */}
 
                       <td className="px-3 py-4 align-middle">
-                        <Cell title={referralName} className="text-sm">
+                        <Cell
+                          title={referralName}
+                          className="text-sm"
+                        >
                           {referralName}
                         </Cell>
                       </td>
@@ -1173,9 +1322,16 @@ function PendingApplicationsTable({
 
                       <td className="px-3 py-4 align-middle">
                         <RmDropdown
-                          value={application.rmId ?? application.rm_id ?? ""}
+                          value={
+                            application.rmId ??
+                            application.rm_id ??
+                            ""
+                          }
                           onChange={(value) =>
-                            handleRmChange(application, value)
+                            handleRmChange(
+                              application,
+                              value,
+                            )
                           }
                         />
                       </td>
@@ -1185,10 +1341,15 @@ function PendingApplicationsTable({
                       <td className="px-3 py-4 align-middle">
                         <AgentDropdown
                           value={
-                            application.agentId ?? application.agent_id ?? ""
+                            application.agentId ??
+                            application.agent_id ??
+                            ""
                           }
                           onChange={(value) =>
-                            handleAgentChange(application, value)
+                            handleAgentChange(
+                              application,
+                              value,
+                            )
                           }
                         />
                       </td>
@@ -1212,7 +1373,11 @@ function PendingApplicationsTable({
                         >
                           <button
                             type="button"
-                            onClick={() => onStatusChange?.(application)}
+                            onClick={() =>
+                              onStatusChange?.(
+                                application,
+                              )
+                            }
                             title={displayStatus}
                             className={`
                                                                 min-w-0
@@ -1244,11 +1409,16 @@ function PendingApplicationsTable({
 
                           {/* INFO ICON */}
 
-                          {isRejectedApplication(application) && (
+                          {isRejectedApplication(
+                            application,
+                          ) && (
                             <button
                               type="button"
                               onClick={(event) =>
-                                handleInfoClick(event, application)
+                                handleInfoClick(
+                                  event,
+                                  application,
+                                )
                               }
                               title="View rejection details"
                               aria-label="View rejection details"
@@ -1288,7 +1458,11 @@ function PendingApplicationsTable({
 
                           <button
                             type="button"
-                            onClick={() => onViewApplication?.(application)}
+                            onClick={() =>
+                              onViewApplication?.(
+                                application,
+                              )
+                            }
                             title="View application"
                             className="
                                                                 btn
@@ -1311,7 +1485,11 @@ function PendingApplicationsTable({
 
                           <button
                             type="button"
-                            onClick={() => onReminder?.(application)}
+                            onClick={() =>
+                              onReminder?.(
+                                application,
+                              )
+                            }
                             title="Add reminder"
                             className="
                                                                 btn
@@ -1334,7 +1512,11 @@ function PendingApplicationsTable({
 
                           <button
                             type="button"
-                            onClick={() => handleOpenChat(application)}
+                            onClick={() =>
+                              handleOpenChat(
+                                application,
+                              )
+                            }
                             title="Open chat"
                             className="
                                                                 btn
@@ -1361,7 +1543,9 @@ function PendingApplicationsTable({
             </tbody>
           </table>
         </div>
+
         {/* PAGINATION */}
+
         {totalApplications > 0 && (
           <div
             className="
@@ -1377,13 +1561,17 @@ function PendingApplicationsTable({
                         "
           >
             {/* LEFT */}
+
             <div className="flex items-center gap-2 text-sm text-base-content/60">
               <span>Rows per page:</span>
 
               <select
                 value={pageSize}
                 onChange={(event) => {
-                  setPageSize(Number(event.target.value));
+                  setPageSize(
+                    Number(event.target.value),
+                  );
+
                   setCurrentPage(1);
                 }}
                 className="
@@ -1401,50 +1589,48 @@ function PendingApplicationsTable({
             </div>
 
             {/* MIDDLE */}
+
             <div className="text-sm text-base-content/60">
-              Showing {(currentPage - 1) * pageSize + 1}
+              Showing{" "}
+              {(currentPage - 1) *
+                pageSize +
+                1}
               {"–"}
-              {Math.min(currentPage * pageSize, totalApplications)} of{" "}
-              {totalApplications}
+              {Math.min(
+                currentPage * pageSize,
+                totalApplications,
+              )}{" "}
+              of {totalApplications}
             </div>
 
             {/* RIGHT */}
+
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
                 disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
+                onClick={() =>
+                  setCurrentPage(
+                    currentPage - 1,
+                  )
+                }
               >
                 Previous
               </button>
 
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-                (page) => (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => setCurrentPage(page)}
-                    className={`
-                                        btn
-                                        btn-sm
-                                        ${
-                                          currentPage === page
-                                            ? "btn-primary"
-                                            : "btn-ghost"
-                                        }
-                                    `}
-                  >
-                    {page}
-                  </button>
-                ),
-              )}
-
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={
+                  currentPage ===
+                  totalPages
+                }
+                onClick={() =>
+                  setCurrentPage(
+                    currentPage + 1,
+                  )
+                }
               >
                 Next
               </button>
@@ -1457,16 +1643,28 @@ function PendingApplicationsTable({
                 GLOBAL CHAT
             ================================================= */}
 
-      {selectedChatApplication && (
-        <GlobalChat
-          open={chatOpen}
-          onClose={handleCloseChat}
-          loanId={getLoanId(selectedChatApplication)}
-          agentId={getAgentId(selectedChatApplication)}
-          customerName={selectedChatApplication.name || "Customer"}
-          customerPhone={selectedChatApplication.phone || ""}
-        />
-      )}
+      <Suspense fallback={null}>
+        {selectedChatApplication && (
+          <GlobalChat
+            open={chatOpen}
+            onClose={handleCloseChat}
+            loanId={getLoanId(
+              selectedChatApplication,
+            )}
+            agentId={getAgentId(
+              selectedChatApplication,
+            )}
+            customerName={
+              selectedChatApplication.name ||
+              "Customer"
+            }
+            customerPhone={
+              selectedChatApplication.phone ||
+              ""
+            }
+          />
+        )}
+      </Suspense>
 
       {/* =================================================
                 REJECTION DETAILS POPUP
@@ -1513,8 +1711,12 @@ function PendingApplicationsTable({
                                 text-base-content
                             "
             >
-              <span className="font-semibold">Type:</span>{" "}
-              {isRevertRejectedApplication(selectedInfoApplication)
+              <span className="font-semibold">
+                Type:
+              </span>{" "}
+              {isRevertRejectedApplication(
+                selectedInfoApplication,
+              )
                 ? "Reverted"
                 : "Rejected"}
             </div>
@@ -1528,10 +1730,18 @@ function PendingApplicationsTable({
                                 text-base-content
                             "
             >
-              <span className="font-semibold">By:</span>{" "}
-              {isRevertRejectedApplication(selectedInfoApplication)
-                ? getRevertedByName(selectedInfoApplication) || "—"
-                : getRejectedByName(selectedInfoApplication) || "—"}
+              <span className="font-semibold">
+                By:
+              </span>{" "}
+              {isRevertRejectedApplication(
+                selectedInfoApplication,
+              )
+                ? getRevertedByName(
+                    selectedInfoApplication,
+                  ) || "—"
+                : getRejectedByName(
+                    selectedInfoApplication,
+                  ) || "—"}
             </div>
 
             {/* DATE */}
@@ -1543,11 +1753,19 @@ function PendingApplicationsTable({
                                 text-base-content
                             "
             >
-              <span className="font-semibold">Date:</span>{" "}
+              <span className="font-semibold">
+                Date:
+              </span>{" "}
               {formatDate(
-                isRevertRejectedApplication(selectedInfoApplication)
-                  ? getRevertedDate(selectedInfoApplication)
-                  : getRejectedDate(selectedInfoApplication),
+                isRevertRejectedApplication(
+                  selectedInfoApplication,
+                )
+                  ? getRevertedDate(
+                      selectedInfoApplication,
+                    )
+                  : getRejectedDate(
+                      selectedInfoApplication,
+                    ),
               )}
             </div>
 
@@ -1561,15 +1779,22 @@ function PendingApplicationsTable({
                                 text-base-content
                             "
             >
-              <span className="font-semibold">Remarks:</span>{" "}
+              <span className="font-semibold">
+                Remarks:
+              </span>{" "}
               <span className="break-words">
-                {isRevertRejectedApplication(selectedInfoApplication)
-                  ? getRevertedReason(selectedInfoApplication) || "—"
-                  : getRejectedReason(selectedInfoApplication) || "—"}
+                {isRevertRejectedApplication(
+                  selectedInfoApplication,
+                )
+                  ? getRevertedReason(
+                      selectedInfoApplication,
+                    ) || "—"
+                  : getRejectedReason(
+                      selectedInfoApplication,
+                    ) || "—"}
               </span>
             </div>
           </div>,
-
           document.body,
         )}
     </div>

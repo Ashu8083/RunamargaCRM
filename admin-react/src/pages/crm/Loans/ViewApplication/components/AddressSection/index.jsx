@@ -1,9 +1,18 @@
 // admin-react/src/pages/Loans/ViewApplication/components/AddressSection/index.jsx
 
-import React, { useState } from 'react'
+import React, {
+    lazy,
+    Suspense,
+    useState,
+} from 'react'
+
 import { COLORS } from '../../../../../../constants/colors'
-import AddAddressModal from '../../modals/AddAddressModal'
 import { addApplicationAddress } from './Api'
+
+const AddAddressModal = lazy(
+    () => import('../../modals/AddAddressModal')
+)
+
 function AddressSection({ application, onRefresh }) {
 
     const addresses = application?.addresses || []
@@ -128,28 +137,34 @@ function AddressSection({ application, onRefresh }) {
                 )}
 
             </div>
-            <AddAddressModal
-                isOpen={showAddAddress}
-                onClose={() => setShowAddAddress(false)}
-                onSubmit={async (addressData) => {
-                    try {
-                        const response = await addApplicationAddress(
-                            application?.unique_id,
-                            addressData
-                        )
 
-                        console.log('Address added:', response)
+            <Suspense fallback={null}>
+                {showAddAddress && (
+                    <AddAddressModal
+                        isOpen={showAddAddress}
+                        onClose={() => setShowAddAddress(false)}
+                        onSubmit={async (addressData) => {
+                            try {
+                                const response = await addApplicationAddress(
+                                    application?.unique_id,
+                                    addressData
+                                )
 
-                        setShowAddAddress(false)
+                                console.log('Address added:', response)
 
-                        if (onRefresh) {
-                            await onRefresh()
-                        }
-                    } catch (error) {
-                        console.error('Failed to add address:', error)
-                    }
-                }}
-            />
+                                setShowAddAddress(false)
+
+                                if (onRefresh) {
+                                    await onRefresh()
+                                }
+                            } catch (error) {
+                                console.error('Failed to add address:', error)
+                            }
+                        }}
+                    />
+                )}
+            </Suspense>
+
         </div>
 
     )

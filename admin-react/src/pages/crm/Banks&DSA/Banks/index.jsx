@@ -1,6 +1,8 @@
-// admin-react/src/pages/BanksAndDSA/Banks/index.jsx
+// admin-react/src/pages/crm/Banks&DSA/Banks/index.jsx
 
 import {
+    lazy,
+    Suspense,
     useEffect,
     useMemo,
     useState,
@@ -11,13 +13,18 @@ import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 
 import BanksTable from './components/BanksTable'
-import BankModal from './components/BankModal'
+
 import {
     getBanks,
     createBank,
     updateBank,
     deleteBank,
 } from './Api'
+
+
+const BankModal = lazy(
+    () => import('./components/BankModal')
+)
 
 
 function Banks() {
@@ -78,25 +85,27 @@ function Banks() {
     // =========================================================
     // MODAL STAT
     // ========================================================
+
     const fetchBanks = async () => {
-    try {
-        const data = await getBanks()
+        try {
+            const data = await getBanks()
 
-        console.log(
-            'BANK API DATA:',
-            data
-        )
+            console.log(
+                'BANK API DATA:',
+                data
+            )
 
-        setBanks(data)
+            setBanks(data)
 
-    } catch (error) {
-        console.error(
-            'Failed to fetch banks:',
-            error
-        )
+        } catch (error) {
+            console.error(
+                'Failed to fetch banks:',
+                error
+            )
+        }
     }
-}
-     useEffect(() => {
+
+    useEffect(() => {
         fetchBanks()
     }, [])
 
@@ -108,11 +117,8 @@ function Banks() {
     const filteredBanks = useMemo(() => {
 
         const searchValue =
-
             search
-
                 .trim()
-
                 .toLowerCase()
 
         return banks.filter((bank) => {
@@ -126,27 +132,17 @@ function Banks() {
             if (searchValue) {
 
                 const bankName =
-
                     String(
-
                         bank.name || ''
-
                     ).toLowerCase()
 
                 if (
-
                     !bankName.includes(
-
                         searchValue
-
                     )
-
                 ) {
-
                     return false
-
                 }
-
             }
 
             // -----------------------------------------------------
@@ -158,23 +154,15 @@ function Banks() {
             if (selectedStatus) {
 
                 const status =
-
                     bank.is_active
-
                         ? 'active'
-
                         : 'inactive'
 
                 if (
-
                     status !== selectedStatus
-
                 ) {
-
                     return false
-
                 }
-
             }
 
             return true
@@ -182,15 +170,10 @@ function Banks() {
         })
 
     }, [
-
         banks,
-
         search,
-
         selectedStatus,
-
     ])
-
 
 
     // =========================================================
@@ -209,7 +192,7 @@ function Banks() {
     // OPEN ADD BANK MODAL
     // =========================================================
 
-   const handleAddBank = () => {
+    const handleAddBank = () => {
         setSelectedBank(null)
         setShowBankModal(true)
     }
@@ -248,35 +231,32 @@ function Banks() {
 
     const handleSaveBank = async (bankData) => {
 
-    try {
+        try {
 
-        if (bankData.id) {
+            if (bankData.id) {
 
-            await updateBank(bankData)
+                await updateBank(bankData)
 
-        } else {
+            } else {
 
-            await createBank(bankData)
+                await createBank(bankData)
+
+            }
+
+            await fetchBanks()
+
+            handleCloseModal()
+
+        } catch (error) {
+
+            console.error(
+                'Failed to save bank:',
+                error
+            )
 
         }
 
-        await fetchBanks()
-
-        handleCloseModal()
-
-    } catch (error) {
-
-        console.error(
-
-            'Failed to save bank:',
-
-            error
-
-        )
-
     }
-
-}
 
 
     // =========================================================
@@ -285,26 +265,26 @@ function Banks() {
 
     const handleDeleteBank = async (bank) => {
 
-    const confirmed = window.confirm(
-        `Are you sure you want to delete ${bank.name}?`
-    )
-
-    if (!confirmed) {
-        return
-    }
-
-    try {
-        await deleteBank(bank.id)
-
-        await fetchBanks()
-
-    } catch (error) {
-        console.error(
-            'Failed to delete bank:',
-            error
+        const confirmed = window.confirm(
+            `Are you sure you want to delete ${bank.name}?`
         )
+
+        if (!confirmed) {
+            return
+        }
+
+        try {
+            await deleteBank(bank.id)
+
+            await fetchBanks()
+
+        } catch (error) {
+            console.error(
+                'Failed to delete bank:',
+                error
+            )
+        }
     }
-}
 
 
     // =========================================================
@@ -570,12 +550,16 @@ function Banks() {
                 ADD / EDIT BANK MODAL
             ===================================================== */}
 
-            <BankModal
-                open={showBankModal}
-                bank={selectedBank}
-                onClose={handleCloseModal}
-                onSubmit={handleSaveBank}
-            />
+            <Suspense fallback={null}>
+                {showBankModal && (
+                    <BankModal
+                        open={showBankModal}
+                        bank={selectedBank}
+                        onClose={handleCloseModal}
+                        onSubmit={handleSaveBank}
+                    />
+                )}
+            </Suspense>
 
         </div>
 

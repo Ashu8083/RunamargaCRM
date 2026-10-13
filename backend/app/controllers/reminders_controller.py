@@ -1,12 +1,9 @@
-# backend\app\controllers\reminders_controller.py
+# backend/app/controllers/reminders_controller.py
 
-from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from typing import Optional
 
 from app.models.employees import Employee
-from app.schemas.reminders_schema import (
-    ReminderCreateSchema,
-)
+from app.schemas.reminders_schema import ReminderCreateSchema
 from app.services.reminders_service import ReminderService
 
 
@@ -16,7 +13,7 @@ from app.services.reminders_service import ReminderService
 
 def create_reminder(
     data: ReminderCreateSchema,
-    db: Session,
+    db,
     current_employee: Employee,
 ):
     service = ReminderService(db)
@@ -28,11 +25,11 @@ def create_reminder(
 
 
 # ============================================================
-# LIST REMINDERS
+# GET REMINDERS
 # ============================================================
 
 def get_reminders(
-    db: Session,
+    db,
     current_employee: Employee,
 ):
     service = ReminderService(db)
@@ -43,28 +40,49 @@ def get_reminders(
 
 
 # ============================================================
+# GET REMINDERS MANAGEMENT
+# ============================================================
+
+def get_reminders_management(
+    db,
+    current_employee: Employee,
+    page: int = 1,
+    page_size: int = 25,
+    search: Optional[str] = None,
+    employee_id: Optional[int] = None,
+    status: Optional[str] = None,
+    context_id: Optional[int] = None,
+    team_lead_context_id: Optional[int] = None,
+):
+    service = ReminderService(db)
+
+    return service.get_reminders_management(
+        employee=current_employee,
+        page=page,
+        page_size=page_size,
+        search=search,
+        employee_id=employee_id,
+        status=status,
+        context_id=context_id,
+        team_lead_context_id=team_lead_context_id,
+    )
+
+
+# ============================================================
 # GET SINGLE REMINDER
 # ============================================================
 
 def get_reminder(
     reminder_id: int,
-    db: Session,
+    db,
     current_employee: Employee,
 ):
     service = ReminderService(db)
 
-    reminder = service.get_reminder(
+    return service.get_reminder(
         reminder_id=reminder_id,
         employee_id=current_employee.id,
     )
-
-    if not reminder:
-        raise HTTPException(
-            status_code=404,
-            detail="Reminder not found",
-        )
-
-    return reminder
 
 
 # ============================================================
@@ -73,23 +91,15 @@ def get_reminder(
 
 def complete_reminder(
     reminder_id: int,
-    db: Session,
+    db,
     current_employee: Employee,
 ):
     service = ReminderService(db)
 
-    reminder = service.complete_reminder(
+    return service.complete_reminder(
         reminder_id=reminder_id,
         employee_id=current_employee.id,
     )
-
-    if not reminder:
-        raise HTTPException(
-            status_code=404,
-            detail="Reminder not found",
-        )
-
-    return reminder
 
 
 # ============================================================
@@ -98,23 +108,15 @@ def complete_reminder(
 
 def cancel_reminder(
     reminder_id: int,
-    db: Session,
+    db,
     current_employee: Employee,
 ):
     service = ReminderService(db)
 
-    reminder = service.cancel_reminder(
+    return service.cancel_reminder(
         reminder_id=reminder_id,
         employee_id=current_employee.id,
     )
-
-    if not reminder:
-        raise HTTPException(
-            status_code=404,
-            detail="Reminder not found",
-        )
-
-    return reminder
 
 
 # ============================================================
@@ -123,25 +125,15 @@ def cancel_reminder(
 
 def delete_reminder(
     reminder_id: int,
-    db: Session,
+    db,
     current_employee: Employee,
 ):
     service = ReminderService(db)
 
-    deleted = service.delete_reminder(
+    return service.delete_reminder(
         reminder_id=reminder_id,
         employee_id=current_employee.id,
     )
-
-    if not deleted:
-        raise HTTPException(
-            status_code=404,
-            detail="Reminder not found",
-        )
-
-    return {
-        "message": "Reminder deleted successfully",
-    }
 
 
 # ============================================================
@@ -149,7 +141,7 @@ def delete_reminder(
 # ============================================================
 
 def get_notifications(
-    db: Session,
+    db,
     current_employee: Employee,
 ):
     service = ReminderService(db)

@@ -1,6 +1,6 @@
 // admin-react/src/pages/Banks&DSA/DSADirectory/index.jsx
 
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
@@ -16,7 +16,8 @@ import {
 } from './API'
 
 import DSADirectoryTable from './components/DSADirectoryTable'
-import DSAModal from './components/DSADirectoryModal'
+
+const DSAModal = lazy(() => import('./components/DSADirectoryModal'))
 
 function DSADirectory() {
     // =========================================================
@@ -331,15 +332,19 @@ function DSADirectory() {
             />
 
             {/* ADD / EDIT MODAL */}
-            <DSAModal
-                open={showDSAModal}
-                entry={selectedEntry}
-                banks={bankOptionsForModal}
-                loanTypes={loanTypeOptionsForModal}
-                existingEntries={entries}
-                onClose={handleCloseModal}
-                onSubmit={handleSaveDSA}
-            />
+            <Suspense fallback={null}>
+                {showDSAModal && (
+                    <DSAModal
+                        open={showDSAModal}
+                        entry={selectedEntry}
+                        banks={bankOptionsForModal}
+                        loanTypes={loanTypeOptionsForModal}
+                        existingEntries={entries}
+                        onClose={handleCloseModal}
+                        onSubmit={handleSaveDSA}
+                    />
+                )}
+            </Suspense>
         </div>
     )
 }

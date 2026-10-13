@@ -1,9 +1,17 @@
-// admin-react/src/pages/Loans/ViewApplication/components/CoApplicantsSection/index.jsx
+// admin-react/src/pages/crm/Loans/ViewApplication/components/CoApplicantsSection/index.jsx
 
-import React, { useState } from 'react'
+import React, {
+    lazy,
+    Suspense,
+    useState,
+} from 'react'
+
 import { COLORS } from '../../../../../../constants/colors'
-import AddCoApplicantModal from '../../modals/AddCoApplicantModal'
 import { addApplicationCoApplicant } from './Api'
+
+const AddCoApplicantModal = lazy(
+    () => import('../../modals/AddCoApplicantModal')
+)
 
 
 function CoApplicantsSection({ application, onRefresh }) {
@@ -178,34 +186,39 @@ function CoApplicantsSection({ application, onRefresh }) {
                 )}
 
             </div>
-            <AddCoApplicantModal
-                isOpen={showCoApplicantModal}
-                onClose={() =>
-                    setShowCoApplicantModal(false)
-                }
-                onSubmit={async (coApplicantData) => {
-                    try {
-                        console.log('APPLICATION:', application)
-                        console.log('UNIQUE ID:', application?.unique_id)
-                        console.log('CO-APPLICANT DATA:', coApplicantData)
 
-                        const response = await addApplicationCoApplicant(
-                            application?.unique_id,
-                            coApplicantData
-                        )
-
-                        console.log('Co-applicant added:', response)
-
-                        setShowCoApplicantModal(false)
-
-                        if (onRefresh) {
-                            await onRefresh()
+            <Suspense fallback={null}>
+                {showCoApplicantModal && (
+                    <AddCoApplicantModal
+                        isOpen={showCoApplicantModal}
+                        onClose={() =>
+                            setShowCoApplicantModal(false)
                         }
-                    } catch (error) {
-                        console.error('Failed to add co-applicant:', error)
-                    }
-                }}
-            />
+                        onSubmit={async (coApplicantData) => {
+                            try {
+                                console.log('APPLICATION:', application)
+                                console.log('UNIQUE ID:', application?.unique_id)
+                                console.log('CO-APPLICANT DATA:', coApplicantData)
+
+                                const response = await addApplicationCoApplicant(
+                                    application?.unique_id,
+                                    coApplicantData
+                                )
+
+                                console.log('Co-applicant added:', response)
+
+                                setShowCoApplicantModal(false)
+
+                                if (onRefresh) {
+                                    await onRefresh()
+                                }
+                            } catch (error) {
+                                console.error('Failed to add co-applicant:', error)
+                            }
+                        }}
+                    />
+                )}
+            </Suspense>
 
         </div>
     )

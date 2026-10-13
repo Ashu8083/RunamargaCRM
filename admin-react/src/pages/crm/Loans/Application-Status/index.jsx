@@ -1,5 +1,8 @@
-// admin-react\src\pages\crm\Loans\Application-Status\index.jsx
+// admin-react/src/pages/crm/Loans/Application-Status/index.jsx
+
 import {
+    lazy,
+    Suspense,
     useEffect,
     useMemo,
     useState,
@@ -22,18 +25,34 @@ import ApplicationsTable from "./components/ApplicationsTable";
 
 
 // =============================================================
+// LAZY-LOADED REMINDER MODAL
+// =============================================================
+
+const ReminderModal = lazy(
+    () =>
+        import(
+            "../../../../components/GlobalModels/Loans/ReminderModal"
+        )
+);
+
+
+// =============================================================
 // APPLICATION STATUS PAGE
 // =============================================================
 
 const ApplicationStatus = () => {
 
-    const activeContext = getActiveContext();
+    const activeContext =
+        getActiveContext();
 
-    const contextId = activeContext?.id;
+    const contextId =
+        activeContext?.id;
 
-    const location = useLocation();
+    const location =
+        useLocation();
 
-    const navigate = useNavigate();
+    const navigate =
+        useNavigate();
 
 
     // =========================================================
@@ -118,10 +137,6 @@ const ApplicationStatus = () => {
 
     // =========================================================
     // TABLE FILTERS
-    //
-    // The filter UI/state will live inside ApplicationsTable.
-    // This object only receives the current values from the table
-    // so that this page can perform server-side fetching.
     // =========================================================
 
     const [
@@ -129,12 +144,41 @@ const ApplicationStatus = () => {
         setTableFilters,
     ] = useState({
         search: "",
-        selectedLoanType: loanType || "",
+
+        selectedLoanType:
+            loanType || "",
+
         selectedRM: "",
+
         selectedTeamLead: "",
+
         selectedAgent: "",
-        selectedStatus: dashboardStatus || "",
+
+        selectedStatus:
+            dashboardStatus || "",
     });
+
+
+    // =========================================================
+    // SELECTED APPLICATION
+    //
+    // Used by ReminderModal.
+    // =========================================================
+
+    const [
+        selectedApplication,
+        setSelectedApplication,
+    ] = useState(null);
+
+
+    // =========================================================
+    // REMINDER MODAL
+    // =========================================================
+
+    const [
+        showReminderModal,
+        setShowReminderModal,
+    ] = useState(false);
 
 
     // =========================================================
@@ -217,8 +261,7 @@ const ApplicationStatus = () => {
 
             setTotalPages(
                 Number(
-                    response?.total_pages ||
-                    0
+                    response?.total_pages || 0
                 )
             );
 
@@ -255,9 +298,6 @@ const ApplicationStatus = () => {
 
     // =========================================================
     // TABLE FILTER CHANGE
-    //
-    // ApplicationsTable will call this whenever any filter
-    // changes.
     // =========================================================
 
     const handleTableFiltersChange = (
@@ -303,8 +343,6 @@ const ApplicationStatus = () => {
 
         // -----------------------------------------------------
         // Small debounce for search.
-        //
-        // This prevents one API request for every keystroke.
         // -----------------------------------------------------
 
         const timer = setTimeout(() => {
@@ -325,17 +363,11 @@ const ApplicationStatus = () => {
 
     }, [
         contextId,
-
         fromDate,
-
         toDate,
-
         loanType,
-
         dashboardStatus,
-
         currentPage,
-
         tableFilters,
     ]);
 
@@ -373,10 +405,6 @@ const ApplicationStatus = () => {
 
     // =========================================================
     // CLEAR FILTERS
-    //
-    // This is now delegated to ApplicationsTable.
-    // ApplicationsTable will reset its own filter state and
-    // notify this page through handleTableFiltersChange().
     // =========================================================
 
     const handleClearFilters = () => {
@@ -475,7 +503,7 @@ const ApplicationStatus = () => {
 
 
     // =========================================================
-    // STATUS / LOAN TYPE MODALS
+    // STATUS / LOAN TYPE ACTIONS
     // =========================================================
 
     const handleLoanTypeAction = (
@@ -510,9 +538,66 @@ const ApplicationStatus = () => {
         application
     ) => {
 
-        console.log(
-            "Reminder:",
+        /*
+         * Store the complete application object.
+         *
+         * ReminderModal can therefore access:
+         *
+         * application.id
+         * application.unique_id
+         * application.name
+         * application.phone
+         * application.agent
+         * application.rm
+         * etc.
+         */
+
+        setSelectedApplication(
             application
+        );
+
+        setShowReminderModal(
+            true
+        );
+
+    };
+
+
+    // =========================================================
+    // CLOSE REMINDER MODAL
+    // =========================================================
+
+    const handleCloseReminderModal = () => {
+
+        setShowReminderModal(
+            false
+        );
+
+        setSelectedApplication(
+            null
+        );
+
+    };
+
+
+    // =========================================================
+    // REMINDER SUBMIT
+    // =========================================================
+
+    const handleReminderSubmit = (
+        reminder
+    ) => {
+
+        /*
+         * ReminderModal handles the actual
+         * reminder creation.
+         *
+         * This callback runs after success.
+         */
+
+        console.log(
+            "Reminder created successfully:",
+            reminder
         );
 
     };
@@ -650,6 +735,7 @@ const ApplicationStatus = () => {
                                     ? ""
                                     : "s"
                             }`
+
                         }
 
                     </p>
@@ -836,9 +922,6 @@ const ApplicationStatus = () => {
 
                     // =================================================
                     // FILTER VALUES
-                    //
-                    // ApplicationsTable will own the actual filter
-                    // controls/state.
                     // =================================================
 
                     filters={
@@ -921,6 +1004,38 @@ const ApplicationStatus = () => {
                 />
 
             )}
+
+
+            {/* =================================================
+                REMINDER MODAL
+            ================================================= */}
+
+            <Suspense fallback={null}>
+                {showReminderModal && (
+                    <ReminderModal
+                        open={
+                            showReminderModal
+                        }
+
+                        applicationId={
+                            selectedApplication?.id ??
+                            null
+                        }
+
+                        application={
+                            selectedApplication
+                        }
+
+                        onClose={
+                            handleCloseReminderModal
+                        }
+
+                        onSubmit={
+                            handleReminderSubmit
+                        }
+                    />
+                )}
+            </Suspense>
 
         </div>
 

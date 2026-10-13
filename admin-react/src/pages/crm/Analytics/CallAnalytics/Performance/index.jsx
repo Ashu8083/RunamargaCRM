@@ -1,6 +1,8 @@
-// admin-react/src/pages/Analytics/CallAnalytics/Performance/index.jsx
+// admin-react/src/pages/crm/Analytics/CallAnalytics/Performance/index.jsx
 
 import {
+    lazy,
+    Suspense,
     useEffect,
     useMemo,
     useState,
@@ -14,9 +16,12 @@ import TeamLeadDropdown from '../../../../../components/GlobalModels/Filters/Tea
 
 import PerformanceCards from './components/PerformanceCards'
 import AgentPerformanceTable from './components/AgentPerformanceTable'
-import AgentPerformanceModal from './components/AgentPerformanceModal'
 
 import performanceAPI from './API'
+
+const AgentPerformanceModal = lazy(
+    () => import('./components/AgentPerformanceModal')
+)
 
 
 // =============================================================
@@ -991,17 +996,21 @@ function Performance() {
                 AGENT PERFORMANCE MODAL
             ================================================= */}
 
-            <AgentPerformanceModal
-                open={
-                    showModal
-                }
-                agent={
-                    selectedAgent
-                }
-                onClose={
-                    handleCloseModal
-                }
-            />
+            <Suspense fallback={null}>
+                {showModal && (
+                    <AgentPerformanceModal
+                        open={
+                            showModal
+                        }
+                        agent={
+                            selectedAgent
+                        }
+                        onClose={
+                            handleCloseModal
+                        }
+                    />
+                )}
+            </Suspense>
 
         </div>
 

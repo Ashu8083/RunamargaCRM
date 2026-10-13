@@ -1,7 +1,17 @@
-import React, { useState } from 'react'
+// admin-react/src/pages/crm/Loans/ViewApplication/components/ReferenceSection/index.jsx
+
+import React, {
+    lazy,
+    Suspense,
+    useState,
+} from 'react'
+
 import { COLORS } from '../../../../../../constants/colors'
-import AddAddressReference from '../../modals/AddReferenceModal'
 import { addApplicationReference } from './Api'
+
+const AddAddressReference = lazy(
+    () => import('../../modals/AddReferenceModal')
+)
 
 function ReferenceSection({ application, onRefresh }) {
 
@@ -166,31 +176,37 @@ function ReferenceSection({ application, onRefresh }) {
                 )}
 
             </div>
-            <AddAddressReference
-                isOpen={showAddReference}
-                onClose={() => setShowAddReference(false)}
-                onSubmit={async (referenceData) => {
-                    try {
-                        const response = await addApplicationReference(
-                            application?.unique_id,
-                            referenceData
-                        )
 
-                        console.log('Reference added:', response)
+            <Suspense fallback={null}>
+                {showAddReference && (
+                    <AddAddressReference
+                        isOpen={showAddReference}
+                        onClose={() => setShowAddReference(false)}
+                        onSubmit={async (referenceData) => {
+                            try {
+                                const response = await addApplicationReference(
+                                    application?.unique_id,
+                                    referenceData
+                                )
 
-                        setShowAddReference(false)
+                                console.log('Reference added:', response)
 
-                        if (onRefresh) {
-                            await onRefresh()
-                        }
-                    } catch (error) {
-                        console.error(
-                            'Failed to add reference:',
-                            error
-                        )
-                    }
-                }}
-            />
+                                setShowAddReference(false)
+
+                                if (onRefresh) {
+                                    await onRefresh()
+                                }
+                            } catch (error) {
+                                console.error(
+                                    'Failed to add reference:',
+                                    error
+                                )
+                            }
+                        }}
+                    />
+                )}
+            </Suspense>
+
         </div>
     )
 }

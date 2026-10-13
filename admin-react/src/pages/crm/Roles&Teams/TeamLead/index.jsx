@@ -1,12 +1,15 @@
-// admin-react/src/pages/Role-management/TeamLead/index.jsx
+// admin-react/src/pages/crm/Roles&Teams/TeamLead/index.jsx
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import TeamLeadTable from "./components/TeamLeadTable";
-import TeamLeadModal from "./components/TeamLeadModal";
-import AssignedAgentsModal from "./components/AssignedAgentsModal";
 
-import PermissionsModal from "../../../../components/GlobalModels/PermissionsModal";
 import FeedbackModal from "../../../../components/GlobalModels/FeedbackModal";
 
 import {
@@ -17,6 +20,19 @@ import {
   updateTeamLeadStatus,
   getEmployees,
 } from "./API";
+
+
+const TeamLeadModal = lazy(
+  () => import("./components/TeamLeadModal")
+);
+
+const AssignedAgentsModal = lazy(
+  () => import("./components/AssignedAgentsModal")
+);
+
+const PermissionsModal = lazy(
+  () => import("../../../../components/GlobalModels/PermissionsModal")
+);
 
 
 function TeamLead() {
@@ -993,52 +1009,62 @@ function TeamLead() {
       />
 
 
-      <TeamLeadModal
-        open={showModal}
-        teamLead={selectedTeamLead}
-        employees={employees}
+      <Suspense fallback={null}>
 
-        onClose={
-          handleCloseModal
-        }
+        {showModal && (
+          <TeamLeadModal
+            open={showModal}
+            teamLead={selectedTeamLead}
+            employees={employees}
 
-        onSubmit={
-          handleSubmit
-        }
-      />
+            onClose={
+              handleCloseModal
+            }
 
-
-      <AssignedAgentsModal
-        open={showAgentsModal}
-        teamLead={selectedTeamLead}
-
-        onClose={
-          handleCloseAgents
-        }
-      />
+            onSubmit={
+              handleSubmit
+            }
+          />
+        )}
 
 
-      <PermissionsModal
-        open={
-          showPermissionsModal
-        }
+        {showAgentsModal && (
+          <AssignedAgentsModal
+            open={showAgentsModal}
+            teamLead={selectedTeamLead}
 
-        admin={
-          selectedTeamLead
-        }
+            onClose={
+              handleCloseAgents
+            }
+          />
+        )}
 
-        employeeId={
-          selectedTeamLead?.employee_id
-        }
 
-        contextId={
-          selectedTeamLead?.context_id
-        }
+        {showPermissionsModal && (
+          <PermissionsModal
+            open={
+              showPermissionsModal
+            }
 
-        onClose={
-          handleClosePermissions
-        }
-      />
+            admin={
+              selectedTeamLead
+            }
+
+            employeeId={
+              selectedTeamLead?.employee_id
+            }
+
+            contextId={
+              selectedTeamLead?.context_id
+            }
+
+            onClose={
+              handleClosePermissions
+            }
+          />
+        )}
+
+      </Suspense>
 
 
       <FeedbackModal

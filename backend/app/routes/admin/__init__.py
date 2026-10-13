@@ -254,12 +254,16 @@ router.include_router(agent_analytics_trends)
 # ============================================================================
 # Dashboard
 # ============================================================================
-
 router.include_router(application_status_router)
 router.include_router(loan_type_distribution_router)
 router.include_router(monthly_trend_router)
 router.include_router(application_funnel_router)
 router.include_router(application_status_applications_router)
+
+# ============================================================================
+# Profile
+# ============================================================================
+router.include_router(profile_router)
 
 # ============================================================================
 # Application Filter

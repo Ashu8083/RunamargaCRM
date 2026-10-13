@@ -1,14 +1,16 @@
 // admin-react/src/pages/crm/Loans/CombinedApplications/index.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+    lazy,
+    Suspense,
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 import { useNavigate } from 'react-router-dom'
+
 import { getActiveContext } from '../../../../app/auth'
-
-import ApplicationsTable from './components/ApplicationsTable'
-
-import LoanTypeModal from '../../../../components/GlobalModels/Loans/LoanTypeModal'
-import StatusModal from '../../../../components/GlobalModels/Loans/StatusModal'
-import ReminderModal from '../../../../components/GlobalModels/Loans/ReminderModal'
 
 import {
     getApplications,
@@ -16,7 +18,342 @@ import {
     updateApplicationStatus,
 } from './Api'
 
+import ApplicationsTable from './components/ApplicationsTable'
+
 import { useToast } from '../../../../components/Toast/ToastProvider'
+
+const LoanTypeModal = lazy(() =>
+    import(
+        '../../../../components/GlobalModels/Loans/LoanTypeModal'
+    )
+)
+
+const StatusModal = lazy(() =>
+    import(
+        '../../../../components/GlobalModels/Loans/StatusModal'
+    )
+)
+
+const ReminderModal = lazy(() =>
+    import(
+        '../../../../components/GlobalModels/Loans/ReminderModal'
+    )
+)
+
+// =============================================================
+// CONSTANTS
+// =============================================================
+
+const STATUS_OPTIONS = [
+    'Revert Rejected',
+    'Rejected',
+    'In Process',
+    'Docs Pending',
+    'Sanctioned',
+    'Disbursed',
+]
+
+// =============================================================
+// HELPERS
+// =============================================================
+
+const normalizeStatus = (status) => {
+    const value = String(status || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[-_]/g, ' ')
+
+    if (
+        value === 'revert rejected' ||
+        value === 'reverted rejected' ||
+        value === 'revert reject'
+    ) {
+        return 'Revert Rejected'
+    }
+
+    if (
+        value === 'rejected' ||
+        value === 'reject'
+    ) {
+        return 'Rejected'
+    }
+
+    if (
+        value === 'inprocess' ||
+        value === 'in process' ||
+        value === 'in progress' ||
+        value === 'processing'
+    ) {
+        return 'In Process'
+    }
+
+    if (
+        value === 'docspending' ||
+        value === 'docs pending' ||
+        value === 'documents pending' ||
+        value === 'document pending'
+    ) {
+        return 'Docs Pending'
+    }
+
+    if (
+        value === 'sanctioned' ||
+        value === 'sanction'
+    ) {
+        return 'Sanctioned'
+    }
+
+    if (
+        value === 'disbursed' ||
+        value === 'disbursement'
+    ) {
+        return 'Disbursed'
+    }
+
+    return String(status || '')
+}
+
+// =============================================================
+// APPLICATION MAPPER
+// =============================================================
+
+const mapApplication = (application) => ({
+    id: application.id,
+
+    loanId:
+        application.unique_id ??
+        application.uniqueId ??
+        application.loanId ??
+        application.loan_id ??
+        application.id,
+
+    unique_id:
+        application.unique_id ??
+        application.uniqueId ??
+        null,
+
+    name: application.name ?? '',
+    phone: application.phone ?? '',
+    email: application.email ?? '',
+
+    gender: application.gender,
+
+    alternatePhone:
+        application.alternate_phone ??
+        application.alternatePhone,
+
+    alternateEmail:
+        application.alternate_email ??
+        application.alternateEmail,
+
+    maritalStatus:
+        application.marital_status ??
+        application.maritalStatus,
+
+    dob: application.dob,
+
+    loanTypeId:
+        application.loan_type_id ??
+        application.loanTypeId,
+
+    loan_type_id:
+        application.loan_type_id ??
+        application.loanTypeId,
+
+    amount:
+        application.loan_amt ??
+        application.loanAmount ??
+        application.amount,
+
+    loan_amt: application.loan_amt,
+
+    loanTenure:
+        application.loan_tenure ??
+        application.loanTenure,
+
+    loanPurpose:
+        application.loan_purpose ??
+        application.loanPurpose,
+
+    creditScore:
+        application.credit_score ??
+        application.creditScore,
+
+    referral:
+        application.referral ?? '',
+
+    appliedById:
+        application.applied_by_id ??
+        application.appliedById,
+
+    appliedBy:
+        application.applied_by ??
+        application.appliedBy,
+
+    agentId:
+        application.agent_id ??
+        application.agentId ??
+        application.agent_context_id ??
+        application.processingAgentId ??
+        application.processing_agent_id,
+
+    agent_id:
+        application.agent_id ??
+        application.agentId ??
+        application.agent_context_id,
+
+    agent_context_id:
+        application.agent_context_id ??
+        application.agent_id ??
+        application.agentId,
+
+    agent:
+        application.agent ?? null,
+
+    agentName:
+        application.agent_name ??
+        application.agentName ??
+        application.agent?.name ??
+        application.processingAgent?.name ??
+        '',
+
+    agent_name:
+        application.agent_name ??
+        application.agentName ??
+        application.agent?.name ??
+        '',
+
+    rmId:
+        application.rm_id ??
+        application.rmId,
+
+    rm_id:
+        application.rm_id ??
+        application.rmId,
+
+    rm:
+        application.rm ?? null,
+
+    rmName:
+        application.rm_name ??
+        application.rmName ??
+        application.rm?.name ??
+        '',
+
+    rm_name:
+        application.rm_name ??
+        application.rmName ??
+        application.rm?.name ??
+        '',
+
+    teamLeadId:
+        application.team_lead_id ??
+        application.teamLeadId,
+
+    team_lead_id:
+        application.team_lead_id ??
+        application.teamLeadId,
+
+    teamLeadName:
+        application.team_lead_name ??
+        application.teamLeadName,
+
+    team_lead_name:
+        application.team_lead_name ??
+        application.teamLeadName,
+
+    loanType:
+        application.loan_type ??
+        application.loanType,
+
+    status:
+        application.status ??
+        '',
+
+    appliedDate:
+        application.applied_date ??
+        application.appliedDate ??
+        '',
+
+    sanctionDate:
+        application.sanction_date ??
+        application.sanctionDate,
+
+    rejectionDate:
+        application.rejection_date ??
+        application.rejectionDate,
+
+    loggedinDate:
+        application.loggedin_date ??
+        application.loggedinDate,
+
+    docsPendingDate:
+        application.docspending_date ??
+        application.docsPendingDate,
+
+    revertedStatus:
+        application.reverted_status ??
+        application.revertedStatus,
+
+    revertedReason:
+        application.reverted_reason ??
+        application.revertedReason ??
+        '',
+
+    revertedDate:
+        application.reverted_date ??
+        application.revertedDate ??
+        null,
+
+    revertedByName:
+        application.reverted_by_name ??
+        application.revertedByName ??
+        '',
+
+    revertedByRole:
+        application.reverted_by_role ??
+        application.revertedByRole ??
+        '',
+
+    rejectionReason:
+        application.rejected_remarks ??
+        application.rejection_reason ??
+        application.rejectionReason ??
+        '',
+
+    rejectedRemarks:
+        application.rejected_remarks ??
+        application.rejectedRemarks ??
+        '',
+
+    stateId:
+        application.state_id ??
+        application.stateId,
+
+    cityId:
+        application.city_id ??
+        application.cityId,
+
+    languageId:
+        application.language_id ??
+        application.languageId,
+
+    ivrId:
+        application.ivr_id ??
+        application.ivrId,
+
+    createdAt:
+        application.created_at ??
+        application.createdAt,
+
+    updatedAt:
+        application.updated_at ??
+        application.updatedAt,
+})
+
+// =============================================================
+// COMPONENT
+// =============================================================
 
 function Applications() {
     const navigate = useNavigate()
@@ -27,19 +364,6 @@ function Applications() {
     } = useToast()
 
     // =========================================================
-    // CONSTANTS
-    // =========================================================
-
-    const STATUS_OPTIONS = [
-        'Revert Rejected',
-        'Rejected',
-        'In Process',
-        'Docs Pending',
-        'Sanctioned',
-        'Disbursed',
-    ]
-
-    // =========================================================
     // APPLICATION DATA
     // =========================================================
 
@@ -48,8 +372,11 @@ function Applications() {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
-    const [totalApplications, setTotalApplications] = useState(0)
-    const [totalPages, setTotalPages] = useState(1)
+    const [totalApplications, setTotalApplications] =
+        useState(0)
+
+    const [totalPages, setTotalPages] =
+        useState(1)
 
     // =========================================================
     // FILTER STATE
@@ -93,372 +420,117 @@ function Applications() {
         useState(false)
 
     // =========================================================
-    // STATUS NORMALIZER
-    // =========================================================
-
-    const normalizeStatus = (status) => {
-        const value = String(status || '')
-            .trim()
-            .toLowerCase()
-            .replace(/[_-]/g, ' ')
-
-        if (
-            value === 'revert rejected' ||
-            value === 'reverted rejected' ||
-            value === 'revert reject'
-        ) {
-            return 'Revert Rejected'
-        }
-
-        if (
-            value === 'rejected' ||
-            value === 'reject'
-        ) {
-            return 'Rejected'
-        }
-
-        if (
-            value === 'inprocess' ||
-            value === 'in process' ||
-            value === 'in progress' ||
-            value === 'processing'
-        ) {
-            return 'In Process'
-        }
-
-        if (
-            value === 'docspending' ||
-            value === 'docs pending' ||
-            value === 'documents pending' ||
-            value === 'document pending'
-        ) {
-            return 'Docs Pending'
-        }
-
-        if (
-            value === 'sanctioned' ||
-            value === 'sanction'
-        ) {
-            return 'Sanctioned'
-        }
-
-        if (
-            value === 'disbursed' ||
-            value === 'disbursement'
-        ) {
-            return 'Disbursed'
-        }
-
-        return String(status || '')
-    }
-
-    // =========================================================
     // FETCH APPLICATIONS
     // =========================================================
 
-    const fetchApplications = async (
-        page = currentPage,
-        size = pageSize,
-    ) => {
-        const activeContext = getActiveContext()
+    const fetchApplications = useCallback(
+        async (page = 1, size = 10) => {
+            const activeContext = getActiveContext()
 
-        if (!activeContext?.id) {
-            setApplications([])
-            setTotalApplications(0)
-            setTotalPages(1)
-            return
-        }
+            if (!activeContext?.id) {
+                setApplications([])
+                setTotalApplications(0)
+                setTotalPages(1)
+                return
+            }
 
-        try {
-            setLoading(true)
+            try {
+                setLoading(true)
 
-            const response = await getApplications(
-                activeContext.id,
-                page,
-                size,
-            )
+                const response =
+                    await getApplications(
+                        activeContext.id,
+                        page,
+                        size,
+                    )
 
-            const data = Array.isArray(response?.data)
-                ? response.data
-                : []
+                const data = Array.isArray(
+                    response?.data
+                )
+                    ? response.data
+                    : []
 
-            const mappedApplications = data.map((application) => ({
-                id: application.id,
+                const mappedApplications =
+                    data.map(mapApplication)
 
-                loanId:
-                    application.unique_id ??
-                    application.uniqueId ??
-                    application.loanId ??
-                    application.loan_id ??
-                    application.id,
+                setApplications(
+                    mappedApplications
+                )
 
-                unique_id:
-                    application.unique_id ??
-                    application.uniqueId ??
-                    null,
+                setTotalApplications(
+                    Number(
+                        response?.count ?? 0
+                    )
+                )
 
-                name: application.name ?? '',
-                phone: application.phone ?? '',
-                email: application.email ?? '',
+                setTotalPages(
+                    Math.max(
+                        1,
+                        Number(
+                            response?.total_pages ??
+                            1
+                        )
+                    )
+                )
+            } catch (error) {
+                console.error(
+                    'Failed to fetch applications:',
+                    error
+                )
 
-                gender: application.gender,
-
-                alternatePhone:
-                    application.alternate_phone ??
-                    application.alternatePhone,
-
-                alternateEmail:
-                    application.alternate_email ??
-                    application.alternateEmail,
-
-                maritalStatus:
-                    application.marital_status ??
-                    application.maritalStatus,
-
-                dob: application.dob,
-
-                loanTypeId:
-                    application.loan_type_id ??
-                    application.loanTypeId,
-
-                loan_type_id:
-                    application.loan_type_id ??
-                    application.loanTypeId,
-
-                amount:
-                    application.loan_amt ??
-                    application.loanAmount ??
-                    application.amount,
-
-                loan_amt: application.loan_amt,
-
-                loanTenure:
-                    application.loan_tenure ??
-                    application.loanTenure,
-
-                loanPurpose:
-                    application.loan_purpose ??
-                    application.loanPurpose,
-
-                creditScore:
-                    application.credit_score ??
-                    application.creditScore,
-
-                referral: application.referral ?? '',
-
-                appliedById:
-                    application.applied_by_id ??
-                    application.appliedById,
-
-                appliedBy:
-                    application.applied_by ??
-                    application.appliedBy,
-
-                agentId:
-                    application.agent_id ??
-                    application.agentId ??
-                    application.agent_context_id ??
-                    application.processingAgentId ??
-                    application.processing_agent_id,
-
-                agent_id:
-                    application.agent_id ??
-                    application.agentId ??
-                    application.agent_context_id,
-
-                agent_context_id:
-                    application.agent_context_id ??
-                    application.agent_id ??
-                    application.agentId,
-
-                agent:
-                    application.agent ?? null,
-
-                agentName:
-                    application.agent_name ??
-                    application.agentName ??
-                    application.agent?.name ??
-                    application.processingAgent?.name ??
-                    '',
-
-                agent_name:
-                    application.agent_name ??
-                    application.agentName ??
-                    application.agent?.name ??
-                    '',
-
-                rmId:
-                    application.rm_id ??
-                    application.rmId,
-
-                rm_id:
-                    application.rm_id ??
-                    application.rmId,
-
-                rm:
-                    application.rm ?? null,
-
-                rmName:
-                    application.rm_name ??
-                    application.rmName ??
-                    application.rm?.name ??
-                    '',
-
-                rm_name:
-                    application.rm_name ??
-                    application.rmName ??
-                    application.rm?.name ??
-                    '',
-
-                teamLeadId:
-                    application.team_lead_id ??
-                    application.teamLeadId,
-
-                team_lead_id:
-                    application.team_lead_id ??
-                    application.teamLeadId,
-
-                teamLeadName:
-                    application.team_lead_name ??
-                    application.teamLeadName,
-
-                team_lead_name:
-                    application.team_lead_name ??
-                    application.teamLeadName,
-
-                loanType:
-                    application.loan_type ??
-                    application.loanType,
-
-                status:
-                    application.status ??
-                    '',
-
-                appliedDate:
-                    application.applied_date ??
-                    application.appliedDate ??
-                    '',
-
-                sanctionDate:
-                    application.sanction_date ??
-                    application.sanctionDate,
-
-                rejectionDate:
-                    application.rejection_date ??
-                    application.rejectionDate,
-
-                loggedinDate:
-                    application.loggedin_date ??
-                    application.loggedinDate,
-
-                docsPendingDate:
-                    application.docspending_date ??
-                    application.docsPendingDate,
-
-                revertedStatus:
-                    application.reverted_status ??
-                    application.revertedStatus,
-
-                revertedReason:
-                    application.reverted_reason ??
-                    application.revertedReason ??
-                    '',
-
-                revertedDate:
-                    application.reverted_date ??
-                    application.revertedDate ??
-                    null,
-
-                revertedByName:
-                    application.reverted_by_name ??
-                    application.revertedByName ??
-                    '',
-
-                revertedByRole:
-                    application.reverted_by_role ??
-                    application.revertedByRole ??
-                    '',
-
-                rejectionReason:
-                    application.rejected_remarks ??
-                    application.rejection_reason ??
-                    application.rejectionReason ??
-                    '',
-
-                rejectedRemarks:
-                    application.rejected_remarks ??
-                    application.rejectedRemarks ??
-                    '',
-
-                stateId:
-                    application.state_id ??
-                    application.stateId,
-
-                cityId:
-                    application.city_id ??
-                    application.cityId,
-
-                languageId:
-                    application.language_id ??
-                    application.languageId,
-
-                ivrId:
-                    application.ivr_id ??
-                    application.ivrId,
-
-                createdAt:
-                    application.created_at ??
-                    application.createdAt,
-
-                updatedAt:
-                    application.updated_at ??
-                    application.updatedAt,
-            }))
-
-            setApplications(mappedApplications)
-
-            setTotalApplications(
-                Number(response?.count ?? 0)
-            )
-
-            setTotalPages(
-                Number(response?.total_pages ?? 1)
-            )
-        } catch (error) {
-            console.error(
-                'Failed to fetch applications:',
-                error
-            )
-
-            setApplications([])
-            setTotalApplications(0)
-            setTotalPages(1)
-        } finally {
-            setLoading(false)
-        }
-    }
+                setApplications([])
+                setTotalApplications(0)
+                setTotalPages(1)
+            } finally {
+                setLoading(false)
+            }
+        },
+        []
+    )
 
     // =========================================================
     // PAGE CONTROLS
     // =========================================================
 
-    const handlePageChange = (page) => {
-        const nextPage = Math.max(
-            1,
-            Math.min(Number(page), totalPages || 1),
-        )
+    const handlePageChange = useCallback(
+        (page) => {
+            const nextPage = Math.max(
+                1,
+                Math.min(
+                    Number(page) || 1,
+                    totalPages || 1
+                )
+            )
 
-        setCurrentPage(nextPage)
-        fetchApplications(nextPage, pageSize)
-    }
+            setCurrentPage(nextPage)
 
-    const handlePageSizeChange = (size) => {
-        const nextSize = Number(size) || 10
+            fetchApplications(
+                nextPage,
+                pageSize
+            )
+        },
+        [
+            fetchApplications,
+            pageSize,
+            totalPages,
+        ]
+    )
 
-        setPageSize(nextSize)
-        setCurrentPage(1)
-        fetchApplications(1, nextSize)
-    }
+    const handlePageSizeChange = useCallback(
+        (size) => {
+            const nextSize =
+                Number(size) || 10
+
+            setPageSize(nextSize)
+            setCurrentPage(1)
+
+            fetchApplications(
+                1,
+                nextSize
+            )
+        },
+        [fetchApplications]
+    )
 
     // =========================================================
     // INITIAL LOAD + CONTEXT CHANGE
@@ -476,7 +548,10 @@ function Applications() {
             setSelectedStatus('')
             setCurrentPage(1)
 
-            fetchApplications(1, pageSize)
+            fetchApplications(
+                1,
+                pageSize
+            )
         }
 
         window.addEventListener(
@@ -490,159 +565,186 @@ function Applications() {
                 handleContextChange
             )
         }
-    }, [])
+    }, [
+        fetchApplications,
+        pageSize,
+    ])
 
     // =========================================================
     // FILTER APPLICATIONS
     // =========================================================
 
     const filteredApplications = useMemo(() => {
-        const searchValue = search.trim().toLowerCase()
+        const searchValue =
+            search.trim().toLowerCase()
 
-        return applications.filter((application) => {
-            // SEARCH
+        return applications.filter(
+            (application) => {
+                // SEARCH
 
-            if (searchValue) {
-                const searchableFields = [
-                    application.name,
-                    application.phone,
-                    application.email,
-                    application.loanType,
-                    application.status,
-                    application.loanId,
-                    application.id,
-                    application.appliedBy,
-                    application.applied_by,
-                    application.referral,
-                    application.referralName,
-                    application.referral_name,
-                    application.referredBy,
-                    application.referred_by,
-                    application.rmName,
-                    application.rm_name,
-                    application.rm?.name,
-                    application.processingAgent,
-                    application.processing_agent,
-                    application.agentName,
-                    application.agent_name,
-                    application.agent?.name,
-                    application.teamLeadName,
-                    application.team_lead_name,
-                    application.teamLead?.name,
-                    application.team_lead?.name,
-                ]
+                if (searchValue) {
+                    const searchableFields = [
+                        application.name,
+                        application.phone,
+                        application.email,
+                        application.loanType,
+                        application.status,
+                        application.loanId,
+                        application.id,
+                        application.appliedBy,
+                        application.applied_by,
+                        application.referral,
+                        application.referralName,
+                        application.referral_name,
+                        application.referredBy,
+                        application.referred_by,
+                        application.rmName,
+                        application.rm_name,
+                        application.rm?.name,
+                        application.processingAgent,
+                        application.processing_agent,
+                        application.agentName,
+                        application.agent_name,
+                        application.agent?.name,
+                        application.teamLeadName,
+                        application.team_lead_name,
+                        application.teamLead?.name,
+                        application.team_lead?.name,
+                    ]
 
-                const matchesSearch = searchableFields.some(
-                    (field) =>
-                        field !== null &&
-                        field !== undefined &&
-                        String(field)
-                            .toLowerCase()
-                            .includes(searchValue)
-                )
+                    const matchesSearch =
+                        searchableFields.some(
+                            (field) =>
+                                field !== null &&
+                                field !== undefined &&
+                                String(field)
+                                    .toLowerCase()
+                                    .includes(
+                                        searchValue
+                                    )
+                        )
 
-                if (!matchesSearch) {
-                    return false
+                    if (!matchesSearch) {
+                        return false
+                    }
                 }
-            }
 
-            // LOAN TYPE
+                // LOAN TYPE
 
-            if (selectedLoanType) {
-                const applicationLoanType =
-                    application.loanTypeId ??
-                    application.loan_type_id ??
-                    application.loanType?.id ??
-                    application.loanType
+                if (selectedLoanType) {
+                    const applicationLoanType =
+                        application.loanTypeId ??
+                        application.loan_type_id ??
+                        application.loanType?.id ??
+                        application.loanType
 
-                if (
-                    String(applicationLoanType) !==
-                    String(selectedLoanType)
-                ) {
-                    return false
+                    if (
+                        String(
+                            applicationLoanType
+                        ) !==
+                        String(
+                            selectedLoanType
+                        )
+                    ) {
+                        return false
+                    }
                 }
-            }
 
-            // RM
+                // RM
 
-            if (selectedRM) {
-                const applicationRM =
-                    application.rmId ??
-                    application.rm_id ??
-                    application.rm?.id ??
-                    application.rmName ??
-                    application.rm_name ??
-                    application.rm
+                if (selectedRM) {
+                    const applicationRM =
+                        application.rmId ??
+                        application.rm_id ??
+                        application.rm?.id ??
+                        application.rmName ??
+                        application.rm_name ??
+                        application.rm
 
-                if (
-                    String(applicationRM) !==
-                    String(selectedRM)
-                ) {
-                    return false
+                    if (
+                        String(
+                            applicationRM
+                        ) !==
+                        String(selectedRM)
+                    ) {
+                        return false
+                    }
                 }
-            }
 
-            // TEAM LEAD
+                // TEAM LEAD
 
-            if (selectedTeamLead) {
-                const applicationTeamLead =
-                    application.teamLeadId ??
-                    application.team_lead_id ??
-                    application.teamLead?.id ??
-                    application.teamLeadName ??
-                    application.team_lead_name ??
-                    application.team_lead
+                if (selectedTeamLead) {
+                    const applicationTeamLead =
+                        application.teamLeadId ??
+                        application.team_lead_id ??
+                        application.teamLead?.id ??
+                        application.teamLeadName ??
+                        application.team_lead_name ??
+                        application.team_lead
 
-                if (
-                    String(applicationTeamLead) !==
-                    String(selectedTeamLead)
-                ) {
-                    return false
+                    if (
+                        String(
+                            applicationTeamLead
+                        ) !==
+                        String(
+                            selectedTeamLead
+                        )
+                    ) {
+                        return false
+                    }
                 }
-            }
 
-            // AGENT
+                // AGENT
 
-            if (selectedAgent) {
-                const applicationAgent =
-                    application.agentId ??
-                    application.agent_id ??
-                    application.processingAgentId ??
-                    application.processing_agent_id ??
-                    application.agent?.id ??
-                    application.processingAgent?.id ??
-                    application.agentName ??
-                    application.agent_name ??
-                    application.processingAgent ??
-                    application.processing_agent
+                if (selectedAgent) {
+                    const applicationAgent =
+                        application.agentId ??
+                        application.agent_id ??
+                        application.processingAgentId ??
+                        application.processing_agent_id ??
+                        application.agent?.id ??
+                        application.processingAgent?.id ??
+                        application.agentName ??
+                        application.agent_name ??
+                        application.processingAgent ??
+                        application.processing_agent
 
-                if (
-                    String(applicationAgent) !==
-                    String(selectedAgent)
-                ) {
-                    return false
+                    if (
+                        String(
+                            applicationAgent
+                        ) !==
+                        String(selectedAgent)
+                    ) {
+                        return false
+                    }
                 }
-            }
 
-            // STATUS
+                // STATUS
 
-            if (selectedStatus) {
-                const normalizedApplicationStatus =
-                    normalizeStatus(application.status)
+                if (selectedStatus) {
+                    const normalizedApplicationStatus =
+                        normalizeStatus(
+                            application.status
+                        )
 
-                const applicationStatus =
-                    normalizedApplicationStatus === 'Rejected' &&
-                    application.revertedReason
-                        ? 'Revert Rejected'
-                        : normalizedApplicationStatus
+                    const applicationStatus =
+                        normalizedApplicationStatus ===
+                            'Rejected' &&
+                        application.revertedReason
+                            ? 'Revert Rejected'
+                            : normalizedApplicationStatus
 
-                if (applicationStatus !== selectedStatus) {
-                    return false
+                    if (
+                        applicationStatus !==
+                        selectedStatus
+                    ) {
+                        return false
+                    }
                 }
-            }
 
-            return true
-        })
+                return true
+            }
+        )
     }, [
         applications,
         search,
@@ -657,10 +759,8 @@ function Applications() {
     // DISPLAY DATA
     // =========================================================
 
-    // The API is paginated. Local filtering applies to the
-    // currently loaded server page only.
-
-    const displayApplications = filteredApplications
+    const displayApplications =
+        filteredApplications
 
     const hasLocalFilters =
         Boolean(search.trim()) ||
@@ -684,301 +784,399 @@ function Applications() {
     // CLEAR FILTERS
     // =========================================================
 
-    const handleClearFilters = () => {
-        setSearch('')
-        setSelectedLoanType('')
-        setSelectedRM('')
-        setSelectedTeamLead('')
-        setSelectedAgent('')
-        setSelectedStatus('')
-    }
+    const handleClearFilters = useCallback(
+        () => {
+            setSearch('')
+            setSelectedLoanType('')
+            setSelectedRM('')
+            setSelectedTeamLead('')
+            setSelectedAgent('')
+            setSelectedStatus('')
+        },
+        []
+    )
 
     // =========================================================
     // LOAN TYPE MODAL
     // =========================================================
 
-    const handleLoanTypeChange = (application) => {
-        setSelectedApplication(application)
-        setShowLoanTypeModal(true)
-    }
-
-    const handleCloseLoanTypeModal = () => {
-        setShowLoanTypeModal(false)
-        setSelectedApplication(null)
-    }
-
-    const handleLoanTypeSubmit = async (data) => {
-        try {
-            const response = await updateApplicationLoanType(
-                data.applicationId,
-                data.loanTypeId
+    const handleLoanTypeChange = useCallback(
+        (application) => {
+            setSelectedApplication(
+                application
             )
+            setShowLoanTypeModal(true)
+        },
+        []
+    )
 
-            const updatedApplication = response?.data
+    const handleCloseLoanTypeModal =
+        useCallback(() => {
+            setShowLoanTypeModal(false)
+            setSelectedApplication(null)
+        }, [])
 
-            setApplications((previous) =>
-                previous.map((application) =>
-                    application.id === data.applicationId
-                        ? {
-                            ...application,
-                            loanTypeId:
-                                updatedApplication?.loan_type_id ??
-                                data.loanTypeId,
-                            updatedAt:
-                                updatedApplication?.updated_at ??
-                                new Date().toISOString(),
-                        }
-                        : application
-                )
-            )
+    const handleLoanTypeSubmit =
+        useCallback(
+            async (data) => {
+                try {
+                    const response =
+                        await updateApplicationLoanType(
+                            data.applicationId,
+                            data.loanTypeId
+                        )
 
-            handleCloseLoanTypeModal()
+                    const updatedApplication =
+                        response?.data
 
-            showSuccess(
-                'Loan type updated successfully'
-            )
-        } catch (error) {
-            console.error(
-                'Failed to update loan type:',
-                error
-            )
+                    setApplications(
+                        (previous) =>
+                            previous.map(
+                                (application) =>
+                                    application.id ===
+                                    data.applicationId
+                                        ? {
+                                            ...application,
+                                            loanTypeId:
+                                                updatedApplication
+                                                    ?.loan_type_id ??
+                                                data.loanTypeId,
+                                            updatedAt:
+                                                updatedApplication
+                                                    ?.updated_at ??
+                                                new Date().toISOString(),
+                                        }
+                                        : application
+                            )
+                    )
 
-            showError(
-                error?.response?.data?.detail ||
-                'Failed to update loan type',
-                'error'
-            )
-        }
-    }
+                    handleCloseLoanTypeModal()
+
+                    showSuccess(
+                        'Loan type updated successfully'
+                    )
+                } catch (error) {
+                    console.error(
+                        'Failed to update loan type:',
+                        error
+                    )
+
+                    showError(
+                        error?.response
+                            ?.data?.detail ||
+                        'Failed to update loan type',
+                        'error'
+                    )
+                }
+            },
+            [
+                handleCloseLoanTypeModal,
+                showError,
+                showSuccess,
+            ]
+        )
 
     // =========================================================
     // STATUS MODAL
     // =========================================================
 
-    const handleStatusChange = (application) => {
-        setSelectedApplication(application)
-        setShowStatusModal(true)
-    }
-
-    const handleCloseStatusModal = () => {
-        setShowStatusModal(false)
-        setSelectedApplication(null)
-    }
-
-    const handleStatusSubmit = async (data) => {
-        try {
-            const isRevertRejected =
-                data.status === 'Revert Rejected'
-
-            const rejectedRemarks =
-                data.status === 'Rejected'
-                    ? data.rejectionReason
-                    : isRevertRejected
-                        ? data.revertRejectedReason
-                        : null
-
-            const revertRejectionDate =
-                isRevertRejected
-                    ? data.revertRejectedDate
-                    : null
-
-            const response = await updateApplicationStatus(
-                data.id,
-                data.status,
-                rejectedRemarks,
-                revertRejectionDate
+    const handleStatusChange = useCallback(
+        (application) => {
+            setSelectedApplication(
+                application
             )
+            setShowStatusModal(true)
+        },
+        []
+    )
 
-            const updatedApplication = response?.data
+    const handleCloseStatusModal =
+        useCallback(() => {
+            setShowStatusModal(false)
+            setSelectedApplication(null)
+        }, [])
 
-            setApplications((previous) =>
-                previous.map((application) =>
-                    application.id === data.id
-                        ? {
-                            ...application,
+    const handleStatusSubmit =
+        useCallback(
+            async (data) => {
+                try {
+                    const isRevertRejected =
+                        data.status ===
+                        'Revert Rejected'
 
-                            // Revert Rejected is stored
-                            // as rejected in the database.
-                            status:
-                                updatedApplication?.status ??
-                                (
-                                    isRevertRejected
-                                        ? 'rejected'
-                                        : data.status
-                                ),
+                    const rejectedRemarks =
+                        data.status ===
+                        'Rejected'
+                            ? data.rejectionReason
+                            : isRevertRejected
+                                ? data.revertRejectedReason
+                                : null
 
-                            rejectionReason:
-                                updatedApplication?.rejected_remarks ??
-                                rejectedRemarks ??
-                                '',
+                    const revertRejectionDate =
+                        isRevertRejected
+                            ? data.revertRejectedDate
+                            : null
 
-                            rejected_remarks:
-                                updatedApplication?.rejected_remarks ??
-                                rejectedRemarks ??
-                                '',
+                    const response =
+                        await updateApplicationStatus(
+                            data.id,
+                            data.status,
+                            rejectedRemarks,
+                            revertRejectionDate
+                        )
 
-                            rejectionDate:
-                                updatedApplication?.rejection_date ??
-                                application.rejectionDate,
+                    const updatedApplication =
+                        response?.data
 
-                            updatedAt:
-                                updatedApplication?.updated_at ??
-                                new Date().toISOString(),
-                        }
-                        : application
-                )
-            )
+                    setApplications(
+                        (previous) =>
+                            previous.map(
+                                (application) =>
+                                    application.id ===
+                                    data.id
+                                        ? {
+                                            ...application,
 
-            handleCloseStatusModal()
+                                            status:
+                                                updatedApplication
+                                                    ?.status ??
+                                                (
+                                                    isRevertRejected
+                                                        ? 'rejected'
+                                                        : data.status
+                                                ),
 
-            await fetchApplications()
+                                            rejectionReason:
+                                                updatedApplication
+                                                    ?.rejected_remarks ??
+                                                rejectedRemarks ??
+                                                '',
 
-            showSuccess(
-                isRevertRejected
-                    ? 'Application rejection reverted successfully'
-                    : 'Application status updated successfully'
-            )
-        } catch (error) {
-            console.error(
-                'Failed to update application status:',
-                error
-            )
+                                            rejected_remarks:
+                                                updatedApplication
+                                                    ?.rejected_remarks ??
+                                                rejectedRemarks ??
+                                                '',
 
-            const detail = error?.response?.data?.detail
+                                            rejectionDate:
+                                                updatedApplication
+                                                    ?.rejection_date ??
+                                                application.rejectionDate,
 
-            const errorMessage =
-                Array.isArray(detail)
-                    ? detail
-                        .map((item) => item?.msg)
-                        .filter(Boolean)
-                        .join(', ')
-                    : typeof detail === 'string'
-                        ? detail
-                        : 'Failed to update application status'
+                                            updatedAt:
+                                                updatedApplication
+                                                    ?.updated_at ??
+                                                new Date().toISOString(),
+                                        }
+                                        : application
+                            )
+                    )
 
-            showError(errorMessage, 'error')
-        }
-    }
+                    handleCloseStatusModal()
+
+                    await fetchApplications(
+                        currentPage,
+                        pageSize
+                    )
+
+                    showSuccess(
+                        isRevertRejected
+                            ? 'Application rejection reverted successfully'
+                            : 'Application status updated successfully'
+                    )
+                } catch (error) {
+                    console.error(
+                        'Failed to update application status:',
+                        error
+                    )
+
+                    const detail =
+                        error?.response
+                            ?.data?.detail
+
+                    const errorMessage =
+                        Array.isArray(detail)
+                            ? detail
+                                .map(
+                                    (item) =>
+                                        item?.msg
+                                )
+                                .filter(
+                                    Boolean
+                                )
+                                .join(', ')
+                            : typeof detail ===
+                                'string'
+                                ? detail
+                                : 'Failed to update application status'
+
+                    showError(
+                        errorMessage,
+                        'error'
+                    )
+                }
+            },
+            [
+                currentPage,
+                fetchApplications,
+                handleCloseStatusModal,
+                pageSize,
+                showError,
+                showSuccess,
+            ]
+        )
 
     // =========================================================
     // REMINDER MODAL
     // =========================================================
 
-    const handleReminder = (application) => {
-        setSelectedApplication(application)
-        setShowReminderModal(true)
-    }
+    const handleReminder = useCallback(
+        (application) => {
+            setSelectedApplication(
+                application
+            )
+            setShowReminderModal(true)
+        },
+        []
+    )
 
-    const handleCloseReminderModal = () => {
-        setShowReminderModal(false)
-        setSelectedApplication(null)
-    }
+    const handleCloseReminderModal =
+        useCallback(() => {
+            setShowReminderModal(false)
+            setSelectedApplication(null)
+        }, [])
 
-    const handleReminderSubmit = (reminder) => {
-        // Reminder creation is handled directly inside
-        // ReminderModal.jsx. This callback runs after success.
-        console.log(
-            'Reminder created successfully:',
-            reminder
-        )
-    }
+    const handleReminderSubmit =
+        useCallback((reminder) => {
+            // Reminder creation is handled directly
+            // inside ReminderModal.jsx.
+            // This callback runs after success.
+            console.log(
+                'Reminder created successfully:',
+                reminder
+            )
+        }, [])
 
     // =========================================================
     // VIEW APPLICATION
     // =========================================================
 
-    const handleViewApplication = (application) => {
-        navigate(
-            `/crm/view-application/${application.unique_id}`
+    const handleViewApplication =
+        useCallback(
+            (application) => {
+                navigate(
+                    `/crm/view-application/${application.unique_id}`
+                )
+            },
+            [navigate]
         )
-    }
 
     // =========================================================
     // CHAT
     // =========================================================
 
-    const handleChat = (application) => {
-        console.log(
-            'Open Application Chat:',
-            {
-                loanId:
-                    application.unique_id ||
-                    application.id,
+    const handleChat = useCallback(
+        (application) => {
+            console.log(
+                'Open Application Chat:',
+                {
+                    loanId:
+                        application.unique_id ||
+                        application.id,
 
-                agentId:
-                    application.agentId ||
-                    application.agent_id,
-            }
-        )
-    }
+                    agentId:
+                        application.agentId ||
+                        application.agent_id,
+                }
+            )
+        },
+        []
+    )
 
     // =========================================================
     // REFRESH
     // =========================================================
 
-    const handleRefresh = () => {
-        fetchApplications(currentPage, pageSize)
-    }
+    const handleRefresh = useCallback(() => {
+        fetchApplications(
+            currentPage,
+            pageSize
+        )
+    }, [
+        currentPage,
+        fetchApplications,
+        pageSize,
+    ])
 
     // =========================================================
     // ASSIGNMENT CHANGE
     // =========================================================
 
-    const handleAssignmentChange = (
-        applicationId,
-        updatedApplication
-    ) => {
-        setApplications((previous) =>
-            previous.map((application) => {
-                if (application.id !== applicationId) {
-                    return application
-                }
+    const handleAssignmentChange =
+        useCallback(
+            (
+                applicationId,
+                updatedApplication
+            ) => {
+                setApplications(
+                    (previous) =>
+                        previous.map(
+                            (application) => {
+                                if (
+                                    application.id !==
+                                    applicationId
+                                ) {
+                                    return application
+                                }
 
-                return {
-                    ...application,
-                    ...updatedApplication,
+                                return {
+                                    ...application,
+                                    ...updatedApplication,
 
-                    rmId:
-                        updatedApplication?.rmId ??
-                        updatedApplication?.rm_id ??
-                        application.rmId,
+                                    rmId:
+                                        updatedApplication?.rmId ??
+                                        updatedApplication?.rm_id ??
+                                        application.rmId,
 
-                    rm_id:
-                        updatedApplication?.rm_id ??
-                        updatedApplication?.rmId ??
-                        application.rm_id,
+                                    rm_id:
+                                        updatedApplication?.rm_id ??
+                                        updatedApplication?.rmId ??
+                                        application.rm_id,
 
-                    rm:
-                        updatedApplication?.rm ??
-                        application.rm,
+                                    rm:
+                                        updatedApplication?.rm ??
+                                        application.rm,
 
-                    rmName:
-                        updatedApplication?.rmName ??
-                        updatedApplication?.rm_name ??
-                        application.rmName,
+                                    rmName:
+                                        updatedApplication?.rmName ??
+                                        updatedApplication?.rm_name ??
+                                        application.rmName,
 
-                    agentId:
-                        updatedApplication?.agentId ??
-                        updatedApplication?.agent_id ??
-                        application.agentId,
+                                    agentId:
+                                        updatedApplication?.agentId ??
+                                        updatedApplication?.agent_id ??
+                                        application.agentId,
 
-                    agent_id:
-                        updatedApplication?.agent_id ??
-                        updatedApplication?.agentId ??
-                        application.agent_id,
+                                    agent_id:
+                                        updatedApplication?.agent_id ??
+                                        updatedApplication?.agentId ??
+                                        application.agent_id,
 
-                    agent:
-                        updatedApplication?.agent ??
-                        application.agent,
+                                    agent:
+                                        updatedApplication?.agent ??
+                                        application.agent,
 
-                    agentName:
-                        updatedApplication?.agentName ??
-                        updatedApplication?.agent_name ??
-                        application.agentName,
-                }
-            })
+                                    agentName:
+                                        updatedApplication?.agentName ??
+                                        updatedApplication?.agent_name ??
+                                        application.agentName,
+                                }
+                            }
+                        )
+                )
+            },
+            []
         )
-    }
 
     // =========================================================
     // RENDER
@@ -987,97 +1185,178 @@ function Applications() {
     return (
         <div className="p-4 sm:p-6 space-y-5">
             <ApplicationsTable
-                applications={displayApplications}
+                applications={
+                    displayApplications
+                }
 
                 currentPage={currentPage}
                 pageSize={pageSize}
-                totalApplications={displayTotalApplications}
-                totalPages={displayTotalPages}
+                totalApplications={
+                    displayTotalApplications
+                }
+                totalPages={
+                    displayTotalPages
+                }
 
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
+                onPageChange={
+                    handlePageChange
+                }
+
+                onPageSizeChange={
+                    handlePageSizeChange
+                }
+
                 loading={loading}
 
                 search={search}
                 setSearch={setSearch}
 
-                statuses={STATUS_OPTIONS}
+                statuses={
+                    STATUS_OPTIONS
+                }
 
                 // LOAN TYPE
 
-                selectedLoanType={selectedLoanType}
-                setSelectedLoanType={setSelectedLoanType}
+                selectedLoanType={
+                    selectedLoanType
+                }
+
+                setSelectedLoanType={
+                    setSelectedLoanType
+                }
 
                 // RM
 
                 selectedRM={selectedRM}
-                setSelectedRM={setSelectedRM}
+                setSelectedRM={
+                    setSelectedRM
+                }
 
                 // TEAM LEAD
 
-                selectedTeamLead={selectedTeamLead}
-                setSelectedTeamLead={setSelectedTeamLead}
+                selectedTeamLead={
+                    selectedTeamLead
+                }
+
+                setSelectedTeamLead={
+                    setSelectedTeamLead
+                }
 
                 // AGENT
 
-                selectedAgent={selectedAgent}
-                setSelectedAgent={setSelectedAgent}
+                selectedAgent={
+                    selectedAgent
+                }
+
+                setSelectedAgent={
+                    setSelectedAgent
+                }
 
                 // STATUS
 
-                selectedStatus={selectedStatus}
-                setSelectedStatus={setSelectedStatus}
+                selectedStatus={
+                    selectedStatus
+                }
+
+                setSelectedStatus={
+                    setSelectedStatus
+                }
 
                 // ACTIONS
 
-                onClearFilters={handleClearFilters}
-                onLoanTypeChange={handleLoanTypeChange}
-                onStatusChange={handleStatusChange}
-                onReminder={handleReminder}
-                onChat={handleChat}
-                onViewApplication={handleViewApplication}
-                onRefresh={handleRefresh}
-                onAssignmentChange={handleAssignmentChange}
-            />
-
-            {/* =================================================
-                LOAN TYPE MODAL
-            ================================================= */}
-
-            <LoanTypeModal
-                open={showLoanTypeModal}
-                application={selectedApplication}
-                onClose={handleCloseLoanTypeModal}
-                onSubmit={handleLoanTypeSubmit}
-            />
-
-            {/* =================================================
-                STATUS MODAL
-            ================================================= */}
-
-            <StatusModal
-                open={showStatusModal}
-                application={selectedApplication}
-                onClose={handleCloseStatusModal}
-                onSubmit={handleStatusSubmit}
-            />
-
-            {/* =================================================
-                REMINDER MODAL
-            ================================================= */}
-
-            <ReminderModal
-                open={showReminderModal}
-
-                applicationId={
-                    selectedApplication?.id ?? null
+                onClearFilters={
+                    handleClearFilters
                 }
 
-                application={selectedApplication}
+                onLoanTypeChange={
+                    handleLoanTypeChange
+                }
 
-                onClose={handleCloseReminderModal}
-                onSubmit={handleReminderSubmit}
+                onStatusChange={
+                    handleStatusChange
+                }
+
+                onReminder={
+                    handleReminder
+                }
+
+                onChat={
+                    handleChat
+                }
+
+                onViewApplication={
+                    handleViewApplication
+                }
+
+                onRefresh={
+                    handleRefresh
+                }
+
+                onAssignmentChange={
+                    handleAssignmentChange
+                }
             />
+
+            {/* =================================================
+                LAZY-LOADED MODALS
+            ================================================= */}
+
+            <Suspense fallback={null}>
+                {showLoanTypeModal && (
+                    <LoanTypeModal
+                        open={
+                            showLoanTypeModal
+                        }
+                        application={
+                            selectedApplication
+                        }
+                        onClose={
+                            handleCloseLoanTypeModal
+                        }
+                        onSubmit={
+                            handleLoanTypeSubmit
+                        }
+                    />
+                )}
+
+                {showStatusModal && (
+                    <StatusModal
+                        open={
+                            showStatusModal
+                        }
+                        application={
+                            selectedApplication
+                        }
+                        onClose={
+                            handleCloseStatusModal
+                        }
+                        onSubmit={
+                            handleStatusSubmit
+                        }
+                    />
+                )}
+
+                {showReminderModal && (
+                    <ReminderModal
+                        open={
+                            showReminderModal
+                        }
+                        applicationId={
+                            selectedApplication?.id ??
+                            null
+                        }
+                        application={
+                            selectedApplication
+                        }
+                        onClose={
+                            handleCloseReminderModal
+                        }
+                        onSubmit={
+                            handleReminderSubmit
+                        }
+                    />
+                )}
+            </Suspense>
         </div>
     )
 }

@@ -33,6 +33,8 @@ import ArrowUpOnSquareIcon from "@heroicons/react/24/outline/ArrowUpOnSquareIcon
 import ChartBarIcon from "@heroicons/react/24/outline/ChartBarIcon";
 import ArrowTrendingUpIcon from "@heroicons/react/24/outline/ArrowTrendingUpIcon";
 
+import BellIcon from "@heroicons/react/24/outline/BellIcon";
+
 /*
  * Log-specific icons
  *
@@ -258,6 +260,13 @@ const sidebarmenu = [
         name: "Phone Numbers",
         parent: "Call Management",
         permission: PERMISSIONS.PHONE_NUMBERS_VIEW,
+      },
+      {
+        path: "/crm/reminders",
+        icon: <BellIcon className={submenuIconClasses} />,
+        name: "Reminders",
+        parent: "Call Management",
+        permission: PERMISSIONS.REMINDERS_VIEW,
       },
     ],
   },

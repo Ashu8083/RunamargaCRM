@@ -1,6 +1,8 @@
-// admin-react/src/pages/EmployeeManagement/Attendance/index.jsx
+// admin-react/src/pages/crm/EmployeeManagement/Attendance/index.jsx
 
 import {
+    lazy,
+    Suspense,
     useCallback,
     useEffect,
     useState,
@@ -10,7 +12,6 @@ import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 
 import AttendanceTable from './components/AttendanceTable'
-import AttendanceHistoryModal from './components/AttendanceHistoryModal'
 import TodayAttendance from './components/TodayAttendance'
 
 import {
@@ -19,6 +20,10 @@ import {
     getEmployeeHistory,
     getApiErrorMessage,
 } from './API'
+
+const AttendanceHistoryModal = lazy(
+    () => import('./components/AttendanceHistoryModal')
+)
 
 
 // ============================================================================
@@ -769,7 +774,7 @@ function Attendance() {
                 sm:justify-between
             ">
 
-             
+
 
                 {/* =============================================================
                     PAGE ACTIONS
@@ -976,23 +981,27 @@ function Attendance() {
                 EMPLOYEE HISTORY MODAL
             ================================================================= */}
 
-            <AttendanceHistoryModal
-                open={
-                    showHistoryModal
-                }
+            <Suspense fallback={null}>
+                {showHistoryModal && (
+                    <AttendanceHistoryModal
+                        open={
+                            showHistoryModal
+                        }
 
-                entry={
-                    selectedEmployee
-                }
+                        entry={
+                            selectedEmployee
+                        }
 
-                history={
-                    history?.history || []
-                }
+                        history={
+                            history?.history || []
+                        }
 
-                onClose={
-                    handleCloseHistory
-                }
-            />
+                        onClose={
+                            handleCloseHistory
+                        }
+                    />
+                )}
+            </Suspense>
 
 
             {/* =================================================================

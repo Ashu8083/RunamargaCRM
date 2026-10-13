@@ -1,19 +1,23 @@
-// admin-react/src/pages/Loans/ShuffleLoans/index.jsx
+// admin-react/src/pages/crm/Loans/ShuffleLoans/index.jsx
 
 import {
+    lazy,
+    Suspense,
     useState,
 } from 'react'
 
 import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
 
 import ShuffleLoansTable from './components/ShuffleLoansTable'
-import AssignShuffleLoansModal from './components/AssignShuffleLoansModal'
 
 import {
     assignShuffleLoans,
     getApiErrorMessage,
 } from './API'
 
+const AssignShuffleLoansModal = lazy(
+    () => import('./components/AssignShuffleLoansModal')
+)
 
 function ShuffleLoans() {
 
@@ -707,23 +711,27 @@ function ShuffleLoans() {
                 ASSIGN MODAL
             ================================================= */}
 
-            <AssignShuffleLoansModal
-                open={
-                    showAssignModal
-                }
+            <Suspense fallback={null}>
+                {showAssignModal && (
+                    <AssignShuffleLoansModal
+                        open={
+                            showAssignModal
+                        }
 
-                applications={
-                    selectedApplications
-                }
+                        applications={
+                            selectedApplications
+                        }
 
-                onClose={
-                    handleCloseAssignModal
-                }
+                        onClose={
+                            handleCloseAssignModal
+                        }
 
-                onSubmit={
-                    handleAssignSubmit
-                }
-            />
+                        onSubmit={
+                            handleAssignSubmit
+                        }
+                    />
+                )}
+            </Suspense>
 
 
             {/* =================================================

@@ -144,3 +144,21 @@ def get_current_employee(
         request.state.employee_context_id = default_context.id if default_context else None
 
     return employee
+
+
+def get_employee_id_from_refresh_token(token: str) -> int:
+    """Validate a refresh token and return its employee ID."""
+    payload = decode_token(token)
+
+    if payload.get("type") != "refresh":
+        raise ValueError("Invalid refresh token")
+
+    employee_id = payload.get("sub")
+
+    if not employee_id:
+        raise ValueError("Refresh token is missing employee ID")
+
+    try:
+        return int(employee_id)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid employee ID in refresh token") from exc

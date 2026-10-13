@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+// admin-react/src/pages/crm/Loans/Application-Status/components/ApplicationsTable.jsx
+
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 
 import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
@@ -9,7 +17,6 @@ import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
 
-import GlobalChat from "../../../../../components/GlobalModels/Loans/GlobalChat";
 import AgentDropdown from "../../../../../components/GlobalModels/Filters/AgentDropdown";
 import RmDropdown from "../../../../../components/GlobalModels/Filters/RmDropdown";
 import TeamLeadDropdown from "../../../../../components/GlobalModels/Filters/TeamLeadDropdown";
@@ -17,6 +24,10 @@ import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/Loa
 import StatusDropdown from "../../../../../components/GlobalModels/Filters/StatusDropdown";
 
 import apiClient from "../../../../../app/apiClient";
+
+const GlobalChat = lazy(() =>
+  import("../../../../../components/GlobalModels/Loans/GlobalChat")
+);
 
 const STATUS_OPTIONS = [
   "Revert Rejected",
@@ -932,16 +943,18 @@ function ApplicationsTable({
           document.body,
         )}
 
-      {selectedChatApplication && (
-        <GlobalChat
-          open={chatOpen}
-          onClose={handleCloseChat}
-          loanId={getLoanId(selectedChatApplication)}
-          agentId={getAgentId(selectedChatApplication)}
-          customerName={selectedChatApplication.name || "Customer"}
-          customerPhone={selectedChatApplication.phone || ""}
-        />
-      )}
+      <Suspense fallback={null}>
+        {selectedChatApplication && (
+          <GlobalChat
+            open={chatOpen}
+            onClose={handleCloseChat}
+            loanId={getLoanId(selectedChatApplication)}
+            agentId={getAgentId(selectedChatApplication)}
+            customerName={selectedChatApplication.name || "Customer"}
+            customerPhone={selectedChatApplication.phone || ""}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

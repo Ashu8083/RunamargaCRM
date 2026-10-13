@@ -1,3 +1,4 @@
+// admin-react/src/features/common/components/NotificationBodyRightDrawer.js
 function NotificationBodyRightDrawer(){
     return(
         <div className="mt-4 rounded-box bg-base-200 p-4 text-sm text-base-content/70">

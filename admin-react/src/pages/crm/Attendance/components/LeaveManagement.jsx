@@ -1,11 +1,21 @@
 // admin-react\src\pages\Attendance\components\LeaveManagement.jsx
-import { useState } from 'react'
+
+import {
+    lazy,
+    Suspense,
+    useState,
+} from 'react'
+
 import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
 import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 import ClockIcon from '@heroicons/react/24/outline/ClockIcon'
 import CheckCircleIcon from '@heroicons/react/24/outline/CheckCircleIcon'
 import XCircleIcon from '@heroicons/react/24/outline/XCircleIcon'
-import LeaveApplicationModal from './LeaveApplicationModal'
+
+// Lazy-load LeaveApplicationModal only when it is rendered.
+const LeaveApplicationModal = lazy(
+    () => import('./LeaveApplicationModal')
+)
 
 function LeaveManagement() {
 
@@ -392,10 +402,14 @@ function LeaveManagement() {
 
             {showModal && (
 
-                <LeaveApplicationModal
-                    onClose={() => setShowModal(false)}
-                    onSubmit={handleSubmit}
-                />
+                <Suspense fallback={null}>
+
+                    <LeaveApplicationModal
+                        onClose={() => setShowModal(false)}
+                        onSubmit={handleSubmit}
+                    />
+
+                </Suspense>
 
             )}
 
