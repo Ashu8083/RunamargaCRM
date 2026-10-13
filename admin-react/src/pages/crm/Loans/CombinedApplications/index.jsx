@@ -17,7 +17,7 @@ import ReminderModal from '../../../../components/GlobalModels/Loans/ReminderMod
 import {
     getApplications,
     updateApplicationLoanType,
-    updateApplicationStatus,
+    updateApplicationStatus, deleteApplication
 } from './Api'
 import { useToast } from '../../../../components/Toast/ToastProvider'
 
@@ -555,7 +555,32 @@ function Applications() {
 
     }
 
+    const handleDeleteApplication = async (application) => {
+        const confirmed = window.confirm(
+            `Are you sure you want to delete the application for ${application.name || "this customer"
+            }?`
+        );
 
+        if (!confirmed) return;
+
+        try {
+            await deleteApplication(
+                application.unique_id ?? application.id
+            );
+
+            showSuccess("Application deleted successfully");
+
+            // Refresh the current applications page.
+            await fetchApplications(currentPage, pageSize, search);
+        } catch (error) {
+            console.error("Failed to delete application:", error);
+
+            showError(
+                error?.response?.data?.detail ||
+                "Failed to delete application"
+            );
+        }
+    };
     // =========================================================
     // LOAN TYPE MODAL
     // =========================================================
@@ -1022,12 +1047,11 @@ function Applications() {
                     handleViewApplication
                 }
 
-                onRefresh={
-                    handleRefresh
-                }
                 onAssignmentChange={
                     handleAssignmentChange
                 }
+                onDeleteApplication={handleDeleteApplication}
+                onRefresh={fetchApplications}
             />
 
 

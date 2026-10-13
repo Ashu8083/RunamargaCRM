@@ -4,6 +4,11 @@ from sqlalchemy.orm import Session
 from app.models.employees import Employee
 from app.services.Loans.application_service import ApplicationService
 from app.core.access_control import AccessControl
+from app.models.loan_applications import LoanApplication
+from datetime import datetime, timezone
+from fastapi import HTTPException
+
+
 
 def get_applications(
     db: Session,
@@ -83,3 +88,62 @@ def get_default_dsa(
         application_id=application_id,
         bank_id=bank_id,
     )
+
+
+
+def delete_loan_application(
+    db: Session,
+    application_id: str,
+    employee: Employee,
+):
+    """
+    Soft-delete a loan application.
+
+    Uses the application's unique_id and checks whether the
+    employee is allowed to access the application.
+    """
+
+    # Apply the same application visibility rules used by the service.
+    scoped_query = ApplicationService.apply_scope(
+        query=db.query(LoanApplication),
+        db=db,
+        employee=employee,
+    )
+
+    application = (
+        scoped_query
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Loan application not found",
+        )
+
+    try:
+        application.deleted_at = datetime.now(timezone.utc)
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "Loan application deleted successfully",
+            "application_id": application.unique_id,
+        }
+
+    except Exception as error:
+        db.rollback()
+
+      
+        import traceback
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to delete loan application",
+        ) from error

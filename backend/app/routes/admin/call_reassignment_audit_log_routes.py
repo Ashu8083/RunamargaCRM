@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.security import get_current_employee
 from app.schemas.call_reassignment_audit_log_schema import CallReassignmentAuditLogResponse
 from app.controllers.call_reassignment_audit_log_controller import (
     get_call_reassignment_audit_logs_controller,
-    get_call_reassignment_audit_log_by_id_controller,
 )
 
 router = APIRouter(
@@ -30,12 +30,16 @@ def get_call_reassignment_audit_logs_route(
     to_assigned_to: Optional[int] = Query(None, description="employee_context_id of new assignee"),
     report_to: Optional[int] = Query(None, description="employee_context_id of reporting manager (matches either side)"),
     db: Session = Depends(get_db),
+    employee=Depends(
+        get_current_employee
+    ),
 ):
     """
     GET route to fetch call reassignment audit logs with optional filters.
     """
     return get_call_reassignment_audit_logs_controller(
         db=db,
+        employee=employee,
         skip=skip,
         limit=limit,
         action=action,
@@ -44,17 +48,3 @@ def get_call_reassignment_audit_logs_route(
         to_assigned_to=to_assigned_to,
         report_to=report_to,
     )
-
-
-@router.get(
-    "/{log_id}",
-    response_model=CallReassignmentAuditLogResponse,
-)
-def get_call_reassignment_audit_log_by_id_route(
-    log_id: int,
-    db: Session = Depends(get_db),
-):
-    """
-    GET route to fetch a specific call reassignment audit log by ID.
-    """
-    return get_call_reassignment_audit_log_by_id_controller(db=db, log_id=log_id)

@@ -73,7 +73,7 @@ class CallLogService:
         query = (
             db.query(CallLog)
             .filter(
-                CallLog.employee_id == employee.id,
+                CallLog.employee_context_id == employee.id,
             )
         )
 

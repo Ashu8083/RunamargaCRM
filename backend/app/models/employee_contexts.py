@@ -154,6 +154,7 @@ class EmployeeContext(Base):
     loan_assignments = relationship(
         "LoanAssignment",
         back_populates="employee_context",
+        foreign_keys="LoanAssignment.employee_context_id",
         cascade="all, delete-orphan",
     )
 

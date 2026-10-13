@@ -4,11 +4,11 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.core.security import get_current_employee
 from app.config.database import get_db
 from app.schemas.loan_application_status_audit_log_schema import LoanApplicationStatusAuditLogResponse
 from app.controllers.loan_application_status_audit_log_controller import (
     get_loan_application_status_audit_logs_controller,
-    get_loan_application_status_audit_log_by_id_controller,
 )
 
 router = APIRouter(
@@ -31,12 +31,16 @@ def get_loan_application_status_audit_logs_route(
     from_status: Optional[str] = Query(None, description="Status before the change"),
     to_status: Optional[str] = Query(None, description="Status after the change"),
     db: Session = Depends(get_db),
+    employee=Depends(
+        get_current_employee
+    ),
 ):
     """
     GET route to fetch loan application status audit logs with optional filters.
     """
     return get_loan_application_status_audit_logs_controller(
         db=db,
+        employee=employee,
         skip=skip,
         limit=limit,
         action=action,
@@ -47,16 +51,3 @@ def get_loan_application_status_audit_logs_route(
         to_status=to_status,
     )
 
-
-@router.get(
-    "/{log_id}",
-    response_model=LoanApplicationStatusAuditLogResponse,
-)
-def get_loan_application_status_audit_log_by_id_route(
-    log_id: int,
-    db: Session = Depends(get_db),
-):
-    """
-    GET route to fetch a specific loan application status audit log by ID.
-    """
-    return get_loan_application_status_audit_log_by_id_controller(db=db, log_id=log_id)

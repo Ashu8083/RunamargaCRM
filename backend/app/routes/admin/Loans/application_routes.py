@@ -7,7 +7,10 @@ from app.core.security import get_current_employee
 from app.controllers.Loans.application_controller import (
     get_applications,
     view_application,
-    create_application,get_bank_processings,get_default_dsa
+    create_application,
+    get_bank_processings,
+    get_default_dsa,
+    delete_loan_application,
 )
 
 from app.schemas.application_schema import (
@@ -118,3 +121,14 @@ def get_default_dsa_route(
     )
 
 
+@router.delete("/{application_id}")
+def delete_application_route(
+    application_id: str,
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
+):
+    return delete_loan_application(
+        db=db,
+        employee=employee,
+        application_id=application_id,
+    )

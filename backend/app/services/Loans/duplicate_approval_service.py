@@ -24,10 +24,35 @@ from app.models.loan_types import LoanType
 from app.schemas.duplicate_approval_schema import (
     DuplicateApprovalCreateRequest,
 )
-
+from app.models.duplicate_lead_approval_logs import (
+    DuplicateLeadApprovalLog,
+    DuplicateLeadApprovalLogStatus,
+)
 
 class DuplicateApprovalService:
 
+
+    @staticmethod
+    def create_approval_log(
+        db: Session,
+        approval: DuplicateApproval,
+        status: DuplicateLeadApprovalLogStatus,
+        reviewed_by_id: Optional[int] = None,
+    ):
+        log = DuplicateLeadApprovalLog(
+            duplicate_approval_id=approval.id,
+            loan_id=approval.loan_id,
+            submitted_by_id=approval.applied_by_context_id,
+            reports_to_id=(
+                approval.applied_by_context.reports_to_id
+                if approval.applied_by_context
+                else None
+            ),
+            reviewed_by_id=reviewed_by_id,
+            status=status,
+        )
+
+        db.add(log)
     # =========================================================
     # SCOPE
     # =========================================================
@@ -823,7 +848,12 @@ class DuplicateApprovalService:
         duplicate_approval.approved_at = (
             datetime.utcnow()
         )
-
+        DuplicateApprovalService.create_approval_log(
+            db=db,
+            approval=duplicate_approval,
+            status=DuplicateLeadApprovalLogStatus.approved,
+            reviewed_by_id=employee.id,
+        )
         # ---------------------------------------------------------
         # COMMIT
         # ---------------------------------------------------------

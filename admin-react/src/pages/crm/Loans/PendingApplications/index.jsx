@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getActiveContext } from '../../../../app/auth'
 import {
     getApplications,
-    updateApplicationLoanType,
+    updateApplicationLoanType, deleteApplication, updateApplicationStatus
 } from '../CombinedApplications/Api'
 
 import PendingApplicationsTable from './components/PendingApplicationsTable'
@@ -415,6 +415,32 @@ const PendingApplications = () => {
     ])
 
 
+    const handleDeleteApplication = async (application) => {
+        const confirmed = window.confirm(
+            `Are you sure you want to delete the application for ${application.name || "this customer"
+            }?`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            await deleteApplication(
+                application.unique_id ?? application.id
+            );
+
+            showSuccess("Application deleted successfully");
+
+            // Refresh the current applications page.
+            await fetchApplications(currentPage, pageSize, search);
+        } catch (error) {
+            console.error("Failed to delete application:", error);
+
+            showError(
+                error?.response?.data?.detail ||
+                "Failed to delete application"
+            );
+        }
+    };
     // =========================================================
     // FETCH WHEN PAGE / PAGE SIZE CHANGES
     //
@@ -1007,10 +1033,8 @@ const PendingApplications = () => {
                     handleClearFilters
                 }
 
-
-                onRefresh={
-                    handleRefresh
-                }
+                onDeleteApplication={handleDeleteApplication}
+                onRefresh={fetchApplications}
             />
 
 

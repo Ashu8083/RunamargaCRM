@@ -1,6 +1,6 @@
 // admin-react/src/pages/Logs/DuplicateLeadLogs/index.jsx
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
@@ -8,65 +8,48 @@ import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import DuplicateLeadLogTable from './components/DuplicateLeadLogTable'
 
 import EmployeeDropdown from '../../../../components/GlobalModels/Filters/EmployeeDropdown'
-
+import { getDuplicateLeadApprovalLogs } from './Api'
 
 function DuplicateLeadLogs() {
 
-    // =========================================================
-    // MOCK EMPLOYEES
-    // =========================================================
+    const [logs, setLogs] = useState([])
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
 
-    const employees = [
-        {
-            id: 105,
-            name: 'Rahul Sharma',
-            employeeId: '105',
-            role: 'agent',
-        },
+    // Build dropdown options from actual API results.
+    const employees = useMemo(() => {
+        const employeeMap = new Map()
 
-        {
-            id: 108,
-            name: 'Anil Kumar',
-            employeeId: '108',
-            role: 'agent',
-        },
+        logs.forEach((log) => {
+            if (log.submittedById != null) {
+                const id = String(log.submittedById)
 
-        {
-            id: 110,
-            name: 'Vikram Singh',
-            employeeId: '110',
-            role: 'agent',
-        },
+                if (!employeeMap.has(id)) {
+                    employeeMap.set(id, {
+                        id,
+                        employeeId: id,
+                        name: log.submittedByName || `Employee ${id}`,
+                        role: '',
+                    })
+                }
+            }
 
-        {
-            id: 112,
-            name: 'Arjun Rao',
-            employeeId: '112',
-            role: 'rm',
-        },
+            if (log.reviewedById != null) {
+                const id = String(log.reviewedById)
 
-        {
-            id: 115,
-            name: 'Kiran Kumar',
-            employeeId: '115',
-            role: 'agent',
-        },
+                if (!employeeMap.has(id)) {
+                    employeeMap.set(id, {
+                        id,
+                        employeeId: id,
+                        name: log.reviewedByName || `Employee ${id}`,
+                        role: '',
+                    })
+                }
+            }
+        })
 
-        {
-            id: 301,
-            name: 'Suresh Kumar',
-            employeeId: '301',
-            role: 'teamlead_agent_business',
-        },
-
-        {
-            id: 302,
-            name: 'Priya Nair',
-            employeeId: '302',
-            role: 'teamlead_agent_personal',
-        },
-    ]
-
+        return Array.from(employeeMap.values())
+    }, [logs])
 
     // =========================================================
     // STATUS OPTIONS
@@ -88,224 +71,62 @@ function DuplicateLeadLogs() {
             name: 'Rejected',
         },
     ]
+    const fetchLogs = useCallback(async () => {
+        setLoading(true)
+        setError('')
 
+        try {
+            const response = await getDuplicateLeadApprovalLogs({
+                skip: 0,
+                limit: 200,
+            })
 
-    // =========================================================
-    // MOCK DUPLICATE LEAD LOGS
-    // =========================================================
+            const records = Array.isArray(response)
+                ? response
+                : response?.items ?? response?.data ?? []
 
-    const [logs] = useState([
-        {
-            id: 9001,
-            leadId: '10245',
-            submittedById: 105,
-            submittedByName: 'Rahul Sharma',
-            submittedByRole: 'agent',
-            reviewedById: 301,
-            reviewedByName: 'Suresh Kumar',
-            reviewedByRole: 'teamlead_agent_business',
-            status: 'APPROVED',
-            createdAt: '01 Sep 2026, 09:42:12',
-            deletedAt: null,
-        },
+            const mappedLogs = records.map((log) => ({
+                id: log.id,
 
-        {
-            id: 9002,
-            leadId: '10246',
-            submittedById: 108,
-            submittedByName: 'Anil Kumar',
-            submittedByRole: 'agent',
-            reviewedById: 302,
-            reviewedByName: 'Priya Nair',
-            reviewedByRole: 'teamlead_agent_personal',
-            status: 'REJECTED',
-            createdAt: '02 Sep 2026, 10:15:43',
-            deletedAt: null,
-        },
+                // Actual loan application ID; null for rejected requests.
+                leadId: log.loan_id ?? null,
 
-        {
-            id: 9003,
-            leadId: '10247',
-            submittedById: 110,
-            submittedByName: 'Vikram Singh',
-            submittedByRole: 'agent',
-            reviewedById: 301,
-            reviewedByName: 'Suresh Kumar',
-            reviewedByRole: 'teamlead_agent_business',
-            status: 'APPROVED',
-            createdAt: '02 Sep 2026, 11:21:08',
-            deletedAt: null,
-        },
+                // Duplicate approval request ID.
+                duplicateApprovalId: log.duplicate_approval_id ?? null,
 
-        {
-            id: 9004,
-            leadId: '10248',
-            submittedById: 112,
-            submittedByName: 'Arjun Rao',
-            submittedByRole: 'rm',
-            reviewedById: 302,
-            reviewedByName: 'Priya Nair',
-            reviewedByRole: 'teamlead_agent_personal',
-            status: 'APPROVED',
-            createdAt: '03 Sep 2026, 09:03:51',
-            deletedAt: null,
-        },
+                submittedById: log.submitted_by_id ?? null,
+                submittedByName: log.submitted_by_name ?? null,
+                submittedByRole: '',
 
-        {
-            id: 9005,
-            leadId: '10249',
-            submittedById: 115,
-            submittedByName: 'Kiran Kumar',
-            submittedByRole: 'agent',
-            reviewedById: 301,
-            reviewedByName: 'Suresh Kumar',
-            reviewedByRole: 'teamlead_agent_business',
-            status: 'REJECTED',
-            createdAt: '03 Sep 2026, 10:30:25',
-            deletedAt: null,
-        },
+                reportsToId: log.reports_to_id ?? null,
+                reportsToName: log.reports_to_name ?? null,
 
-        {
-            id: 9006,
-            leadId: '10250',
-            submittedById: 105,
-            submittedByName: 'Rahul Sharma',
-            submittedByRole: 'agent',
-            reviewedById: 302,
-            reviewedByName: 'Priya Nair',
-            reviewedByRole: 'teamlead_agent_personal',
-            status: 'APPROVED',
-            createdAt: '04 Sep 2026, 11:10:14',
-            deletedAt: null,
-        },
+                reviewedById: log.reviewed_by_id ?? null,
+                reviewedByName: log.reviewed_by_name ?? null,
+                reviewedByRole: '',
 
-        {
-            id: 9007,
-            leadId: '10251',
-            submittedById: 108,
-            submittedByName: 'Anil Kumar',
-            submittedByRole: 'agent',
-            reviewedById: 301,
-            reviewedByName: 'Suresh Kumar',
-            reviewedByRole: 'teamlead_agent_business',
-            status: 'REJECTED',
-            createdAt: '04 Sep 2026, 12:05:37',
-            deletedAt: null,
-        },
+                status: String(log.status ?? '').toUpperCase(),
+                createdAt: log.created_at ?? null,
+                deletedAt: log.deleted_at ?? null,
+            }))
 
-        {
-            id: 9008,
-            leadId: '10252',
-            submittedById: 110,
-            submittedByName: 'Vikram Singh',
-            submittedByRole: 'agent',
-            reviewedById: 302,
-            reviewedByName: 'Priya Nair',
-            reviewedByRole: 'teamlead_agent_personal',
-            status: 'APPROVED',
-            createdAt: '05 Sep 2026, 09:42:19',
-            deletedAt: null,
-        },
+            setLogs(mappedLogs)
+            setCurrentPage(1)
+        } catch (err) {
+            console.error('Failed to fetch duplicate lead logs:', err)
 
-        {
-            id: 9009,
-            leadId: '10253',
-            submittedById: 112,
-            submittedByName: 'Arjun Rao',
-            submittedByRole: 'rm',
-            reviewedById: 301,
-            reviewedByName: 'Suresh Kumar',
-            reviewedByRole: 'teamlead_agent_business',
-            status: 'REJECTED',
-            createdAt: '05 Sep 2026, 10:12:44',
-            deletedAt: null,
-        },
+            setError(
+                err.response?.data?.detail ||
+                'Failed to load duplicate lead logs.'
+            )
+        } finally {
+            setLoading(false)
+        }
+    }, [])
 
-        {
-            id: 9010,
-            leadId: '10254',
-            submittedById: 115,
-            submittedByName: 'Kiran Kumar',
-            submittedByRole: 'agent',
-            reviewedById: 302,
-            reviewedByName: 'Priya Nair',
-            reviewedByRole: 'teamlead_agent_personal',
-            status: 'APPROVED',
-            createdAt: '06 Sep 2026, 11:45:22',
-            deletedAt: null,
-        },
-
-        {
-            id: 9011,
-            leadId: '10255',
-            submittedById: 105,
-            submittedByName: 'Rahul Sharma',
-            submittedByRole: 'agent',
-            reviewedById: 301,
-            reviewedByName: 'Suresh Kumar',
-            reviewedByRole: 'teamlead_agent_business',
-            status: 'REJECTED',
-            createdAt: '06 Sep 2026, 01:18:09',
-            deletedAt: null,
-        },
-
-        {
-            id: 9012,
-            leadId: '10256',
-            submittedById: 108,
-            submittedByName: 'Anil Kumar',
-            submittedByRole: 'agent',
-            reviewedById: 302,
-            reviewedByName: 'Priya Nair',
-            reviewedByRole: 'teamlead_agent_personal',
-            status: 'APPROVED',
-            createdAt: '07 Sep 2026, 02:52:31',
-            deletedAt: null,
-        },
-
-        {
-            id: 9013,
-            leadId: '10257',
-            submittedById: 110,
-            submittedByName: 'Vikram Singh',
-            submittedByRole: 'agent',
-            reviewedById: 301,
-            reviewedByName: 'Suresh Kumar',
-            reviewedByRole: 'teamlead_agent_business',
-            status: 'APPROVED',
-            createdAt: '07 Sep 2026, 03:25:16',
-            deletedAt: null,
-        },
-
-        {
-            id: 9014,
-            leadId: '10258',
-            submittedById: 112,
-            submittedByName: 'Arjun Rao',
-            submittedByRole: 'rm',
-            reviewedById: 302,
-            reviewedByName: 'Priya Nair',
-            reviewedByRole: 'teamlead_agent_personal',
-            status: 'REJECTED',
-            createdAt: '08 Sep 2026, 09:14:42',
-            deletedAt: null,
-        },
-
-        {
-            id: 9015,
-            leadId: '10259',
-            submittedById: 115,
-            submittedByName: 'Kiran Kumar',
-            submittedByRole: 'agent',
-            reviewedById: 301,
-            reviewedByName: 'Suresh Kumar',
-            reviewedByRole: 'teamlead_agent_business',
-            status: 'APPROVED',
-            createdAt: '08 Sep 2026, 10:36:28',
-            deletedAt: null,
-        },
-    ])
-
+    useEffect(() => {
+        fetchLogs()
+    }, [fetchLogs])
 
     // =========================================================
     // FILTER STATE
@@ -376,19 +197,19 @@ function DuplicateLeadLogs() {
             const matchesSubmittedBy =
                 !submittedById ||
                 String(log.submittedById) ===
-                    String(submittedById)
+                String(submittedById)
 
 
             const matchesReviewedBy =
                 !reviewedById ||
                 String(log.reviewedById) ===
-                    String(reviewedById)
+                String(reviewedById)
 
 
             const matchesStatus =
                 !status ||
-                log.status === status
-
+                String(log.status ?? '').toUpperCase() ===
+                String(status).toUpperCase()
 
             const logDate =
                 log.createdAt
@@ -401,9 +222,9 @@ function DuplicateLeadLogs() {
                 (
                     logDate &&
                     logDate >=
-                        new Date(
-                            `${fromDate}T00:00:00`
-                        )
+                    new Date(
+                        `${fromDate}T00:00:00`
+                    )
                 )
 
 
@@ -412,9 +233,9 @@ function DuplicateLeadLogs() {
                 (
                     logDate &&
                     logDate <=
-                        new Date(
-                            `${toDate}T23:59:59`
-                        )
+                    new Date(
+                        `${toDate}T23:59:59`
+                    )
                 )
 
 
@@ -472,10 +293,10 @@ function DuplicateLeadLogs() {
     const paginatedLogs =
         filteredLogs.slice(
             (safeCurrentPage - 1) *
-                pageSize,
+            pageSize,
 
             safeCurrentPage *
-                pageSize
+            pageSize
         )
 
 
@@ -958,7 +779,24 @@ function DuplicateLeadLogs() {
 
             </div>
 
+            {loading && (
+                <div className="py-4 text-center text-sm text-base-content/60">
+                    Loading duplicate lead logs...
+                </div>
+            )}
 
+            {error && (
+                <div className="alert alert-error">
+                    <span>{error}</span>
+                    <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={fetchLogs}
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
             {/* =====================================================
                 TABLE
             ===================================================== */}
@@ -1018,7 +856,7 @@ function DuplicateLeadLogs() {
                         ">
                             {Math.min(
                                 safeCurrentPage *
-                                    pageSize,
+                                pageSize,
                                 filteredLogs.length
                             )}
                         </span>
@@ -1088,17 +926,16 @@ function DuplicateLeadLogs() {
                                     className={`
                                         btn
                                         btn-sm
-                                        ${
-                                            safeCurrentPage ===
+                                        ${safeCurrentPage ===
                                             page
-                                                ? `
+                                            ? `
                                                     border-[#8BCF00]
                                                     bg-[#8BCF00]
                                                     text-white
                                                     hover:border-[#6FA800]
                                                     hover:bg-[#6FA800]
                                                 `
-                                                : `
+                                            : `
                                                     btn-ghost
                                                 `
                                         }

@@ -81,9 +81,13 @@ class CallReassignmentAuditLog(Base):
     )
 
     # Phone number assigned to (phone_numbers.id)
+    assigned_from_phone = Column(
+        String(20),
+        nullable=True,
+    )
+
     assigned_to_phone = Column(
-        Integer,
-        ForeignKey("phone_numbers.id", ondelete="SET NULL"),
+        String(20),
         nullable=True,
     )
 
@@ -133,11 +137,4 @@ class CallReassignmentAuditLog(Base):
         foreign_keys=[to_report_to_id],
         lazy="select",
     )
-
-    target_phone_number = relationship(
-        "PhoneNumber",
-        foreign_keys=[assigned_to_phone],
-        lazy="select",
-    )
-
 

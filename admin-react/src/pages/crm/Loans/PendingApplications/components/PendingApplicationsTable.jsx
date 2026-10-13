@@ -10,7 +10,7 @@ import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftR
 import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
-
+import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
 import GlobalChat from "../../../../../components/GlobalModels/Loans/GlobalChat";
 
 import AgentDropdown from "../../../../../components/GlobalModels/Filters/AgentDropdown";
@@ -54,6 +54,7 @@ function PendingApplicationsTable({
   onReminder,
   onChat,
   onViewApplication,
+  onDeleteApplication,
   onRefresh,
   onAssignmentChange,
 }) {
@@ -1350,6 +1351,23 @@ function PendingApplicationsTable({
                                                                     h-4
                                                                 "
                             />
+                          </button>
+                            {/* DELETE */}
+                          <button
+                            type="button"
+                            onClick={() => onDeleteApplication?.(application)}
+                            title="Delete application"
+                            aria-label={`Delete application for ${application.name || "customer"}`}
+                            className="
+                              btn
+                              btn-ghost
+                              btn-sm
+                              btn-square
+                              text-error
+                              hover:bg-error/10
+                                                "
+                          >
+                            <TrashIcon className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

@@ -205,9 +205,7 @@ const LoanAssignmentLogs = lazy(
 const DuplicateLeadLogs = lazy(
     () => import('../pages/crm/Logs/DuplicateLeadLogs')
 )
-const CallAssignmentLogs = lazy(
-    () => import('../pages/crm/Logs/CallAssignmentLogs')
-)
+
 const CallReassignmentLogs = lazy(
     () => import('../pages/crm/Logs/CallReassignmentLogs')
 )
@@ -533,11 +531,7 @@ const routes = [
         component: DuplicateLeadLogs,
         permission: PERMISSIONS.DUPLICATE_LEAD_LOGS_VIEW,
     },
-    {
-        path: '/call-assignment-logs',
-        component: CallAssignmentLogs,
-        permission: PERMISSIONS.CALL_ASSIGNMENT_LOGS_VIEW,
-    },
+   
     {
         path: '/call-reassignment-logs',
         component: CallReassignmentLogs,

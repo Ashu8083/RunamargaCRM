@@ -1,6 +1,6 @@
 // admin-react/src/pages/CallManagement/CallAssignment/components/AssignNumbersModal.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState, useMemo} from 'react'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import ExclamationTriangleIcon from '@heroicons/react/24/outline/ExclamationTriangleIcon'
@@ -33,8 +33,6 @@ const DATE_RANGES = [
 function AssignNumbersModal({
     open = false,
     entries = [],
-    employees = [],
-    rms = [],
     onClose,
     onAssign,
 }) {
@@ -67,39 +65,6 @@ function AssignNumbersModal({
 
     }, [entries])
 
-
-    // =========================================================
-    // EMPLOYEE / RM LIST
-    // =========================================================
-
-    const rmList = useMemo(() => {
-
-        const list =
-            Array.isArray(employees) &&
-                employees.length
-                ? employees
-                : Array.isArray(rms)
-                    ? rms
-                    : []
-
-        return list.filter((employee) => {
-
-            const role =
-                String(employee.role || '')
-                    .toLowerCase()
-
-            return (
-                role === 'rm' ||
-                role === 'relationship manager' ||
-                !role
-            )
-
-        })
-
-    }, [
-        employees,
-        rms,
-    ])
 
 
     // =========================================================
@@ -167,7 +132,7 @@ function AssignNumbersModal({
     }
 
 
-   
+
     // =========================================================
     // ASSIGN
     // =========================================================
@@ -427,25 +392,15 @@ function AssignNumbersModal({
                     ================================================= */}
 
                     <RmDropdown
-                        label="Agent / RM *"
+                        label="Agent / RM"
+                        required
                         value={selectedRm}
                         onChange={(value, option) => {
                             setSelectedRm(value)
                             setSelectedEmployee(option)
                         }}
-                        options={rmList}
                         placeholder="Search agent / RM..."
-                        searchPlaceholder="Search agent / RM"
-                        emptyMessage="No agents / RMs found"
-                        includeAllOption={false}
                         className="mb-6 min-w-0"
-                        buttonClassName="h-14 min-h-14 rounded-xl px-4 text-base"
-                        getOptionValue={(employee) =>
-                            employee.id ??
-                            employee.employeeId ??
-                            employee.name ??
-                            ''
-                        }
                     />
 
 

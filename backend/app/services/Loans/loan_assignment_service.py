@@ -14,6 +14,7 @@ from app.models.loan_assignments import (
 )
 
 
+
 class LoanAssignmentService:
 
     # ========================================================================
@@ -415,7 +416,39 @@ class LoanAssignmentService:
             assignment_by_context_id = {
                 assignment.employee_context_id: assignment
                 for assignment in assignments
+            }   
+                        # Resolve the names of employees who last changed
+            # these assignment records.
+            action_by_context_ids = {
+                assignment.action_by
+                for assignment in assignments
+                if assignment.action_by is not None
             }
+
+            action_by_names = {}
+
+            if action_by_context_ids:
+                action_by_rows = (
+                    db.query(
+                        EmployeeContext.id,
+                        Employee.name,
+                    )
+                    .join(
+                        Employee,
+                        Employee.id == EmployeeContext.employee_id,
+                    )
+                    .filter(
+                        EmployeeContext.id.in_(
+                            action_by_context_ids
+                        )
+                    )
+                    .all()
+                )
+
+                action_by_names = {
+                    context_id: name
+                    for context_id, name in action_by_rows
+                }
 
             agents = []
 
@@ -447,7 +480,7 @@ class LoanAssignmentService:
                     {
                         "employee_context_id": agent_context.id,
                         "employee_id": agent.id,
-                        "name": agent.name,
+                        "name": agent.employee.name,
                         "assigned": assigned,
                     }
                 )
@@ -613,7 +646,59 @@ class LoanAssignmentService:
                 "This agent does not have the required "
                 "loan assignment permission."
             )
+        # Resolve the context of the employee performing the action.
+        # Resolve the context of the employee performing the action.
+        action_context = None
 
+        # First, try the active context supplied by the API.
+        if context_id is not None:
+            action_context = (
+                db.query(EmployeeContext)
+                .filter(
+                    EmployeeContext.id == context_id,
+                    EmployeeContext.employee_id == employee.id,
+                    EmployeeContext.is_active.is_(True),
+                    EmployeeContext.deleted_at.is_(None),
+                )
+                .first()
+            )
+
+        # If no context_id was supplied, use the employee's default active context.
+        if action_context is None:
+            action_context = (
+                db.query(EmployeeContext)
+                .filter(
+                    EmployeeContext.employee_id == employee.id,
+                    EmployeeContext.is_active.is_(True),
+                    EmployeeContext.is_default.is_(True),
+                    EmployeeContext.deleted_at.is_(None),
+                )
+                .first()
+            )
+
+        # If there is no default, use the employee's only active context,
+        # but do not arbitrarily select one when multiple contexts exist.
+        if action_context is None:
+            active_contexts = (
+                db.query(EmployeeContext)
+                .filter(
+                    EmployeeContext.employee_id == employee.id,
+                    EmployeeContext.is_active.is_(True),
+                    EmployeeContext.deleted_at.is_(None),
+                )
+                .all()
+            )
+
+            if len(active_contexts) == 1:
+                action_context = active_contexts[0]
+
+        if action_context is None:
+            raise ValueError(
+                "No valid active employee context was found. "
+                "Please select an active context or configure a default context."
+            )
+
+        action_by_id = action_context.id
         # --------------------------------------------------------------------
         # STEP 7
         # Find existing assignment.
@@ -635,19 +720,20 @@ class LoanAssignmentService:
         # Update existing assignment OR create new one.
         # --------------------------------------------------------------------
 
+
         if assignment:
-
+            # Update the existing record.
             assignment.status = status
-
-            # A status toggle is not a deletion.
             assignment.deleted_at = None
+            assignment.action_by = action_by_id
 
         else:
-
+            # Insert a new record.
             assignment = LoanAssignment(
                 employee_context_id=employee_context_id,
                 loan_type_id=loan_type_id,
                 status=status,
+                action_by=action_by_id,
             )
 
             db.add(assignment)

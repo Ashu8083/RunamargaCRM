@@ -37,7 +37,7 @@ from .employee_audit_log_routes import router as employee_audit_log_router
 from .phone_number_audit_log_routes import router as phone_number_audit_log_router
 from .loan_application_audit_log_routes import router as loan_application_audit_log_router
 from .loan_application_status_audit_log_routes import router as loan_application_status_audit_log_router
-
+from .Logs.duplicate_lead_approval_log_routes import router as duplicate_lead_approval_log_router
 
 
 
@@ -138,6 +138,19 @@ from .AgentAnalytics.trends_routes import router as agent_analytics_trends
 from app.routes.admin.ApplicationFilter.application_filter_routes import (
     router as application_filter_router,
 )
+
+# ============================================================================
+# Agent Audit  Logs
+# ============================================================================
+
+from app.routes.admin.Logs.agent_audit_log_routes import router as agent_audit_log_router
+
+# ============================================================================
+# Team Lead Audit  Logs
+# ============================================================================
+
+from app.routes.admin.Logs.team_audit_log_routes import router as team_lead_audit_log_router
+
 
 # ============================================================================
 # Loan Shuffle Logs
@@ -277,7 +290,6 @@ router.include_router(loan_type_distribution_router)
 router.include_router(monthly_trend_router)
 router.include_router(application_funnel_router)
 router.include_router(application_status_applications_router)
-
 # ============================================================================
 # Application Filter 
 # ============================================================================
@@ -311,3 +323,16 @@ router.include_router(
 router.include_router(
     bank_processing_logs_router,
 )
+# ============================================================================
+# Agent Audit Logs
+# ============================================================================
+router.include_router(agent_audit_log_router)
+
+
+# ============================================================================
+# Team Lead Audit Logs
+# ============================================================================
+router.include_router(team_lead_audit_log_router)
+
+
+router.include_router(duplicate_lead_approval_log_router)

@@ -2,6 +2,7 @@ from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
 
+from app.models.employees import Employee
 from app.models.admin_logs import AdminLogs
 from app.Enums.LogAction import LogAction
 
@@ -46,23 +47,37 @@ create_admin_log = log_admin_action
 
 def get_admin_logs(
     db: Session,
+    employee: Employee,
     skip: int = 0,
     limit: int = 100,
     action: Optional[str] = None,
     action_by: Optional[int] = None,
     action_on: Optional[int] = None,
 ) -> List[AdminLogs]:
-    """
-    Retrieves admin logs (Read-Only Data Fetch).
-    """
+    if employee is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Employee not authenticated",
+        )
+
     query = db.query(AdminLogs)
+
     if action:
         query = query.filter(AdminLogs.action == action)
-    if action_by:
-        query = query.filter(AdminLogs.action_by == action_by)
-    if action_on:
-        query = query.filter(AdminLogs.action_on == action_on)
-    return query.order_by(AdminLogs.date_and_time.desc()).offset(skip).limit(limit).all()
+
+    if action_by is not None:
+        query = query.filter(AdminLogs.action_by_id == action_by)
+
+    if action_on is not None:
+        query = query.filter(AdminLogs.admin_id == action_on)
+
+    return (
+        query
+        .order_by(AdminLogs.date_and_time.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
 def get_admin_log_by_id(

@@ -40,7 +40,7 @@ function LeadCreationLogTable({
 
         return (
             roleMap[
-                String(role).toLowerCase()
+            String(role).toLowerCase()
             ] ||
             role
         )
@@ -141,7 +141,7 @@ function LeadCreationLogTable({
             shadow-sm
         ">
 
-          
+
 
             {/* =====================================================
                 TABLE
@@ -175,7 +175,7 @@ function LeadCreationLogTable({
                             <th>
                                 Lead ID
                             </th>
-
+                            <th>Applicant Phone</th>
 
                             {/* CREATED BY */}
 
@@ -250,7 +250,11 @@ function LeadCreationLogTable({
 
                                     </td>
 
-
+                                    <td>
+                                        <span className="text-sm">
+                                            {log.phone || '—'}
+                                        </span>
+                                    </td>
                                     {/* =================================
                                         CREATED BY
                                     ================================= */}

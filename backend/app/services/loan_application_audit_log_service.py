@@ -5,6 +5,8 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 
 from app.models.employee_contexts import EmployeeContext
+from app.models.employees import Employee
+
 from app.models.loan_applications import LoanApplication
 from app.models.loan_application_audit_logs import LoanApplicationAuditLog
 from app.services.auditl_log_service import AuditLogService
@@ -97,6 +99,7 @@ class LoanApplicationAuditLogService(AuditLogService[LoanApplicationAuditLog]):
     @staticmethod
     def get_audit_logs(
         db: Session,
+        employee:Employee,
         skip: int = 0,
         limit: int = 100,
         action: Optional[str] = None,
@@ -120,22 +123,6 @@ class LoanApplicationAuditLogService(AuditLogService[LoanApplicationAuditLog]):
 
         return query.order_by(LoanApplicationAuditLog.date_and_time.desc()).offset(skip).limit(limit).all()
 
-    @staticmethod
-    def get_loan_application_audit_log_by_id(
-        db: Session,
-        log_id: int,
-    ) -> Optional[LoanApplicationAuditLog]:
-        """
-        Retrieves a single loan application audit log by ID.
-        """
-        return (
-            db.query(LoanApplicationAuditLog)
-            .filter(
-                LoanApplicationAuditLog.id == log_id,
-                LoanApplicationAuditLog.deleted_at.is_(None),
-            )
-            .first()
-        )
 
 
 # Helper function alias

@@ -29,6 +29,7 @@ class LoanAssignment(Base):
         index=True,
     )
 
+    # Employee receiving the loan assignment.
     employee_context_id = Column(
         Integer,
         ForeignKey(
@@ -39,6 +40,7 @@ class LoanAssignment(Base):
         index=True,
     )
 
+    # Loan type being assigned.
     loan_type_id = Column(
         Integer,
         ForeignKey(
@@ -46,6 +48,17 @@ class LoanAssignment(Base):
             ondelete="CASCADE",
         ),
         nullable=False,
+        index=True,
+    )
+
+    # Employee context performing the action.
+    action_by = Column(
+        Integer,
+        ForeignKey(
+            "employee_contexts.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
         index=True,
     )
 
@@ -75,11 +88,22 @@ class LoanAssignment(Base):
         nullable=True,
     )
 
+    # EmployeeContext receiving the assignment.
+    # Explicitly use employee_context_id.
     employee_context = relationship(
         "EmployeeContext",
         back_populates="loan_assignments",
+        foreign_keys=[employee_context_id],
     )
 
+    # EmployeeContext performing the action.
+    # Explicitly use action_by.
+    action_by_context = relationship(
+        "EmployeeContext",
+        foreign_keys=[action_by],
+    )
+
+    # Loan type relationship.
     loan_type = relationship(
         "LoanType",
         back_populates="loan_assignments",

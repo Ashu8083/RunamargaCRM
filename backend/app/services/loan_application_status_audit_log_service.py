@@ -2,8 +2,8 @@
 
 from datetime import datetime
 from typing import Optional, List
-from sqlalchemy.orm import Session
-
+from sqlalchemy.orm import Session,joinedload
+from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
 from app.models.loan_applications import LoanApplication
 from app.models.loan_application_status_audit_logs import LoanApplicationStatusAuditLog
@@ -101,6 +101,7 @@ class LoanApplicationStatusAuditLogService(AuditLogService[LoanApplicationStatus
     @staticmethod
     def get_audit_logs(
         db: Session,
+        employee:Employee,
         skip: int = 0,
         limit: int = 100,
         action: Optional[str] = None,
@@ -113,8 +114,34 @@ class LoanApplicationStatusAuditLogService(AuditLogService[LoanApplicationStatus
         """
         Retrieves loan application status audit logs with optional filtering.
         """
-        query = db.query(LoanApplicationStatusAuditLog).filter(
-            LoanApplicationStatusAuditLog.deleted_at.is_(None)
+        if not employee:
+            return []
+
+        query = (
+            db.query(LoanApplicationStatusAuditLog)
+            .options(
+                # Load the loan application
+                joinedload(
+                    LoanApplicationStatusAuditLog.loan_application
+                ),
+
+                # Load the employee who performed the action
+                joinedload(
+                    LoanApplicationStatusAuditLog.performer
+                ).joinedload(
+                    EmployeeContext.employee
+                ),
+
+                # Load the reporting manager
+                joinedload(
+                    LoanApplicationStatusAuditLog.reporting_manager
+                ).joinedload(
+                    EmployeeContext.employee
+                ),
+            )
+            .filter(
+                LoanApplicationStatusAuditLog.deleted_at.is_(None)
+            )
         )
 
         if action:

@@ -2,13 +2,14 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.models.employees import Employee
 from app.config.database import get_db
 from app.schemas.admin_log_schema import AdminLogResponse
 from app.controllers.admin_log_controller import (
     get_admin_logs_controller,
     get_admin_log_by_id_controller,
 )
-
+from app.core.security import get_current_employee
 router = APIRouter(
     prefix="/admin-logs",
     tags=["Admin Logs"],
@@ -26,6 +27,7 @@ def get_admin_logs_route(
     action_by: Optional[int] = Query(None, description="employee_context_id of admin performing action"),
     action_on: Optional[int] = Query(None, description="employee_context_id of target admin"),
     db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
 ):
     """
     Read-only GET route to fetch admin logs.
@@ -37,6 +39,7 @@ def get_admin_logs_route(
         action=action,
         action_by=action_by,
         action_on=action_on,
+        employee=employee
     )
 
 
@@ -47,8 +50,10 @@ def get_admin_logs_route(
 def get_admin_log_by_id_route(
     log_id: int,
     db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
 ):
     """
     Read-only GET route to fetch a specific admin log by ID.
     """
-    return get_admin_log_by_id_controller(db=db, log_id=log_id)
+    return get_admin_log_by_id_controller(db=db, log_id=log_id,
+        employee=employee)

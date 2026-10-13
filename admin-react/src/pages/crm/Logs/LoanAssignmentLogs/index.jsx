@@ -1,409 +1,20 @@
 // admin-react/src/pages/Logs/LoanAssignmentLogs/index.jsx
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getLoanAssignments } from "./Api";
 
 import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 
 import LoanAssignmentLogTable from './components/LoanAssignmentLogTable'
-
-import EmployeeDropdown from '../../../../components/GlobalModels/Filters/EmployeeDropdown'
 import LoanTypeDropdown from '../../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
 
 function LoanAssignmentLogs() {
 
-    // =========================================================
-    // MOCK EMPLOYEES
-    // =========================================================
-
-    const employees = [
-        {
-            id: 105,
-            name: 'Rahul Sharma',
-            employeeId: '105',
-            role: 'agent',
-        },
-
-        {
-            id: 108,
-            name: 'Anil Kumar',
-            employeeId: '108',
-            role: 'agent',
-        },
-
-        {
-            id: 110,
-            name: 'Vikram Singh',
-            employeeId: '110',
-            role: 'agent',
-        },
-
-        {
-            id: 112,
-            name: 'Arjun Rao',
-            employeeId: '112',
-            role: 'rm',
-        },
-
-        {
-            id: 115,
-            name: 'Kiran Kumar',
-            employeeId: '115',
-            role: 'agent',
-        },
-
-        {
-            id: 301,
-            name: 'Suresh Kumar',
-            employeeId: '301',
-            role: 'teamlead_agent_business',
-        },
-
-        {
-            id: 302,
-            name: 'Priya Singh',
-            employeeId: '302',
-            role: 'teamlead_rm_business',
-        },
-    ]
-
-
-    // =========================================================
-    // MOCK LOAN ASSIGNMENT LOGS
-    // =========================================================
-
-    const [logs] = useState([
-        {
-            id: 5001,
-
-            employeeId: 105,
-
-            employeeName: 'Rahul Sharma',
-
-            employeeRole: 'agent',
-
-            reportsToId: 301,
-
-            reportsToName: 'Suresh Kumar',
-
-            loanType: 'PERSONAL',
-
-            event: 'Auto-assignment enabled',
-
-            createdAt: '01 Sep 2026, 09:42:12',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5002,
-
-            employeeId: 105,
-
-            employeeName: 'Rahul Sharma',
-
-            employeeRole: 'agent',
-
-            reportsToId: 301,
-
-            reportsToName: 'Suresh Kumar',
-
-            loanType: 'BUSINESS',
-
-            event: 'Auto-assignment enabled',
-
-            createdAt: '01 Sep 2026, 10:15:43',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5003,
-
-            employeeId: 105,
-
-            employeeName: 'Rahul Sharma',
-
-            employeeRole: 'agent',
-
-            reportsToId: 301,
-
-            reportsToName: 'Suresh Kumar',
-
-            loanType: 'PERSONAL',
-
-            event: 'Auto-assignment disabled',
-
-            createdAt: '02 Sep 2026, 11:21:08',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5004,
-
-            employeeId: 108,
-
-            employeeName: 'Anil Kumar',
-
-            employeeRole: 'agent',
-
-            reportsToId: 302,
-
-            reportsToName: 'Priya Singh',
-
-            loanType: 'PERSONAL',
-
-            event: 'Auto-assignment enabled',
-
-            createdAt: '02 Sep 2026, 09:03:51',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5005,
-
-            employeeId: 108,
-
-            employeeName: 'Anil Kumar',
-
-            employeeRole: 'agent',
-
-            reportsToId: 302,
-
-            reportsToName: 'Priya Singh',
-
-            loanType: 'BUSINESS',
-
-            event: 'Auto-assignment enabled',
-
-            createdAt: '03 Sep 2026, 10:30:25',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5006,
-
-            employeeId: 108,
-
-            employeeName: 'Anil Kumar',
-
-            employeeRole: 'agent',
-
-            reportsToId: 302,
-
-            reportsToName: 'Priya Singh',
-
-            loanType: 'PERSONAL',
-
-            event: 'Auto-assignment disabled',
-
-            createdAt: '04 Sep 2026, 11:10:14',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5007,
-
-            employeeId: 110,
-
-            employeeName: 'Vikram Singh',
-
-            employeeRole: 'agent',
-
-            reportsToId: 303,
-
-            reportsToName: 'Rajesh Kumar',
-
-            loanType: 'BUSINESS',
-
-            event: 'Auto-assignment enabled',
-
-            createdAt: '04 Sep 2026, 12:05:37',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5008,
-
-            employeeId: 110,
-
-            employeeName: 'Vikram Singh',
-
-            employeeRole: 'agent',
-
-            reportsToId: 303,
-
-            reportsToName: 'Rajesh Kumar',
-
-            loanType: 'PERSONAL',
-
-            event: 'Auto-assignment enabled',
-
-            createdAt: '05 Sep 2026, 09:42:19',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5009,
-
-            employeeId: 112,
-
-            employeeName: 'Arjun Rao',
-
-            employeeRole: 'rm',
-
-            reportsToId: 301,
-
-            reportsToName: 'Suresh Kumar',
-
-            loanType: 'BUSINESS',
-
-            event: 'Auto-assignment enabled',
-
-            createdAt: '05 Sep 2026, 10:12:44',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5010,
-
-            employeeId: 112,
-
-            employeeName: 'Arjun Rao',
-
-            employeeRole: 'rm',
-
-            reportsToId: 301,
-
-            reportsToName: 'Suresh Kumar',
-
-            loanType: 'PERSONAL',
-
-            event: 'Auto-assignment disabled',
-
-            createdAt: '06 Sep 2026, 11:45:22',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5011,
-
-            employeeId: 115,
-
-            employeeName: 'Kiran Kumar',
-
-            employeeRole: 'agent',
-
-            reportsToId: 302,
-
-            reportsToName: 'Priya Singh',
-
-            loanType: 'PERSONAL',
-
-            event: 'Auto-assignment enabled',
-
-            createdAt: '06 Sep 2026, 01:18:09',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5012,
-
-            employeeId: 115,
-
-            employeeName: 'Kiran Kumar',
-
-            employeeRole: 'agent',
-
-            reportsToId: 302,
-
-            reportsToName: 'Priya Singh',
-
-            loanType: 'BUSINESS',
-
-            event: 'Auto-assignment disabled',
-
-            createdAt: '07 Sep 2026, 02:52:31',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5013,
-
-            employeeId: 105,
-
-            employeeName: 'Rahul Sharma',
-
-            employeeRole: 'agent',
-
-            reportsToId: 301,
-
-            reportsToName: 'Suresh Kumar',
-
-            loanType: 'BUSINESS',
-
-            event: 'Auto-assignment enabled',
-
-            createdAt: '07 Sep 2026, 03:25:16',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5014,
-
-            employeeId: 108,
-
-            employeeName: 'Anil Kumar',
-
-            employeeRole: 'agent',
-
-            reportsToId: 302,
-
-            reportsToName: 'Priya Singh',
-
-            loanType: 'PERSONAL',
-
-            event: 'Auto-assignment enabled',
-
-            createdAt: '08 Sep 2026, 09:14:42',
-
-            deletedAt: null,
-        },
-
-        {
-            id: 5015,
-
-            employeeId: 110,
-
-            employeeName: 'Vikram Singh',
-
-            employeeRole: 'agent',
-
-            reportsToId: 303,
-
-            reportsToName: 'Rajesh Kumar',
-
-            loanType: 'BUSINESS',
-
-            event: 'Auto-assignment disabled',
-
-            createdAt: '08 Sep 2026, 10:36:28',
-
-            deletedAt: null,
-        },
-    ])
+    const [logs, setLogs] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
 
     // =========================================================
@@ -440,6 +51,58 @@ function LoanAssignmentLogs() {
 
     const pageSize = 10
 
+    const fetchLoanAssignments = useCallback(async () => {
+        setLoading(true)
+        setError('')
+
+        try {
+            const response = await getLoanAssignments()
+
+            const loanTypes = Array.isArray(response)
+                ? response
+                : response?.data ?? []
+
+            const rows = loanTypes.flatMap((loanType) =>
+                (loanType.agents ?? []).map((agent) => ({
+                    id: `${loanType.id}-${agent.employee_context_id}`,
+
+                    employeeContextId: agent.employee_context_id,
+                    employeeId: agent.employee_id,
+                    employeeName: agent.name ?? '',
+
+                    loanTypeId: loanType.id,
+                    loanType: loanType.name ?? '',
+
+                    assigned: Boolean(agent.assigned),
+                    event: agent.assigned
+                        ? 'Auto-assignment enabled'
+                        : 'Auto-assignment disabled',
+
+                    actionById: agent.action_by ?? null,
+                    actionByName: agent.action_by_name ?? '',
+
+                    createdAt: agent.created_at ?? null,
+                    updatedAt: agent.updated_at ?? null,
+                }))
+            )
+
+            setLogs(rows)
+        } catch (err) {
+            console.error('Failed to fetch loan assignments:', err)
+
+            setLogs([])
+            setError(
+                err.response?.data?.detail ||
+                'Failed to load loan assignments.'
+            )
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        fetchLoanAssignments()
+    }, [fetchLoanAssignments])
 
     // =========================================================
     // FILTER LOGS
@@ -461,19 +124,20 @@ function LoanAssignmentLogs() {
 
             const matchesSearch =
                 !searchValue ||
-                log.employeeName
-                    ?.toLowerCase()
-                    .includes(searchValue) ||
-                String(log.employeeId)
-                    .toLowerCase()
-                    .includes(searchValue) ||
-                log.reportsToName
-                    ?.toLowerCase()
-                    .includes(searchValue) ||
-                String(log.reportsToId)
-                    .toLowerCase()
-                    .includes(searchValue)
-
+                [
+                    log.employeeName,
+                    log.employeeId,
+                    log.employeeContextId,
+                    log.loanType,
+                    log.loanTypeId,
+                    log.event,
+                    log.actionByName,
+                    log.actionById,
+                ].some((value) =>
+                    String(value ?? '')
+                        .toLowerCase()
+                        .includes(searchValue)
+                )
 
             // -------------------------------------------------
             // EMPLOYEE
@@ -482,7 +146,7 @@ function LoanAssignmentLogs() {
             const matchesEmployee =
                 !employeeId ||
                 String(log.employeeId) ===
-                    String(employeeId)
+                String(employeeId)
 
 
             // -------------------------------------------------
@@ -513,9 +177,9 @@ function LoanAssignmentLogs() {
                 (
                     logDate &&
                     logDate >=
-                        new Date(
-                            `${fromDate}T00:00:00`
-                        )
+                    new Date(
+                        `${fromDate}T00:00:00`
+                    )
                 )
 
 
@@ -528,9 +192,9 @@ function LoanAssignmentLogs() {
                 (
                     logDate &&
                     logDate <=
-                        new Date(
-                            `${toDate}T23:59:59`
-                        )
+                    new Date(
+                        `${toDate}T23:59:59`
+                    )
                 )
 
 
@@ -586,10 +250,10 @@ function LoanAssignmentLogs() {
     const paginatedLogs =
         filteredLogs.slice(
             (safeCurrentPage - 1) *
-                pageSize,
+            pageSize,
 
             safeCurrentPage *
-                pageSize
+            pageSize
         )
 
 
@@ -698,16 +362,8 @@ function LoanAssignmentLogs() {
     // =========================================================
 
     const handleRefresh = () => {
-
-        /*
-         * Replace with API call later.
-         */
-
-        console.log(
-            'Refresh loan assignment logs'
-        )
-
-    }
+        fetchLoanAssignments();
+    };
 
 
     // =========================================================
@@ -846,30 +502,7 @@ function LoanAssignmentLogs() {
                         </div>
 
 
-                        {/* =========================================
-                            EMPLOYEE
-                        ========================================= */}
 
-                        <div className="
-                            min-w-0
-                            w-full
-                            sm:flex-1
-                            lg:min-w-[170px]
-                            lg:flex-1
-                        ">
-
-                            <EmployeeDropdown
-                                label=""
-                                value={employeeId}
-                                onChange={
-                                    handleEmployeeChange
-                                }
-                                options={employees}
-                                allLabel="All Employees"
-                                placeholder="Employee"
-                            />
-
-                        </div>
 
 
                         {/* =========================================
@@ -1098,7 +731,7 @@ function LoanAssignmentLogs() {
                         ">
                             {Math.min(
                                 safeCurrentPage *
-                                    pageSize,
+                                pageSize,
                                 filteredLogs.length
                             )}
                         </span>
@@ -1172,17 +805,16 @@ function LoanAssignmentLogs() {
                                     className={`
                                         btn
                                         btn-sm
-                                        ${
-                                            safeCurrentPage ===
+                                        ${safeCurrentPage ===
                                             page
-                                                ? `
+                                            ? `
                                                     border-[#8BCF00]
                                                     bg-[#8BCF00]
                                                     text-white
                                                     hover:border-[#6FA800]
                                                     hover:bg-[#6FA800]
                                                 `
-                                                : `
+                                            : `
                                                     btn-ghost
                                                 `
                                         }

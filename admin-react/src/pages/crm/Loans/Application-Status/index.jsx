@@ -16,11 +16,13 @@ import {
 } from "../../../../app/auth";
 
 import {
-    getApplicationStatusApplications,
+    getApplicationStatusApplications
 } from "./API";
-
+import { deleteApplication
+} from '../CombinedApplications/Api'
 import ApplicationsTable from "./components/ApplicationsTable";
 
+import { useToast } from '../../../../components/Toast/ToastProvider'
 
 // =============================================================
 // NORMALIZE APPLICATION
@@ -346,6 +348,10 @@ const ApplicationStatus = () => {
 
     const [selectedStatus, setSelectedStatus] =
         useState('')
+    const {
+        showSuccess,
+        showError,
+    } = useToast()
 
     // =========================================================
     // URL PARAMETERS
@@ -574,6 +580,33 @@ const ApplicationStatus = () => {
 
 
 
+
+    const handleDeleteApplication = async (application) => {
+        const confirmed = window.confirm(
+            `Are you sure you want to delete the application for ${application.name || "this customer"
+            }?`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            await deleteApplication(
+                application.unique_id ?? application.id
+            );
+
+            showSuccess("Application deleted successfully");
+
+            // Refresh the current applications page.
+            await fetchApplications(currentPage, pageSize, search);
+        } catch (error) {
+            console.error("Failed to delete application:", error);
+
+            showError(
+                error?.response?.data?.detail ||
+                "Failed to delete application"
+            );
+        }
+    };
 
     // =========================================================
     // FETCH WHEN PAGE / FILTER CHANGES
@@ -1265,10 +1298,10 @@ const ApplicationStatus = () => {
                 onChat={handleChat}
                 onViewApplication={handleViewApplication}
 
-                onRefresh={handleRefresh}
+                onRefresh={fetchApplications}
 
                 onAssignmentChange={handleAssignmentChange}
-
+                onDeleteApplication={handleDeleteApplication}
                 onPageChange={handlePageChange}
             />
 

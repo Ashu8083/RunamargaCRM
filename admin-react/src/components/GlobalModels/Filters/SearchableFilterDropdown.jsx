@@ -221,7 +221,7 @@ function SearchableFilterDropdown({
                 ? String(value)
                 : placeholder || allLabel
         )
-        console.log(displayValue)
+        // console.log(displayValue)
 
     // =========================================================
     // FILTER OPTIONS

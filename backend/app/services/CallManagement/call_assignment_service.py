@@ -8,7 +8,11 @@ from app.models.call_assignments import CallAssignment
 from app.models.loan_applications import LoanApplication
 from app.models.call_logs import CallLog
 from app.models.employees import Employee
-
+from app.models.employee_contexts import EmployeeContext
+from app.services.CallManagement.call_reassignment_audit_log_service import (
+    CallReassignmentAuditLogService,
+)
+from app.models.phone_numbers import PhoneNumber
 
 
 class CallAssignmentService:
@@ -73,24 +77,81 @@ class CallAssignmentService:
         employee: Employee,
         phone_number: str,
         assigned_to_id: int,
+        context_id: Optional[int] = None,
     ):
+        # ---------------------------------------------------------
+        # GET THE CALLER'S ACTIVE EMPLOYEE CONTEXT
+        # ---------------------------------------------------------
+
+        current_context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not current_context or not current_context.context:
+            raise ValueError("Active employee context not found")
+
+        # ---------------------------------------------------------
+        # GET THE RECIPIENT EMPLOYEE CONTEXT
+        # ---------------------------------------------------------
+
         assigned_to = (
-            db.query(Employee)
-            .filter(Employee.id == assigned_to_id)
+            db.query(EmployeeContext)
+            .filter(
+                EmployeeContext.id == assigned_to_id,
+                EmployeeContext.is_active.is_(True),
+                EmployeeContext.deleted_at.is_(None),
+            )
             .first()
         )
 
         if not assigned_to:
-            raise ValueError("Assigned employee not found")
+            raise ValueError("Assigned employee context not found")
 
-        if not AccessControl.can_assign_call_to_employee(
+        # ---------------------------------------------------------
+        # CHECK ASSIGNMENT PERMISSION
+        # ---------------------------------------------------------
+
+        if not AccessControl.has_permission(
             db=db,
             employee=employee,
-            target_employee=assigned_to,
+            permission="calls:number:assign",
         ):
             raise PermissionError(
-                "You are not allowed to assign calls to this employee."
+                "You are not allowed to assign calls."
             )
+
+        # GLOBAL and MANAGER may assign to visible contexts.
+        # Other roles must only assign within their allowed hierarchy.
+        current_family = AccessControl.get_context_family(
+            current_context.context.code
+        )
+
+        if current_family not in {"GLOBAL", "MANAGER"}:
+            visible_rms = AccessControl.get_visible_rms(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+            )
+
+            visible_rm_context_ids = {
+                rm.id for rm in visible_rms
+            }
+
+            if current_family == "RM":
+                allowed = assigned_to.id == current_context.id
+            else:
+                allowed = assigned_to.id in visible_rm_context_ids
+
+            if not allowed:
+                raise PermissionError(
+                    "You are not allowed to assign calls to this context."
+                )
+
+        # ---------------------------------------------------------
+        # PREVENT DUPLICATE ACTIVE ASSIGNMENTS
+        # ---------------------------------------------------------
 
         existing_assignment = (
             db.query(CallAssignment)
@@ -107,11 +168,15 @@ class CallAssignmentService:
                 "This phone number is already assigned."
             )
 
+        # ---------------------------------------------------------
+        # CREATE ASSIGNMENT
+        # ---------------------------------------------------------
+
         assignment = CallAssignment(
             phone_number=phone_number,
-            assigned_to_id=assigned_to_id,
-            assigned_by_id=employee.id,
-            status="received",
+            assigned_to_id=assigned_to.id,
+            assigned_by_id=current_context.id,
+            status="missed",
         )
 
         db.add(assignment)
@@ -127,70 +192,199 @@ class CallAssignmentService:
         employee: Employee,
         assignment_id: int,
         new_agent_id: int,
+        context_id: int | None = None,
     ):
-        assignment = (
-            db.query(CallAssignment)
-            .filter(
-                CallAssignment.id == assignment_id,
-                CallAssignment.deleted_at.is_(None),
-            )
-            .first()
+        # --------------------------------------------------
+        # 1. Get the caller's active EmployeeContext
+        # --------------------------------------------------
+        current_context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
         )
+
+        if not current_context:
+            raise ValueError("Active employee context not found.")
+
+        # --------------------------------------------------
+        # 2. Find the assignment within the caller's scope
+        # --------------------------------------------------
+        assignment_query = db.query(CallAssignment).filter(
+            CallAssignment.id == assignment_id,
+            CallAssignment.deleted_at.is_(None),
+        )
+
+        assignment_query = CallAssignmentService.apply_scope(
+            assignment_query,
+            db=db,
+            employee=employee,
+            context_id=current_context.id,
+        )
+
+        assignment = assignment_query.first()
 
         if not assignment:
-            raise ValueError("Call assignment not found")
-
-        visible_assignment = (
-            CallAssignmentService.apply_scope(
-                query=db.query(CallAssignment).filter(
-                    CallAssignment.id == assignment_id,
-                    CallAssignment.deleted_at.is_(None),
-                ),
-                db=db,
-                employee=employee,
-            )
-            .first()
-        )
-
-        if not visible_assignment:
-            raise PermissionError(
-                "You are not allowed to exchange this assignment."
+            raise ValueError(
+                "Call assignment not found or you do not have access to it."
             )
 
+        # --------------------------------------------------
+        # 3. Find the new recipient EmployeeContext
+        # --------------------------------------------------
         new_agent = (
-            db.query(Employee)
-            .filter(Employee.id == new_agent_id)
+            db.query(EmployeeContext)
+            .filter(
+                EmployeeContext.id == new_agent_id,
+                EmployeeContext.is_active.is_(True),
+                EmployeeContext.deleted_at.is_(None),
+            )
             .first()
         )
 
         if not new_agent:
-            raise ValueError("Assigned employee not found")
+            raise ValueError("Target employee context not found or inactive.")
 
-        if not AccessControl.can_assign_call_to_employee(
+        # --------------------------------------------------
+        # 4. Check assignment permission
+        # --------------------------------------------------
+        if not AccessControl.has_permission(
             db=db,
             employee=employee,
-            target_employee=new_agent,
+            permission="calls:number:assign",
         ):
             raise PermissionError(
-                "You are not allowed to assign calls to this employee."
+                "You do not have permission to assign call numbers."
             )
 
-        previous_agent_id = assignment.assigned_to_id
+        # --------------------------------------------------
+        # 5. Validate the target against the caller's context
+        # --------------------------------------------------
+        current_family = AccessControl.get_context_family(
+            current_context.context.code
+        )
+
+        if current_family in {"GLOBAL", "MANAGER"}:
+            # Global and manager contexts can assign according
+            # to their existing application permissions.
+            pass
+
+        elif current_family == "RM":
+            # An RM can only assign to their own active context.
+            if new_agent.id != current_context.id:
+                raise PermissionError(
+                    "An RM can only assign calls to their own context."
+                )
+
+        elif current_family in {"AGENT", "TEAMLEAD"}:
+            # Restrict the target to visible RM contexts.
+            visible_rms = AccessControl.get_visible_rms(
+                db=db,
+                employee=employee,
+                context_id=current_context.id,
+            )
+
+            visible_rm_context_ids = {
+                rm.id for rm in visible_rms
+            }
+
+            if new_agent.id not in visible_rm_context_ids:
+                raise PermissionError(
+                    "You are not allowed to assign calls to this context."
+                )
+
+        else:
+            raise PermissionError(
+                "Your active context is not allowed to exchange assignments."
+            )
+
+        # --------------------------------------------------
+        # 6. Get the previous assignee and their phone number
+        # --------------------------------------------------
 
         previous_agent = None
+        from_phone_record = None
 
-        if previous_agent_id:
+        if assignment.assigned_to_id is not None:
             previous_agent = (
-                db.query(Employee)
-                .filter(Employee.id == previous_agent_id)
+                db.query(EmployeeContext)
+                .filter(
+                    EmployeeContext.id == assignment.assigned_to_id
+                )
                 .first()
             )
 
-        assignment.assigned_to_id = new_agent_id
-        assignment.assigned_by_id = employee.id
+        if previous_agent:
+            from_phone_record = (
+                db.query(PhoneNumber)
+                .filter(
+                    PhoneNumber.employee_id == previous_agent.employee_id,
+                    PhoneNumber.deleted_at.is_(None),
+                )
+                .first()
+            )
 
-        db.commit()
-        db.refresh(assignment)
+        # --------------------------------------------------
+        # 7. Get the new assignee's phone number
+        # --------------------------------------------------
+
+        to_phone_record = (
+            db.query(PhoneNumber)
+            .filter(
+                PhoneNumber.employee_id == new_agent.employee_id,
+                PhoneNumber.deleted_at.is_(None),
+            )
+            .first()
+        )
+        # --------------------------------------------------
+        # 7. Create the reassignment audit log
+        # --------------------------------------------------
+
+        CallReassignmentAuditLogService.log_audit_log(
+            db=db,
+            action="CALL_ASSIGNMENT_EXCHANGED",
+            action_by=current_context.id,
+            action_on=new_agent.id,
+
+            from_assigned_to=previous_agent.id if previous_agent else None,
+            from_report_to=(
+                previous_agent.reports_to_id
+                if previous_agent
+                else None
+            ),
+
+            to_assigned_to=new_agent.id,
+            to_report_to=new_agent.reports_to_id,
+
+            phone=assignment.phone_number,
+
+            assigned_from_phone=(
+                from_phone_record.phone
+                if from_phone_record
+                else None
+            ),
+            assigned_to_phone=(
+                to_phone_record.phone
+                if to_phone_record
+                else None
+            ),
+
+            commit=False,
+        )
+        # --------------------------------------------------
+        # 8. Update assignment using EmployeeContext IDs
+        # --------------------------------------------------
+        assignment.assigned_to_id = new_agent.id
+        assignment.assigned_by_id = current_context.id
+
+        # --------------------------------------------------
+        # 9. Save changes
+        # --------------------------------------------------
+        try:
+            db.commit()
+            db.refresh(assignment)
+        except Exception:
+            db.rollback()
+            raise
 
         return assignment, previous_agent
 
@@ -278,8 +472,13 @@ class CallAssignmentService:
         db: Session,
         employee: Employee,
     ):
+        """
+        Return eligible missed-call numbers that have not already
+        been assigned to an employee.
+        """
+
         # ---------------------------------------------------------
-        # Find phone numbers that have EXACTLY ONE call
+        # 1. Find phone numbers having exactly one call
         # ---------------------------------------------------------
 
         call_count_subquery = (
@@ -300,7 +499,23 @@ class CallAssignmentService:
         )
 
         # ---------------------------------------------------------
-        # Get the actual call belonging to those phone numbers
+        # 2. Find numbers that are already assigned
+        # ---------------------------------------------------------
+
+        assigned_numbers_subquery = (
+            db.query(
+                CallAssignment.phone_number,
+            )
+            .filter(
+                CallAssignment.deleted_at.is_(None),
+                CallAssignment.assigned_to_id.isnot(None),
+            )
+            .distinct()
+            .subquery()
+        )
+
+        # ---------------------------------------------------------
+        # 3. Get eligible missed calls and exclude assigned numbers
         # ---------------------------------------------------------
 
         query = (
@@ -311,23 +526,18 @@ class CallAssignmentService:
                 == CallLog.phone_number,
             )
             .filter(
-                # The only call must be MISSED
                 CallLog.mobile_status == "MISSED",
+                CallLog.phone_number.isnot(None),
+                ~CallLog.phone_number.in_(
+                    db.query(
+                        assigned_numbers_subquery.c.phone_number
+                    )
+                ),
             )
         )
 
         # ---------------------------------------------------------
-        # Apply centralized access-control scope
-        # ---------------------------------------------------------
-
-        query = CallAssignmentService.apply_scope(
-            query=query,
-            db=db,
-            employee=employee,
-        )
-
-        # ---------------------------------------------------------
-        # Exclude phone numbers already in loan applications
+        # 4. Exclude numbers already present in loan applications
         # ---------------------------------------------------------
 
         application_numbers = (
@@ -345,7 +555,7 @@ class CallAssignmentService:
         }
 
         # ---------------------------------------------------------
-        # Get eligible calls
+        # 5. Retrieve available calls in chronological order
         # ---------------------------------------------------------
 
         call_logs = (
@@ -358,16 +568,12 @@ class CallAssignmentService:
         )
 
         # ---------------------------------------------------------
-        # Build response
+        # 6. Build the response
         # ---------------------------------------------------------
 
         data = []
 
         for call in call_logs:
-
-            # -----------------------------------------------------
-            # Number already exists in loan applications
-            # -----------------------------------------------------
 
             if call.phone_number in application_numbers:
                 continue
@@ -405,4 +611,4 @@ class CallAssignmentService:
         return {
             "success": True,
             "data": data,
-        } 
+        }

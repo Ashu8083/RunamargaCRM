@@ -20,13 +20,27 @@ class CallReassignmentAuditLogCreate(BaseModel):
 class CallReassignmentAuditLogResponse(BaseModel):
     id: int
     action: str
+
     customer_phone: Optional[str] = None
-    reassigned_by_id: Optional[int] = None       # employee_context_id performing reassignment
-    from_assigned_to_id: Optional[int] = None    # employee_context_id of previous assignee
-    from_report_to_id: Optional[int] = None      # report_to of previous assignee
-    to_assigned_to_id: Optional[int] = None      # employee_context_id of new assignee
-    to_report_to_id: Optional[int] = None        # report_to of new assignee
-    assigned_to_phone: Optional[int] = None      # phone_numbers.id
+
+    reassigned_by_id: Optional[int] = None
+    reassigned_by_name: Optional[str] = None
+
+    from_assigned_to_id: Optional[int] = None
+    from_assigned_to_name: Optional[str] = None
+    assigned_from_phone: Optional[str] = None
+
+    from_report_to_id: Optional[int] = None
+    from_report_to_name: Optional[str] = None
+
+    to_assigned_to_id: Optional[int] = None
+    to_assigned_to_name: Optional[str] = None
+    assigned_to_phone: Optional[str] = None
+
+    to_report_to_id: Optional[int] = None
+    to_report_to_name: Optional[str] = None
+
+
     date_and_time: datetime
     deleted_at: Optional[datetime] = None
 

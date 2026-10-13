@@ -1,46 +1,73 @@
 # backend/app/services/CallManagement/call_reassignment_audit_log_service.py
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
+
 from sqlalchemy.orm import Session
 
 from app.models.employee_contexts import EmployeeContext
+from app.models.employees import Employee
 from app.models.call_reassignment_audit_logs import CallReassignmentAuditLog
 from app.services.auditl_log_service import AuditLogService
 
 
-class CallReassignmentAuditLogService(AuditLogService[CallReassignmentAuditLog]):
+class CallReassignmentAuditLogService(
+    AuditLogService[CallReassignmentAuditLog]
+):
+
+    @staticmethod
+    def _get_employee_name(
+        db: Session,
+        employee_context_id: Optional[int],
+    ) -> Optional[str]:
+
+        if employee_context_id is None:
+            return None
+
+        result = (
+            db.query(Employee.name)
+            .join(
+                EmployeeContext,
+                EmployeeContext.employee_id == Employee.id,
+            )
+            .filter(
+                EmployeeContext.id == employee_context_id,
+            )
+            .first()
+        )
+
+        return result[0] if result else None
 
     @staticmethod
     def log_audit_log(
         db: Session,
         action: Optional[str] = None,
-        action_by: Optional[int] = None,           # employee_context_id performing reassignment
-        action_on: Optional[int] = None,            # employee_context_id of new assignee (to_assigned_to)
-        report_to: Optional[int] = None,            # not used directly; kept for interface compatibility
-        from_assigned_to: Optional[int] = None,     # employee_context_id of previous assignee
-        from_report_to: Optional[int] = None,       # report_to of previous assignee
-        to_assigned_to: Optional[int] = None,       # employee_context_id of new assignee
-        to_report_to: Optional[int] = None,         # report_to of new assignee
+        action_by: Optional[int] = None,
+        action_on: Optional[int] = None,
+        report_to: Optional[int] = None,
+        from_assigned_to: Optional[int] = None,
+        from_report_to: Optional[int] = None,
+        to_assigned_to: Optional[int] = None,
+        to_report_to: Optional[int] = None,
         date_and_time: Optional[datetime] = None,
         delete: Optional[datetime] = None,
         commit: bool = False,
         phone: Optional[str] = None,
-        assigned_to_phone: Optional[int] = None,    # phone_numbers.id
+        assigned_from_phone: Optional[str] = None,
+        assigned_to_phone: Optional[str] = None,
     ) -> CallReassignmentAuditLog:
         """
-        Creates a reassignment audit log entry for call assignment changes.
-        Tracks from whom (previous assignee) to whom (new assignee) with
-        report_to_id for both sides.
-        Auto-resolves from_report_to and to_report_to from EmployeeContext
-        hierarchy if not explicitly provided.
+        Create an audit record for a call reassignment.
+
+        Employee-related IDs refer to EmployeeContext.id.
+        Phone fields contain actual phone numbers.
         """
-        # If to_assigned_to not explicitly provided, fall back to action_on
+
         if to_assigned_to is None and action_on is not None:
             to_assigned_to = action_on
 
-        # Auto-resolve from_report_to (previous assignee's manager)
-        if from_report_to is None and from_assigned_to:
+        # Get the previous assignee's reporting context.
+        if from_report_to is None and from_assigned_to is not None:
             from_ctx = (
                 db.query(EmployeeContext)
                 .filter(
@@ -49,21 +76,12 @@ class CallReassignmentAuditLogService(AuditLogService[CallReassignmentAuditLog])
                 )
                 .first()
             )
-            # Fallback: if caller passed employee_id instead of context_id
-            if not from_ctx:
-                from_ctx = (
-                    db.query(EmployeeContext)
-                    .filter(
-                        EmployeeContext.employee_id == from_assigned_to,
-                        EmployeeContext.deleted_at.is_(None),
-                    )
-                    .first()
-                )
-            if from_ctx and from_ctx.reports_to_id:
+
+            if from_ctx:
                 from_report_to = from_ctx.reports_to_id
 
-        # Auto-resolve to_report_to (new assignee's manager)
-        if to_report_to is None and to_assigned_to:
+        # Get the new assignee's reporting context.
+        if to_report_to is None and to_assigned_to is not None:
             to_ctx = (
                 db.query(EmployeeContext)
                 .filter(
@@ -72,31 +90,24 @@ class CallReassignmentAuditLogService(AuditLogService[CallReassignmentAuditLog])
                 )
                 .first()
             )
-            # Fallback: if caller passed employee_id instead of context_id
-            if not to_ctx:
-                to_ctx = (
-                    db.query(EmployeeContext)
-                    .filter(
-                        EmployeeContext.employee_id == to_assigned_to,
-                        EmployeeContext.deleted_at.is_(None),
-                    )
-                    .first()
-                )
-            if to_ctx and to_ctx.reports_to_id:
+
+            if to_ctx:
                 to_report_to = to_ctx.reports_to_id
 
         log_entry = CallReassignmentAuditLog(
-            action=action,
+            action=action or "CALL_ASSIGNMENT_EXCHANGED",
             customer_phone=phone,
             reassigned_by_id=action_by,
             from_assigned_to_id=from_assigned_to,
             from_report_to_id=from_report_to,
             to_assigned_to_id=to_assigned_to,
             to_report_to_id=to_report_to,
+            assigned_from_phone=assigned_from_phone,
             assigned_to_phone=assigned_to_phone,
             date_and_time=date_and_time or datetime.now(),
             deleted_at=delete,
         )
+
         db.add(log_entry)
 
         if commit:
@@ -108,6 +119,7 @@ class CallReassignmentAuditLogService(AuditLogService[CallReassignmentAuditLog])
     @staticmethod
     def get_audit_logs(
         db: Session,
+        employee: Employee,
         skip: int = 0,
         limit: int = 100,
         action: Optional[str] = None,
@@ -116,53 +128,119 @@ class CallReassignmentAuditLogService(AuditLogService[CallReassignmentAuditLog])
         report_to: Optional[int] = None,
         from_assigned_to: Optional[int] = None,
         to_assigned_to: Optional[int] = None,
-    ) -> List[CallReassignmentAuditLog]:
+    ) -> List[Any]:
         """
-        Retrieves call reassignment audit logs with optional filtering.
+        Retrieve audit logs with employee names instead of displaying IDs.
         """
-        query = db.query(CallReassignmentAuditLog).filter(
-            CallReassignmentAuditLog.deleted_at.is_(None)
-        )
 
+        # Build the query.
+        query = db.query(CallReassignmentAuditLog)
+
+        # Apply optional filters.
         if action:
-            query = query.filter(CallReassignmentAuditLog.action == action)
-        if action_by:
-            query = query.filter(CallReassignmentAuditLog.reassigned_by_id == action_by)
-        if from_assigned_to:
-            query = query.filter(CallReassignmentAuditLog.from_assigned_to_id == from_assigned_to)
-        if to_assigned_to:
-            query = query.filter(CallReassignmentAuditLog.to_assigned_to_id == to_assigned_to)
-        if report_to:
-            # Filter logs where either side has this report_to
             query = query.filter(
-                (CallReassignmentAuditLog.from_report_to_id == report_to)
-                | (CallReassignmentAuditLog.to_report_to_id == report_to)
+                CallReassignmentAuditLog.action == action
             )
 
-        return (
-            query.order_by(CallReassignmentAuditLog.date_and_time.desc())
+        if action_by is not None:
+            query = query.filter(
+                CallReassignmentAuditLog.reassigned_by_id == action_by
+            )
+
+        if action_on is not None:
+            query = query.filter(
+                CallReassignmentAuditLog.to_assigned_to_id == action_on
+            )
+
+        if report_to is not None:
+            query = query.filter(
+                CallReassignmentAuditLog.to_report_to_id == report_to
+            )
+
+        if from_assigned_to is not None:
+            query = query.filter(
+                CallReassignmentAuditLog.from_assigned_to_id
+                == from_assigned_to
+            )
+
+        if to_assigned_to is not None:
+            query = query.filter(
+                CallReassignmentAuditLog.to_assigned_to_id
+                == to_assigned_to
+            )
+
+        logs = (
+            query.order_by(
+                CallReassignmentAuditLog.date_and_time.desc()
+            )
             .offset(skip)
             .limit(limit)
             .all()
         )
 
-    @staticmethod
-    def get_call_reassignment_audit_log_by_id(
-        db: Session,
-        log_id: int,
-    ) -> Optional[CallReassignmentAuditLog]:
-        """
-        Retrieves a single call reassignment audit log by ID.
-        """
-        return (
-            db.query(CallReassignmentAuditLog)
-            .filter(
-                CallReassignmentAuditLog.id == log_id,
-                CallReassignmentAuditLog.deleted_at.is_(None),
-            )
-            .first()
-        )
+        results = []
+
+        for log in logs:
+            results.append({
+                "id": log.id,
+                "action": log.action,
+                "customer_phone": log.customer_phone,
+
+                # Employee who performed the reassignment.
+                "reassigned_by_id": log.reassigned_by_id,
+                "reassigned_by_name": (
+                    CallReassignmentAuditLogService._get_employee_name(
+                        db,
+                        log.reassigned_by_id,
+                    )
+                ),
+
+                # Previous RM.
+                "from_assigned_to_id": log.from_assigned_to_id,
+                "from_assigned_to_name": (
+                    CallReassignmentAuditLogService._get_employee_name(
+                        db,
+                        log.from_assigned_to_id,
+                    )
+                ),
+                "assigned_from_phone": log.assigned_from_phone,
+
+                # Previous RM's reporting employee.
+                "from_report_to_id": log.from_report_to_id,
+                "from_report_to_name": (
+                    CallReassignmentAuditLogService._get_employee_name(
+                        db,
+                        log.from_report_to_id,
+                    )
+                ),
+
+                # New RM.
+                "to_assigned_to_id": log.to_assigned_to_id,
+                "to_assigned_to_name": (
+                    CallReassignmentAuditLogService._get_employee_name(
+                        db,
+                        log.to_assigned_to_id,
+                    )
+                ),
+                "assigned_to_phone": log.assigned_to_phone,
+
+                # New RM's reporting employee.
+                "to_report_to_id": log.to_report_to_id,
+                "to_report_to_name": (
+                    CallReassignmentAuditLogService._get_employee_name(
+                        db,
+                        log.to_report_to_id,
+                    )
+                ),
+
+                "date_and_time": log.date_and_time,
+                "deleted_at": log.deleted_at,
+            })
+
+        return results
 
 
-# Helper function alias
-log_call_reassignment_action = CallReassignmentAuditLogService.log_audit_log
+# Helper function alias.
+log_call_reassignment_action = (
+    CallReassignmentAuditLogService.log_audit_log
+)

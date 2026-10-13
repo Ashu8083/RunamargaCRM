@@ -14,8 +14,6 @@ from sqlalchemy.orm import relationship
 from app.models.base import Base
 import enum
 
-from app.models.employees import Employee
-
 
 class StatusEnum(str, enum.Enum):
     RECEIVED = "received"
@@ -39,15 +37,17 @@ class CallAssignment(Base):
         nullable=False,
     )
 
+    # EmployeeContext ID of the recipient
     assigned_to_id = Column(
         BigInteger,
-        ForeignKey("employees.id"),
+        ForeignKey("employee_contexts.id"),
         nullable=True,
     )
 
+    # EmployeeContext ID of the person making the assignment
     assigned_by_id = Column(
         BigInteger,
-        ForeignKey("employees.id"),
+        ForeignKey("employee_contexts.id"),
         nullable=True,
     )
 
@@ -77,13 +77,13 @@ class CallAssignment(Base):
     )
 
     assigned_to = relationship(
-        "Employee",
+        "EmployeeContext",
         foreign_keys=[assigned_to_id],
         backref="call_assignments_received",
     )
 
     assigned_by = relationship(
-        "Employee",
+        "EmployeeContext",
         foreign_keys=[assigned_by_id],
         backref="call_assignments_created",
     )

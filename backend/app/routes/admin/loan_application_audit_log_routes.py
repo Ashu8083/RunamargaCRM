@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.security import get_current_employee
 from app.schemas.loan_application_audit_log_schema import LoanApplicationAuditLogResponse
 from app.controllers.loan_application_audit_log_controller import (
     get_loan_application_audit_logs_controller,
-    get_loan_application_audit_log_by_id_controller,
 )
 
 router = APIRouter(
@@ -29,12 +29,16 @@ def get_loan_application_audit_logs_route(
     action_on: Optional[int] = Query(None, description="loan_application_id of target loan application"),
     report_to: Optional[int] = Query(None, description="employee_context_id of reporting manager"),
     db: Session = Depends(get_db),
+    employee=Depends(
+        get_current_employee
+    ),
 ):
     """
     GET route to fetch loan application audit logs with optional filters.
     """
     return get_loan_application_audit_logs_controller(
         db=db,
+        employee=employee,
         skip=skip,
         limit=limit,
         action=action,
@@ -44,15 +48,3 @@ def get_loan_application_audit_logs_route(
     )
 
 
-@router.get(
-    "/{log_id}",
-    response_model=LoanApplicationAuditLogResponse,
-)
-def get_loan_application_audit_log_by_id_route(
-    log_id: int,
-    db: Session = Depends(get_db),
-):
-    """
-    GET route to fetch a specific loan application audit log by ID.
-    """
-    return get_loan_application_audit_log_by_id_controller(db=db, log_id=log_id)

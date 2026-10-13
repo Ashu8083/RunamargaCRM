@@ -113,3 +113,15 @@ export const updateApplicationStatus = async (
 
     return response.data
 }
+
+// =============================================================
+// DELETE APPLICATION (SOFT DELETE)
+// =============================================================
+
+export const deleteApplication = async (applicationId) => {
+    const response = await apiClient.delete(
+        `/applications/${applicationId}`
+    );
+
+    return response.data;
+};
