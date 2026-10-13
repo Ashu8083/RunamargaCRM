@@ -16,6 +16,7 @@ import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftR
 import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
+import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
 
 import AgentDropdown from "../../../../../components/GlobalModels/Filters/AgentDropdown";
 import RmDropdown from "../../../../../components/GlobalModels/Filters/RmDropdown";
@@ -40,14 +41,14 @@ const GlobalChat = lazy(
 // =============================================================
 
 const STATUS_OPTIONS = [
-  "Revert Rejected",
-  "Rejected",
-  "In Process",
-  "Docs Pending",
-  "Sanctioned",
-  "Disbursed",
-];
-
+  { label: 'In Process', value: 'inprocess' },
+  { label: 'Docs Pending', value: 'docspending' },
+  { label: 'Rejected', value: 'rejected' },
+  { label: 'Sanctioned', value: 'sanctioned' },
+  { label: 'Disbursed', value: 'disbursed' },
+  { label: 'Login', value: 'login' },
+  { label: 'Revert Rejected', value: 'revert_rejected' },
+]
 // =============================================================
 // HELPERS
 // =============================================================
@@ -350,11 +351,11 @@ const formatDate = (value) => {
 const getAppliedDate = (application) =>
   formatDate(
     application.appliedDate ??
-      application.applied_date ??
-      application.appliedAt ??
-      application.applied_at ??
-      application.createdAt ??
-      application.created_at,
+    application.applied_date ??
+    application.appliedAt ??
+    application.applied_at ??
+    application.createdAt ??
+    application.created_at,
   );
 
 // =============================================================
@@ -540,7 +541,7 @@ function ApplicationsTable({
   onViewApplication,
   onRefresh,
   onAssignmentChange,
-
+  onDeleteApplication,
   // Server-side pagination
   currentPage = 1,
   pageSize = 10,
@@ -749,6 +750,9 @@ function ApplicationsTable({
 
   const statusOptions = statuses?.length ? statuses : STATUS_OPTIONS;
 
+  useEffect(() => {
+    // console.log("STATUS OPTIONS CHANGED:", statusOptions);
+  }, [statusOptions]);
   // =========================================================
   // CHAT
   // =========================================================
@@ -1231,14 +1235,10 @@ function ApplicationsTable({
                           {application.phone && (
                             <a
                               href={`tel:${application.phone}`}
-                              title={`Call ${
-                                application.name ||
-                                application.phone
-                              }`}
-                              aria-label={`Call ${
-                                application.name ||
-                                application.phone
-                              }`}
+                              title={`Call ${application.name || application.phone
+                                }`}
+                              aria-label={`Call ${application.name || application.phone
+                                }`}
                               className="
                                                                     btn
                                                                     btn-ghost
@@ -1378,11 +1378,7 @@ function ApplicationsTable({
                                                 "
                       >
                         <RmDropdown
-                          value={
-                            application.rmId ??
-                            application.rm_context_id ??
-                            ""
-                          }
+                          value={application.rmId ?? application.rm_context_id ?? ""}
                           onChange={(value) =>
                             handleRmChange(
                               application,
@@ -1463,33 +1459,29 @@ function ApplicationsTable({
                           </button>
 
                           {(status === "Rejected" ||
-                            status ===
-                              "Revert Rejected") && (
-                            <button
-                              type="button"
-                              onClick={(event) =>
-                                handleInfoClick(
-                                  event,
-                                  application,
-                                )
-                              }
-                              title="View rejection details"
-                              aria-label="View rejection details"
-                              className="
+                            status === "Revert Rejected") && (
+                              <button
+                                type="button"
+                                onClick={(event) =>
+                                  handleInfoClick(event, application)
+                                }
+                                title="View rejection details"
+                                aria-label="View rejection details"
+                                className="
                                                                     shrink-0
                                                                     text-base-content/50
                                                                     hover:text-base-content
                                                                     transition-colors
                                                                 "
-                            >
-                              <InformationCircleIcon
-                                className="
+                              >
+                                <InformationCircleIcon
+                                  className="
                                                                         h-4
                                                                         w-4
                                                                     "
-                              />
-                            </button>
-                          )}
+                                />
+                              </button>
+                            )}
                         </div>
                       </td>
 
@@ -1588,6 +1580,23 @@ function ApplicationsTable({
                                                                     h-4
                                                                 "
                             />
+                          </button>
+                          {/* DELETE */}
+                          <button
+                            type="button"
+                            onClick={() => onDeleteApplication?.(application)}
+                            title="Delete application"
+                            aria-label={`Delete application for ${application.name || "customer"}`}
+                            className="
+                              btn
+                              btn-ghost
+                              btn-sm
+                              btn-square
+                              text-error
+                              hover:bg-error/10
+                                                "
+                          >
+                            <TrashIcon className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

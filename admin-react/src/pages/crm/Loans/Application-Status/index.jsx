@@ -18,10 +18,307 @@ import {
 } from "../../../../app/auth";
 
 import {
-    getApplicationStatusApplications,
+    getApplicationStatusApplications
 } from "./API";
-
+import { deleteApplication
+} from '../CombinedApplications/Api'
 import ApplicationsTable from "./components/ApplicationsTable";
+
+import { useToast } from '../../../../components/Toast/ToastProvider'
+
+// =============================================================
+// NORMALIZE APPLICATION
+// =============================================================
+// The dashboard API returns raw snake_case rows. The
+// ApplicationsTable component expects camelCase aliases
+// (rmId, agentId, agent_context_id, rm_context_id, ...).
+// This mapping ensures both shapes exist on every row.
+// =============================================================
+
+const mapApplication = (application) => ({
+    // ---------------------------------------------------------
+    // IDENTITY
+    // ---------------------------------------------------------
+    id: application.id,
+
+    loanId:
+        application.unique_id ??
+        application.uniqueId ??
+        application.loanId ??
+        application.loan_id ??
+        application.id,
+
+    unique_id:
+        application.unique_id ??
+        application.uniqueId ??
+        null,
+
+    // ---------------------------------------------------------
+    // BASIC
+    // ---------------------------------------------------------
+    name: application.name ?? "",
+    phone: application.phone ?? "",
+    email: application.email ?? "",
+
+    gender: application.gender,
+    alternatePhone:
+        application.alternate_phone ??
+        application.alternatePhone,
+    alternateEmail:
+        application.alternate_email ??
+        application.alternateEmail,
+    maritalStatus:
+        application.marital_status ??
+        application.maritalStatus,
+    dob: application.dob,
+
+    // ---------------------------------------------------------
+    // LOAN TYPE
+    // ---------------------------------------------------------
+    loanTypeId:
+        application.loan_type_id ??
+        application.loanTypeId,
+
+    loan_type_id:
+        application.loan_type_id ??
+        application.loanTypeId,
+
+    loanType:
+        application.loan_type ??
+        application.loanType,
+
+    loan_type:
+        application.loan_type ??
+        application.loanType,
+
+    // ---------------------------------------------------------
+    // AMOUNT / TENURE / PURPOSE
+    // ---------------------------------------------------------
+    amount:
+        application.display_amount ??
+        application.loan_amt ??
+        application.loanAmount ??
+        application.loan_amount ??
+        application.amount,
+
+    loan_amt:
+        application.loan_amt ??
+        application.loanAmount,
+
+    loanTenure:
+        application.loan_tenure ??
+        application.loanTenure,
+
+    loan_tenure:
+        application.loan_tenure ??
+        application.loanTenure,
+
+    loanPurpose:
+        application.loan_purpose ??
+        application.loanPurpose,
+
+    loan_purpose:
+        application.loan_purpose ??
+        application.loanPurpose,
+
+    creditScore:
+        application.credit_score ??
+        application.creditScore,
+
+    // ---------------------------------------------------------
+    // REFERRAL / APPLIED BY
+    // ---------------------------------------------------------
+    referral: application.referral ?? "",
+
+    appliedById:
+        application.applied_by_id ??
+        application.appliedById,
+
+    appliedBy:
+        application.applied_by ??
+        application.appliedBy,
+
+    // ---------------------------------------------------------
+    // AGENT  (all aliases so ApplicationsTable + dropdowns work)
+    // ---------------------------------------------------------
+    agentId:
+        application.agent_id ??
+        application.agentId ??
+        application.agent_context_id ??
+        application.processingAgentId ??
+        application.processing_agent_id,
+
+    agent_id:
+        application.agent_id ??
+        application.agentId ??
+        application.agent_context_id,
+
+    agent_context_id:
+        application.agent_context_id ??
+        application.agent_id ??
+        application.agentId,
+
+    agent:
+        application.agent ?? null,
+
+    agentName:
+        application.agent_name ??
+        application.agentName ??
+        application.agent?.name ??
+        application.processingAgent?.name ??
+        "",
+
+    agent_name:
+        application.agent_name ??
+        application.agentName ??
+        application.agent?.name ??
+        "",
+
+    // ---------------------------------------------------------
+    // RM
+    // ---------------------------------------------------------
+    rmId:
+        application.rm_id ??
+        application.rmId,
+
+    rm_id:
+        application.rm_id ??
+        application.rmId,
+
+    rm:
+        application.rm ?? null,
+
+    rm_context_id:
+        application.rm_context_id ??
+        application.rm_id ??
+        application.rmId,
+
+    rmName:
+        application.rm_name ??
+        application.rmName ??
+        application.rm?.name ??
+        "",
+
+    rm_name:
+        application.rm_name ??
+        application.rmName ??
+        application.rm?.name ??
+        "",
+
+    // ---------------------------------------------------------
+    // TEAM LEAD
+    // ---------------------------------------------------------
+    teamLeadId:
+        application.team_lead_id ??
+        application.teamLeadId,
+
+    team_lead_id:
+        application.team_lead_id ??
+        application.teamLeadId,
+
+    teamLeadName:
+        application.team_lead_name ??
+        application.teamLeadName,
+
+    team_lead_name:
+        application.team_lead_name ??
+        application.teamLeadName,
+
+    // ---------------------------------------------------------
+    // STATUS
+    // ---------------------------------------------------------
+    status:
+        application.status ?? "",
+
+    sanctionDate:
+        application.sanction_date ??
+        application.sanctionDate,
+
+    rejectionDate:
+        application.rejection_date ??
+        application.rejectionDate,
+
+    loggedinDate:
+        application.loggedin_date ??
+        application.loggedinDate,
+
+    docsPendingDate:
+        application.docspending_date ??
+        application.docsPendingDate,
+
+    // ---------------------------------------------------------
+    // REVERTED
+    // ---------------------------------------------------------
+    revertedStatus:
+        application.reverted_status ??
+        application.revertedStatus,
+
+    revertedReason:
+        application.reverted_reason ??
+        application.revertedReason ??
+        "",
+
+    revertedDate:
+        application.reverted_date ??
+        application.revertedDate ??
+        null,
+
+    revertedByName:
+        application.reverted_by_name ??
+        application.revertedByName ??
+        "",
+
+    revertedByRole:
+        application.reverted_by_role ??
+        application.revertedByRole ??
+        "",
+
+    // ---------------------------------------------------------
+    // REJECTED
+    // ---------------------------------------------------------
+    rejectionReason:
+        application.rejected_remarks ??
+        application.rejection_reason ??
+        application.rejectionReason ??
+        "",
+
+    rejectedRemarks:
+        application.rejected_remarks ??
+        application.rejectedRemarks ??
+        "",
+
+    // ---------------------------------------------------------
+    // LOCATION / MISC
+    // ---------------------------------------------------------
+    stateId:
+        application.state_id ??
+        application.stateId,
+
+    cityId:
+        application.city_id ??
+        application.cityId,
+
+    languageId:
+        application.language_id ??
+        application.languageId,
+
+    ivrId:
+        application.ivr_id ??
+        application.ivrId,
+
+    appliedDate:
+        application.applied_date ??
+        application.appliedDate ??
+        "",
+
+    createdAt:
+        application.created_at ??
+        application.createdAt,
+
+    updatedAt:
+        application.updated_at ??
+        application.updatedAt,
+});
 
 
 // =============================================================
@@ -51,9 +348,27 @@ const ApplicationStatus = () => {
     const location =
         useLocation();
 
-    const navigate =
-        useNavigate();
+    const navigate = useNavigate();
+    const [search, setSearch] = useState('')
 
+    const [selectedLoanType, setSelectedLoanType] =
+        useState('')
+
+    const [selectedRM, setSelectedRM] =
+        useState('')
+
+    const [selectedTeamLead, setSelectedTeamLead] =
+        useState('')
+
+    const [selectedAgent, setSelectedAgent] =
+        useState('')
+
+    const [selectedStatus, setSelectedStatus] =
+        useState('')
+    const {
+        showSuccess,
+        showError,
+    } = useToast()
 
     // =========================================================
     // URL PARAMETERS
@@ -236,11 +551,20 @@ const ApplicationStatus = () => {
 
 
             // =================================================
-            // APPLICATIONS
+            // APPLICATIONS  →  MAP INTO TABLE SHAPE
             // =================================================
 
+            const rawData =
+                Array.isArray(response?.data)
+                    ? response.data
+                    : [];
+
+            const mappedApplications =
+                rawData.map(mapApplication);
+
+
             setApplications(
-                response?.data || []
+                mappedApplications
             );
 
 
@@ -296,39 +620,34 @@ const ApplicationStatus = () => {
     };
 
 
-    // =========================================================
-    // TABLE FILTER CHANGE
-    // =========================================================
 
-    const handleTableFiltersChange = (
-        filters
-    ) => {
 
-        setTableFilters(
-            filters
+    const handleDeleteApplication = async (application) => {
+        const confirmed = window.confirm(
+            `Are you sure you want to delete the application for ${application.name || "this customer"
+            }?`
         );
 
-        setCurrentPage(1);
+        if (!confirmed) return;
 
+        try {
+            await deleteApplication(
+                application.unique_id ?? application.id
+            );
+
+            showSuccess("Application deleted successfully");
+
+            // Refresh the current applications page.
+            await fetchApplications(currentPage, pageSize, search);
+        } catch (error) {
+            console.error("Failed to delete application:", error);
+
+            showError(
+                error?.response?.data?.detail ||
+                "Failed to delete application"
+            );
+        }
     };
-
-
-    // =========================================================
-    // RESET PAGE WHEN URL / CONTEXT CHANGES
-    // =========================================================
-
-    useEffect(() => {
-
-        setCurrentPage(1);
-
-    }, [
-        fromDate,
-        toDate,
-        loanType,
-        dashboardStatus,
-        contextId,
-    ]);
-
 
     // =========================================================
     // FETCH WHEN PAGE / FILTER CHANGES
@@ -451,6 +770,91 @@ const ApplicationStatus = () => {
 
 
     // =========================================================
+    // LOAN TYPE CHANGE (filter dropdown)
+    // =========================================================
+
+    const handleLoanTypeChange = (
+        value
+    ) => {
+
+        setSelectedLoanType(
+            value || ""
+        );
+
+        setCurrentPage(1);
+
+    };
+
+
+    // =========================================================
+    // STATUS CHANGE (filter dropdown)
+    // =========================================================
+
+    const handleStatusChange = (
+        value
+    ) => {
+
+        setSelectedStatus(
+            value || ""
+        );
+
+        setCurrentPage(1);
+
+    };
+
+
+    // =========================================================
+    // RM CHANGE
+    // =========================================================
+
+    const handleRMChange = (
+        value
+    ) => {
+
+        setSelectedRM(
+            value || ""
+        );
+
+        setCurrentPage(1);
+
+    };
+
+
+    // =========================================================
+    // TEAM LEAD CHANGE
+    // =========================================================
+
+    const handleTeamLeadChange = (
+        value
+    ) => {
+
+        setSelectedTeamLead(
+            value || ""
+        );
+
+        setCurrentPage(1);
+
+    };
+
+
+    // =========================================================
+    // AGENT CHANGE
+    // =========================================================
+
+    const handleAgentChange = (
+        value
+    ) => {
+
+        setSelectedAgent(
+            value || ""
+        );
+
+        setCurrentPage(1);
+
+    };
+
+
+    // =========================================================
     // PAGE CHANGE
     // =========================================================
 
@@ -479,6 +883,10 @@ const ApplicationStatus = () => {
     // =========================================================
     // ASSIGNMENT CHANGE
     // =========================================================
+    // Normalizes the response from /shuffle-loans/assign
+    // so the row dropdown `value` stays in sync after an
+    // RM / Agent change.
+    // =========================================================
 
     const handleAssignmentChange = (
         applicationId,
@@ -486,16 +894,86 @@ const ApplicationStatus = () => {
     ) => {
 
         setApplications(
-            (currentApplications) =>
-                currentApplications.map(
-                    (application) =>
-                        application.id ===
+            (previous) =>
+                previous.map(
+                    (application) => {
+
+                        if (
+                            application.id !==
                             applicationId
-                            ? {
-                                ...application,
-                                ...updatedApplication,
-                            }
-                            : application
+                        ) {
+                            return application;
+                        }
+
+                        return {
+                            ...application,
+                            ...updatedApplication,
+
+                            // ---- RM ----
+                            rmId:
+                                updatedApplication?.rmId ??
+                                updatedApplication?.rm_id ??
+                                application.rmId,
+
+                            rm_id:
+                                updatedApplication?.rm_id ??
+                                updatedApplication?.rmId ??
+                                application.rm_id,
+
+                            rm_context_id:
+                                updatedApplication?.rm_context_id ??
+                                updatedApplication?.rm_id ??
+                                updatedApplication?.rmId ??
+                                application.rm_context_id,
+
+                            rm:
+                                updatedApplication?.rm ??
+                                application.rm,
+
+                            rmName:
+                                updatedApplication?.rmName ??
+                                updatedApplication?.rm_name ??
+                                application.rmName,
+
+                            rm_name:
+                                updatedApplication?.rm_name ??
+                                updatedApplication?.rmName ??
+                                application.rm_name,
+
+                            // ---- AGENT ----
+                            agentId:
+                                updatedApplication?.agentId ??
+                                updatedApplication?.agent_id ??
+                                updatedApplication?.agent_context_id ??
+                                application.agentId,
+
+                            agent_id:
+                                updatedApplication?.agent_id ??
+                                updatedApplication?.agentId ??
+                                updatedApplication?.agent_context_id ??
+                                application.agent_id,
+
+                            agent_context_id:
+                                updatedApplication?.agent_context_id ??
+                                updatedApplication?.agent_id ??
+                                updatedApplication?.agentId ??
+                                application.agent_context_id,
+
+                            agent:
+                                updatedApplication?.agent ??
+                                application.agent,
+
+                            agentName:
+                                updatedApplication?.agentName ??
+                                updatedApplication?.agent_name ??
+                                application.agentName,
+
+                            agent_name:
+                                updatedApplication?.agent_name ??
+                                updatedApplication?.agentName ??
+                                application.agent_name,
+                        };
+                    }
                 )
         );
 
@@ -503,7 +981,7 @@ const ApplicationStatus = () => {
 
 
     // =========================================================
-    // STATUS / LOAN TYPE ACTIONS
+    // STATUS / LOAN TYPE MODALS (row cell actions)
     // =========================================================
 
     const handleLoanTypeAction = (
@@ -639,7 +1117,7 @@ const ApplicationStatus = () => {
 
 
         navigate(
-            `/view-application/${uniqueId}`
+            `/crm/view-application/${uniqueId}`
         );
 
     };
@@ -730,10 +1208,9 @@ const ApplicationStatus = () => {
 
                             ? "Loading applications..."
 
-                            : `${totalApplications} application${
-                                totalApplications === 1
-                                    ? ""
-                                    : "s"
+                            : `${totalApplications} application${totalApplications === 1
+                                ? ""
+                                : "s"
                             }`
 
                         }
@@ -771,84 +1248,84 @@ const ApplicationStatus = () => {
                 loanType ||
                 dashboardStatus) && (
 
-                <div
-                    className="
+                    <div
+                        className="
                         flex
                         flex-wrap
                         items-center
                         gap-2
                         mb-4
                     "
-                >
+                    >
 
-                    {fromDate && (
+                        {fromDate && (
 
-                        <span
-                            className="
+                            <span
+                                className="
                                 badge
                                 badge-ghost
                                 h-8
                                 px-3
                             "
-                        >
-                            From: {fromDate}
-                        </span>
+                            >
+                                From: {fromDate}
+                            </span>
 
-                    )}
+                        )}
 
 
-                    {toDate && (
+                        {toDate && (
 
-                        <span
-                            className="
+                            <span
+                                className="
                                 badge
                                 badge-ghost
                                 h-8
                                 px-3
                             "
-                        >
-                            To: {toDate}
-                        </span>
+                            >
+                                To: {toDate}
+                            </span>
 
-                    )}
+                        )}
 
 
-                    {loanType && (
+                        {loanType && (
 
-                        <span
-                            className="
+                            <span
+                                className="
                                 badge
                                 badge-ghost
                                 h-8
                                 px-3
                             "
-                        >
-                            Loan Type: {loanType}
-                        </span>
+                            >
+                                Loan Type: {loanType}
+                            </span>
 
-                    )}
+                        )}
 
 
-                    {dashboardStatus && (
+                        {dashboardStatus && (
 
-                        <span
-                            className="
+                            <span
+                                className="
                                 badge
                                 badge-primary
                                 h-8
                                 px-3
                             "
-                        >
-                            Status: {
-                                dashboardStatus
-                            }
-                        </span>
+                            >
+                                Status: {
+                                    dashboardStatus
+                                }
+                            </span>
 
-                    )}
+                        )}
 
-                </div>
+                    </div>
 
-            )}
+                )}
 
 
             {/* =================================================
@@ -874,136 +1351,48 @@ const ApplicationStatus = () => {
             )}
 
 
-            {/* =================================================
-                LOADING
-            ================================================= */}
+            <ApplicationsTable
+                applications={applications}
 
-            {loading ? (
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalApplications={totalApplications}
+                pageSize={pageSize}
+                loading={loading}
 
-                <div
-                    className="
-                        flex
-                        items-center
-                        justify-center
-                        min-h-[250px]
-                        rounded-xl
-                        border
-                        border-base-300
-                        bg-base-100
-                    "
-                >
+                search={search}
+                setSearch={setSearch}
 
-                    <span
-                        className="
-                            loading
-                            loading-spinner
-                            loading-md
-                        "
-                    />
+                selectedLoanType={selectedLoanType}
+                setSelectedLoanType={handleLoanTypeChange}
 
-                    <span className="ml-3">
-                        Loading applications...
-                    </span>
+                selectedRM={selectedRM}
+                setSelectedRM={handleRMChange}
 
-                </div>
+                selectedTeamLead={selectedTeamLead}
+                setSelectedTeamLead={handleTeamLeadChange}
 
-            ) : (
+                selectedAgent={selectedAgent}
+                setSelectedAgent={handleAgentChange}
 
-                /* =================================================
-                   APPLICATION TABLE
-                ================================================= */
+                selectedStatus={selectedStatus}
+                setSelectedStatus={handleStatusChange}
 
-                <ApplicationsTable
+                onClearFilters={handleClearFilters}
 
-                    applications={
-                        applications
-                    }
+                onLoanTypeChange={handleLoanTypeAction}
+                onStatusChange={handleStatusAction}
 
+                onReminder={handleReminder}
+                onChat={handleChat}
+                onViewApplication={handleViewApplication}
 
-                    // =================================================
-                    // FILTER VALUES
-                    // =================================================
+                onRefresh={fetchApplications}
 
-                    filters={
-                        tableFilters
-                    }
-
-                    onFiltersChange={
-                        handleTableFiltersChange
-                    }
-
-
-                    onClearFilters={
-                        handleClearFilters
-                    }
-
-
-                    // =================================================
-                    // ACTIONS
-                    // =================================================
-
-                    onLoanTypeChange={
-                        handleLoanTypeAction
-                    }
-
-
-                    onStatusChange={
-                        handleStatusAction
-                    }
-
-
-                    onReminder={
-                        handleReminder
-                    }
-
-
-                    onChat={
-                        handleChat
-                    }
-
-
-                    onViewApplication={
-                        handleViewApplication
-                    }
-
-
-                    onRefresh={
-                        handleRefresh
-                    }
-
-
-                    onAssignmentChange={
-                        handleAssignmentChange
-                    }
-
-
-                    // =================================================
-                    // SERVER PAGINATION
-                    // =================================================
-
-                    currentPage={
-                        currentPage
-                    }
-
-                    totalPages={
-                        totalPages
-                    }
-
-                    totalApplications={
-                        totalApplications
-                    }
-
-                    pageSize={
-                        pageSize
-                    }
-
-                    onPageChange={
-                        handlePageChange
-                    }
-
-                />
-
-            )}
+                onAssignmentChange={handleAssignmentChange}
+                onDeleteApplication={handleDeleteApplication}
+                onPageChange={handlePageChange}
+            />
 
 
             {/* =================================================

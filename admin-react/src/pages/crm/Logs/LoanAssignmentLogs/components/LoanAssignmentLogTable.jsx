@@ -191,11 +191,7 @@ function LoanAssignmentLogTable({
                                 Employee
                             </th>
 
-
-                            <th>
-                                Role
-                            </th>
-
+                            <th>Action By</th>
 
                             <th>
                                 Reports To
@@ -322,23 +318,19 @@ function LoanAssignmentLogTable({
                                     </td>
 
 
-                                    {/* =================================
-                                        ROLE
-                                    ================================= */}
-
                                     <td>
+                                        <div className="flex min-w-[150px] flex-col">
+                                            <span className="text-sm font-medium">
+                                                {log.actionByName || '—'}
+                                            </span>
 
-                                        <span className="
-                                            whitespace-nowrap
-                                            text-sm
-                                        ">
-                                            {formatRole(
-                                                log.employeeRole
+                                            {log.actionById != null && (
+                                                <span className="mt-0.5 text-xs text-base-content/50">
+                                                    Context ID: {log.actionById}
+                                                </span>
                                             )}
-                                        </span>
-
+                                        </div>
                                     </td>
-
 
                                     {/* =================================
                                         REPORTS TO
@@ -411,8 +403,8 @@ function LoanAssignmentLogTable({
                                             text-xs
                                             font-medium
                                             ${getEventClass(
-                                                log.event
-                                            )}
+                                            log.event
+                                        )}
                                         `}>
                                             {log.event || '—'}
                                         </span>

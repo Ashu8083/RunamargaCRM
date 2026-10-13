@@ -2,11 +2,16 @@
 
 from datetime import datetime
 
+from fastapi import logger
 from sqlalchemy.orm import Session
 
+from app.core.log_config import logger
 from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
 from app.models.contexts import Context
+from app.services.admin_log_service import log_admin_action
+from app.Enums.LogAction import LogAction
+
 
 
 class AdminsService:
@@ -283,11 +288,14 @@ class AdminsService:
         db: Session,
         employee_id: int,
         status: str = "Active",
+        action_by: int | None = None,
     ):
 
         is_active = AdminsService._validate_status(
             status
         )
+
+        logger.info("<================ action_by=%s =====================>", action_by)
 
         # --------------------------------------------------------------------
         # GET GLOBAL CONTEXT
@@ -351,6 +359,13 @@ class AdminsService:
 
             db.flush()
 
+            log_admin_action(
+                db=db,
+                action=LogAction.create,
+                action_by=action_by,
+                action_on=existing.id,
+            )
+
             return {
                 "id": existing.id,
                 "employee_id": existing.employee_id,
@@ -376,15 +391,20 @@ class AdminsService:
 
             # Admin has no reporting relationship.
             reports_to_id=None,
-
             is_default=False,
-
             is_active=is_active,
         )
 
         db.add(admin)
 
         db.flush()
+
+        log_admin_action(
+            db=db,
+            action=LogAction.create,
+            action_by=action_by,
+            action_on=admin.id,
+        )
 
         return {
             "id": admin.id,
@@ -400,6 +420,7 @@ class AdminsService:
             "is_active": admin.is_active,
             "reports_to_id": None,
         }
+
 
     # ========================================================================
     # UPDATE ADMIN
@@ -418,6 +439,7 @@ class AdminsService:
     def update_admin(
         db: Session,
         admin_id: int,
+        action_by: int | None = None,
     ):
 
         admin = AdminsService._get_admin_context(
@@ -444,6 +466,13 @@ class AdminsService:
 
         db.flush()
 
+        log_admin_action(
+            db=db,
+            action=LogAction.update,
+            action_by=action_by,
+            action_on=admin.id,
+        )
+
         return AdminsService._build_admin_response(
             employee_context=admin,
             employee=employee,
@@ -466,6 +495,7 @@ class AdminsService:
     def delete_admin(
         db: Session,
         admin_id: int,
+        action_by: int | None = None,
     ):
 
         admin = AdminsService._get_admin_context(
@@ -481,6 +511,13 @@ class AdminsService:
         admin.reports_to_id = None
 
         db.flush()
+
+        log_admin_action(
+            db=db,
+            action=LogAction.delete,
+            action_by=action_by,
+            action_on=admin.id,
+        )
 
         return {
             "message": "Admin deleted successfully",
@@ -505,6 +542,7 @@ class AdminsService:
         db: Session,
         admin_id: int,
         status: str,
+        action_by: int | None = None,
     ):
 
         is_active = AdminsService._validate_status(
@@ -519,6 +557,13 @@ class AdminsService:
         admin.is_active = is_active
 
         db.flush()
+
+        log_admin_action(
+            db=db,
+            action=LogAction.update,
+            action_by=action_by,
+            action_on=admin.id,
+        )
 
         return {
             "id": admin.id,
@@ -536,6 +581,7 @@ class AdminsService:
                 if admin.is_active
                 else "Inactive"
             ),
+
 
             "is_active": admin.is_active,
 

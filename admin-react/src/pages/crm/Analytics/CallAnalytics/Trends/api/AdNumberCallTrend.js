@@ -1,130 +1,41 @@
-const DUMMY_CALL_TRENDS = [
-  {
-    id: 1,
-    date: '2026-09-30',
-    type: 'incoming',
-    status: 'received',
-    phone: '9876543210',
-    adNumber: 'AD-1001',
-  },
-  {
-    id: 2,
-    date: '2026-09-30',
-    type: 'incoming',
-    status: 'received',
-    phone: '9876543211',
-    adNumber: 'AD-1001',
-  },
-  {
-    id: 3,
-    date: '2026-09-30',
-    type: 'outgoing',
-    status: 'received',
-    phone: '9876543212',
-    adNumber: 'AD-1001',
-  },
-  {
-    id: 4,
-    date: '2026-09-30',
-    type: 'missed',
-    status: 'missed',
-    phone: '9876543213',
-    adNumber: 'AD-1001',
-  },
-  {
-    id: 5,
-    date: '2026-09-30',
-    type: 'incoming',
-    status: 'received',
-    phone: '9876543220',
-    adNumber: 'AD-1002',
-  },
-  {
-    id: 6,
-    date: '2026-09-30',
-    type: 'outgoing',
-    status: 'received',
-    phone: '9876543221',
-    adNumber: 'AD-1002',
-  },
-  {
-    id: 7,
-    date: '2026-09-29',
-    type: 'incoming',
-    status: 'received',
-    phone: '9876543230',
-    adNumber: 'AD-1001',
-  },
-  {
-    id: 8,
-    date: '2026-09-29',
-    type: 'incoming',
-    status: 'received',
-    phone: '9876543231',
-    adNumber: 'AD-1001',
-  },
-  {
-    id: 9,
-    date: '2026-09-29',
-    type: 'outgoing',
-    status: 'received',
-    phone: '9876543232',
-    adNumber: 'AD-1002',
-  },
-  {
-    id: 10,
-    date: '2026-09-29',
-    type: 'missed',
-    status: 'missed',
-    phone: '9876543233',
-    adNumber: 'AD-1002',
-  },
-  {
-    id: 11,
-    date: '2026-09-28',
-    type: 'incoming',
-    status: 'received',
-    phone: '9876543240',
-    adNumber: 'AD-1003',
-  },
-  {
-    id: 12,
-    date: '2026-09-28',
-    type: 'outgoing',
-    status: 'received',
-    phone: '9876543241',
-    adNumber: 'AD-1003',
-  },
-  {
-    id: 13,
-    date: '2026-09-28',
-    type: 'missed',
-    status: 'missed',
-    phone: '9876543242',
-    adNumber: 'AD-1003',
-  },
-  {
-    id: 14,
-    date: '2026-09-27',
-    type: 'incoming',
-    status: 'received',
-    phone: '9876543250',
-    adNumber: 'AD-1001',
-  },
-  {
-    id: 15,
-    date: '2026-09-27',
-    type: 'outgoing',
-    status: 'received',
-    phone: '9876543251',
-    adNumber: 'AD-1002',
-  },
-]
+import apiClient from '../../../../../../app/apiClient'
 
-export const fetchAdNumberCallTrend = async () => {
-  await new Promise((resolve) => {
-    setTimeout(resolve, 400)
-  })
+export const fetchAdNumberCallTrend = async ({
+    fromDate,
+    toDate,
+    phoneId = '',
+    teamLeadId = '',
+    rmId = '',
+}) => {
 
-  return DUMMY_CALL_TRENDS
+    const params = {}
+
+    if (fromDate) {
+        params.from_date = fromDate
+    }
+
+    if (toDate) {
+        params.to_date = toDate
+    }
+
+    if (phoneId) {
+        params.phone_id = phoneId
+    }
+
+    if (teamLeadId) {
+        params.team_lead_id = teamLeadId
+    }
+
+    if (rmId) {
+        params.rm_id = rmId
+    }
+
+    const response = await apiClient.get(
+        '/call-analytics/trends/ad-number',
+        {
+            params,
+        }
+    )
+
+    return response.data
 }

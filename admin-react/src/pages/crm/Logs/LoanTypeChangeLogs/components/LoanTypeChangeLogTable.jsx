@@ -176,6 +176,13 @@ function LoanTypeChangeLogTable({
                             ">
                                 Loan ID
                             </th>
+                             {/* Phone number */}
+
+                            <th className="
+                                whitespace-nowrap
+                            ">
+                               Phone Number
+                            </th>
 
 
                             {/* CHANGED BY */}
@@ -288,7 +295,20 @@ function LoanTypeChangeLogTable({
 
                                     </td>
 
+                                        {/* =================================
+                                        Phone number
+                                    ================================= */}
 
+                                    <td>
+
+                                        <span className="
+                                            text-sm
+                                            font-medium
+                                        ">
+                                            {log.phone}
+                                        </span>
+
+                                    </td>
                                     {/* =================================
                                         CHANGED BY
                                     ================================= */}

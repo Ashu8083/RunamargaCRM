@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
-import AgentDropdown from '../../../../../../components/GlobalModels/Filters/AgentDropdown'
-import RmDropdown from '../../../../../../components/GlobalModels/Filters/RmDropdown'
+import TeamLeadDropdown from '../../../../../../components/GlobalModels/Filters/TeamLeadDropdown'
 
+import {
+    fetchTeamLeadCallPerformance,
+} from '../api/TeamCallTrend'
 // =============================================================
 // HELPERS
 // =============================================================
@@ -59,9 +61,17 @@ function TeamCallTrend({
     // FILTER STATE
     // =========================================================
 
-    const [agent, setAgent] = useState('')
+    const [teamLeadContextId, setTeamLeadContextId] =
+        useState('')
 
-    const [rm, setRm] = useState('')
+    const [performanceData, setPerformanceData] =
+        useState(null)
+
+    const [loading, setLoading] =
+        useState(false)
+
+    const [error, setError] =
+        useState(null)
 
     const [fromDate, setFromDate] = useState('')
 
@@ -108,53 +118,6 @@ function TeamCallTrend({
             }
 
 
-            // -------------------------------------------------
-            // AGENT
-            //
-            // Support the possible field names returned
-            // by the backend.
-            // -------------------------------------------------
-
-            if (agent) {
-
-                const agentId =
-                    call.agentId ??
-                    call.agent_id ??
-                    call.agentContextId ??
-                    call.agent_context_id ??
-                    call.employeeId ??
-                    call.employee_id
-
-                if (
-                    String(agentId ?? '') !==
-                    String(agent)
-                ) {
-                    return false
-                }
-
-            }
-
-
-            // -------------------------------------------------
-            // RM
-            // -------------------------------------------------
-
-            if (rm) {
-
-                const rmId =
-                    call.rmId ??
-                    call.rm_id ??
-                    call.rmContextId ??
-                    call.rm_context_id
-
-                if (
-                    String(rmId ?? '') !==
-                    String(rm)
-                ) {
-                    return false
-                }
-
-            }
 
 
             return true
@@ -163,8 +126,6 @@ function TeamCallTrend({
 
     }, [
         calls,
-        agent,
-        rm,
         fromDate,
         toDate,
     ])
@@ -372,7 +333,7 @@ function TeamCallTrend({
                             sum +
                             Number(
                                 item[
-                                    metric.key
+                                metric.key
                                 ] || 0
                             ),
                         0
@@ -387,17 +348,54 @@ function TeamCallTrend({
     }, [
         teamData,
     ])
+    useEffect(() => {
+        const loadPerformance = async () => {
+            try {
+                setLoading(true)
+                setError(null)
 
+                const data =
+                    await fetchTeamLeadCallPerformance({
+                        teamLeadContextId,
+                        fromDate,
+                        toDate,
+                    })
 
+                setPerformanceData(data)
+            } catch (err) {
+                console.error(
+                    'Failed to fetch team lead performance:',
+                    err
+                )
+
+                setError(err)
+                setPerformanceData(null)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadPerformance()
+    }, [
+        teamLeadContextId,
+        fromDate,
+        toDate,
+    ])
+    const handleTeamLeadChange = (value) => {
+        console.log(
+            'SELECTED TEAM LEAD VALUE:',
+            value,
+            typeof value
+        )
+
+        setTeamLeadContextId(value)
+    }
     // =========================================================
     // RESET
     // =========================================================
 
     const handleReset = () => {
-
-        setAgent('')
-
-        setRm('')
+        setTeamLeadContextId('')
 
         setFromDate('')
 
@@ -486,38 +484,13 @@ function TeamCallTrend({
 
                     <div className="min-w-0">
 
-                        <AgentDropdown
-                            label="Agent"
-                            value={agent}
-                            onChange={(value) => {
-
-                                setAgent(value)
-
-                                // When Agent changes,
-                                // reset RM because the
-                                // available RM scope changes.
-
-                                setRm('')
-
-                            }}
+                        <TeamLeadDropdown
+                            label="Team Lead"
+                            value={teamLeadContextId}
+                            onChange={handleTeamLeadChange}
                         />
 
                     </div>
-
-
-                    {/* RM */}
-
-                    <div className="min-w-0">
-
-                        <RmDropdown
-                            label="RM"
-                            value={rm}
-                            onChange={setRm}
-                            agentContextId={agent || undefined}
-                        />
-
-                    </div>
-
 
                     {/* FROM */}
 
@@ -897,7 +870,7 @@ function TeamCallTrend({
                                                             >
                                                                 {
                                                                     item[
-                                                                        metric.key
+                                                                    metric.key
                                                                     ]
                                                                 }
                                                             </b>
@@ -930,7 +903,7 @@ function TeamCallTrend({
                                                         const value =
                                                             Number(
                                                                 item[
-                                                                    metric.key
+                                                                metric.key
                                                                 ] || 0
                                                             )
 
@@ -1109,7 +1082,7 @@ function TeamCallTrend({
                                     >
                                         {formatNumber(
                                             summary[
-                                                metric.key
+                                            metric.key
                                             ]
                                         )}
                                     </p>

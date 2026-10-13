@@ -7,6 +7,7 @@ from app.models.employees import Employee
 from app.services.CallManagement.call_assignment_service import (
     CallAssignmentService,
 )
+from app.core.access_control import AccessControl
 
 
 # =============================================================
@@ -16,11 +17,13 @@ from app.services.CallManagement.call_assignment_service import (
 def get_call_assignments(
     db: Session,
     employee: Employee,
+    context_id: int | None = None,
 ):
     try:
         assignments = CallAssignmentService.get_all(
             db=db,
             employee=employee,
+            context_id=context_id,
         )
 
         data = []
@@ -29,8 +32,11 @@ def get_call_assignments(
             data.append({
                 "id": assignment.id,
                 "phone_number": assignment.phone_number,
+
+                # EmployeeContext ID
                 "assigned_to_id": assignment.assigned_to_id,
 
+                # Recipient's employee name
                 "assigned_to_name": (
                     assignment.assigned_to.employee.name
                     if assignment.assigned_to
@@ -38,11 +44,14 @@ def get_call_assignments(
                     else None
                 ),
 
+                # EmployeeContext ID
                 "assigned_by_id": assignment.assigned_by_id,
 
+                # Creator's employee name
                 "assigned_by_name": (
-                    assignment.assigned_by.name
+                    assignment.assigned_by.employee.name
                     if assignment.assigned_by
+                    and assignment.assigned_by.employee
                     else None
                 ),
 
@@ -78,13 +87,28 @@ def create_call_assignment(
     employee: Employee,
     phone_number: str,
     assigned_to_id: int,
+    context_id: int | None = None,
 ):
     try:
+        # Resolve the caller's active EmployeeContext.
+        current_context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not current_context:
+            raise HTTPException(
+                status_code=400,
+                detail="Active employee context not found.",
+            )
+
         assignment = CallAssignmentService.create(
             db=db,
             employee=employee,
             phone_number=phone_number,
             assigned_to_id=assigned_to_id,
+            context_id=current_context.id,
         )
 
         return {
@@ -92,8 +116,24 @@ def create_call_assignment(
             "data": {
                 "id": assignment.id,
                 "phone_number": assignment.phone_number,
+
+                # Both values are EmployeeContext IDs.
                 "assigned_to_id": assignment.assigned_to_id,
                 "assigned_by_id": assignment.assigned_by_id,
+
+                "assigned_to_name": (
+                    assignment.assigned_to.employee.name
+                    if assignment.assigned_to
+                    and assignment.assigned_to.employee
+                    else None
+                ),
+
+                "assigned_by_name": (
+                    assignment.assigned_by.employee.name
+                    if assignment.assigned_by
+                    and assignment.assigned_by.employee
+                    else None
+                ),
 
                 "status": (
                     assignment.status.value
@@ -105,13 +145,19 @@ def create_call_assignment(
             },
         }
 
+    except HTTPException:
+        db.rollback()
+        raise
+
     except ValueError as e:
+        db.rollback()
         raise HTTPException(
             status_code=400,
             detail=str(e),
         )
 
     except PermissionError as e:
+        db.rollback()
         raise HTTPException(
             status_code=403,
             detail=str(e),
@@ -119,7 +165,6 @@ def create_call_assignment(
 
     except Exception as e:
         db.rollback()
-
         raise HTTPException(
             status_code=500,
             detail=str(e),
@@ -135,47 +180,10 @@ def get_available_call_numbers(
     employee: Employee,
 ):
     try:
-        call_logs = CallAssignmentService.get_available_call_numbers(
+        return CallAssignmentService.get_available_call_numbers(
             db=db,
             employee=employee,
         )
-
-        data = []
-
-        for call in call_logs:
-            data.append({
-                "id": call.id,
-                "phone_number": call.phone_number,
-
-                "call_type": (
-                    call.call_type.value
-                    if call.call_type
-                    else None
-                ),
-
-                "mobile_status": (
-                    call.mobile_status.value
-                    if call.mobile_status
-                    else None
-                ),
-
-                "call_started_at": call.call_started_at,
-                "call_ended_at": call.call_ended_at,
-                "duration_seconds": call.duration_seconds,
-
-                "employee_id": call.employee_id,
-
-                "employee_name": (
-                    call.employee.name
-                    if call.employee
-                    else None
-                ),
-            })
-
-        return {
-            "success": True,
-            "data": data,
-        }
 
     except Exception as e:
         raise HTTPException(
@@ -193,6 +201,7 @@ async def exchange_assignment(
     db: Session,
     payload: dict,
     employee: Employee,
+    context_id: int | None = None,
 ):
     try:
         assignment_id = payload.get("assignmentId")
@@ -211,7 +220,22 @@ async def exchange_assignment(
         except (TypeError, ValueError):
             raise HTTPException(
                 status_code=400,
-                detail="assignmentId and newAgentId must be valid integers",
+                detail=(
+                    "assignmentId and newAgentId "
+                    "must be valid integers"
+                ),
+            )
+
+        current_context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+
+        if not current_context:
+            raise HTTPException(
+                status_code=400,
+                detail="Active employee context not found.",
             )
 
         assignment, previous_agent = (
@@ -220,6 +244,7 @@ async def exchange_assignment(
                 employee=employee,
                 assignment_id=assignment_id,
                 new_agent_id=new_agent_id,
+                context_id=current_context.id,
             )
         )
 
@@ -243,6 +268,7 @@ async def exchange_assignment(
 
                 "skipped_assignment_ids": [],
 
+                # Previous recipient's EmployeeContext ID
                 "previous_agent_id": (
                     previous_agent.id
                     if previous_agent
@@ -250,11 +276,13 @@ async def exchange_assignment(
                 ),
 
                 "previous_agent_name": (
-                    previous_agent.name
+                    previous_agent.employee.name
                     if previous_agent
+                    and previous_agent.employee
                     else None
                 ),
 
+                # New recipient's EmployeeContext ID
                 "new_agent_id": assignment.assigned_to_id,
 
                 "new_agent_name": (
@@ -274,7 +302,6 @@ async def exchange_assignment(
 
     except ValueError as e:
         db.rollback()
-
         raise HTTPException(
             status_code=404,
             detail=str(e),
@@ -282,7 +309,6 @@ async def exchange_assignment(
 
     except PermissionError as e:
         db.rollback()
-
         raise HTTPException(
             status_code=403,
             detail=str(e),
@@ -290,7 +316,6 @@ async def exchange_assignment(
 
     except Exception as e:
         db.rollback()
-
         raise HTTPException(
             status_code=500,
             detail=f"Failed to exchange assignment: {str(e)}",
@@ -317,7 +342,6 @@ async def delete_call_assignment(
         return {
             "success": True,
             "message": "Assignment deleted successfully",
-
             "data": {
                 "assignment_id": assignment.id,
                 "phone_number": assignment.phone_number,
@@ -326,7 +350,6 @@ async def delete_call_assignment(
 
     except ValueError as e:
         db.rollback()
-
         raise HTTPException(
             status_code=404,
             detail=str(e),
@@ -334,7 +357,6 @@ async def delete_call_assignment(
 
     except PermissionError as e:
         db.rollback()
-
         raise HTTPException(
             status_code=403,
             detail=str(e),
@@ -342,7 +364,6 @@ async def delete_call_assignment(
 
     except Exception as e:
         db.rollback()
-
         raise HTTPException(
             status_code=500,
             detail=f"Failed to delete assignment: {str(e)}",

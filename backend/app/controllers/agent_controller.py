@@ -70,6 +70,7 @@ class AgentController:
     @staticmethod
     def create_agent(
         db: Session,
+        action_by_ctx :int,
         payload: AgentCreate,
     ):
         return AgentService.create_agent(
@@ -77,6 +78,7 @@ class AgentController:
             employee_id=payload.employee_id,
             context_id=payload.context_id,
             status=payload.status,
+            action_by_ctx=action_by_ctx,
         )
 
     # ========================================================================
@@ -97,12 +99,14 @@ class AgentController:
     def update_agent(
         db: Session,
         agent_id: int,
+        action_by_ctx :int,
         payload: AgentUpdate,
     ):
         return AgentService.update_agent(
             db=db,
             agent_id=agent_id,
             context_id=payload.context_id,
+            action_by_ctx=action_by_ctx,
         )
 
     # ========================================================================
@@ -112,11 +116,13 @@ class AgentController:
     @staticmethod
     def delete_agent(
         db: Session,
+        action_by_ctx : int,
         agent_id: int,
     ):
         return AgentService.delete_agent(
             db=db,
             agent_id=agent_id,
+            action_by_ctx=action_by_ctx,
         )
 
     # ========================================================================
@@ -127,12 +133,14 @@ class AgentController:
     def update_agent_status(
         db: Session,
         agent_id: int,
+        action_by_ctx :int,
         payload: AgentStatusUpdate,
     ):
         return AgentService.update_agent_status(
             db=db,
             agent_id=agent_id,
             status=payload.status,
+            action_by_ctx=action_by_ctx,
         )
 
     # ========================================================================

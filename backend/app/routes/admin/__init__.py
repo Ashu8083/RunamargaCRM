@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+
 # ============================================================================
 # AUTH AND COMMON
 # ============================================================================
@@ -10,6 +11,7 @@ from .auth_routes import router as auth_router
 from .common_routes import router as common_router
 from .state_routes import router as state_router
 from .city_routes import router as city_router
+
 
 # ============================================================================
 # LOAN MANAGEMENT
@@ -22,6 +24,7 @@ from .Loans.duplicate_approval_routes import router as duplicate_approval_router
 from .Loans.team_chat import router as team_chat_router
 from .Loans.loan_assignment_routes import router as loan_assignment_router
 
+
 # ============================================================================
 # ROLES AND TEAMS
 # ============================================================================
@@ -29,6 +32,13 @@ from .context_routes import router as context_router
 from .team_leads_routes import router as team_leads_router
 from .agents_routes import router as agents_router
 from .admins_routes import router as admins_router
+from .admin_log_routes import router as admin_log_router
+from .employee_audit_log_routes import router as employee_audit_log_router
+from .phone_number_audit_log_routes import router as phone_number_audit_log_router
+from .loan_application_audit_log_routes import router as loan_application_audit_log_router
+from .loan_application_status_audit_log_routes import router as loan_application_status_audit_log_router
+from .Logs.duplicate_lead_approval_log_routes import router as duplicate_lead_approval_log_router
+
 
 
 from app.routes.admin.bank_routes import router as bank_router
@@ -46,14 +56,13 @@ from .Loans.reverted_loans_routes import router as reverted_loans_router
 from .phone_number_routes import router as phone_num_router
 from .CallManagement.call_logs import router as call_logs_router
 from .CallManagement.call_assignments import router as call_assignment_router
+from .call_reassignment_audit_log_routes import router as call_reassignment_audit_log_router
 
 # ============================================================================
 # Dashboard
 # ============================================================================
 from .Dashboard.application_status import router as application_status_router
-from .Dashboard.loan_type_distribution_routes import (
-    router as loan_type_distribution_router,
-)
+from .Dashboard.loan_type_distribution_routes import router as loan_type_distribution_router
 from .Dashboard.monthly_trend_routes import router as monthly_trend_router
 from .Dashboard.application_funnel_routes import router as application_funnel_router
 from .Dashboard.application_status_applications_routes import (
@@ -67,13 +76,13 @@ from .bank_routes import router as bank_router
 from .dsa_routes import router as dsa_router
 from .banker_directory_routes import router as banker_directory_router
 
+
 # ============================================================================
 # EMPLOYEE MANAGEMENT
 # ============================================================================
 from .employee_routes import router as employee_router
-from .employee_management.attendance_routes import (
-    router as employement_management_attendance_router,
-)
+from .employee_management.attendance_routes import router as employement_management_attendance_router
+
 
 # ============================================================================
 # My Attendance
@@ -84,6 +93,7 @@ from .attendance_routes import router as attendance_router
 from .employee_management.face_enrollment_routes import router as face_enrollment_router
 from .employee_management.attendance_routes import router as attendance_router
 
+
 # ============================================================================
 # EMPLOYEE MANAGEMENT - FACE ENROLLMENT
 # ============================================================================
@@ -91,6 +101,7 @@ from .employee_management.attendance_routes import router as attendance_router
 from .employee_management.face_enrollment_routes import (
     router as face_enrollment_router,
 )
+
 
 # ============================================================================
 # CALL MANAGEMENT
@@ -106,12 +117,13 @@ from .CallManagement.call_assignments import (
 # CALL Analytics
 # ============================================================================
 from .CallAnalytics.overview_routes import router as call_analytics_overview_router
-from .CallAnalytics.performance_routes import (
-    router as call_analytics_performance_router,
-)
-from .CallAnalytics.Trends.ad_number_trend_routes import (
-    router as call_analytics_trends_ad_number_trend_router,
-)
+from .CallAnalytics.performance_routes import router as call_analytics_performance_router
+from .CallAnalytics.Trends.ad_number_trend_routes import router as call_analytics_trends_ad_number_trend_router
+from .CallAnalytics.Trends.performance_trend_routes import router as call_analytics_trends_performance_trend_router
+from .CallAnalytics.Trends.team_lead_call_performance_routes import router as call_analytics_trends_team_lead_performance_trend_router
+from .CallAnalytics.Trends.daily_call_trend_routes import router as call_analytics_trends_daily_call_trend_router
+from .CallAnalytics.Trends.monthly_call_overview_routes import router as call_analytics_monthly_call_overview_router
+
 
 # ============================================================================
 # Agent Analytics
@@ -126,6 +138,19 @@ from .AgentAnalytics.trends_routes import router as agent_analytics_trends
 from app.routes.admin.ApplicationFilter.application_filter_routes import (
     router as application_filter_router,
 )
+
+# ============================================================================
+# Agent Audit  Logs
+# ============================================================================
+
+from app.routes.admin.Logs.agent_audit_log_routes import router as agent_audit_log_router
+
+# ============================================================================
+# Team Lead Audit  Logs
+# ============================================================================
+
+from app.routes.admin.Logs.team_audit_log_routes import router as team_lead_audit_log_router
+
 
 # ============================================================================
 # Loan Shuffle Logs
@@ -151,15 +176,6 @@ from app.routes.admin.Logs.loan_type_change_logs_routes import (
 from app.routes.admin.Logs.bank_processing_logs_routes import (
     router as bank_processing_logs_router,
 )
-
-# ============================================================================
-# Reminders
-# ============================================================================
-from app.routes.admin.reminders_routes import router as reminders_router
-
-
-
-
 # ============================================================================
 # MAIN ADMIN ROUTER
 # ============================================================================
@@ -198,6 +214,12 @@ router.include_router(context_router)
 router.include_router(team_leads_router)
 router.include_router(agents_router)
 router.include_router(admins_router)
+router.include_router(admin_log_router)
+router.include_router(employee_audit_log_router)
+router.include_router(phone_number_audit_log_router)
+router.include_router(loan_application_audit_log_router)
+router.include_router(loan_application_status_audit_log_router)
+
 
 
 # ============================================================================
@@ -236,6 +258,7 @@ router.include_router(face_enrollment_router)
 router.include_router(phone_number_router)
 router.include_router(call_logs_router)
 router.include_router(call_assignment_router)
+router.include_router(call_reassignment_audit_log_router)
 
 # ============================================================================
 # CALL Analytics
@@ -243,6 +266,13 @@ router.include_router(call_assignment_router)
 router.include_router(call_analytics_overview_router)
 router.include_router(call_analytics_performance_router)
 router.include_router(call_analytics_trends_ad_number_trend_router)
+router.include_router(call_analytics_trends_performance_trend_router)
+router.include_router(call_analytics_trends_team_lead_performance_trend_router)
+router.include_router(call_analytics_trends_daily_call_trend_router)
+router.include_router(
+    call_analytics_monthly_call_overview_router
+)
+
 
 # ============================================================================
 # Agent Analytics
@@ -252,14 +282,13 @@ router.include_router(agent_analytics_performance)
 router.include_router(agent_analytics_trends)
 
 # ============================================================================
-# Dashboard
+# Dashboard 
 # ============================================================================
 router.include_router(application_status_router)
 router.include_router(loan_type_distribution_router)
 router.include_router(monthly_trend_router)
 router.include_router(application_funnel_router)
 router.include_router(application_status_applications_router)
-
 # ============================================================================
 # Profile
 # ============================================================================
@@ -269,21 +298,28 @@ router.include_router(profile_router)
 # Application Filter
 # ============================================================================
 
-router.include_router(application_filter_router)
+router.include_router(
+    application_filter_router
+)
+
 
 
 # ============================================================================
 # Loan Shuffle Logs
 # ============================================================================
 
-router.include_router(loan_shuffle_logs_router)
+router.include_router(
+    loan_shuffle_logs_router
+)
 
 
 # ============================================================================
 # Loan Type Change Logs
 # ============================================================================
 
-router.include_router(loan_type_change_logs_router)
+router.include_router(
+    loan_type_change_logs_router
+)
 
 # ============================================================================
 # Bank processing Logs
@@ -291,9 +327,16 @@ router.include_router(loan_type_change_logs_router)
 router.include_router(
     bank_processing_logs_router,
 )
+# ============================================================================
+# Agent Audit Logs
+# ============================================================================
+router.include_router(agent_audit_log_router)
 
 
 # ============================================================================
-# Reminders
+# Team Lead Audit Logs
 # ============================================================================
-router.include_router(reminders_router)
+router.include_router(team_lead_audit_log_router)
+
+
+router.include_router(duplicate_lead_approval_log_router)

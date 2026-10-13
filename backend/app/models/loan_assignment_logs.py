@@ -1,1 +1,0 @@
-# backend/app/models/loan_assignment_logs.py

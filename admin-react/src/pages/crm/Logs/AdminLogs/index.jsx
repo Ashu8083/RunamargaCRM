@@ -1,6 +1,6 @@
 // admin-react/src/pages/Logs/AdminLogs/index.jsx
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react';
 
 import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
@@ -8,47 +8,14 @@ import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import AdminLogTable from './components/AdminLogTable'
 
 import EmployeeDropdown from '../../../../components/GlobalModels/Filters/EmployeeDropdown'
-
+import { getAdminLogs } from './Api';
 
 function AdminLogs() {
 
-    // =========================================================
-    // MOCK EMPLOYEES
-    // =========================================================
-
-    const employees = [
-        {
-            id: 201,
-            name: 'Rahul Sharma',
-            employeeId: 'EMP201',
-        },
-
-        {
-            id: 202,
-            name: 'Anil Kumar',
-            employeeId: 'EMP202',
-        },
-
-        {
-            id: 203,
-            name: 'Vikram Singh',
-            employeeId: 'EMP203',
-        },
-
-        {
-            id: 204,
-            name: 'Arjun Rao',
-            employeeId: 'EMP204',
-        },
-
-        {
-            id: 205,
-            name: 'Kiran Kumar',
-            employeeId: 'EMP205',
-        },
-    ]
-
-
+    const [logs, setLogs] = useState([]);
+    const [employees, setemployees] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
     // =========================================================
     // EVENT OPTIONS
     // =========================================================
@@ -95,289 +62,18 @@ function AdminLogs() {
         },
     ]
 
-
-    // =========================================================
-    // MOCK ADMIN LOGS
-    // =========================================================
-
-    const [logs] = useState([
-        {
-            id: 1001,
-
-            empId: 201,
-
-            employeeName:
-                'Rahul Sharma',
-
-            performedById: 2,
-
-            performedByName:
-                'Rahul Admin',
-
-            event:
-                'CREATED',
-
-            createdAt:
-                '31 Aug 2026, 09:42:12',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 1002,
-
-            empId: 201,
-
-            employeeName:
-                'Rahul Sharma',
-
-            performedById: 2,
-
-            performedByName:
-                'Rahul Admin',
-
-            event:
-                'UPDATED',
-
-            createdAt:
-                '31 Aug 2026, 10:15:43',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 1003,
-
-            empId: 202,
-
-            employeeName:
-                'Anil Kumar',
-
-            performedById: 4,
-
-            performedByName:
-                'Vikram Admin',
-
-            event:
-                'DELETED',
-
-            createdAt:
-                '31 Aug 2026, 11:21:08',
-
-            deletedAt:
-                '31 Aug 2026, 11:21:08',
-        },
-
-        {
-            id: 1004,
-
-            empId: 203,
-
-            employeeName:
-                'Vikram Singh',
-
-            performedById: 2,
-
-            performedByName:
-                'Rahul Admin',
-
-            event:
-                'ACTIVE',
-
-            createdAt:
-                '31 Aug 2026, 12:03:51',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 1005,
-
-            empId: 204,
-
-            employeeName:
-                'Arjun Rao',
-
-            performedById: 1,
-
-            performedByName:
-                'John Admin',
-
-            event:
-                'ABSENT',
-
-            createdAt:
-                '31 Aug 2026, 12:30:25',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 1006,
-
-            empId: 205,
-
-            employeeName:
-                'Kiran Kumar',
-
-            performedById: 3,
-
-            performedByName:
-                'Priya Admin',
-
-            event:
-                'DEACTIVATED',
-
-            createdAt:
-                '31 Aug 2026, 01:10:14',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 1007,
-
-            empId: 201,
-
-            employeeName:
-                'Rahul Sharma',
-
-            performedById: 1,
-
-            performedByName:
-                'John Admin',
-
-            event:
-                'PERMISSIONS_UPDATED',
-
-            createdAt:
-                '31 Aug 2026, 02:05:37',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 1008,
-
-            empId: 202,
-
-            employeeName:
-                'Anil Kumar',
-
-            performedById: 2,
-
-            performedByName:
-                'Rahul Admin',
-
-            event:
-                'UPDATED',
-
-            createdAt:
-                '31 Aug 2026, 02:42:19',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 1009,
-
-            empId: 203,
-
-            employeeName:
-                'Vikram Singh',
-
-            performedById: 4,
-
-            performedByName:
-                'Vikram Admin',
-
-            event:
-                'PERMISSIONS_UPDATED',
-
-            createdAt:
-                '31 Aug 2026, 03:12:44',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 1010,
-
-            empId: 204,
-
-            employeeName:
-                'Arjun Rao',
-
-            performedById: 1,
-
-            performedByName:
-                'John Admin',
-
-            event:
-                'ACTIVE',
-
-            createdAt:
-                '31 Aug 2026, 03:45:22',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 1011,
-
-            empId: 205,
-
-            employeeName:
-                'Kiran Kumar',
-
-            performedById: 3,
-
-            performedByName:
-                'Priya Admin',
-
-            event:
-                'UPDATED',
-
-            createdAt:
-                '31 Aug 2026, 04:18:09',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 1012,
-
-            empId: 202,
-
-            employeeName:
-                'Anil Kumar',
-
-            performedById: 4,
-
-            performedByName:
-                'Vikram Admin',
-
-            event:
-                'DEACTIVATED',
-
-            createdAt:
-                '31 Aug 2026, 04:52:31',
-
-            deletedAt:
-                null,
-        },
-    ])
-
+    const eventMap = {
+        create: "CREATED",
+        created: "CREATED",
+        update: "UPDATED",
+        updated: "UPDATED",
+        delete: "DELETED",
+        deleted: "DELETED",
+        active: "ACTIVE",
+        absent: "ABSENT",
+        deactivated: "DEACTIVATED",
+        permissions_updated: "PERMISSIONS_UPDATED",
+    };
 
     // =========================================================
     // FILTER STATE
@@ -404,7 +100,65 @@ function AdminLogs() {
 
 
     const pageSize = 10
+    useEffect(() => {
+        let cancelled = false;
 
+        const fetchLogs = async () => {
+            setLoading(true);
+            setError('');
+
+            try {
+                const data = await getAdminLogs({ limit: 500 });
+
+                if (!Array.isArray(data)) {
+                    throw new Error("Admin Logs API did not return an array");
+                }
+
+                const formattedLogs = data.map((log) => ({
+                    id: log.id,
+
+                    empId: log.action_on ?? "—",
+                    employeeName: log.employee_name ?? "—",
+
+                    performedById: log.action_by ?? "—",
+                    performedByName: log.performed_by_name ?? "—",
+
+                    event: eventMap[String(log.action).toLowerCase()] || "UNKNOWN",
+
+                    createdAt: log.date_and_time
+                        ? new Date(log.date_and_time).toLocaleString()
+                        : "—",
+
+                    deletedAt: "—",
+                }));
+                if (!cancelled) {
+                    setLogs(formattedLogs);
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    console.error(
+                        'Failed to fetch admin logs:',
+                        err
+                    );
+
+                    setError(
+                        err.response?.data?.detail ||
+                        'Failed to fetch admin logs.'
+                    );
+                }
+            } finally {
+                if (!cancelled) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchLogs();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     // =========================================================
     // FILTER LOGS
@@ -430,21 +184,12 @@ function AdminLogs() {
 
                 const matchesSearch =
                     !searchValue ||
-                    log.employeeName
-                        ?.toLowerCase()
-                        .includes(searchValue) ||
-                    String(log.empId)
-                        .toLowerCase()
-                        .includes(searchValue) ||
-                    log.performedByName
-                        ?.toLowerCase()
-                        .includes(searchValue) ||
-                    String(log.performedById)
-                        .toLowerCase()
-                        .includes(searchValue) ||
-                    String(log.id)
-                        .toLowerCase()
-                        .includes(searchValue)
+                    String(log.employeeName ?? "").toLowerCase().includes(searchValue) ||
+                    String(log.empId ?? "").toLowerCase().includes(searchValue) ||
+                    String(log.performedByName ?? "").toLowerCase().includes(searchValue) ||
+                    String(log.performedById ?? "").toLowerCase().includes(searchValue) ||
+                    String(log.id ?? "").toLowerCase().includes(searchValue) ||
+                    String(log.event ?? "").toLowerCase().includes(searchValue);
 
 
                 // -------------------------------------------------
@@ -454,7 +199,7 @@ function AdminLogs() {
                 const matchesEmployee =
                     !employeeId ||
                     String(log.empId) ===
-                        String(employeeId)
+                    String(employeeId)
 
 
                 // -------------------------------------------------
@@ -505,10 +250,10 @@ function AdminLogs() {
     const paginatedLogs =
         filteredLogs.slice(
             (currentPage - 1) *
-                pageSize,
+            pageSize,
 
             currentPage *
-                pageSize
+            pageSize
         )
 
 
@@ -693,27 +438,6 @@ function AdminLogs() {
 
 
                         {/* =========================================
-                            EMPLOYEE
-                        ========================================= */}
-
-                        <div className="
-                            lg:col-span-3
-                        ">
-
-                            <EmployeeDropdown
-                                value={employeeId}
-                                onChange={
-                                    handleEmployeeChange
-                                }
-                                options={employees}
-                                allLabel="All Employees"
-                                placeholder="All Employees"
-                            />
-
-                        </div>
-
-
-                        {/* =========================================
                             EVENT
                         ========================================= */}
 
@@ -875,7 +599,7 @@ function AdminLogs() {
                         ">
                             {Math.min(
                                 currentPage *
-                                    pageSize,
+                                pageSize,
                                 filteredLogs.length
                             )}
                         </span>
@@ -949,17 +673,16 @@ function AdminLogs() {
                                     className={`
                                         btn
                                         btn-sm
-                                        ${
-                                            currentPage ===
+                                        ${currentPage ===
                                             page
-                                                ? `
+                                            ? `
                                                     border-[#8BCF00]
                                                     bg-[#8BCF00]
                                                     text-white
                                                     hover:border-[#6FA800]
                                                     hover:bg-[#6FA800]
                                                 `
-                                                : `
+                                            : `
                                                     btn-ghost
                                                 `
                                         }

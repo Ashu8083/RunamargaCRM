@@ -19,67 +19,38 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+
 def upgrade() -> None:
-    """Upgrade schema."""
+        """Upgrade schema."""
 
-    op.execute("""
-        DO $$
-        BEGIN
-            IF NOT EXISTS (
-                SELECT 1
-                FROM pg_type
-                WHERE typname = 'phonenumberstatus'
-            ) THEN
-                CREATE TYPE phonenumberstatus AS ENUM ('inactive', 'active');
-            END IF;
-        END
-        $$;
-    """)
+        op.execute("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM pg_type
+                    WHERE typname = 'phonenumberstatus'
+                ) THEN
+                    CREATE TYPE phonenumberstatus AS ENUM ('inactive', 'active');
+                END IF;
+            END
+            $$;
+        """)
 
-    op.execute("""
-        CREATE TABLE phone_numbers (
-            id INTEGER NOT NULL,
-            employee_id INTEGER NOT NULL,
-            phone TEXT,
-            status phonenumberstatus NOT NULL DEFAULT 'inactive',
-            trackable phonenumberstatus NOT NULL DEFAULT 'inactive',
-            reports_to_id INTEGER,
-            created_at TIMESTAMP DEFAULT now(),
-            updated_at TIMESTAMP DEFAULT now(),
-            deleted_at TIMESTAMP,
-            CONSTRAINT phone_numbers_pkey PRIMARY KEY (id),
-            CONSTRAINT phone_numbers_employee_id_key UNIQUE (employee_id),
-            CONSTRAINT phone_numbers_employee_id_fkey
-                FOREIGN KEY (employee_id)
-                REFERENCES employees (id)
-                ON DELETE CASCADE,
-            CONSTRAINT phone_numbers_reports_to_id_fkey
-                FOREIGN KEY (reports_to_id)
-                REFERENCES employees (id)
-                ON DELETE SET NULL
-        )
-    """)
+        op.execute("""
+            CREATE INDEX IF NOT EXISTS ix_phone_numbers_id
+            ON phone_numbers (id);
+        """)
 
-    op.create_index(
-        "ix_phone_numbers_id",
-        "phone_numbers",
-        ["id"],
-        unique=False,
-    )
+        op.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS ix_phone_numbers_employee_id
+            ON phone_numbers (employee_id);
+        """)
 
-    op.create_index(
-        "ix_phone_numbers_employee_id",
-        "phone_numbers",
-        ["employee_id"],
-        unique=True,
-    )
-
-    op.create_index(
-        "ix_phone_numbers_reports_to_id",
-        "phone_numbers",
-        ["reports_to_id"],
-        unique=False,
-    )
+        op.execute("""
+            CREATE INDEX IF NOT EXISTS ix_phone_numbers_reports_to_id
+            ON phone_numbers (reports_to_id);
+        """)
 def downgrade() -> None:
     """Downgrade schema."""
 

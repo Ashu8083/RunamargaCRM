@@ -129,29 +129,22 @@ function ApplicationStatusLogTable({
     // =========================================================
 
     const formatDate = (dateString) => {
+        if (!dateString) return "—";
 
-        if (!dateString) {
-            return '—'
-        }
+        const date = new Date(dateString);
 
+        if (Number.isNaN(date.getTime())) return "—";
 
-        /*
-         * createdAt contains the complete timestamp.
-         *
-         * Only the date should be displayed in this table.
-         *
-         * Example:
-         *
-         * 31 Aug 2026
-         */
-
-        const datePart =
-            dateString.split(',')[0]
-
-
-        return datePart || '—'
-    }
-
+        return date.toLocaleString("en-IN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+        });
+    };
 
     // =========================================================
     // RENDER
@@ -203,6 +196,14 @@ function ApplicationStatusLogTable({
                                 Loan ID
                             </th>
 
+
+                            {/* Phone number */}
+
+                            <th className="
+                                whitespace-nowrap
+                            ">
+                                Phone Number
+                            </th>
 
                             {/* CHANGED BY */}
 
@@ -335,6 +336,20 @@ function ApplicationStatusLogTable({
                                             </span>
 
                                         </td>
+                                        {/* =================================
+                                           Phone Number
+                                        ================================= */}
+
+                                        <td>
+
+                                            <span className="
+                                                text-sm
+                                                font-semibold
+                                            ">
+                                                {log.phone}
+                                            </span>
+
+                                        </td>
 
 
                                         {/* =================================
@@ -400,8 +415,8 @@ function ApplicationStatusLogTable({
                                                 text-xs
                                                 font-medium
                                                 ${getStatusClass(
-                                                    log.status
-                                                )}
+                                                log.status
+                                            )}
                                             `}>
 
                                                 <span className="
@@ -448,10 +463,9 @@ function ApplicationStatusLogTable({
                                             <span className={`
                                                 whitespace-nowrap
                                                 text-sm
-                                                ${
-                                                    log.deletedAt
-                                                        ? 'text-error'
-                                                        : 'text-base-content/40'
+                                                ${log.deletedAt
+                                                    ? 'text-error'
+                                                    : 'text-base-content/40'
                                                 }
                                             `}>
                                                 {log.deletedAt

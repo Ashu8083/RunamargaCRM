@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 
+from app.core.security import get_current_employee
 from app.dependency.get_access_control_dependency import (
     check_permission,
 )
@@ -25,7 +26,9 @@ from app.controllers.Loans.duplicate_approval_controller import (
 router = APIRouter(
     prefix="/duplicate-approvals",
     tags=["Duplicate Approvals"],
+    dependencies=[Depends(get_current_employee)],
 )
+
 
 
 # =============================================================

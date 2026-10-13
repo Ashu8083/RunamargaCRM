@@ -516,7 +516,7 @@ const sidebarmenu = [
       {
         path: "/crm/lead-creation-logs",
         icon: <UserPlusIcon className={submenuIconClasses} />,
-        name: "Lead Creation Logs",
+        name: "Loan Application Logs",
         parent: "Logs",
         permission: PERMISSIONS.LEAD_CREATION_LOGS_VIEW,
       },
@@ -529,21 +529,21 @@ const sidebarmenu = [
         permission: PERMISSIONS.APPLICATION_STATUS_LOGS_VIEW,
       },
 
-      {
-        path: "/crm/application-edit-logs",
-        icon: <PencilSquareIcon className={submenuIconClasses} />,
-        name: "Application Edit Logs",
-        parent: "Logs",
-        permission: PERMISSIONS.APPLICATION_EDIT_LOGS_VIEW,
-      },
+      // {
+      //   path: "/crm/application-edit-logs",
+      //   icon: <PencilSquareIcon className={submenuIconClasses} />,
+      //   name: "Application Edit Logs",
+      //   parent: "Logs",
+      //   permission: PERMISSIONS.APPLICATION_EDIT_LOGS_VIEW,
+      // },
 
-      {
-        path: "/crm/application-delete-logs",
-        icon: <TrashIcon className={submenuIconClasses} />,
-        name: "Application Delete Logs",
-        parent: "Logs",
-        permission: PERMISSIONS.APPLICATION_DELETE_LOGS_VIEW,
-      },
+      // {
+      //   path: "/crm/application-delete-logs",
+      //   icon: <TrashIcon className={submenuIconClasses} />,
+      //   name: "Application Delete Logs",
+      //   parent: "Logs",
+      //   permission: PERMISSIONS.APPLICATION_DELETE_LOGS_VIEW,
+      // },
 
       {
         path: "/crm/loan-type-change-logs",
@@ -601,13 +601,13 @@ const sidebarmenu = [
        * CALL MANAGEMENT
        * ----------------------------------------------------- */
 
-      {
-        path: "/crm/call-assignment-logs",
-        icon: <PhoneArrowUpRightIcon className={submenuIconClasses} />,
-        name: "Call Assignment Logs",
-        parent: "Logs",
-        permission: PERMISSIONS.CALL_ASSIGNMENT_LOGS_VIEW,
-      },
+      // {
+      //   path: "/crm/call-assignment-logs",
+      //   icon: <PhoneArrowUpRightIcon className={submenuIconClasses} />,
+      //   name: "Call Assignment Logs",
+      //   parent: "Logs",
+      //   permission: PERMISSIONS.CALL_ASSIGNMENT_LOGS_VIEW,
+      // },
 
       {
         path: "/crm/call-reassignment-logs",

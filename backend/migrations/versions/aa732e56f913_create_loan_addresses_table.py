@@ -33,14 +33,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_loan_addresses_id'), 'loan_addresses', ['id'], unique=False)
-    op.drop_index(op.f('idx_duplicate_approval_applied_date'), table_name='duplicate_approvals')
-    op.drop_index(op.f('idx_duplicate_approval_approved_by_id'), table_name='duplicate_approvals')
-    op.drop_index(op.f('idx_duplicate_approval_dashboard'), table_name='duplicate_approvals')
-    op.drop_index(op.f('idx_duplicate_approval_deleted_at'), table_name='duplicate_approvals')
-    op.drop_index(op.f('idx_duplicate_approval_rm_id'), table_name='duplicate_approvals')
-    op.drop_index(op.f('idx_duplicate_approval_status'), table_name='duplicate_approvals')
-    op.drop_index(op.f('idx_duplicate_approval_type_id'), table_name='duplicate_approvals')
-    op.drop_index(op.f('ix_duplicate_approvals_id'), table_name='duplicate_approvals')
+
     op.drop_table('duplicate_approvals')
     # ### end Alembic commands ###
 

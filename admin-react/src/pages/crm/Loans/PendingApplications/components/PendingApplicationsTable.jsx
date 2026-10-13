@@ -16,6 +16,8 @@ import ChatBubbleLeftRightIcon from "@heroicons/react/24/outline/ChatBubbleLeftR
 import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
+import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
+
 
 import AgentDropdown from "../../../../../components/GlobalModels/Filters/AgentDropdown";
 import RmDropdown from "../../../../../components/GlobalModels/Filters/RmDropdown";
@@ -71,6 +73,7 @@ function PendingApplicationsTable({
   onReminder,
   onChat,
   onViewApplication,
+  onDeleteApplication,
   onRefresh,
   onAssignmentChange,
 }) {
@@ -82,13 +85,14 @@ function PendingApplicationsTable({
   // =============================================================
 
   const STATUS_OPTIONS = [
-    "Revert Rejected",
-    "Rejected",
-    "In Process",
-    "Docs Pending",
-    "Sanctioned",
-    "Disbursed",
-  ];
+    { label: 'In Process', value: 'inprocess' },
+    { label: 'Docs Pending', value: 'docspending' },
+    { label: 'Rejected', value: 'rejected' },
+    { label: 'Sanctioned', value: 'sanctioned' },
+    { label: 'Disbursed', value: 'disbursed' },
+    { label: 'Login', value: 'login' },
+    { label: 'Revert Rejected', value: 'revert_rejected' },
+  ]
 
   // =========================================================
   // CHAT
@@ -494,10 +498,10 @@ function PendingApplicationsTable({
   const getAppliedDate = (application) =>
     formatDate(
       application.appliedDate ??
-        application.applied_date ??
-        application.applied_at ??
-        application.createdAt ??
-        application.created_at,
+      application.applied_date ??
+      application.applied_at ??
+      application.createdAt ??
+      application.created_at,
     );
 
   // =========================================================
@@ -1221,12 +1225,10 @@ function PendingApplicationsTable({
                             <a
                               href={`tel:${application.phone}`}
                               title={`Call ${
-                                application.name ||
-                                application.phone
+                                application.name || application.phone
                               }`}
                               aria-label={`Call ${
-                                application.name ||
-                                application.phone
+                                application.name || application.phone
                               }`}
                               className="
                                                                     btn
@@ -1394,8 +1396,8 @@ function PendingApplicationsTable({
                                                                 truncate
                                                                 hover:opacity-80
                                                                 ${getStatusClass(
-                                                                  displayStatus,
-                                                                )}
+                              displayStatus,
+                            )}
                                                             `}
                           >
                             <span
@@ -1534,6 +1536,23 @@ function PendingApplicationsTable({
                                                                 "
                             />
                           </button>
+                            {/* DELETE */}
+                          <button
+                            type="button"
+                            onClick={() => onDeleteApplication?.(application)}
+                            title="Delete application"
+                            aria-label={`Delete application for ${application.name || "customer"}`}
+                            className="
+                              btn
+                              btn-ghost
+                              btn-sm
+                              btn-square
+                              text-error
+                              hover:bg-error/10
+                                                "
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1604,8 +1623,9 @@ function PendingApplicationsTable({
             </div>
 
             {/* RIGHT */}
-
             <div className="flex items-center gap-1">
+
+              {/* PREVIOUS */}
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
@@ -1619,21 +1639,36 @@ function PendingApplicationsTable({
                 Previous
               </button>
 
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`
+                                        btn
+                                        btn-sm
+                                        ${
+                                          currentPage === page
+                                            ? "btn-primary"
+                                            : "btn-ghost"
+                                        }
+                                    `}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
+
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
-                disabled={
-                  currentPage ===
-                  totalPages
-                }
-                onClick={() =>
-                  setCurrentPage(
-                    currentPage + 1,
-                  )
-                }
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
               >
                 Next
               </button>
+
             </div>
           </div>
         )}

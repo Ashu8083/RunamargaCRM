@@ -1,6 +1,7 @@
 // admin-react/src/pages/Logs/LeadCreationLogs/index.jsx
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { getLoanApplicationAuditLogs } from './Api'
 
 import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
@@ -13,465 +14,62 @@ import TeamLeadDropdown from '../../../../components/GlobalModels/Filters/TeamLe
 
 function LeadCreationLogs() {
 
-    // =========================================================
-    // MOCK EMPLOYEES
-    // =========================================================
-
-    const employees = [
-        {
-            id: 105,
-            name: 'Rahul Sharma',
-            employeeId: '105',
-            role: 'agent',
-        },
-
-        {
-            id: 108,
-            name: 'Anil Kumar',
-            employeeId: '108',
-            role: 'rm',
-        },
-
-        {
-            id: 110,
-            name: 'Vikram Singh',
-            employeeId: '110',
-            role: 'agent',
-        },
-
-        {
-            id: 112,
-            name: 'Arjun Rao',
-            employeeId: '112',
-            role: 'rm',
-        },
-
-        {
-            id: 115,
-            name: 'Kiran Kumar',
-            employeeId: '115',
-            role: 'agent',
-        },
-    ]
-
-
-    // =========================================================
-    // MOCK TEAM LEADS
-    // =========================================================
-
-    const teamLeads = [
-        {
-            id: 301,
-            name: 'Suresh Kumar',
-            employeeId: '301',
-        },
-
-        {
-            id: 302,
-            name: 'Priya Singh',
-            employeeId: '302',
-        },
-
-        {
-            id: 303,
-            name: 'Rajesh Kumar',
-            employeeId: '303',
-        },
-
-        {
-            id: 304,
-            name: 'Manoj Rao',
-            employeeId: '304',
-        },
-    ]
-
-
-    // =========================================================
-    // MOCK LEAD CREATION LOGS
-    // =========================================================
-
-    const [logs] = useState([
-        {
-            id: 5001,
-
-            leadId: '10245',
-
-            createdById: 105,
-
-            createdByName:
-                'Rahul Sharma',
-
-            createdByRole:
-                'agent',
-
-            reportsToId: 301,
-
-            reportsToName:
-                'Suresh Kumar',
-
-            createdAt:
-                '01 Sep 2026, 09:42:12',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5002,
-
-            leadId: '10246',
-
-            createdById: 108,
-
-            createdByName:
-                'Anil Kumar',
-
-            createdByRole:
-                'rm',
-
-            reportsToId: 302,
-
-            reportsToName:
-                'Priya Singh',
-
-            createdAt:
-                '02 Sep 2026, 10:15:43',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5003,
-
-            leadId: '10247',
-
-            createdById: 110,
-
-            createdByName:
-                'Vikram Singh',
-
-            createdByRole:
-                'agent',
-
-            reportsToId: 303,
-
-            reportsToName:
-                'Rajesh Kumar',
-
-            createdAt:
-                '02 Sep 2026, 11:21:08',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5004,
-
-            leadId: '10248',
-
-            createdById: 112,
-
-            createdByName:
-                'Arjun Rao',
-
-            createdByRole:
-                'rm',
-
-            reportsToId: 301,
-
-            reportsToName:
-                'Suresh Kumar',
-
-            createdAt:
-                '03 Sep 2026, 09:03:51',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5005,
-
-            leadId: '10249',
-
-            createdById: 115,
-
-            createdByName:
-                'Kiran Kumar',
-
-            createdByRole:
-                'agent',
-
-            reportsToId: 304,
-
-            reportsToName:
-                'Manoj Rao',
-
-            createdAt:
-                '03 Sep 2026, 10:30:25',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5006,
-
-            leadId: '10250',
-
-            createdById: 105,
-
-            createdByName:
-                'Rahul Sharma',
-
-            createdByRole:
-                'agent',
-
-            reportsToId: 302,
-
-            reportsToName:
-                'Priya Singh',
-
-            createdAt:
-                '04 Sep 2026, 11:10:14',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5007,
-
-            leadId: '10251',
-
-            createdById: 108,
-
-            createdByName:
-                'Anil Kumar',
-
-            createdByRole:
-                'rm',
-
-            reportsToId: 303,
-
-            reportsToName:
-                'Rajesh Kumar',
-
-            createdAt:
-                '04 Sep 2026, 12:05:37',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5008,
-
-            leadId: '10252',
-
-            createdById: 110,
-
-            createdByName:
-                'Vikram Singh',
-
-            createdByRole:
-                'agent',
-
-            reportsToId: 304,
-
-            reportsToName:
-                'Manoj Rao',
-
-            createdAt:
-                '05 Sep 2026, 09:42:19',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5009,
-
-            leadId: '10253',
-
-            createdById: 112,
-
-            createdByName:
-                'Arjun Rao',
-
-            createdByRole:
-                'rm',
-
-            reportsToId: 301,
-
-            reportsToName:
-                'Suresh Kumar',
-
-            createdAt:
-                '05 Sep 2026, 10:12:44',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5010,
-
-            leadId: '10254',
-
-            createdById: 115,
-
-            createdByName:
-                'Kiran Kumar',
-
-            createdByRole:
-                'agent',
-
-            reportsToId: 302,
-
-            reportsToName:
-                'Priya Singh',
-
-            createdAt:
-                '06 Sep 2026, 11:45:22',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5011,
-
-            leadId: '10255',
-
-            createdById: 105,
-
-            createdByName:
-                'Rahul Sharma',
-
-            createdByRole:
-                'agent',
-
-            reportsToId: 303,
-
-            reportsToName:
-                'Rajesh Kumar',
-
-            createdAt:
-                '06 Sep 2026, 01:18:09',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5012,
-
-            leadId: '10256',
-
-            createdById: 108,
-
-            createdByName:
-                'Anil Kumar',
-
-            createdByRole:
-                'rm',
-
-            reportsToId: 304,
-
-            reportsToName:
-                'Manoj Rao',
-
-            createdAt:
-                '07 Sep 2026, 02:52:31',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5013,
-
-            leadId: '10257',
-
-            createdById: 110,
-
-            createdByName:
-                'Vikram Singh',
-
-            createdByRole:
-                'agent',
-
-            reportsToId: 301,
-
-            reportsToName:
-                'Suresh Kumar',
-
-            createdAt:
-                '07 Sep 2026, 03:25:16',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5014,
-
-            leadId: '10258',
-
-            createdById: 112,
-
-            createdByName:
-                'Arjun Rao',
-
-            createdByRole:
-                'rm',
-
-            reportsToId: 302,
-
-            reportsToName:
-                'Priya Singh',
-
-            createdAt:
-                '08 Sep 2026, 09:14:42',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5015,
-
-            leadId: '10259',
-
-            createdById: 115,
-
-            createdByName:
-                'Kiran Kumar',
-
-            createdByRole:
-                'agent',
-
-            reportsToId: 303,
-
-            reportsToName:
-                'Rajesh Kumar',
-
-            createdAt:
-                '08 Sep 2026, 10:36:28',
-
-            deletedAt:
-                null,
-        },
-    ])
+    const [logs, setLogs] = useState([])
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
+
+    const fetchLogs = useCallback(async () => {
+        setLoading(true)
+        setError('')
+
+        try {
+            const records = await getLoanApplicationAuditLogs({
+                skip: 0,
+                limit: 500,
+            })
+
+            const mappedLogs = records.map((log) => ({
+                id: log.id,
+                leadId: log.loan_application_id ?? null,
+
+                phone: log.loan_application_phone ?? '',
+
+                createdById: log.action_by_id ?? null,
+                createdByName: log.performer_name ?? 'Unknown Employee',
+                createdByRole: log.performer_role ?? '',
+
+                reportsToId: log.report_to_id ?? null,
+                reportsToName: log.report_to_name ?? 'Unknown Employee',
+
+                action: log.action ?? '',
+                createdAt: log.date_and_time ?? null,
+                deletedAt: log.deleted_at ?? null,
+            }))
+
+            setLogs(mappedLogs)
+        } catch (err) {
+            console.error('Failed to fetch loan application audit logs:', err)
+
+            setError(
+                err.response?.data?.detail ||
+                'Failed to load loan application creation logs.'
+            )
+
+            setLogs([])
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        fetchLogs()
+    }, [fetchLogs])
 
 
     // =========================================================
     // FILTER STATE
     // =========================================================
-
+    const [actionFilter, setActionFilter] = useState('')
     const [search, setSearch] =
         useState('')
 
@@ -516,7 +114,14 @@ function LeadCreationLogs() {
 
 
         return logs.filter((log) => {
+            const normalizeAction = (value) =>
+                String(value ?? '').trim().toUpperCase()
 
+            const matchesAction =
+                !actionFilter ||
+                String(log.action ?? "")
+                    .toLowerCase()
+                    .includes(actionFilter.toLowerCase());
             // -------------------------------------------------
             // SEARCH
             // -------------------------------------------------
@@ -547,7 +152,7 @@ function LeadCreationLogs() {
             const matchesCreatedBy =
                 !createdById ||
                 String(log.createdById) ===
-                    String(createdById)
+                String(createdById)
 
 
             // -------------------------------------------------
@@ -557,7 +162,7 @@ function LeadCreationLogs() {
             const matchesReportsTo =
                 !reportsToId ||
                 String(log.reportsToId) ===
-                    String(reportsToId)
+                String(reportsToId)
 
 
             // -------------------------------------------------
@@ -579,9 +184,9 @@ function LeadCreationLogs() {
                 (
                     logDate &&
                     logDate >=
-                        new Date(
-                            `${fromDate}T00:00:00`
-                        )
+                    new Date(
+                        `${fromDate}T00:00:00`
+                    )
                 )
 
 
@@ -594,9 +199,9 @@ function LeadCreationLogs() {
                 (
                     logDate &&
                     logDate <=
-                        new Date(
-                            `${toDate}T23:59:59`
-                        )
+                    new Date(
+                        `${toDate}T23:59:59`
+                    )
                 )
 
 
@@ -605,7 +210,8 @@ function LeadCreationLogs() {
                 matchesCreatedBy &&
                 matchesReportsTo &&
                 matchesFromDate &&
-                matchesToDate
+                matchesToDate &&
+                matchesAction
             )
 
         })
@@ -617,6 +223,7 @@ function LeadCreationLogs() {
         reportsToId,
         fromDate,
         toDate,
+        actionFilter,
     ])
 
 
@@ -652,10 +259,10 @@ function LeadCreationLogs() {
     const paginatedLogs =
         filteredLogs.slice(
             (safeCurrentPage - 1) *
-                pageSize,
+            pageSize,
 
             safeCurrentPage *
-                pageSize
+            pageSize
         )
 
 
@@ -674,7 +281,7 @@ function LeadCreationLogs() {
         setFromDate('')
 
         setToDate('')
-
+        setActionFilter('')
         setCurrentPage(1)
 
     }
@@ -809,7 +416,7 @@ function LeadCreationLogs() {
             sm:p-6
         ">
 
-           
+
             {/* =====================================================
                 FILTER CARD
             ===================================================== */}
@@ -882,12 +489,28 @@ function LeadCreationLogs() {
                             </label>
 
                         </div>
-
+                        <div>
+                            
+                            <select
+                                id="actionFilter"
+                                value={actionFilter}
+                                onChange={(e) => {
+                                    setActionFilter(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="select select-bordered w-full"
+                            >
+                                <option value="">All Actions</option>
+                                <option value="create">Create</option>
+                                <option value="update">Update</option>
+                                <option value="delete">Delete</option>
+                            </select>
+                        </div>
 
                         {/* =========================================
                             CREATED BY
                         ========================================= */}
-
+                        {/* 
                         <div className="
                             min-w-0
                             w-full
@@ -907,14 +530,14 @@ function LeadCreationLogs() {
                                 placeholder="Created By"
                             />
 
-                        </div>
+                        </div> */}
 
 
                         {/* =========================================
                             REPORTS TO
                         ========================================= */}
 
-                        <div className="
+                        {/* <div className="
                             min-w-0
                             w-full
                             sm:flex-1
@@ -933,7 +556,7 @@ function LeadCreationLogs() {
                                 placeholder="Reports To"
                             />
 
-                        </div>
+                        </div> */}
 
 
                         {/* =========================================
@@ -1137,7 +760,7 @@ function LeadCreationLogs() {
                         ">
                             {Math.min(
                                 safeCurrentPage *
-                                    pageSize,
+                                pageSize,
                                 filteredLogs.length
                             )}
                         </span>
@@ -1211,17 +834,16 @@ function LeadCreationLogs() {
                                     className={`
                                         btn
                                         btn-sm
-                                        ${
-                                            safeCurrentPage ===
+                                        ${safeCurrentPage ===
                                             page
-                                                ? `
+                                            ? `
                                                     border-[#8BCF00]
                                                     bg-[#8BCF00]
                                                     text-white
                                                     hover:border-[#6FA800]
                                                     hover:bg-[#6FA800]
                                                 `
-                                                : `
+                                            : `
                                                     btn-ghost
                                                 `
                                         }

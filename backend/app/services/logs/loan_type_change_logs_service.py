@@ -310,7 +310,7 @@ class LoanChangeTypeLogsService:
                     "id": log.id,
 
                     "loanId": log.loan_id,
-
+                    "phone":log.loan.phone,
                     "changedById": (
                         log.changed_by_id
                     ),

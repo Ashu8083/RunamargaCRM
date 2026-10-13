@@ -35,7 +35,20 @@ from app.models.duplicate_approvals import DuplicateApproval
 from app.models.phone_numbers import PhoneNumber
 
 
+from app.models.admin_logs import  AdminLog
 from app.models.audit_logs import AuditLog
+from app.models.agent_audit_logs import AgentAuditLog
+from app.models.employee_audit_logs import EmployeeAuditLog
+from app.models.team_lead_audit_logs import TeamLeadLogs
+from app.models.loan_application_audit_logs import LoanApplicationAuditLog
+from app.models.loan_application_status_audit_logs import LoanApplicationStatusAuditLog
+from app.models.duplicate_lead_approval_logs import DuplicateLeadApprovalLog
+
+
 from app.models.loan_shuffle_history import LoanShuffleHistory
 from app.models.loan_type_change_log import LoanTypeChangeLog
 from app.models.bank_processing_logs import BankProcessingLog
+from app.models.call_assignment_audit_logs import CallAssignmentAuditLogs
+from app.models.call_reassignment_audit_logs import CallReassignmentAuditLog
+from app.models.phone_number_audit_logs import PhoneNumberAuditLog
+

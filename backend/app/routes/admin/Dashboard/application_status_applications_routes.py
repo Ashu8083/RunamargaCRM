@@ -25,13 +25,10 @@ router = APIRouter(
 async def get_application_status_applications(
     from_date: Optional[date] = Query(default=None),
     to_date: Optional[date] = Query(default=None),
-
     loan_type_id: Optional[int] = Query(default=None),
     status: Optional[str] = Query(default=None),
-
     # Existing RBAC context
     context_id: Optional[int] = Query(default=None),
-
     # New filters
     search: Optional[str] = Query(default=None),
     rm_id: Optional[int] = Query(default=None),

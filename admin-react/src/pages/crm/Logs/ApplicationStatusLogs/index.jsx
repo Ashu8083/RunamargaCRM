@@ -1,495 +1,32 @@
 // admin-react\src\pages\Logs\ApplicationStatusLogs\index.jsx
-import { useMemo, useState } from 'react'
-
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import SearchIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 
 import ApplicationStatusLogTable from './components/ApplicationStatusLogTable'
 
-import EmployeeDropdown from '../../../../components/GlobalModels/Filters/EmployeeDropdown'
-
+import { getApplicationStatusAuditLogs } from './Api'
 
 function ApplicationStatusLogs() {
 
-    // =========================================================
-    // MOCK EMPLOYEES
-    // =========================================================
-
-    const employees = [
-        {
-            id: 201,
-            name: 'Rahul Sharma',
-            employeeId: 'EMP201',
-        },
-
-        {
-            id: 202,
-            name: 'Anil Kumar',
-            employeeId: 'EMP202',
-        },
-
-        {
-            id: 203,
-            name: 'Vikram Singh',
-            employeeId: 'EMP203',
-        },
-
-        {
-            id: 204,
-            name: 'Arjun Rao',
-            employeeId: 'EMP204',
-        },
-
-        {
-            id: 205,
-            name: 'Kiran Kumar',
-            employeeId: 'EMP205',
-        },
-    ]
-
+    const [logs, setLogs] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
     // =========================================================
     // STATUS OPTIONS
     // =========================================================
 
     const statusOptions = [
-        {
-            value: '',
-            label: 'All Statuses',
-        },
-
-        {
-            value: 'IN_PROCESS',
-            label: 'In Process',
-        },
-
-        {
-            value: 'LOGIN',
-            label: 'Login',
-        },
-
-        {
-            value: 'SANCTIONED',
-            label: 'Sanctioned',
-        },
-
-        {
-            value: 'DISBURSED',
-            label: 'Disbursed',
-        },
-
-        {
-            value: 'REJECTED',
-            label: 'Rejected',
-        },
+        { label: 'In Process', value: 'inprocess' },
+        { label: 'Docs Pending', value: 'docspending' },
+        { label: 'Rejected', value: 'rejected' },
+        { label: 'Sanctioned', value: 'sanctioned' },
+        { label: 'Disbursed', value: 'disbursed' },
+        { label: 'Login', value: 'login' },
+        { label: 'Revert Rejected', value: 'revert_rejected' },
     ]
 
-
-    // =========================================================
-    // MOCK APPLICATION STATUS LOGS
-    // =========================================================
-
-    const [logs] = useState([
-        {
-            id: 5001,
-
-            loanId:
-                '10245',
-
-            changedById:
-                201,
-
-            changedByName:
-                'Rahul Sharma',
-
-            empRole:
-                'agent',
-
-            status:
-                'IN_PROCESS',
-
-            createdAt:
-                '31 Aug 2026, 09:42:12',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5002,
-
-            loanId:
-                '10245',
-
-            changedById:
-                201,
-
-            changedByName:
-                'Rahul Sharma',
-
-            empRole:
-                'agent',
-
-            status:
-                'LOGIN',
-
-            createdAt:
-                '31 Aug 2026, 10:15:43',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5003,
-
-            loanId:
-                '10245',
-
-            changedById:
-                202,
-
-            changedByName:
-                'Anil Kumar',
-
-            empRole:
-                'rm',
-
-            status:
-                'SANCTIONED',
-
-            createdAt:
-                '01 Sep 2026, 11:21:08',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5004,
-
-            loanId:
-                '10245',
-
-            changedById:
-                202,
-
-            changedByName:
-                'Anil Kumar',
-
-            empRole:
-                'rm',
-
-            status:
-                'DISBURSED',
-
-            createdAt:
-                '03 Sep 2026, 12:03:51',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5005,
-
-            loanId:
-                '10246',
-
-            changedById:
-                203,
-
-            changedByName:
-                'Vikram Singh',
-
-            empRole:
-                'teamlead_rm_business',
-
-            status:
-                'IN_PROCESS',
-
-            createdAt:
-                '29 Aug 2026, 09:12:35',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5006,
-
-            loanId:
-                '10246',
-
-            changedById:
-                203,
-
-            changedByName:
-                'Vikram Singh',
-
-            empRole:
-                'teamlead_rm_business',
-
-            status:
-                'LOGIN',
-
-            createdAt:
-                '29 Aug 2026, 10:45:18',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5007,
-
-            loanId:
-                '10246',
-
-            changedById:
-                204,
-
-            changedByName:
-                'Arjun Rao',
-
-            empRole:
-                'teamlead_agent_business',
-
-            status:
-                'REJECTED',
-
-            createdAt:
-                '30 Aug 2026, 02:18:42',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5008,
-
-            loanId:
-                '10247',
-
-            changedById:
-                205,
-
-            changedByName:
-                'Kiran Kumar',
-
-            empRole:
-                'teamlead_agent_personal',
-
-            status:
-                'IN_PROCESS',
-
-            createdAt:
-                '28 Aug 2026, 09:25:11',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5009,
-
-            loanId:
-                '10247',
-
-            changedById:
-                205,
-
-            changedByName:
-                'Kiran Kumar',
-
-            empRole:
-                'teamlead_agent_personal',
-
-            status:
-                'LOGIN',
-
-            createdAt:
-                '28 Aug 2026, 11:04:27',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5010,
-
-            loanId:
-                '10247',
-
-            changedById:
-                201,
-
-            changedByName:
-                'Rahul Sharma',
-
-            empRole:
-                'agent',
-
-            status:
-                'SANCTIONED',
-
-            createdAt:
-                '30 Aug 2026, 03:42:19',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5011,
-
-            loanId:
-                '10248',
-
-            changedById:
-                202,
-
-            changedByName:
-                'Anil Kumar',
-
-            empRole:
-                'rm',
-
-            status:
-                'IN_PROCESS',
-
-            createdAt:
-                '27 Aug 2026, 09:18:09',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5012,
-
-            loanId:
-                '10248',
-
-            changedById:
-                202,
-
-            changedByName:
-                'Anil Kumar',
-
-            empRole:
-                'rm',
-
-            status:
-                'REJECTED',
-
-            createdAt:
-                '31 Aug 2026, 04:52:31',
-
-            deletedAt:
-                '31 Aug 2026, 04:52:31',
-        },
-
-        {
-            id: 5013,
-
-            loanId:
-                '10249',
-
-            changedById:
-                203,
-
-            changedByName:
-                'Vikram Singh',
-
-            empRole:
-                'teamlead_rm_business',
-
-            status:
-                'IN_PROCESS',
-
-            createdAt:
-                '01 Sep 2026, 08:15:22',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5014,
-
-            loanId:
-                '10249',
-
-            changedById:
-                204,
-
-            changedByName:
-                'Arjun Rao',
-
-            empRole:
-                'teamlead_agent_business',
-
-            status:
-                'LOGIN',
-
-            createdAt:
-                '01 Sep 2026, 10:32:45',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5015,
-
-            loanId:
-                '10250',
-
-            changedById:
-                205,
-
-            changedByName:
-                'Kiran Kumar',
-
-            empRole:
-                'teamlead_agent_personal',
-
-            status:
-                'IN_PROCESS',
-
-            createdAt:
-                '25 Aug 2026, 09:42:12',
-
-            deletedAt:
-                null,
-        },
-
-        {
-            id: 5016,
-
-            loanId:
-                '10250',
-
-            changedById:
-                201,
-
-            changedByName:
-                'Rahul Sharma',
-
-            empRole:
-                'agent',
-
-            status:
-                'SANCTIONED',
-
-            createdAt:
-                '27 Aug 2026, 02:15:43',
-
-            deletedAt:
-                null,
-        },
-    ])
 
 
     // =========================================================
@@ -557,8 +94,88 @@ function ApplicationStatusLogs() {
 
         return parsedDate
     }
+    const fetchApplicationStatusLogs = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError("");
 
+            const response = await getApplicationStatusAuditLogs({
+                skip: 0,
+                limit: 500,
+            });
 
+            const records = Array.isArray(response)
+                ? response
+                : [];
+
+            const mappedLogs = records.map((log) => ({
+                id: log.id,
+
+                // Loan application information
+                loanId: log.loan_application_id ?? "N/A",
+
+                // Employee information
+                changedById: log.action_by_id ?? null,
+                changedByName: log.performer_name ?? "N/A",
+                phone: log.performer_phone ?? "N/A",
+
+                reportToName: log.report_to_name ?? "N/A",
+
+                empRole: log.action_by_role ?? "N/A",
+
+                // Status information
+                status: String(
+                    log.to_status ?? log.action ?? ""
+                ).toUpperCase(),
+
+                fromStatus: log.from_status ?? null,
+                toStatus: log.to_status ?? null,
+
+                // Timestamps
+                createdAt: log.date_and_time ?? null,
+                deletedAt: log.deleted_at ?? null,
+            }));
+
+            setLogs(mappedLogs);
+        } catch (err) {
+            console.error(
+                "Failed to fetch application status logs:",
+                err
+            );
+
+            setError(
+                err?.response?.data?.detail ??
+                err?.message ??
+                "Failed to load application status logs."
+            );
+
+            setLogs([]);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchApplicationStatusLogs();
+    }, [fetchApplicationStatusLogs]);
+    const employeeOptions = useMemo(() => {
+        const uniqueEmployees = new Map();
+
+        logs.forEach((log) => {
+            if (log.changedById == null) return;
+
+            const id = String(log.changedById);
+
+            if (!uniqueEmployees.has(id)) {
+                uniqueEmployees.set(id, {
+                    value: id,
+                    label: log.changedByName || "Unknown Employee",
+                });
+            }
+        });
+
+        return Array.from(uniqueEmployees.values());
+    }, [logs]);
     // =========================================================
     // FILTER LOGS
     // =========================================================
@@ -580,21 +197,22 @@ function ApplicationStatusLogs() {
 
                 const matchesSearch =
                     !searchValue ||
-                    String(log.loanId)
+                    String(log.loanId ?? "")
                         .toLowerCase()
                         .includes(searchValue) ||
-                    log.changedByName
-                        ?.toLowerCase()
-                        .includes(searchValue) ||
-                    String(log.changedById)
+                    String(log.changedByName ?? "")
                         .toLowerCase()
                         .includes(searchValue) ||
-                    String(log.id)
+                    String(log.phone ?? "")
                         .toLowerCase()
                         .includes(searchValue) ||
-                    log.empRole
-                        ?.toLowerCase()
-                        .includes(searchValue)
+                    String(log.status ?? "")
+                        .toLowerCase()
+                        .replace(/_/g, " ")
+                        .includes(searchValue) ||
+                    String(log.reportToName ?? "")
+                        .toLowerCase()
+                        .includes(searchValue);
 
 
                 // -------------------------------------------------
@@ -604,17 +222,21 @@ function ApplicationStatusLogs() {
                 const matchesChangedBy =
                     !changedById ||
                     String(log.changedById) ===
-                        String(changedById)
+                    String(changedById)
 
 
                 // -------------------------------------------------
                 // STATUS
                 // -------------------------------------------------
 
+                const normalizeStatus = (value) =>
+                    String(value ?? "")
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]/g, "");
+
                 const matchesStatus =
                     !status ||
-                    log.status === status
-
+                    normalizeStatus(log.status) === normalizeStatus(status);
 
                 // -------------------------------------------------
                 // LOG DATE
@@ -635,9 +257,9 @@ function ApplicationStatusLogs() {
                     (
                         logDate &&
                         logDate >=
-                            new Date(
-                                `${fromDate}T00:00:00`
-                            )
+                        new Date(
+                            `${fromDate}T00:00:00`
+                        )
                     )
 
 
@@ -650,9 +272,9 @@ function ApplicationStatusLogs() {
                     (
                         logDate &&
                         logDate <=
-                            new Date(
-                                `${toDate}T23:59:59`
-                            )
+                        new Date(
+                            `${toDate}T23:59:59`
+                        )
                     )
 
 
@@ -698,10 +320,10 @@ function ApplicationStatusLogs() {
     const paginatedLogs =
         filteredLogs.slice(
             (currentPage - 1) *
-                pageSize,
+            pageSize,
 
             currentPage *
-                pageSize
+            pageSize
         )
 
 
@@ -857,7 +479,7 @@ function ApplicationStatusLogs() {
             sm:p-6
         ">
 
-           
+
 
             {/* =====================================================
                 FILTERS
@@ -923,24 +545,6 @@ function ApplicationStatusLogs() {
                         </div>
 
 
-                        {/* =========================================
-                            CHANGED BY
-                        ========================================= */}
-
-                        <div>
-
-                            <EmployeeDropdown
-                                label=""
-                                value={changedById}
-                                onChange={
-                                    handleChangedByChange
-                                }
-                                options={employees}
-                                allLabel="All Employees"
-                                placeholder="Changed By"
-                            />
-
-                        </div>
 
 
                         {/* =========================================
@@ -960,7 +564,7 @@ function ApplicationStatusLogs() {
                                     w-full
                                 "
                             >
-
+                                <option value="">All Statuses</option>
                                 {statusOptions.map(
                                     (option) => (
 
@@ -976,6 +580,35 @@ function ApplicationStatusLogs() {
 
                             </select>
 
+                        </div>
+                        {/* CHANGED BY EMPLOYEE */}
+                        <div>
+                            <label
+                                htmlFor="changedByFilter"
+                                className="mb-1 block text-sm font-medium"
+                            >
+                            </label>
+
+                            <select
+                                id="changedByFilter"
+                                value={changedById}
+                                onChange={(event) => {
+                                    setChangedById(event.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="select select-bordered w-full"
+                            >
+                                <option value="">All Employees</option>
+
+                                {employeeOptions.map((employee) => (
+                                    <option
+                                        key={employee.value}
+                                        value={employee.value}
+                                    >
+                                        {employee.label}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
 
@@ -1083,14 +716,19 @@ function ApplicationStatusLogs() {
             </div>
 
 
-            {/* =====================================================
-                LOG TABLE
-            ===================================================== */}
+            {error && (
+                <div role="alert" className="alert alert-error">
+                    <span>{error}</span>
+                </div>
+            )}
 
-            <ApplicationStatusLogTable
-                logs={paginatedLogs}
-            />
-
+            {loading && logs.length === 0 ? (
+                <div className="py-8 text-center text-sm text-base-content/60">
+                    Loading application status logs...
+                </div>
+            ) : (
+                <ApplicationStatusLogTable logs={paginatedLogs} />
+            )}
 
             {/* =====================================================
                 PAGINATION
@@ -1142,7 +780,7 @@ function ApplicationStatusLogs() {
                         ">
                             {Math.min(
                                 currentPage *
-                                    pageSize,
+                                pageSize,
                                 filteredLogs.length
                             )}
                         </span>
@@ -1216,17 +854,16 @@ function ApplicationStatusLogs() {
                                     className={`
                                         btn
                                         btn-sm
-                                        ${
-                                            currentPage ===
+                                        ${currentPage ===
                                             page
-                                                ? `
+                                            ? `
                                                     border-[#8BCF00]
                                                     bg-[#8BCF00]
                                                     text-white
                                                     hover:border-[#6FA800]
                                                     hover:bg-[#6FA800]
                                                 `
-                                                : `
+                                            : `
                                                     btn-ghost
                                                 `
                                         }

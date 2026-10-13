@@ -12,21 +12,51 @@ export const getApplications = async (
     page = 1,
     pageSize = 10,
     noChatForDays = null,
+    search = '',
+    loanTypeId = '',
+    rmId = '',
+    teamLeadId = '',
+    agentId = '',
+    status = '',
 ) => {
     const response = await apiClient.get("/applications", {
         params: {
             context_id: contextId,
             page,
             page_size: pageSize,
+
             ...(noChatForDays !== null && {
                 no_chat_for_days: noChatForDays,
+            }),
+
+            ...(search.trim() && {
+                search: search.trim(),
+            }),
+
+            ...(loanTypeId && {
+                loan_type_id: loanTypeId,
+            }),
+
+            ...(rmId && {
+                rm_id: rmId,
+            }),
+
+            ...(teamLeadId && {
+                team_lead_id: teamLeadId,
+            }),
+
+            ...(agentId && {
+                agent_id: agentId,
+            }),
+
+            ...(status && {
+                status,
             }),
         },
     });
 
     return response.data;
 };
-
 // =============================================================
 // GET SINGLE APPLICATION
 // =============================================================
@@ -83,3 +113,15 @@ export const updateApplicationStatus = async (
 
     return response.data
 }
+
+// =============================================================
+// DELETE APPLICATION (SOFT DELETE)
+// =============================================================
+
+export const deleteApplication = async (applicationId) => {
+    const response = await apiClient.delete(
+        `/applications/${applicationId}`
+    );
+
+    return response.data;
+};

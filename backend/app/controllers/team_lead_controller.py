@@ -20,10 +20,12 @@ class TeamLeadController:
     @staticmethod
     def create_team_lead(
         db: Session,
+        action_by_ctx: int,
         payload: TeamLeadCreate,
     ):
         return TeamLeadService.create_team_lead(
             db=db,
+            action_by_ctx=action_by_ctx,
             employee_id=payload.employee_id,
             context_id=payload.context_id,
             status=payload.status,
@@ -33,34 +35,40 @@ class TeamLeadController:
     def update_team_lead(
         db: Session,
         team_lead_id: int,
+        action_by_ctx: int,
         payload: TeamLeadUpdate,
     ):
         return TeamLeadService.update_team_lead(
             db=db,
             team_lead_id=team_lead_id,
             context_id=payload.context_id,
+            action_by_ctx=action_by_ctx,
         )
 
     @staticmethod
     def delete_team_lead(
         db: Session,
+        action_by_ctx: int,
         team_lead_id: int,
     ):
         return TeamLeadService.delete_team_lead(
             db=db,
             team_lead_id=team_lead_id,
+            action_by_ctx=action_by_ctx,
         )
 
     @staticmethod
     def update_team_lead_status(
         db: Session,
         team_lead_id: int,
+        action_by_ctx: int,
         payload: TeamLeadStatusUpdate,
     ):
         return TeamLeadService.update_team_lead_status(
             db=db,
             team_lead_id=team_lead_id,
             status=payload.status,
+            action_by_ctx=action_by_ctx,
         )
 
     @staticmethod

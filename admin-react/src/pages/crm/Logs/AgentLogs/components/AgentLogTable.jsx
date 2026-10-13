@@ -300,19 +300,6 @@ function AgentLogTable({
                             </th>
 
 
-                            {/* ROLE */}
-
-                            <th className="
-                                whitespace-nowrap
-                                text-xs
-                                font-semibold
-                                uppercase
-                                tracking-wide
-                                text-base-content/70
-                            ">
-                                Role
-                            </th>
-
 
                             {/* REPORTS TO */}
 
@@ -342,18 +329,7 @@ function AgentLogTable({
                             </th>
 
 
-                            {/* ACTION ROLE */}
-
-                            <th className="
-                                whitespace-nowrap
-                                text-xs
-                                font-semibold
-                                uppercase
-                                tracking-wide
-                                text-base-content/70
-                            ">
-                                Action Role
-                            </th>
+                            
 
 
                             {/* EVENT */}
@@ -436,32 +412,7 @@ function AgentLogTable({
                                 </td>
 
 
-                                {/* =================================
-                                    ROLE
-                                ================================= */}
-
-                                <td className="
-                                    whitespace-nowrap
-                                ">
-
-                                    <span className="
-                                        inline-flex
-                                        items-center
-                                        rounded-full
-                                        border
-                                        border-base-300
-                                        bg-base-200/60
-                                        px-2.5
-                                        py-1
-                                        text-xs
-                                        font-medium
-                                    ">
-                                        {getRoleLabel(
-                                            log.agentRole
-                                        )}
-                                    </span>
-
-                                </td>
+                               
 
 
                                 {/* =================================
@@ -496,19 +447,6 @@ function AgentLogTable({
                                 </td>
 
 
-                                {/* =================================
-                                    ACTION ROLE
-                                ================================= */}
-
-                                <td className="
-                                    whitespace-nowrap
-                                ">
-
-                                    {getRoleLabel(
-                                        log.actionByRole
-                                    )}
-
-                                </td>
 
 
                                 {/* =================================

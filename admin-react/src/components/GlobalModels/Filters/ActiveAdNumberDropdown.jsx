@@ -1,46 +1,22 @@
 // src/components/Filters/ActiveAdNumberDropdown.jsx
+
 import { useEffect, useState } from 'react'
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'
+import apiClient from '../../../app/apiClient'
 
 
 // =============================================================
-// MOCK API
-// Replace this with your actual API call later.
+// API
 // =============================================================
 
 const fetchActiveAdNumbers = async () => {
 
-    return new Promise((resolve) => {
-
-        setTimeout(() => {
-
-            resolve([
-                {
-                    id: 501,
-                    number: '9876543210',
-                },
-                {
-                    id: 502,
-                    number: '9876543211',
-                },
-                {
-                    id: 503,
-                    number: '9876543212',
-                },
-                {
-                    id: 504,
-                    number: '9876543213',
-                },
-                {
-                    id: 505,
-                    number: '9876543214',
-                },
-            ])
-
-        }, 300)
-
-    })
+    const response = await apiClient.get(
+        '/call-analytics/active-ad-numbers'
+    )
+    // console.log(response);
+    return response.data
 
 }
 
@@ -94,6 +70,8 @@ function ActiveAdNumberDropdown({
                     error
                 )
 
+                setDefaultOptions([])
+
             } finally {
 
                 setLoading(false)
@@ -120,8 +98,8 @@ function ActiveAdNumberDropdown({
             searchPlaceholder={searchPlaceholder}
             emptyMessage={emptyMessage}
             loading={loading}
-            getOptionValue={(option) => option.id}
-            getOptionLabel={(option) => option.number}
+            getOptionValue={(option) => option.phone}
+            getOptionLabel={(option) => option.phone}
             {...props}
         />
 

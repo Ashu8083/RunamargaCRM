@@ -16,8 +16,7 @@ import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
 import ExistingLoan from '../../Loans/CreateApplication/components/ExistingLoan'
 import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
 import CallAssignmentTable from './components/CallAssignmentTable'
-
-import {
+import {    
     getCallAssignments,
     getAvailableCallNumbers,
     createCallAssignment,

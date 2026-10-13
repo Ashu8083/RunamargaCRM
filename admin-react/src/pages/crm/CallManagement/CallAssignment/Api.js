@@ -45,7 +45,7 @@ export const createApplication = async (payload) => {
         '/applications/create',
         payload
     )
-
+    
     return response.data
 }
 

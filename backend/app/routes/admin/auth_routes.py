@@ -6,7 +6,6 @@ from app.controllers.auth_controller import (
     request_otp,
     verify_otp,
     refresh_token,
-    logout,
 )
 
 from app.config.database import get_db
@@ -64,23 +63,23 @@ def refresh_token_route(
         refresh_token=refresh_token_cookie,
         response=response,
     )
-
-
 @router.post("/logout")
 def logout_route(
     response: Response,
-    refresh_token_cookie: str | None = Cookie(
-        default=None,
-        alias="refresh_token",
-    ),
-    db: Session = Depends(get_db),
 ):
-    return logout(
-        db=db,
-        refresh_token=refresh_token_cookie,
-        response=response,
+    response.delete_cookie(
+        key="access_token",
+        path="/",
     )
 
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+    )
+
+    return {
+        "message": "Logout successful",
+    }
 @router.get("/me")
 def get_current_user_route(
     db: Session = Depends(get_db),

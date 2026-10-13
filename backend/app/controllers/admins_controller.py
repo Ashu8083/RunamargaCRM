@@ -42,11 +42,13 @@ class AdminsController:
     def create_admin(
         db: Session,
         payload: AdminCreate,
+        action_by
     ):
         return AdminsService.create_admin(
             db=db,
             employee_id=payload.employee_id,
             status=payload.status,
+            action_by = action_by,
         )
 
     # ========================================================================
@@ -64,10 +66,12 @@ class AdminsController:
         db: Session,
         admin_id: int,
         payload: AdminUpdate,
+        action_by
     ):
         return AdminsService.update_admin(
             db=db,
             admin_id=admin_id,
+            action_by=action_by,
         )
 
     # ========================================================================
@@ -78,10 +82,12 @@ class AdminsController:
     def delete_admin(
         db: Session,
         admin_id: int,
+        action_by
     ):
         return AdminsService.delete_admin(
             db=db,
             admin_id=admin_id,
+            action_by=action_by,
         )
 
     # ========================================================================
