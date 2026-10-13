@@ -44,7 +44,7 @@ class TeamChat(Base):
 
     sender_admin_id = Column(
         Integer,
-        ForeignKey("employees.id", ondelete="CASCADE"),
+        ForeignKey("employee_contexts.id", ondelete="CASCADE"),
         nullable=True
     )
 
@@ -94,7 +94,7 @@ class TeamChat(Base):
 
     deleted_by_admin_id = Column(
         Integer,
-        ForeignKey("employees.id", ondelete="SET NULL"),
+        ForeignKey("employee_contexts.id", ondelete="SET NULL"),
         nullable=True
     )
 

@@ -81,12 +81,12 @@ class DuplicateLeadApprovalLog(Base):
     # Employee who reviewed the request
     reviewed_by_id = Column(
         Integer,
-        ForeignKey("employees.id", ondelete="SET NULL"),
+        ForeignKey("employee_contexts.id", ondelete="SET NULL"),
         nullable=True,
     )
 
     reviewed_by = relationship(
-        "Employee",
+    "EmployeeContext",
         foreign_keys=[reviewed_by_id],
     )
 

@@ -119,12 +119,12 @@ class DuplicateApproval(Base):
 
     approved_by_id = Column(
         Integer,
-        ForeignKey("employees.id"),
+        ForeignKey("employee_contexts.id"),
         nullable=True,
     )
 
     approved_by = relationship(
-        "Employee",
+        "EmployeeContext",
         foreign_keys=[approved_by_id],
     )
 

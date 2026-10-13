@@ -28,7 +28,7 @@ class RevertedLoan(Base):
 
     reverted_by_id = Column(
         Integer,
-        ForeignKey("employees.id"),
+        ForeignKey("employee_contexts.id"),
         nullable=False,
     )
 
@@ -73,6 +73,6 @@ class RevertedLoan(Base):
     )
 
     employee = relationship(
-        "Employee",
+        "EmployeeContext",
         foreign_keys=[reverted_by_id],
     )
