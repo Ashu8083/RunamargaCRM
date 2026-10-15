@@ -20,7 +20,6 @@ from .city_routes import router as city_router
 from .Loans.application_routes import router as application_router
 from .Loans.edit_application_routes import router as edit_application_router
 from .Loans.shuffle_loans_routes import router as shuffle_loans_router
-from .Loans.duplicate_approval_routes import router as duplicate_approval_router
 from .Loans.team_chat import router as team_chat_router
 from .Loans.loan_assignment_routes import router as loan_assignment_router
 
@@ -53,9 +52,6 @@ from .Loans.reverted_loans_routes import router as reverted_loans_router
 # CALL MANAGEMENT
 # ============================================================================
 
-from .phone_number_routes import router as phone_num_router
-from .CallManagement.call_logs import router as call_logs_router
-from .CallManagement.call_assignments import router as call_assignment_router
 from .call_reassignment_audit_log_routes import router as call_reassignment_audit_log_router
 
 # ============================================================================
@@ -87,10 +83,8 @@ from .employee_management.attendance_routes import router as employement_managem
 # ============================================================================
 # My Attendance
 # ============================================================================
-from .attendance_routes import router as attendance_router
 
 # Face Enrollment
-from .employee_management.face_enrollment_routes import router as face_enrollment_router
 from .employee_management.attendance_routes import router as attendance_router
 
 
@@ -112,6 +106,7 @@ from .CallManagement.call_logs import router as call_logs_router
 from .CallManagement.call_assignments import (
     router as call_assignment_router,
 )
+from app.routes.api.call_log_api import router as call_log_router
 
 # ============================================================================
 # CALL Analytics
@@ -246,10 +241,12 @@ router.include_router(attendance_router)
 # Call Management
 router.include_router(call_logs_router)
 router.include_router(call_assignment_router)
+router.include_router(call_log_router)
 # ============================================================================
 # FACE ENROLLMENT
 # ============================================================================
 router.include_router(face_enrollment_router)
+
 
 
 # ============================================================================
@@ -259,6 +256,7 @@ router.include_router(phone_number_router)
 router.include_router(call_logs_router)
 router.include_router(call_assignment_router)
 router.include_router(call_reassignment_audit_log_router)
+
 
 # ============================================================================
 # CALL Analytics

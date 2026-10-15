@@ -15,6 +15,7 @@ from app.services.Loans.application_service import ApplicationService
 
 
 FUNNEL_STATUSES = [
+    "Docs Pending",
     "In Process",
     "Login",
     "Sanctioned",
@@ -231,43 +232,19 @@ def get_application_funnel(
         )
 
     # =========================================================
-    # DATE RANGE
-    #
-    # Default:
-    # current month -> today
+    # DATE RANGE — CURRENT MONTH ONLY
     # =========================================================
 
-    if from_date is None and to_date is None:
-        from_date, to_date_exclusive = (
-            _get_current_month_range()
-        )
+    today = date.today()
 
-        response_to_date = (
-            date.today()
-        )
+    # First day of the current month
+    from_date = today.replace(day=1)
 
-    else:
-        if from_date is None:
-            from_date = to_date
+    # First day after today; exclusive upper bound
+    to_date_exclusive = today + timedelta(days=1)
 
-        if to_date is None:
-            to_date = from_date
-
-        if from_date > to_date:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "from_date cannot be greater "
-                    "than to_date."
-                ),
-            )
-
-        to_date_exclusive = (
-            to_date
-            + timedelta(days=1)
-        )
-
-        response_to_date = to_date
+    # Date displayed in the API response
+    response_to_date = today
 
     # =========================================================
     # BASE APPLICATION SCOPE
@@ -283,6 +260,9 @@ def get_application_funnel(
             ),
             LoanApplication.loan_amt.label(
                 "loan_amount"
+            ),
+            LoanApplication.docspending_date.label(
+                "docspending_date"
             ),
             LoanApplication.applied_date.label(
                 "applied_date"
@@ -333,6 +313,33 @@ def get_application_funnel(
             )
         )
 
+
+    # =========================================================
+    # DOCS PENDING
+    # =========================================================
+    # Only applications currently in docspending status.
+    # Date: LoanApplication.docspending_date.
+    # =========================================================
+
+    docs_pending_query = (
+        db.query(
+            scoped_applications.c.loan_id.label("loan_id"),
+            literal("Docs Pending").label("stage"),
+            _money(
+                scoped_applications.c.loan_amount
+            ).label("stage_amount"),
+        )
+        .filter(
+            func.lower(
+                cast(
+                    scoped_applications.c.application_status,
+                    String,
+                )
+            ) == "docspending",
+            scoped_applications.c.docspending_date >= from_date,
+            scoped_applications.c.docspending_date < to_date_exclusive,
+        )
+    )
     # =========================================================
     # IN PROCESS
     #
@@ -358,6 +365,12 @@ def get_application_funnel(
             ),
         )
         .filter(
+             func.lower(
+                cast(
+                    scoped_applications.c.application_status,
+                    String,
+                )
+            ) == "inprocess",
             scoped_applications.c.applied_date
             >= from_date,
             scoped_applications.c.applied_date
@@ -572,8 +585,9 @@ def get_application_funnel(
     # =========================================================
 
     all_stage_rows = (
-        in_process_query
+        docs_pending_query
         .union_all(
+            in_process_query,
             login_query,
             sanctioned_query,
             disbursed_query,
