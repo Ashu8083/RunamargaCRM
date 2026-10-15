@@ -46,7 +46,7 @@ STATUS_PRIORITY = {
 
 STATUS_LABELS = {
     "inprocess": "In Process",
-    "docspending": "In Process",
+    "docspending": "Docs Pending",
     "rejected": "Rejected",
     "revert_rejected": "Rejected",
     "login": "Login",
@@ -72,11 +72,11 @@ BANK_STATUS_PRIORITY = {
 # =========================================================
 
 PENDING_STATUSES = {
+    "Docs Pending",
     "In Process",
     "Login",
     "Sanctioned",
 }
-
 
 # =========================================================
 # GET APPLICATION STATUS APPLICATIONS
@@ -377,39 +377,28 @@ def get_application_status_applications(
             )
         )
 
-        inprocess_condition = or_(
-
-            and_(
-                loan_status_text
-                == "inprocess",
-
-                LoanApplication.applied_date
-                >= from_date,
-
-                LoanApplication.applied_date
-                < to_date_exclusive,
-            ),
-
-            and_(
-                loan_status_text
-                == "docspending",
-
-                LoanApplication.docspending_date
-                >= from_date,
-
-                LoanApplication.docspending_date
-                < to_date_exclusive,
-            ),
+        inprocess_condition = and_(
+            loan_status_text == "inprocess",
+            LoanApplication.applied_date >= from_date,
+            LoanApplication.applied_date < to_date_exclusive,
         )
 
         query = query.filter(
-
             inprocess_condition,
-
-            not_(
-                progressed_exists
-            ),
+            not_(progressed_exists),
         )
+    # =====================================================
+    # DOCS PENDING
+    # =====================================================
+
+    elif status == "Docs Pending":
+
+        query = query.filter(
+            loan_status_text == "docspending",
+            LoanApplication.docspending_date >= from_date,
+            LoanApplication.docspending_date < to_date_exclusive,
+        )
+      
 
     # =====================================================
     # REJECTED
@@ -940,7 +929,24 @@ def get_application_status_applications(
                 continue
 
             selected_status = loan_status
+        # -------------------------------------------------
+        # DOCS PENDING
+        # -------------------------------------------------
 
+        elif status == "Docs Pending":
+
+            if loan_status != "docspending":
+                continue
+
+            if not (
+                application.docspending_date
+                and from_date
+                <= application.docspending_date
+                < to_date_exclusive
+            ):
+                continue
+
+            selected_status = "docspending"
         # -------------------------------------------------
         # REJECTED
         # -------------------------------------------------

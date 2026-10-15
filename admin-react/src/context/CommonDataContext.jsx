@@ -374,3 +374,13 @@ export const useCommonData = () => {
 
   return context
 }
+
+
+export const useActiveContext = () => {
+    const { activeContext } = useCommonData();
+
+    return {
+        activeContext,
+        contextId: activeContext?.id ?? null,
+    };
+};

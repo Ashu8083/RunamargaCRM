@@ -14,6 +14,15 @@ import { getActiveContext } from "../../../../../app/auth";
    ============================================================= */
 
 const STATUS_CONFIG = {
+    "Docs Pending": {
+        background: "rgb(255 247 219 / 0.95)",
+        darkBackground: "rgb(100 75 20 / 0.55)",
+        border: "#F5D98A",
+        darkBorder: "#A8852F",
+        accent: "#EAB308",
+        text: "#854D0E",
+        darkText: "#FDE68A",
+    },
     "In Process": {
         background: "rgb(232 245 208 / 0.95)",
         darkBackground: "rgb(63 88 28 / 0.55)",
@@ -84,13 +93,13 @@ const MAX_WEIGHT = 1.12;
 const FIRST_ROW_RATIO = 0.52;
 
 const STATUS_ORDER = [
+    "Docs Pending",
     "In Process",
     "Rejected",
     "Login",
     "Sanctioned",
     "Disbursed",
 ];
-
 /* =============================================================
    HELPERS
    ============================================================= */
@@ -312,7 +321,7 @@ function ApplicationStatus() {
         if (
             !element ||
             typeof ResizeObserver ===
-                "undefined"
+            "undefined"
         ) {
             return undefined;
         }
@@ -526,10 +535,9 @@ function ApplicationStatus() {
                 params.toString();
 
             navigate(
-                `/crm/application-status${
-                    queryString
-                        ? `?${queryString}`
-                        : ""
+                `/crm/application-status${queryString
+                    ? `?${queryString}`
+                    : ""
                 }`
             );
         };
@@ -548,9 +556,9 @@ function ApplicationStatus() {
         ) => {
             if (
                 event.key ===
-                    "Enter" ||
+                "Enter" ||
                 event.key ===
-                    " "
+                " "
             ) {
                 event.preventDefault();
 
@@ -1053,21 +1061,20 @@ function ApplicationStatus() {
             <div
                 ref={chartRef}
                 className="
-                    relative
-                    mx-4
-                    mt-3
-                    mb-4
-                    min-h-[300px]
-                    flex-1
-                    w-auto
-                    overflow-visible
-                    rounded-xl
-                    border
-                    border-gray-200
-                    bg-gray-50/40
-                    shadow-inner
-                    dark:border-gray-700
-                    dark:bg-gray-950/30
+                mx-4
+                mt-3
+                mb-4
+                grid
+                grid-cols-3
+                gap-1
+                overflow-visible
+                rounded-xl
+                border
+                border-gray-200
+                bg-gray-50/40
+                shadow-inner
+                dark:border-gray-700
+                dark:bg-gray-950/30
                 "
             >
                 {apiState.loading ? (
@@ -1141,7 +1148,7 @@ function ApplicationStatus() {
 
                             const config =
                                 STATUS_CONFIG[
-                                    item.status
+                                item.status
                                 ] ||
                                 DEFAULT_STATUS_CONFIG;
 
@@ -1170,20 +1177,14 @@ function ApplicationStatus() {
                                     tabIndex={0}
                                     aria-label={`View ${item.status} applications`}
                                     className="
-                                        absolute
-                                        cursor-pointer
-                                        outline-none
-                                    "
-                                    style={{
-                                        left: `${tile.x}px`,
-                                        top: `${tile.y}px`,
-                                        width: `${tile.width}px`,
-                                        height: `${tile.height}px`,
-                                        zIndex:
-                                            isHovered
-                                                ? 50
-                                                : 1,
-                                    }}
+                                            relative
+                                            min-h-[150px]
+                                            cursor-pointer
+                                            overflow-hidden
+                                            rounded-sm
+                                            outline-none
+                                        "
+
                                     onClick={() =>
                                         handleCardClick(
                                             item.status

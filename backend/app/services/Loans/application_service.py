@@ -805,7 +805,7 @@ class ApplicationService:
             state_id=payload.state_id,
             city_id=payload.city_id,
 
-            status=LoanStatus.inprocess,
+            status=LoanStatus.docspending,
             applied_date=date.today(),
         )
 
@@ -828,7 +828,7 @@ class ApplicationService:
             action_by=current_context.id,
             action_on=application.id,
             from_status=None,
-            to_status=LoanStatus.inprocess.value,
+            to_status=LoanStatus.docspending.value,
             commit=False,
         )
 

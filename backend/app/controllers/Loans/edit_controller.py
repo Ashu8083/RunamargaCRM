@@ -15,7 +15,7 @@ from app.models.dsa_details import DSADetail
 from app.models.bank_processing_logs import BankProcessingLog
 from app.models.loan_reference import LoanReference
 from app.models.bank import Bank
-
+import random
 from app.schemas.application_schema import (
    ApplicationHeaderUpdate,ApplicationLoanDetailsUpdate,AddApplicationAddressRequest,AddApplicationReferenceRequest,AddApplicationCoApplicantRequest,UploadApplicationDocumentRequest
 )
@@ -25,9 +25,22 @@ from app.services.Loans.application_service import ApplicationService
 from app.models.loan_type_change_log import LoanTypeChangeLog
 from app.services.loan_application_audit_log_service import LoanApplicationAuditLogService
 from app.services.loan_application_status_audit_log_service import LoanApplicationStatusAuditLogService
+from app.models.loan_types import LoanType
+from app.models.employee_context_permissions import EmployeeContextPermission
+from app.models.permissions import Permission
 
 
-
+LOAN_TYPE_PERMISSION_MAP = {
+    "personal loan": "loans:personal:view",
+    "business loan": "loans:business:view",
+    "home loan": "loans:home:view",
+    "lap": "loans:lap:view",
+    "education loan": "loans:education:view",
+    "car loan": "loans:car:view",
+    "gold loan": "loans:gold:view",
+    "credit card": "loans:credit-card:view",
+    "agriculture loan": "loans:agriculture:view",
+}
 # =============================================================
 # UPDATE LOAN TYPE
 # =============================================================
@@ -183,6 +196,10 @@ def update_application_status(
     rejected_remarks: str | None = None,
     revert_rejection_date: str | None = None,
 ):
+    # =========================================================
+    # GET APPLICATION
+    # =========================================================
+
     application = (
         db.query(LoanApplication)
         .filter(
@@ -306,11 +323,224 @@ def update_application_status(
             )
 
     # =========================================================
+    # RANDOM AGENT ASSIGNMENT
+    # WHEN STATUS CHANGES TO INPROCESS
+    # =========================================================
+
+    selected_agent = None
+
+    # Assign an agent only when the application transitions
+    # from another status to INPROCESS.
+    if (
+        database_status == LoanStatus.inprocess
+        and application.status != LoanStatus.inprocess
+    ):
+
+        # -----------------------------------------------------
+        # 1. Find the application's loan type
+        # -----------------------------------------------------
+
+        loan_type = (
+            db.query(LoanType)
+            .filter(
+                LoanType.id == application.loan_type_id,
+                LoanType.deleted_at.is_(None),
+            )
+            .first()
+        )
+
+        if not loan_type:
+            raise HTTPException(
+                status_code=400,
+                detail="Loan type not found for this application",
+            )
+
+        # -----------------------------------------------------
+        # 2. Map loan type to its view permission
+        # -----------------------------------------------------
+
+        loan_type_permission_map = {
+            "personal loan": "loans:personal:view",
+            "business loan": "loans:business:view",
+            "home loan": "loans:home:view",
+            "lap": "loans:lap:view",
+            "education loan": "loans:education:view",
+            "car loan": "loans:car:view",
+            "gold loan": "loans:gold:view",
+            "credit card": "loans:credit-card:view",
+            "agriculture loan": "loans:agriculture:view",
+        }
+
+        permission_code = loan_type_permission_map.get(
+            loan_type.name.strip().lower()
+        )
+
+        if not permission_code:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"No permission mapping found for loan type: "
+                    f"{loan_type.name}"
+                ),
+            )
+
+        # -----------------------------------------------------
+        # 3. Find the required permission
+        # -----------------------------------------------------
+
+        permission = (
+            db.query(Permission)
+            .filter(
+                Permission.code == permission_code,
+                Permission.is_active.is_(True),
+            )
+            .first()
+        )
+
+        if not permission:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Required permission not found or inactive: "
+                    f"{permission_code}"
+                ),
+            )
+
+        # -----------------------------------------------------
+        # 4. Get agent contexts
+        # -----------------------------------------------------
+
+        agent_contexts = AccessControl._visible_contexts(
+            db=db,
+            family="AGENT",
+        )
+
+        if not agent_contexts:
+            raise HTTPException(
+                status_code=400,
+                detail="No active agents available for assignment",
+            )
+
+        agent_context_ids = [
+            context.id
+            for context in agent_contexts
+        ]
+
+                # -----------------------------------------------------
+        # 5. Find agent contexts with the required permission
+        #    AND an active loan assignment
+        # -----------------------------------------------------
+
+        eligible_agent_rows = (
+            db.query(
+                EmployeeContextPermission.employee_context_id
+            )
+            .join(
+                Permission,
+                Permission.id
+                == EmployeeContextPermission.permission_id,
+            )
+            .join(
+                LoanAssignment,
+                LoanAssignment.employee_context_id
+                == EmployeeContextPermission.employee_context_id,
+            )
+            .filter(
+                # Agent must have the required loan permission
+                EmployeeContextPermission.employee_context_id.in_(
+                    agent_context_ids
+                ),
+                EmployeeContextPermission.permission_id
+                == permission.id,
+                Permission.is_active.is_(True),
+
+                # Agent must be actively assigned to this loan type
+                LoanAssignment.loan_type_id == loan_type.id,
+                LoanAssignment.status == LoanAssignmentStatus.active,
+                LoanAssignment.deleted_at.is_(None),
+            )
+            .distinct()
+            .all()
+        )
+
+        # Extract eligible EmployeeContext IDs
+        eligible_agent_ids = {
+            row[0]
+            for row in eligible_agent_rows
+        }
+
+        # Retain only agent contexts satisfying BOTH conditions
+        eligible_agents = [
+            context
+            for context in agent_contexts
+            if context.id in eligible_agent_ids
+        ]
+
+        # -----------------------------------------------------
+        # 6. Handle the case where no eligible agent exists
+        # -----------------------------------------------------
+
+        if not eligible_agents:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"No eligible agents found for loan type "
+                    f"'{loan_type.name}'. Agents must have the "
+                    f"required permission and an active loan "
+                    f"assignment."
+                ),
+            )
+
+        # -----------------------------------------------------
+        # 7. Randomly select an eligible agent
+        # -----------------------------------------------------
+
+        selected_agent = random.choice(eligible_agents)
+
+    # =========================================================
+    # SOFT DELETE ACTIVE REVERT RECORDS
+    # BEFORE MOVING TO INPROCESS OR DOCSPENDING
+    # =========================================================
+
+    if database_status in {
+        LoanStatus.inprocess,
+        LoanStatus.docspending,
+    }:
+
+        active_reverts = (
+            db.query(RevertedLoan)
+            .filter(
+                RevertedLoan.loan_id == application.id,
+                RevertedLoan.deleted_at.is_(None),
+            )
+            .all()
+        )
+
+        if active_reverts:
+            reverted_deleted_at = datetime.utcnow()
+
+            for revert in active_reverts:
+                revert.deleted_at = reverted_deleted_at
+
+    # =========================================================
     # UPDATE STATUS
     # =========================================================
 
-    from_status = application.status.value if application.status else None
+    from_status = (
+        application.status.value
+        if application.status
+        else None
+    )
+
+    # Update application status
     application.status = database_status
+
+    # Assign random agent when status changes to INPROCESS
+    if (
+        database_status == LoanStatus.inprocess
+        and selected_agent is not None
+    ):
+        application.agent_context_id = selected_agent.id
 
     # =========================================================
     # NORMAL REJECTION
@@ -335,14 +565,11 @@ def update_application_status(
 
     elif is_revert_rejected:
 
-        # IMPORTANT:
         # Database status remains REJECTED.
         application.status = LoanStatus.rejected
 
         # Mark this application as reverted-rejected.
-        application.reverted_status = (
-            "revert_rejected"
-        )
+        application.reverted_status = "revert_rejected"
 
         # Store reason on application.
         application.rejected_remarks = (
@@ -363,9 +590,7 @@ def update_application_status(
                     revert_rejection_date,
                     datetime,
                 ):
-                    reverted_at = (
-                        revert_rejection_date
-                    )
+                    reverted_at = revert_rejection_date
 
                 else:
                     reverted_at = datetime.combine(
@@ -397,17 +622,11 @@ def update_application_status(
 
         reverted_loan = RevertedLoan(
             remarks=rejected_remarks.strip(),
-
             loan_id=application.id,
-
             reverted_by_id=employee.id,
-
             reverted_by_name=employee.name,
-
             rejection_type="revert",
-
             reverted_by_role=role_name,
-
             reverted_at=reverted_at,
         )
 
@@ -420,7 +639,6 @@ def update_application_status(
     elif database_status != LoanStatus.rejected:
 
         application.rejected_remarks = None
-
         application.reverted_status = None
 
     # =========================================================
@@ -445,9 +663,22 @@ def update_application_status(
     # AUDIT LOGS
     # =========================================================
 
-    active_context = AccessControl.get_active_context(db=db, employee=employee)
-    action_by_id = active_context.id if active_context else None
-    to_status_str = database_status.value if database_status else None
+    active_context = AccessControl.get_active_context(
+        db=db,
+        employee=employee,
+    )
+
+    action_by_id = (
+        active_context.id
+        if active_context
+        else None
+    )
+
+    to_status_str = (
+        database_status.value
+        if database_status
+        else None
+    )
 
     LoanApplicationStatusAuditLogService.log_audit_log(
         db=db,
@@ -486,26 +717,19 @@ def update_application_status(
                 else None
             ),
 
-            "reverted_status":
-                application.reverted_status,
+            "reverted_status": application.reverted_status,
 
-            "rejected_remarks":
-                application.rejected_remarks,
+            "rejected_remarks": application.rejected_remarks,
 
-            "rejection_date":
-                application.rejection_date,
+            "rejection_date": application.rejection_date,
 
-            "docspending_date":
-                application.docspending_date,
+            "docspending_date": application.docspending_date,
 
-            "sanction_date":
-                application.sanction_date,
+            "sanction_date": application.sanction_date,
 
-            "loggedin_date":
-                application.loggedin_date,
+            "loggedin_date": application.loggedin_date,
 
-            "updated_at":
-                application.updated_at,
+            "updated_at": application.updated_at,
         },
     }
 

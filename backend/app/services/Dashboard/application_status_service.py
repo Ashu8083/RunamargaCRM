@@ -222,16 +222,17 @@ async def get_application_status_data(
     # requested In Process exclusion is specifically:
     # Login / Sanctioned / Disbursed.
     # =====================================================
+        # =====================================================
+    # FIND APPLICATIONS THAT HAVE ALREADY PROGRESSED
+    # =====================================================
+
     progressed_loans = (
         db.query(
-            BankProcessing.loan_id.label(
-                "loan_id"
-            )
+            BankProcessing.loan_id.label("loan_id")
         )
         .join(
             scoped_loans,
-            scoped_loans.c.loan_id
-            == BankProcessing.loan_id,
+            scoped_loans.c.loan_id == BankProcessing.loan_id,
         )
         .filter(
             BankProcessing.deleted_at.is_(None),
@@ -244,112 +245,101 @@ async def get_application_status_data(
             ),
         )
         .distinct()
-        .subquery(
-            name="progressed_loans"
-        )
+        .subquery(name="progressed_loans")
     )
+
     # =====================================================
-    # IN PROCESS COUNT
+    # IN PROCESS
     # =====================================================
+    # Only applications whose current status is inprocess.
+    # Date filter: applied_date.
+    # Exclude applications that have progressed to
+    # Login, Sanctioned, or Disbursed.
+    # =====================================================
+
+    in_process_filter = (
+        (scoped_loans.c.application_status == "inprocess")
+        & (scoped_loans.c.applied_date >= from_date)
+        & (
+            scoped_loans.c.applied_date
+            < to_date + timedelta(days=1)
+        )
+        & (progressed_loans.c.loan_id.is_(None))
+    )
+
     in_process_count = (
         db.query(
-            func.count(
-                scoped_loans.c.loan_id
-            )
+            func.count(scoped_loans.c.loan_id)
         )
         .outerjoin(
             progressed_loans,
-            progressed_loans.c.loan_id
-            == scoped_loans.c.loan_id,
+            progressed_loans.c.loan_id == scoped_loans.c.loan_id,
         )
-        .filter(
-            (
-                (
-                    scoped_loans.c.application_status
-                    == "inprocess"
-                )
-                & (
-                    scoped_loans.c.applied_date
-                    >= from_date
-                )
-                & (
-                    scoped_loans.c.applied_date
-                    < to_date + timedelta(days=1)
-                )
-            )
-            |
-            (
-                (
-                    scoped_loans.c.application_status
-                    == "docspending"
-                )
-                & (
-                    scoped_loans.c.docspending_date
-                    >= from_datetime
-                )
-                & (
-                    scoped_loans.c.docspending_date
-                    < to_datetime_exclusive
-                )
-            )
-        )
-        .filter(
-            progressed_loans.c.loan_id.is_(None)
-        )
+        .filter(in_process_filter)
         .scalar()
         or 0
     )
-    # =====================================================
-    # IN PROCESS AMOUNT
-    # =====================================================
+
     in_process_amount = (
         db.query(
             func.coalesce(
-                func.sum(
-                    scoped_loans.c.loan_amt
-                ),
+                func.sum(scoped_loans.c.loan_amt),
                 0,
             )
         )
         .outerjoin(
             progressed_loans,
-            progressed_loans.c.loan_id
-            == scoped_loans.c.loan_id,
+            progressed_loans.c.loan_id == scoped_loans.c.loan_id,
         )
-        .filter(
-            (
-                (
-                    scoped_loans.c.application_status
-                    == "inprocess"
-                )
-                & (
-                    scoped_loans.c.applied_date
-                    >= from_date
-                )
-                & (
-                    scoped_loans.c.applied_date
-                    < to_date + timedelta(days=1)
-                )
+        .filter(in_process_filter)
+        .scalar()
+        or 0
+    )
+
+    # =====================================================
+    # DOCS PENDING
+    # =====================================================
+    # Only applications whose current status is docspending.
+    # Date filter: docspending_date.
+    # Exclude applications that have progressed to
+    # Login, Sanctioned, or Disbursed.
+    # =====================================================
+
+    docs_pending_filter = (
+        (scoped_loans.c.application_status == "docspending")
+        & (scoped_loans.c.docspending_date >= from_datetime)
+        & (
+            scoped_loans.c.docspending_date
+            < to_datetime_exclusive
+        )
+        & (progressed_loans.c.loan_id.is_(None))
+    )
+
+    docs_pending_count = (
+        db.query(
+            func.count(scoped_loans.c.loan_id)
+        )
+        .outerjoin(
+            progressed_loans,
+            progressed_loans.c.loan_id == scoped_loans.c.loan_id,
+        )
+        .filter(docs_pending_filter)
+        .scalar()
+        or 0
+    )
+
+    docs_pending_amount = (
+        db.query(
+            func.coalesce(
+                func.sum(scoped_loans.c.loan_amt),
+                0,
             )
-            |
-            (
-                (
-                    scoped_loans.c.application_status
-                    == "docspending"
-                )
-                & (
-                    scoped_loans.c.docspending_date
-                    >= from_datetime
-                )
-                & (
-                    scoped_loans.c.docspending_date
-                    < to_datetime_exclusive
-                )
-            )
         )
-        .filter(
-            progressed_loans.c.loan_id.is_(None)
+        .outerjoin(
+            progressed_loans,
+            progressed_loans.c.loan_id == scoped_loans.c.loan_id,
         )
+        .filter(docs_pending_filter)
         .scalar()
         or 0
     )
@@ -639,6 +629,11 @@ async def get_application_status_data(
     # =====================================================
     data = [
         {
+            "status": "Docs Pending",
+            "count": int(docs_pending_count),
+            "amount": float(docs_pending_amount),
+        },
+        {
             "status": "In Process",
             "count": int(
                 in_process_count
@@ -692,6 +687,7 @@ async def get_application_status_data(
         for item in data
     )
     pending_statuses = {
+        "Docs Pending",
         "In Process",
         "Login",
         "Sanctioned",

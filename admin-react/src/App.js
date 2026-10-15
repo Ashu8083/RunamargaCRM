@@ -16,7 +16,7 @@ import {
 } from './app/auth';
 
 import initializeApp from './app/init';
-
+import { useCommonData } from './context/CommonDataContext';
 
 // =========================================================
 // CRM
@@ -54,7 +54,13 @@ const WhatsappButton = lazy(
 // =========================================================
 
 initializeApp();
+function ContextAwareCRM() {
+    const { activeContext } = useCommonData();
 
+    return (
+        <Layout key={activeContext?.id ?? 'no-context'} />
+    );
+}
 
 // =========================================================
 // APP
@@ -223,7 +229,7 @@ function App() {
                     path="/crm/*"
                     element={
                         authenticated
-                            ? <Layout />
+                            ? <ContextAwareCRM />
                             : (
                                 <Navigate
                                     to="/login"
