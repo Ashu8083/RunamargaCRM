@@ -1,3 +1,4 @@
+
 # backend/app/models/loan_shuffle_history.py
 
 from datetime import datetime
@@ -22,6 +23,20 @@ class LoanShuffleHistory(Base):
         Integer,
         ForeignKey("employee_contexts.id"),
         nullable=False,
+    )
+
+    # Original agent assignment before this shuffle operation
+    from_agent_id = Column(
+        Integer,
+        ForeignKey("employee_contexts.id"),
+        nullable=True,
+    )
+
+    # Original RM assignment before this shuffle operation
+    from_rm_id = Column(
+        Integer,
+        ForeignKey("employee_contexts.id"),
+        nullable=True,
     )
 
     # Final/target assignment for this shuffle operation
