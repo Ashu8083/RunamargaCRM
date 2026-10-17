@@ -1,6 +1,12 @@
-// admin-react/src/pages/CallManagement/CallAssignment/index.jsx
+// admin-react/src/pages/crm/CallManagement/CallAssignment/index.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+    lazy,
+    Suspense,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
@@ -9,12 +15,7 @@ import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon
 import RmDropdown from '../../../../components/GlobalModels/Filters/RmDropdown'
 import ExistingLoan from '../../Loans/CreateApplication/components/ExistingLoan'
 import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
-import AssignNumbersModal from './components/AssignNumbersModal'
 import CallAssignmentTable from './components/CallAssignmentTable'
-import CallHistoryModal from './components/CallHistoryModal'
-import CreateLeadModal from './components/CreateLeadModal'
-import LoanApplicationModal from './components/LoanApplicationModal'
-import ExchangeNumberModal from './components/ExchangeNumberModal'
 import {    
     getCallAssignments,
     getAvailableCallNumbers,
@@ -23,6 +24,26 @@ import {
     createApplication,
     deleteCallAssignment,
 } from './Api'
+
+const AssignNumbersModal = lazy(
+    () => import('./components/AssignNumbersModal')
+)
+
+const CallHistoryModal = lazy(
+    () => import('./components/CallHistoryModal')
+)
+
+const CreateLeadModal = lazy(
+    () => import('./components/CreateLeadModal')
+)
+
+const LoanApplicationModal = lazy(
+    () => import('./components/LoanApplicationModal')
+)
+
+const ExchangeNumberModal = lazy(
+    () => import('./components/ExchangeNumberModal')
+)
 
 // =============================================================
 // STATUS OPTIONS
@@ -1603,149 +1624,161 @@ function CallAssignment() {
                 }
             />
 
-            {/* =====================================================
-                ASSIGN MODAL
-            ===================================================== */}
+            <Suspense fallback={null}>
+                {/* =====================================================
+                    ASSIGN MODAL
+                ===================================================== */}
 
-            <AssignNumbersModal
-                open={
-                    showAssignModal
-                }
+                {showAssignModal && (
+                    <AssignNumbersModal
+                        open={
+                            showAssignModal
+                        }
 
-                entries={
-                    availableNumbers
-                }
+                        entries={
+                            availableNumbers
+                        }
 
-                onClose={() =>
-                    setShowAssignModal(
-                        false
-                    )
-                }
+                        onClose={() =>
+                            setShowAssignModal(
+                                false
+                            )
+                        }
 
-                onAssign={
-                    handleAssign
-                }
-            />
+                        onAssign={
+                            handleAssign
+                        }
+                    />
+                )}
 
-            {/* =====================================================
-                CALL HISTORY
-            ===================================================== */}
+                {/* =====================================================
+                    CALL HISTORY
+                ===================================================== */}
 
-            <CallHistoryModal
-                open={
-                    showHistoryModal
-                }
+                {showHistoryModal && (
+                    <CallHistoryModal
+                        open={
+                            showHistoryModal
+                        }
 
-                entry={
-                    selectedEntry
-                }
+                        entry={
+                            selectedEntry
+                        }
 
-                history={
-                    callHistory
-                }
+                        history={
+                            callHistory
+                        }
 
-                onClose={() => {
+                        onClose={() => {
 
-                    setShowHistoryModal(
-                        false
-                    )
+                            setShowHistoryModal(
+                                false
+                            )
 
-                    setSelectedEntry(
-                        null
-                    )
+                            setSelectedEntry(
+                                null
+                            )
 
-                }}
-            />
+                        }}
+                    />
+                )}
 
-            {/* =====================================================
-                LOAN APPLICATION
-            ===================================================== */}
+                {/* =====================================================
+                    LOAN APPLICATION
+                ===================================================== */}
 
-            <LoanApplicationModal
-                open={
-                    showApplicationModal
-                }
+                {showApplicationModal && (
+                    <LoanApplicationModal
+                        open={
+                            showApplicationModal
+                        }
 
-                entry={
-                    selectedEntry
-                }
+                        entry={
+                            selectedEntry
+                        }
 
-                application={
-                    selectedEntry?.application
-                }
+                        application={
+                            selectedEntry?.application
+                        }
 
-                onClose={() => {
+                        onClose={() => {
 
-                    setShowApplicationModal(
-                        false
-                    )
+                            setShowApplicationModal(
+                                false
+                            )
 
-                    setSelectedEntry(
-                        null
-                    )
+                            setSelectedEntry(
+                                null
+                            )
 
-                }}
-            />
+                        }}
+                    />
+                )}
 
-            {/* =====================================================
-                CREATE LEAD
-            ===================================================== */}
+                {/* =====================================================
+                    CREATE LEAD
+                ===================================================== */}
 
-            <CreateLeadModal
-                open={
-                    showCreateLeadModal
-                }
+                {showCreateLeadModal && (
+                    <CreateLeadModal
+                        open={
+                            showCreateLeadModal
+                        }
 
-                entry={
-                    selectedEntry
-                }
+                        entry={
+                            selectedEntry
+                        }
 
-                onClose={() => {
+                        onClose={() => {
 
-                    setShowCreateLeadModal(
-                        false
-                    )
+                            setShowCreateLeadModal(
+                                false
+                            )
 
-                    setSelectedEntry(
-                        null
-                    )
+                            setSelectedEntry(
+                                null
+                            )
 
-                }}
+                        }}
 
-                onCreate={
-                    handleLeadCreated
-                }
-            />
+                        onCreate={
+                            handleLeadCreated
+                        }
+                    />
+                )}
 
-            {/* =====================================================
-                EXCHANGE
-            ===================================================== */}
+                {/* =====================================================
+                    EXCHANGE
+                ===================================================== */}
 
-            <ExchangeNumberModal
-                open={
-                    showExchangeModal
-                }
+                {showExchangeModal && (
+                    <ExchangeNumberModal
+                        open={
+                            showExchangeModal
+                        }
 
-                entry={
-                    selectedEntry
-                }
+                        entry={
+                            selectedEntry
+                        }
 
-                onClose={() => {
+                        onClose={() => {
 
-                    setShowExchangeModal(
-                        false
-                    )
+                            setShowExchangeModal(
+                                false
+                            )
 
-                    setSelectedEntry(
-                        null
-                    )
+                            setSelectedEntry(
+                                null
+                            )
 
-                }}
+                        }}
 
-                onExchange={
-                    handleExchangeComplete
-                }
-            />
+                        onExchange={
+                            handleExchangeComplete
+                        }
+                    />
+                )}
+            </Suspense>
 
             {/* =====================================================
                 FEEDBACK MODAL

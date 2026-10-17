@@ -1,14 +1,31 @@
-import React, { useState, useEffect } from 'react'
-import AssignBankModal from '../../modals/AssignBankModal'
+// admin-react/src/pages/crm/Loans/ViewApplication/components/BankProcessingSection/index.jsx
+
+import React, {
+    lazy,
+    Suspense,
+    useState,
+    useEffect,
+} from 'react'
+
 import {
     assignBank,
-    getBankProcessing, updateBankProcessingWorkflow, deleteApplicationBankProcessing
+    getBankProcessing,
+    updateBankProcessingWorkflow,
+    deleteApplicationBankProcessing
 } from './Api'
+
 /* -------------------------------------------------
    HELPERS
 -------------------------------------------------- */
 import { COLORS } from '../../../../../../constants/colors'
-import BankProcessingWorkflowModal from '../../modals/BankProcessingWorkflowModal'
+
+const AssignBankModal = lazy(
+    () => import('../../modals/AssignBankModal')
+)
+
+const BankProcessingWorkflowModal = lazy(
+    () => import('../../modals/BankProcessingWorkflowModal')
+)
 
 
 const formatAmount = (amount) => {
@@ -367,13 +384,18 @@ function BankCard({ bank, onWorkflowUpdate, onDelete }) {
                     </button>
                 </div>
             )}
-            <BankProcessingWorkflowModal
-                isOpen={!!workflowAction}
-                onClose={() => setWorkflowAction(null)}
-                action={workflowAction}
-                bank={bank}
-                onSubmit={onWorkflowUpdate}
-            />
+
+            <Suspense fallback={null}>
+                {!!workflowAction && (
+                    <BankProcessingWorkflowModal
+                        isOpen={!!workflowAction}
+                        onClose={() => setWorkflowAction(null)}
+                        action={workflowAction}
+                        bank={bank}
+                        onSubmit={onWorkflowUpdate}
+                    />
+                )}
+            </Suspense>
         </div>
     )
 }
@@ -588,39 +610,44 @@ function BankProcessingSection({
                 )}
 
             </div>
-            <AssignBankModal
-                isOpen={showAssignBank}
-                onClose={() => setShowAssignBank(false)}
-                applicationId={application?.unique_id}
-                onSubmit={async (bank) => {
-                    try {
-                        await assignBank(
-                            application?.unique_id,
-                            {
-                                bank_id: bank.id,
-                                dsa_code: bank.dsa_code || null,
-                                dsa_name: bank.dsa_name || null,
+
+            <Suspense fallback={null}>
+                {showAssignBank && (
+                    <AssignBankModal
+                        isOpen={showAssignBank}
+                        onClose={() => setShowAssignBank(false)}
+                        applicationId={application?.unique_id}
+                        onSubmit={async (bank) => {
+                            try {
+                                await assignBank(
+                                    application?.unique_id,
+                                    {
+                                        bank_id: bank.id,
+                                        dsa_code: bank.dsa_code || null,
+                                        dsa_name: bank.dsa_name || null,
+                                    }
+                                )
+
+                                await fetchBankProcessing()
+                                setShowAssignBank(false)
+
+                                // We'll connect the refresh properly in the next step
+                            } catch (error) {
+                                console.error('ASSIGN BANK ERROR:', error)
+                                console.error('ERROR RESPONSE:', error?.response)
+                                console.error('ERROR DATA:', error?.response?.data)
+
+                                alert(
+                                    error?.response?.data?.detail ||
+                                    'Failed to assign bank'
+                                )
+
+                                throw error
                             }
-                        )
-
-                        await fetchBankProcessing()
-                        setShowAssignBank(false)
-
-                        // We'll connect the refresh properly in the next step
-                    } catch (error) {
-                        console.error('ASSIGN BANK ERROR:', error)
-                        console.error('ERROR RESPONSE:', error?.response)
-                        console.error('ERROR DATA:', error?.response?.data)
-
-                        alert(
-                            error?.response?.data?.detail ||
-                            'Failed to assign bank'
-                        )
-
-                        throw error
-                    }
-                }}
-            />
+                        }}
+                    />
+                )}
+            </Suspense>
 
         </div>
     )

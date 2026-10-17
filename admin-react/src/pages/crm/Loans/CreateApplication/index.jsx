@@ -1,10 +1,17 @@
-
 // admin-react/src/pages/Loans/CreateApplication/index.jsx
 
-import { useState } from 'react'
+import {
+  lazy,
+  Suspense,
+  useState,
+} from 'react'
 
 import ApplicationForm from './components/ApplicationForm'
-import ExistingLoan from './components/ExistingLoan'
+
+// Lazy-load ExistingLoan only when the existing loan popup is opened.
+const ExistingLoan = lazy(
+  () => import('./components/ExistingLoan')
+)
 
 
 function CreateApplication() {
@@ -114,25 +121,29 @@ function CreateApplication() {
             "
           >
 
-            <ExistingLoan
+            <Suspense fallback={null}>
 
-              existingLoanData={
-                existingLoan.existingLoanData
-              }
+              <ExistingLoan
 
-              originalApplicationData={
-                existingLoan.originalApplicationData
-              }
+                existingLoanData={
+                  existingLoan.existingLoanData
+                }
 
-              onCancel={
-                handleCancelExistingLoan
-              }
+                originalApplicationData={
+                  existingLoan.originalApplicationData
+                }
 
-              onSubmitSuccess={
-                handleExistingLoanSubmitSuccess
-              }
+                onCancel={
+                  handleCancelExistingLoan
+                }
 
-            />
+                onSubmitSuccess={
+                  handleExistingLoanSubmitSuccess
+                }
+
+              />
+
+            </Suspense>
 
           </div>
 

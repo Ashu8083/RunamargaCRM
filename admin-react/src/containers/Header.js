@@ -1,23 +1,28 @@
+// admin-react/src/containers/Header.js
+
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 
 import BellIcon from "@heroicons/react/24/outline/BellIcon";
+import BellAlertIcon from "@heroicons/react/24/outline/BellAlertIcon";
 import Bars3Icon from "@heroicons/react/24/outline/Bars3Icon";
 import MoonIcon from "@heroicons/react/24/outline/MoonIcon";
 import SunIcon from "@heroicons/react/24/outline/SunIcon";
 
 import { openRightDrawer } from "../features/common/rightDrawerSlice";
+import { openReminderDrawer } from "../features/common/reminders/reminderDrawerSlice";
 import { RIGHT_DRAWER_TYPES } from "../utils/globalConstantUtil";
+
 import {
   getStoredUser,
   logout,
   getActiveContext,
   setActiveContext,
 } from "../app/auth";
+
 import { getDefaultProfileImage } from "../constants/assets";
 
 import { useLocation } from "react-router-dom";
-
 import routes from "../routes/sidebarmenu";
 
 function Header({ onToggleSidebar, sidebarOpen }) {
@@ -25,6 +30,15 @@ function Header({ onToggleSidebar, sidebarOpen }) {
   const location = useLocation();
 
   const { noOfNotifications } = useSelector((state) => state.header);
+
+  // Live reminder count from the shared Redux store.
+  const reminders = useSelector(
+    (state) => state.reminderDrawer?.reminders ?? [],
+  );
+
+  const reminderCount = reminders.filter((reminder) =>
+    ["scheduled", "ringing"].includes(reminder.status),
+  ).length;
 
   const currentUser = getStoredUser();
 
@@ -43,26 +57,28 @@ function Header({ onToggleSidebar, sidebarOpen }) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const [profileSrc, setProfileSrc] = useState(profileImage);
+
   const contexts = Array.isArray(currentUser?.contexts)
     ? currentUser.contexts
     : [];
 
   const [activeContext, setActiveContextState] = useState(() =>
-    getActiveContext(currentUser)
+    getActiveContext(currentUser),
   );
+
   // =========================================================
   // CONTEXT SWITCHING
   // =========================================================
 
   const handleContextChange = (context) => {
     setActiveContext(context);
-
     setActiveContextState(context);
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("auth:changed"));
     }
   };
+
   // =========================================================
   // THEME
   // =========================================================
@@ -72,40 +88,36 @@ function Header({ onToggleSidebar, sidebarOpen }) {
 
     const preferredTheme =
       window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches
+      window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
 
     const nextTheme = storedTheme || preferredTheme;
 
     setCurrentTheme(nextTheme);
-
     localStorage.setItem("theme", nextTheme);
-
     document.documentElement.setAttribute("data-theme", nextTheme);
   }, []);
 
-
   const updateTheme = (theme) => {
     setCurrentTheme(theme);
-
     localStorage.setItem("theme", theme);
-
     document.documentElement.setAttribute("data-theme", theme);
   };
 
+  // =========================================================
+  // PROFILE IMAGE
+  // =========================================================
 
   useEffect(() => {
     setProfileSrc(profileImage);
   }, [profileImage]);
-
 
   const handleProfileImageError = () => {
     if (profileSrc !== profileFallback) {
       setProfileSrc(profileFallback);
     }
   };
-
 
   // =========================================================
   // DIGITAL CLOCK
@@ -119,13 +131,11 @@ function Header({ onToggleSidebar, sidebarOpen }) {
     return () => clearInterval(timer);
   }, []);
 
-
   const formattedDate = currentTime.toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-
 
   const formattedTime = currentTime.toLocaleTimeString("en-IN", {
     hour: "2-digit",
@@ -133,44 +143,12 @@ function Header({ onToggleSidebar, sidebarOpen }) {
     hour12: true,
   });
 
-
   // =========================================================
   // FIND CURRENT PAGE
   // =========================================================
 
-  /*
-   * This function searches the sidebar recursively.
-   *
-   * It supports:
-   *
-   * Section
-   *   └── Normal route
-   *
-   * and also:
-   *
-   * Section
-   *   └── Submenu
-   *         └── Normal route
-   *
-   * Example:
-   *
-   * Call Management
-   *   └── Call Analytics
-   *         └── Overview
-   *
-   * Result:
-   *
-   * parentPath = ["Call Management", "Call Analytics"]
-   * name       = "Overview"
-   */
-
   const findCurrentPage = (items, parentPath = []) => {
     for (const item of items) {
-
-      // =====================================================
-      // NORMAL ROUTE
-      // =====================================================
-
       if (item.path && item.path === location.pathname) {
         return {
           parentPath,
@@ -178,23 +156,13 @@ function Header({ onToggleSidebar, sidebarOpen }) {
         };
       }
 
-
-      // =====================================================
-      // NESTED SUBMENU
-      // =====================================================
-
       if (item.submenu && item.submenu.length > 0) {
+        const currentPath =
+          item.type === "section"
+            ? [...parentPath]
+            : [...parentPath, item.name];
 
-        const currentPath = item.type === "section"
-          ? [...parentPath]
-          : [...parentPath, item.name];
-
-
-        const result = findCurrentPage(
-          item.submenu,
-          currentPath
-        );
-
+        const result = findCurrentPage(item.submenu, currentPath);
 
         if (result) {
           return result;
@@ -205,16 +173,13 @@ function Header({ onToggleSidebar, sidebarOpen }) {
     return null;
   };
 
-
-  const currentPage =
-    findCurrentPage(routes) || {
-      parentPath: [],
-      name: "Dashboard",
-    };
-
+  const currentPage = findCurrentPage(routes) || {
+    parentPath: [],
+    name: "Dashboard",
+  };
 
   // =========================================================
-  // NOTIFICATIONS
+  // NOTIFICATIONS - EXISTING FUNCTIONALITY
   // =========================================================
 
   const openNotification = () => {
@@ -226,6 +191,17 @@ function Header({ onToggleSidebar, sidebarOpen }) {
     );
   };
 
+  // =========================================================
+  // REMINDERS - LIVE COUNT AND DRAWER
+  // =========================================================
+
+  const openReminders = () => {
+    dispatch(
+      openReminderDrawer({
+        header: "Reminders",
+      }),
+    );
+  };
 
   // =========================================================
   // LOGOUT
@@ -235,21 +211,11 @@ function Header({ onToggleSidebar, sidebarOpen }) {
     logout();
   }
 
-
   // =========================================================
   // HEADER TITLE
   // =========================================================
 
   const renderPageTitle = () => {
-
-    // =====================================================
-    // No parent
-    //
-    // Example:
-    // Dashboard
-    // Profile
-    // =====================================================
-
     if (currentPage.parentPath.length === 0) {
       return (
         <h1 className="truncate text-lg sm:text-2xl font-semibold ml-2">
@@ -258,29 +224,10 @@ function Header({ onToggleSidebar, sidebarOpen }) {
       );
     }
 
-
-    // =====================================================
-    // Parent path exists
-    //
-    // Example:
-    //
-    // Call Management / Call Logs
-    //
-    // or:
-    //
-    // Call Management / Call Analytics / Overview
-    // =====================================================
-
     return (
       <div className="flex items-center ml-2 min-w-0">
-
-        {/* =================================================
-                    Parent levels
-            ================================================= */}
-
         {currentPage.parentPath.map((parent, index) => (
           <React.Fragment key={`${parent}-${index}`}>
-
             <span
               className="
                 hidden
@@ -297,23 +244,15 @@ function Header({ onToggleSidebar, sidebarOpen }) {
             <span className="hidden sm:inline mx-2 text-base-content/40">
               /
             </span>
-
           </React.Fragment>
         ))}
-
-
-        {/* =================================================
-                    Current page
-            ================================================= */}
 
         <span className="truncate text-lg sm:text-2xl font-semibold">
           {currentPage.name}
         </span>
-
       </div>
     );
   };
-
 
   // =========================================================
   // RENDER
@@ -321,58 +260,29 @@ function Header({ onToggleSidebar, sidebarOpen }) {
 
   return (
     <div className="navbar sticky top-0 bg-base-100 z-10 border-b border-base-300 shadow-sm px-2 sm:px-4">
-
-      {/* =====================================================
-                LEFT SIDE
-            ===================================================== */}
+      {/* LEFT SIDE */}
 
       <div className="flex-1 min-w-0">
-
-        {/* =================================================
-                    Sidebar Toggle
-            ================================================= */}
-
         <button
           type="button"
           onClick={onToggleSidebar}
           className="btn btn-ghost btn-circle mr-1 sm:mr-2"
-          aria-label={
-            sidebarOpen
-              ? "Hide sidebar"
-              : "Show sidebar"
-          }
-          title={
-            sidebarOpen
-              ? "Hide sidebar"
-              : "Show sidebar"
-          }
+          aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+          title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
         >
           <Bars3Icon className="h-5 inline-block w-5" />
         </button>
 
-
-        {/* =================================================
-                    Page Title
-            ================================================= */}
-
         {renderPageTitle()}
-
       </div>
 
-
-      {/* =====================================================
-                RIGHT SIDE
-            ===================================================== */}
+      {/* RIGHT SIDE */}
 
       <div className="flex-none flex items-center gap-1 sm:gap-2">
-
-        {/* =================================================
-            CONTEXT SWITCHER
-    ================================================= */}
+        {/* CONTEXT SWITCHER */}
 
         {contexts.length > 1 && (
           <div className="dropdown dropdown-end">
-
             <button
               type="button"
               tabIndex={0}
@@ -387,26 +297,24 @@ function Header({ onToggleSidebar, sidebarOpen }) {
                 {activeContext?.name || "Select Context"}
               </span>
 
-              <span className="text-xs">
-                ▼
-              </span>
+              <span className="text-xs">▼</span>
             </button>
 
             <ul
               tabIndex={0}
               className="
-        menu
-        menu-sm
-        dropdown-content
-        mt-3
-        p-2
-        shadow
-        bg-base-100
-        rounded-box
-        w-56
-        border
-        border-base-300
-      "
+                menu
+                menu-sm
+                dropdown-content
+                mt-3
+                p-2
+                shadow
+                bg-base-100
+                rounded-box
+                w-56
+                border
+                border-base-300
+              "
             >
               <li className="menu-title">
                 <span>Switch Context</span>
@@ -419,28 +327,21 @@ function Header({ onToggleSidebar, sidebarOpen }) {
                     onClick={() => handleContextChange(context)}
                     className="flex items-center justify-between"
                   >
-                    <span>
-                      {context.name}
-                    </span>
+                    <span>{context.name}</span>
 
                     {activeContext?.id === context.id && (
-                      <span className="text-success font-bold">
-                        ✓
-                      </span>
+                      <span className="text-success font-bold">✓</span>
                     )}
                   </button>
                 </li>
               ))}
             </ul>
-
           </div>
         )}
-        {/* =================================================
-                    DATE & TIME
-            ================================================= */}
+
+        {/* DATE AND TIME */}
 
         <div className="hidden lg:flex flex-col items-end mr-5 leading-tight">
-
           <span className="text-xs font-medium text-base-content/60">
             {formattedDate}
           </span>
@@ -448,55 +349,34 @@ function Header({ onToggleSidebar, sidebarOpen }) {
           <span className="text-sm font-semibold text-base-content tabular-nums">
             {formattedTime}
           </span>
-
         </div>
 
-
-        {/* =================================================
-                    THEME TOGGLE
-            ================================================= */}
+        {/* THEME TOGGLE */}
 
         <label className="btn btn-ghost btn-circle swap swap-rotate">
-
           <input
             type="checkbox"
             checked={currentTheme === "dark"}
             onChange={(event) =>
-              updateTheme(
-                event.target.checked
-                  ? "dark"
-                  : "light"
-              )
+              updateTheme(event.target.checked ? "dark" : "light")
             }
             aria-label="Toggle theme"
           />
 
-
-          <SunIcon
-            className="swap-off fill-current w-5 h-5"
-          />
-
-
-          <MoonIcon
-            className="swap-on fill-current w-5 h-5"
-          />
-
+          <SunIcon className="swap-off fill-current w-5 h-5" />
+          <MoonIcon className="swap-on fill-current w-5 h-5" />
         </label>
 
-
-        {/* =================================================
-                    NOTIFICATIONS
-            ================================================= */}
+        {/* EXISTING NOTIFICATIONS */}
 
         <button
           className="btn btn-ghost btn-circle"
           onClick={openNotification}
           type="button"
           aria-label="Open notifications"
+          title="Notifications"
         >
-
           <div className="indicator">
-
             <BellIcon className="h-6 w-6" />
 
             {noOfNotifications > 0 && (
@@ -504,40 +384,55 @@ function Header({ onToggleSidebar, sidebarOpen }) {
                 {noOfNotifications}
               </span>
             )}
-
           </div>
-
         </button>
 
+        {/* REMINDERS - LIVE BADGE */}
 
-        {/* =================================================
-                    PROFILE
-            ================================================= */}
+        <button
+          className="btn btn-ghost btn-circle"
+          onClick={openReminders}
+          type="button"
+          aria-label={
+            reminderCount > 0
+              ? `Open reminders, ${reminderCount} pending`
+              : "Open reminders"
+          }
+          title={
+            reminderCount > 0
+              ? `${reminderCount} pending reminder(s)`
+              : "Reminders"
+          }
+        >
+          <div className="indicator">
+            <BellAlertIcon className="h-6 w-6" />
+
+            {reminderCount > 0 && (
+              <span className="indicator-item badge badge-primary badge-sm">
+                {reminderCount > 99 ? "99+" : reminderCount}
+              </span>
+            )}
+          </div>
+        </button>
+
+        {/* PROFILE */}
 
         <div className="dropdown dropdown-end">
-
           <button
             type="button"
             tabIndex={0}
             className="btn btn-ghost btn-circle avatar"
+            aria-label="Open profile menu"
           >
-
             <div className="w-10 rounded-full bg-base-200">
-
               <img
                 src={profileSrc}
-                alt={
-                  currentUser?.name ||
-                  "Profile"
-                }
+                alt={currentUser?.name || "Profile"}
                 className="object-cover"
                 onError={handleProfileImageError}
               />
-
             </div>
-
           </button>
-
 
           <ul
             tabIndex={0}
@@ -553,34 +448,20 @@ function Header({ onToggleSidebar, sidebarOpen }) {
               w-52
             "
           >
-
             <li className="menu-title px-3 py-2">
-
               <span className="truncate text-sm normal-case">
-                {currentUser?.name ||
-                  "Runamarga User"}
+                {currentUser?.name || "Runamarga User"}
               </span>
-
             </li>
-
 
             <li>
-
-              <button
-                type="button"
-                onClick={logoutUser}
-              >
+              <button type="button" onClick={logoutUser}>
                 Logout
               </button>
-
             </li>
-
           </ul>
-
         </div>
-
       </div>
-
     </div>
   );
 }

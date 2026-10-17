@@ -232,6 +232,14 @@ const RoleLogs = lazy(
 )
 
 
+// ========================================================
+// Reminders
+// ========================================================
+
+const Reminders = lazy(
+    () => import('../pages/crm/Reminders/index')
+)
+
 
 // =========================================================
 // ROUTES
@@ -571,6 +579,11 @@ const routes = [
         path: '/role-logs',
         component: RoleLogs,
         permission: PERMISSIONS.ROLE_LOGS_VIEW,
+    },
+    {
+        path: '/reminders',
+        component: Reminders,
+        permission: PERMISSIONS.REMINDERS_VIEW,
     }
 
 

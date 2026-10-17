@@ -1,6 +1,8 @@
-// admin-react/src/pages/Banks&DSA/BankersDirectory/index.jsx
+// admin-react/src/pages/crm/Banks&DSA/BankersDirectory/index.jsx
 
 import {
+    lazy,
+    Suspense,
     useCallback,
     useEffect,
     useMemo,
@@ -20,10 +22,17 @@ import {
 } from '../Banks/Api'
 
 import BankersDirectoryTable from './components/BankersDirectoryTable'
-import BankerModal from './components/BankerModal'
-import BankerViewModal from './components/BankerViewModal'
 import LoanTypeDropdown from '../../../../components/GlobalModels/Filters/LoanTypeDropdown'
 import StateCityDropdown  from '../../../../components/GlobalModels/Filters/StateCityDropdown'
+
+
+const BankerModal = lazy(
+    () => import('./components/BankerModal')
+)
+
+const BankerViewModal = lazy(
+    () => import('./components/BankerViewModal')
+)
 
 
 // =============================================================
@@ -877,29 +886,37 @@ function BankersDirectory() {
             />
 
 
-            {/* =====================================================
-                ADD / EDIT MODAL
-            ===================================================== */}
-            <BankerModal
-                open={showBankerModal}
-                entry={selectedEntry}
-                states={states}
-                cities={allCities}
-                banks={banks}
-                onClose={handleCloseBankerModal}
-                onSubmit={handleSaveEntry}
-            />
+            <Suspense fallback={null}>
+
+                {/* =====================================================
+                    ADD / EDIT MODAL
+                ===================================================== */}
+                {showBankerModal && (
+                    <BankerModal
+                        open={showBankerModal}
+                        entry={selectedEntry}
+                        states={states}
+                        cities={allCities}
+                        banks={banks}
+                        onClose={handleCloseBankerModal}
+                        onSubmit={handleSaveEntry}
+                    />
+                )}
 
 
-            {/* =====================================================
-                VIEW MODAL
-            ===================================================== */}
-            <BankerViewModal
-                open={showViewModal}
-                entry={selectedEntry}
-                onClose={handleCloseViewModal}
-                onEdit={handleEditEntry}
-            />
+                {/* =====================================================
+                    VIEW MODAL
+                ===================================================== */}
+                {showViewModal && (
+                    <BankerViewModal
+                        open={showViewModal}
+                        entry={selectedEntry}
+                        onClose={handleCloseViewModal}
+                        onEdit={handleEditEntry}
+                    />
+                )}
+
+            </Suspense>
         </div>
     )
 }

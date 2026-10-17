@@ -1,6 +1,12 @@
-// admin-react/src/pages/Applicationfilter/index.jsx
+// admin-react/src/pages/crm/Applicationfilter/index.jsx
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
@@ -12,10 +18,13 @@ import LoanTypeDropdown from "../../../components/GlobalModels/Filters/LoanTypeD
 import RmDropdown from "../../../components/GlobalModels/Filters/RmDropdown";
 
 import ApplicationFilterTable from "./components/ApplicationFilterTable";
-import ApplicationDisbursementModal from "./components/ApplicationDisbursementModal";
 
 import { getApplicationFilter } from "./Api";
 import { getActiveContext } from "../../../app/auth";
+
+const ApplicationDisbursementModal = lazy(
+  () => import("./components/ApplicationDisbursementModal"),
+);
 
 // =============================================================
 // STATUS
@@ -643,7 +652,7 @@ function ApplicationFilter() {
                     ================================================= */}
 
           <LoanTypeDropdown
-          label="Loan Type"
+            label="Loan Type"
             value={loanType}
             options={loanTypeOptions}
             onChange={(value) => {
@@ -999,11 +1008,15 @@ function ApplicationFilter() {
                 DISBURSEMENT MODAL
             ===================================================== */}
 
-      <ApplicationDisbursementModal
-        open={showModal}
-        application={selectedApplication}
-        onClose={handleCloseModal}
-      />
+      <Suspense fallback={null}>
+        {showModal && (
+          <ApplicationDisbursementModal
+            open={showModal}
+            application={selectedApplication}
+            onClose={handleCloseModal}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

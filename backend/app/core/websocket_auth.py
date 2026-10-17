@@ -4,35 +4,21 @@ from fastapi import WebSocket
 from sqlalchemy.orm import Session
 
 from app.models.employees import Employee
-from app.core.security import get_employee_id_from_token
+from app.core.security import get_employee_id_from_refresh_token
 
 
 async def get_current_employee_websocket(
     websocket: WebSocket,
     db: Session,
 ) -> Employee | None:
+    # Never log cookie values or JWTs.
+    refresh_token = websocket.cookies.get("refresh_token")
 
-    print(
-        "WEBSOCKET COOKIES:",
-        websocket.cookies
-    )
-
-    access_token = websocket.cookies.get(
-        "access_token"
-    )
-
-    print(
-        "WEBSOCKET ACCESS TOKEN:",
-        bool(access_token)
-    )
-
-    if not access_token:
+    if not refresh_token:
         return None
 
     try:
-        employee_id = get_employee_id_from_token(
-            access_token
-        )
+        employee_id = get_employee_id_from_refresh_token(refresh_token)
     except ValueError:
         return None
 
@@ -45,13 +31,10 @@ async def get_current_employee_websocket(
         .first()
     )
 
-    if not employee:
+    if employee is None:
         return None
 
-    if employee.deactivate:
-        return None
-
-    if employee.status != "active":
+    if employee.deactivate or employee.status != "active":
         return None
 
     return employee

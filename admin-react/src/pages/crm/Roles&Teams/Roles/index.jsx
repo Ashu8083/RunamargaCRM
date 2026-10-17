@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react'
+// admin-react\src\pages\crm\Roles&Teams\Roles\index.jsx
+import {
+    lazy,
+    Suspense,
+    useEffect,
+    useState,
+} from 'react'
 
 import RoleTable from './components/RoleTable'
-import RoleModal from './components/RoleModal'
 
 import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
 
@@ -11,6 +16,11 @@ import {
     updateRole,
     deleteRole,
 } from './API'
+
+
+const RoleModal = lazy(
+    () => import('./components/RoleModal')
+)
 
 
 function Roles() {
@@ -491,17 +501,21 @@ function Roles() {
                 ROLE MODAL
             ================================================= */}
 
-            <RoleModal
-                open={showModal}
+            <Suspense fallback={null}>
+                {showModal && (
+                    <RoleModal
+                        open={showModal}
 
-                role={editingRole}
+                        role={editingRole}
 
-                onClose={handleCloseModal}
+                        onClose={handleCloseModal}
 
-                onSubmit={handleSubmit}
+                        onSubmit={handleSubmit}
 
-                loading={saving}
-            />
+                        loading={saving}
+                    />
+                )}
+            </Suspense>
 
 
             {/* =================================================

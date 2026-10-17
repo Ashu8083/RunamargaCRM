@@ -1,13 +1,16 @@
 // admin-react/src/pages/Attendance/index.jsx
 
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 
 import AttendanceSummary from './components/AttendanceSummary'
 import AttendanceCalendar from './components/AttendanceCalendar'
-import AttendanceDetailsModal from './components/AttendanceDetailsModal'
 import LeaveManagement from './components/LeaveManagement'
 
 import { getMyAttendance } from './api'
+
+const AttendanceDetailsModal = lazy(
+    () => import('./components/AttendanceDetailsModal')
+)
 
 
 function Attendance() {
@@ -131,16 +134,18 @@ function Attendance() {
                 ATTENDANCE DETAILS MODAL
             ===================================================== */}
 
-            {selectedAttendance && (
+            <Suspense fallback={null}>
+                {selectedAttendance && (
 
-                <AttendanceDetailsModal
-                    attendance={selectedAttendance}
-                    onClose={() =>
-                        setSelectedAttendance(null)
-                    }
-                />
+                    <AttendanceDetailsModal
+                        attendance={selectedAttendance}
+                        onClose={() =>
+                            setSelectedAttendance(null)
+                        }
+                    />
 
-            )}
+                )}
+            </Suspense>
 
         </div>
 

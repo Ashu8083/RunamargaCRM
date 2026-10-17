@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+// admin-react/src/pages/crm/Loans/CombinedApplications/components/ApplicationsTable.jsx
+
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 
 import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
@@ -9,7 +17,6 @@ import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
 import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
-import GlobalChat from "../../../../../components/GlobalModels/Loans/GlobalChat";
 
 import AgentDropdown from "../../../../../components/GlobalModels/Filters/AgentDropdown";
 import RmDropdown from "../../../../../components/GlobalModels/Filters/RmDropdown";
@@ -17,6 +24,17 @@ import TeamLeadDropdown from "../../../../../components/GlobalModels/Filters/Tea
 import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import StatusDropdown from "../../../../../components/GlobalModels/Filters/StatusDropdown";
 import apiClient from "../../../../../app/apiClient";
+
+// =============================================================
+// LAZY-LOADED GLOBAL CHAT
+// =============================================================
+
+const GlobalChat = lazy(
+  () =>
+    import(
+      "../../../../../components/GlobalModels/Loans/GlobalChat"
+    ),
+);
 
 // =============================================================
 // CONSTANTS
@@ -105,6 +123,7 @@ const getTeamLeadName = (application) => {
 
   return "N/A";
 };
+
 const getAppliedBy = (application) => {
   if (application.appliedBy && typeof application.appliedBy === "object") {
     return application.appliedBy.name || "N/A";
@@ -200,6 +219,7 @@ const getReferral = (application) => {
 
   return "N/A";
 };
+
 const getLoanId = (application) =>
   application.loanId ??
   application.loan_id ??
@@ -531,11 +551,13 @@ function ApplicationsTable({
   onPageSizeChange,
 }) {
   const [loanTypes, setLoanTypes] = useState([]);
+
   // =========================================================
   // STATE
   // =========================================================
 
-  const [selectedInfoApplication, setSelectedInfoApplication] = useState(null);
+  const [selectedInfoApplication, setSelectedInfoApplication] =
+    useState(null);
 
   const [infoPopupPosition, setInfoPopupPosition] = useState(null);
 
@@ -544,9 +566,11 @@ function ApplicationsTable({
   const [selectedChatApplication, setSelectedChatApplication] = useState(null);
 
   const [expandedPhoneId, setExpandedPhoneId] = useState(null);
+
   const handleLoanTypesLoaded = useCallback((options) => {
     setLoanTypes(options || []);
   }, []);
+
   const updateApplicationAssignment = async ({
     applicationId,
     rmId,
@@ -572,6 +596,7 @@ function ApplicationsTable({
 
     return response.data;
   };
+
   const handleAgentChange = async (application, newAgentId) => {
     const applicationId =
       application.id ?? application.loanId ?? application.loan_id;
@@ -641,6 +666,7 @@ function ApplicationsTable({
       console.error("Failed to update RM:", error);
     }
   };
+
   // =========================================================
   // INFO POPUP
   // =========================================================
@@ -673,7 +699,8 @@ function ApplicationsTable({
       top = viewportPadding;
     }
 
-    const isSameApplication = selectedInfoApplication?.id === application.id;
+    const isSameApplication =
+      selectedInfoApplication?.id === application.id;
 
     if (isSameApplication) {
       setSelectedInfoApplication(null);
@@ -759,6 +786,7 @@ function ApplicationsTable({
 
   const startIndex =
     Math.max(0, (currentPage - 1) * pageSize);
+
   // =========================================================
   // SEARCH
   // =========================================================
@@ -891,6 +919,7 @@ function ApplicationsTable({
               teamLeadContextId={selectedTeamLead}
             />
           </div>
+
           {/* STATUS */}
 
           <div className="w-44 shrink-0">
@@ -1083,22 +1112,31 @@ function ApplicationsTable({
 
                   const phone = application.phone || "N/A";
 
-                  const phoneExpanded = expandedPhoneId === applicationId;
+                  const phoneExpanded =
+                    expandedPhoneId === applicationId;
 
-                  const status = getApplicationStatus(application);
+                  const status =
+                    getApplicationStatus(application);
 
-                  const loanTypeName = getLoanTypeName(application, loanTypes);
+                  const loanTypeName =
+                    getLoanTypeName(
+                      application,
+                      loanTypes,
+                    );
 
                   // const appliedBy =
                   //     getAppliedBy(
                   //         application
                   //     );
 
-                  const referral = getReferral(application);
+                  const referral =
+                    getReferral(application);
 
-                  const amount = getAmount(application);
+                  const amount =
+                    getAmount(application);
 
-                  const appliedDate = getAppliedDate(application);
+                  const appliedDate =
+                    getAppliedDate(application);
 
                   return (
                     <tr
@@ -1165,7 +1203,11 @@ function ApplicationsTable({
                         >
                           <button
                             type="button"
-                            onClick={() => handlePhoneClick(application)}
+                            onClick={() =>
+                              handlePhoneClick(
+                                application,
+                              )
+                            }
                             title={
                               phoneExpanded
                                 ? "Collapse phone number"
@@ -1181,7 +1223,9 @@ function ApplicationsTable({
                           >
                             <span
                               className={
-                                phoneExpanded ? "break-all" : "block truncate"
+                                phoneExpanded
+                                  ? "break-all"
+                                  : "block truncate"
                               }
                             >
                               {phone}
@@ -1227,7 +1271,11 @@ function ApplicationsTable({
                       >
                         <button
                           type="button"
-                          onClick={() => onLoanTypeChange?.(application)}
+                          onClick={() =>
+                            onLoanTypeChange?.(
+                              application,
+                            )
+                          }
                           title={loanTypeName}
                           className="
                                                             max-w-full
@@ -1277,7 +1325,10 @@ function ApplicationsTable({
                                                     py-4
                                                 "
                       >
-                        <Cell title={appliedDate} className="text-sm">
+                        <Cell
+                          title={appliedDate}
+                          className="text-sm"
+                        >
                           {appliedDate}
                         </Cell>
                       </td>
@@ -1310,7 +1361,10 @@ function ApplicationsTable({
                                                     py-4
                                                 "
                       >
-                        <Cell title={referral} className="text-sm">
+                        <Cell
+                          title={referral}
+                          className="text-sm"
+                        >
                           {referral}
                         </Cell>
                       </td>
@@ -1326,7 +1380,10 @@ function ApplicationsTable({
                         <RmDropdown
                           value={application.rmId ?? application.rm_context_id ?? ""}
                           onChange={(value) =>
-                            handleRmChange(application, value)
+                            handleRmChange(
+                              application,
+                              value,
+                            )
                           }
                         />
                       </td>
@@ -1347,7 +1404,10 @@ function ApplicationsTable({
                             ""
                           }
                           onChange={(value) =>
-                            handleAgentChange(application, value)
+                            handleAgentChange(
+                              application,
+                              value,
+                            )
                           }
                         />
                       </td>
@@ -1371,7 +1431,11 @@ function ApplicationsTable({
                         >
                           <button
                             type="button"
-                            onClick={() => onStatusChange?.(application)}
+                            onClick={() =>
+                              onStatusChange?.(
+                                application,
+                              )
+                            }
                             title={status}
                             className={`
                                                                     max-w-full
@@ -1386,7 +1450,9 @@ function ApplicationsTable({
                                                                     font-medium
                                                                     truncate
                                                                     hover:opacity-80
-                                                                    ${getStatusClass(status)}
+                                                                    ${getStatusClass(
+                                                                      status,
+                                                                    )}
                                                                 `}
                           >
                             {status}
@@ -1439,7 +1505,11 @@ function ApplicationsTable({
 
                           <button
                             type="button"
-                            onClick={() => onViewApplication?.(application)}
+                            onClick={() =>
+                              onViewApplication?.(
+                                application,
+                              )
+                            }
                             title="View application"
                             className="
                                                                 btn
@@ -1462,7 +1532,11 @@ function ApplicationsTable({
 
                           <button
                             type="button"
-                            onClick={() => onReminder?.(application)}
+                            onClick={() =>
+                              onReminder?.(
+                                application,
+                              )
+                            }
                             title="Add reminder"
                             className="
                                                                 btn
@@ -1485,7 +1559,11 @@ function ApplicationsTable({
 
                           <button
                             type="button"
-                            onClick={() => handleOpenChat(application)}
+                            onClick={() =>
+                              handleOpenChat(
+                                application,
+                              )
+                            }
                             title="Open chat"
                             className="
                                                                 btn
@@ -1543,13 +1621,16 @@ function ApplicationsTable({
         "
         >
           {/* ROWS PER PAGE */}
+
           <div className="flex items-center gap-2 text-sm text-base-content/60">
             <span>Rows per page:</span>
 
             <select
               value={pageSize}
               onChange={(event) => {
-                onPageSizeChange?.(Number(event.target.value));
+                onPageSizeChange?.(
+                  Number(event.target.value),
+                );
               }}
               className="
                     select
@@ -1566,14 +1647,19 @@ function ApplicationsTable({
           </div>
 
           {/* SHOWING */}
+
           <div className="text-sm text-base-content/60">
             Showing {startIndex + 1}
             {"–"}
-            {Math.min(startIndex + pageSize, totalApplications)} of{" "}
-            {totalApplications}
+            {Math.min(
+              startIndex + pageSize,
+              totalApplications,
+            )}{" "}
+            of {totalApplications}
           </div>
 
           {/* NAVIGATION */}
+
           {totalPages > 1 && (
             <div className="flex items-center gap-1">
               <button
@@ -1581,7 +1667,12 @@ function ApplicationsTable({
                 className="btn btn-sm btn-ghost"
                 disabled={currentPage === 1}
                 onClick={() =>
-                  onPageChange?.(Math.max(currentPage - 1, 1))
+                  onPageChange?.(
+                    Math.max(
+                      currentPage - 1,
+                      1,
+                    ),
+                  )
                 }
               >
                 Previous
@@ -1594,10 +1685,15 @@ function ApplicationsTable({
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
-                disabled={currentPage === totalPages}
+                disabled={
+                  currentPage === totalPages
+                }
                 onClick={() =>
                   onPageChange?.(
-                    Math.min(currentPage + 1, totalPages)
+                    Math.min(
+                      currentPage + 1,
+                      totalPages,
+                    ),
                   )
                 }
               >
@@ -1607,6 +1703,7 @@ function ApplicationsTable({
           )}
         </div>
       )}
+
       {/* =================================================
                 REJECTION DETAILS POPUP
             ================================================= */}
@@ -1652,8 +1749,12 @@ function ApplicationsTable({
                             text-base-content
                         "
             >
-              <span className="font-semibold">Type:</span>{" "}
-              {getRevertedReason(selectedInfoApplication)
+              <span className="font-semibold">
+                Type:
+              </span>{" "}
+              {getRevertedReason(
+                selectedInfoApplication,
+              )
                 ? "Reverted"
                 : "Rejected"}
             </div>
@@ -1667,10 +1768,18 @@ function ApplicationsTable({
                             text-base-content
                         "
             >
-              <span className="font-semibold">By:</span>{" "}
-              {getRevertedReason(selectedInfoApplication)
-                ? getRevertedByName(selectedInfoApplication) || "—"
-                : getRejectedByName(selectedInfoApplication) || "—"}
+              <span className="font-semibold">
+                By:
+              </span>{" "}
+              {getRevertedReason(
+                selectedInfoApplication,
+              )
+                ? getRevertedByName(
+                    selectedInfoApplication,
+                  ) || "—"
+                : getRejectedByName(
+                    selectedInfoApplication,
+                  ) || "—"}
             </div>
 
             {/* DATE */}
@@ -1682,11 +1791,19 @@ function ApplicationsTable({
                             text-base-content
                         "
             >
-              <span className="font-semibold">Date:</span>{" "}
+              <span className="font-semibold">
+                Date:
+              </span>{" "}
               {formatDate(
-                getRevertedReason(selectedInfoApplication)
-                  ? getRevertedDate(selectedInfoApplication)
-                  : getRejectedDate(selectedInfoApplication),
+                getRevertedReason(
+                  selectedInfoApplication,
+                )
+                  ? getRevertedDate(
+                      selectedInfoApplication,
+                    )
+                  : getRejectedDate(
+                      selectedInfoApplication,
+                    ),
               )}
             </div>
 
@@ -1700,19 +1817,26 @@ function ApplicationsTable({
                             text-base-content
                         "
             >
-              <span className="font-semibold">Remarks:</span>{" "}
+              <span className="font-semibold">
+                Remarks:
+              </span>{" "}
               <span
                 className="
                                 break-words
                             "
               >
-                {getRevertedReason(selectedInfoApplication)
-                  ? getRevertedReason(selectedInfoApplication) || "—"
-                  : getRejectedReason(selectedInfoApplication) || "—"}
+                {getRevertedReason(
+                  selectedInfoApplication,
+                )
+                  ? getRevertedReason(
+                      selectedInfoApplication,
+                    ) || "—"
+                  : getRejectedReason(
+                      selectedInfoApplication,
+                    ) || "—"}
               </span>
             </div>
           </div>,
-
           document.body,
         )}
 
@@ -1720,16 +1844,28 @@ function ApplicationsTable({
                 GLOBAL CHAT
             ================================================= */}
 
-      {selectedChatApplication && (
-        <GlobalChat
-          open={chatOpen}
-          onClose={handleCloseChat}
-          loanId={getLoanId(selectedChatApplication)}
-          agentId={getAgentId(selectedChatApplication)}
-          customerName={selectedChatApplication.name || "Customer"}
-          customerPhone={selectedChatApplication.phone || ""}
-        />
-      )}
+      <Suspense fallback={null}>
+        {selectedChatApplication && (
+          <GlobalChat
+            open={chatOpen}
+            onClose={handleCloseChat}
+            loanId={getLoanId(
+              selectedChatApplication,
+            )}
+            agentId={getAgentId(
+              selectedChatApplication,
+            )}
+            customerName={
+              selectedChatApplication.name ||
+              "Customer"
+            }
+            customerPhone={
+              selectedChatApplication.phone ||
+              ""
+            }
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

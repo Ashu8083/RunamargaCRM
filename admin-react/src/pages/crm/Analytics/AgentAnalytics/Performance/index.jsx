@@ -1,6 +1,12 @@
 // admin-react/src/pages/Analytics/AgentAnalytics/Performance/index.jsx
 
-import { useEffect, useRef, useState } from 'react'
+import {
+    lazy,
+    Suspense,
+    useEffect,
+    useRef,
+    useState,
+} from 'react'
 
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 
@@ -11,9 +17,18 @@ import LoanTypeDropdown from '../../../../../components/GlobalModels/Filters/Loa
 
 import PerformanceAPI from './API'
 
-import PerformanceOverview from './components/PerformanceOverview'
-import LoanWisePerformance from './components/LoanWisePerformance'
-import TopPerformers from './components/TopPerformers'
+// Lazy-load analytics display components.
+const PerformanceOverview = lazy(
+    () => import('./components/PerformanceOverview')
+)
+
+const LoanWisePerformance = lazy(
+    () => import('./components/LoanWisePerformance')
+)
+
+const TopPerformers = lazy(
+    () => import('./components/TopPerformers')
+)
 
 
 // =============================================================
@@ -1044,7 +1059,6 @@ function Performance() {
                     </p>
 
                 </section>
-
             )}
 
 
@@ -1054,47 +1068,51 @@ function Performance() {
 
             {overview.length > 0 && (
 
-                <div className="
-                    space-y-4
-                ">
+                <Suspense fallback={null}>
 
-                    <PerformanceOverview
-                        mode={mode}
-                        performance={
-                            overview
-                        }
-                    />
+                    <div className="
+                        space-y-4
+                    ">
 
-                    <LoanWisePerformance
-                        mode={mode}
-                        performance={
-                            loanWise
-                        }
-                    />
+                        <PerformanceOverview
+                            mode={mode}
+                            performance={
+                                overview
+                            }
+                        />
 
-                    <TopPerformers
-                        mode={mode}
-                        performance={
-                            overview
-                        }
-                        loanWise={
-                            loanWise
-                        }
-                        topPerformers={
-                            topPerformers
-                        }
-                        topPerformersByLoanType={
-                            topPerformersByLoanType
-                        }
-                        metric={
-                            performanceMetric
-                        }
-                        onMetricChange={
-                            setPerformanceMetric
-                        }
-                    />
+                        <LoanWisePerformance
+                            mode={mode}
+                            performance={
+                                loanWise
+                            }
+                        />
 
-                </div>
+                        <TopPerformers
+                            mode={mode}
+                            performance={
+                                overview
+                            }
+                            loanWise={
+                                loanWise
+                            }
+                            topPerformers={
+                                topPerformers
+                            }
+                            topPerformersByLoanType={
+                                topPerformersByLoanType
+                            }
+                            metric={
+                                performanceMetric
+                            }
+                            onMetricChange={
+                                setPerformanceMetric
+                            }
+                        />
+
+                    </div>
+
+                </Suspense>
 
             )}
 

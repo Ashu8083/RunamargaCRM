@@ -1,6 +1,8 @@
-// admin-react/src/pages/Analytics/AgentAnalytics/Trends/index.jsx
+// admin-react/src/pages/crm/Analytics/AgentAnalytics/Trends/index.jsx
 
 import {
+    lazy,
+    Suspense,
     useCallback,
     useEffect,
     useRef,
@@ -14,13 +16,27 @@ import RmDropdown from '../../../../../components/GlobalModels/Filters/RmDropdow
 import TeamLeadDropdown from '../../../../../components/GlobalModels/Filters/TeamLeadDropdown'
 import LoanTypeDropdown from '../../../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
-import ApplicationTrend from './components/ApplicationTrend'
-import LoanStageDistribution from './components/LoanStageDistribution'
-import LoanTypeTrend from './components/LoanTypeTrend'
-import SanctionDisbursementTrend from './components/SanctionDisbursementTrend'
-import RejectionTrend from './components/RejectionTrend'
-
 import TrendsAPI from './API'
+
+const ApplicationTrend = lazy(
+    () => import('./components/ApplicationTrend')
+)
+
+const LoanStageDistribution = lazy(
+    () => import('./components/LoanStageDistribution')
+)
+
+const LoanTypeTrend = lazy(
+    () => import('./components/LoanTypeTrend')
+)
+
+const SanctionDisbursementTrend = lazy(
+    () => import('./components/SanctionDisbursementTrend')
+)
+
+const RejectionTrend = lazy(
+    () => import('./components/RejectionTrend')
+)
 
 
 // =============================================================
@@ -1419,125 +1435,133 @@ function Trends() {
 
 
             {/* =================================================
-                APPLICATION TREND + STAGE
+                CHARTS
             ================================================= */}
 
-            {hasData && (
+            <Suspense fallback={null}>
 
-                <div className="
-                    grid
-                    w-full
-                    min-w-0
-                    grid-cols-1
-                    gap-5
-                    xl:grid-cols-3
-                ">
+                {/* =================================================
+                    APPLICATION TREND + STAGE
+                ================================================= */}
 
-                    {/* -------------------------------------------------
-                        APPLICATION TREND
-                    ------------------------------------------------- */}
+                {hasData && (
 
                     <div className="
+                        grid
+                        w-full
                         min-w-0
-                        xl:col-span-2
+                        grid-cols-1
+                        gap-5
+                        xl:grid-cols-3
                     ">
 
-                        <ApplicationTrend
-                            analytics={
-                                trend
-                            }
-                        />
+                        {/* -------------------------------------------------
+                            APPLICATION TREND
+                        ------------------------------------------------- */}
+
+                        <div className="
+                            min-w-0
+                            xl:col-span-2
+                        ">
+
+                            <ApplicationTrend
+                                analytics={
+                                    trend
+                                }
+                            />
+
+                        </div>
+
+
+                        {/* -------------------------------------------------
+                            STAGE DISTRIBUTION
+                        ------------------------------------------------- */}
+
+                        <div className="
+                            min-w-0
+                        ">
+
+                            <LoanStageDistribution
+                                stageDistribution={
+                                    stageDistribution
+                                }
+                            />
+
+                        </div>
 
                     </div>
 
+                )}
 
-                    {/* -------------------------------------------------
-                        STAGE DISTRIBUTION
-                    ------------------------------------------------- */}
+
+                {/* =================================================
+                    LOAN TYPE TREND
+                ================================================= */}
+
+                {hasData && (
+
+                    <LoanTypeTrend
+                        loanTypeTrend={
+                            loanTypeTrend
+                        }
+                    />
+
+                )}
+
+
+                {/* =================================================
+                    SANCTION / REJECTION
+                ================================================= */}
+
+                {hasData && (
 
                     <div className="
+                        grid
+                        w-full
                         min-w-0
+                        grid-cols-1
+                        gap-5
+                        xl:grid-cols-2
                     ">
 
-                        <LoanStageDistribution
-                            stageDistribution={
-                                stageDistribution
-                            }
-                        />
+                        {/* -------------------------------------------------
+                            SANCTION / DISBURSEMENT
+                        ------------------------------------------------- */}
+
+                        <div className="
+                            min-w-0
+                        ">
+
+                            <SanctionDisbursementTrend
+                                sanctionDisbursementTrend={
+                                    sanctionDisbursementTrend
+                                }
+                            />
+
+                        </div>
+
+
+                        {/* -------------------------------------------------
+                            REJECTION
+                        ------------------------------------------------- */}
+
+                        <div className="
+                            min-w-0
+                        ">
+
+                            <RejectionTrend
+                                rejectionTrend={
+                                    rejectionTrend
+                                }
+                            />
+
+                        </div>
 
                     </div>
 
-                </div>
+                )}
 
-            )}
-
-
-            {/* =================================================
-                LOAN TYPE TREND
-            ================================================= */}
-
-            {hasData && (
-
-                <LoanTypeTrend
-                    loanTypeTrend={
-                        loanTypeTrend
-                    }
-                />
-
-            )}
-
-
-            {/* =================================================
-                SANCTION / REJECTION
-            ================================================= */}
-
-            {hasData && (
-
-                <div className="
-                    grid
-                    w-full
-                    min-w-0
-                    grid-cols-1
-                    gap-5
-                    xl:grid-cols-2
-                ">
-
-                    {/* -------------------------------------------------
-                        SANCTION / DISBURSEMENT
-                    ------------------------------------------------- */}
-
-                    <div className="
-                        min-w-0
-                    ">
-
-                        <SanctionDisbursementTrend
-                            sanctionDisbursementTrend={
-                                sanctionDisbursementTrend
-                            }
-                        />
-
-                    </div>
-
-
-                    {/* -------------------------------------------------
-                        REJECTION
-                    ------------------------------------------------- */}
-
-                    <div className="
-                        min-w-0
-                    ">
-
-                        <RejectionTrend
-                            rejectionTrend={
-                                rejectionTrend
-                            }
-                        />
-
-                    </div>
-
-                </div>
-
-            )}
+            </Suspense>
 
         </div>
 

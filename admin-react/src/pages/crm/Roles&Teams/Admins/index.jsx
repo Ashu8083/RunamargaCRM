@@ -1,11 +1,15 @@
-// admin-react/src/pages/Roles&Teams/Admins/index.jsx
+// admin-react/src/pages/crm/Roles&Teams/Admins/index.jsx
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+    lazy,
+    Suspense,
+    useEffect,
+    useMemo,
+    useState,
+} from 'react'
 
 import AdminTable from './components/AdminTable'
-import AdminModal from './components/AdminModal'
 
-import PermissionsModal from '../../../../components/GlobalModels/PermissionsModal'
 import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
 
 import {
@@ -17,6 +21,15 @@ import {
     updateAdminStatus,
     getApiErrorMessage,
 } from './API'
+
+
+const AdminModal = lazy(
+    () => import('./components/AdminModal')
+)
+
+const PermissionsModal = lazy(
+    () => import('../../../../components/GlobalModels/PermissionsModal')
+)
 
 
 function Admins() {
@@ -700,48 +713,56 @@ function Admins() {
             />
 
 
-            {/* =====================================================
-                ADD / EDIT MODAL
-            ===================================================== */}
+            <Suspense fallback={null}>
 
-            <AdminModal
-                open={showModal}
-                admin={editingAdmin}
-                employees={
-                    editingAdmin
-                        ? employees
-                        : availableEmployees
-                }
-                onClose={handleCloseModal}
-                onSubmit={handleSubmit}
-                loading={actionLoading}
-            />
+                {/* =====================================================
+                    ADD / EDIT MODAL
+                ===================================================== */}
+
+                {showModal && (
+                    <AdminModal
+                        open={showModal}
+                        admin={editingAdmin}
+                        employees={
+                            editingAdmin
+                                ? employees
+                                : availableEmployees
+                        }
+                        onClose={handleCloseModal}
+                        onSubmit={handleSubmit}
+                        loading={actionLoading}
+                    />
+                )}
 
 
-            {/* =====================================================
-                PERMISSIONS
+                {/* =====================================================
+                    PERMISSIONS
                 =====================================================
                 
-                IMPORTANT:
-                Existing PermissionsModal is not modified.
+                    IMPORTANT:
+                    Existing PermissionsModal is not modified.
 
-                It receives the REAL Employee.id and
-                EmployeeContext.context_id.
+                    It receives the REAL Employee.id and
+                    EmployeeContext.context_id.
 
-            ===================================================== */}
+                ===================================================== */}
 
-            <PermissionsModal
-                open={showPermissionsModal}
-                admin={selectedAdmin}
-                employeeId={
-                    selectedAdmin?.employee_id
-                }
-                contextId={
-                    selectedAdmin?.context_id
-                }
-                onClose={handleClosePermissions}
-                onSave={handleSavePermissions}
-            />
+                {showPermissionsModal && (
+                    <PermissionsModal
+                        open={showPermissionsModal}
+                        admin={selectedAdmin}
+                        employeeId={
+                            selectedAdmin?.employee_id
+                        }
+                        contextId={
+                            selectedAdmin?.context_id
+                        }
+                        onClose={handleClosePermissions}
+                        onSave={handleSavePermissions}
+                    />
+                )}
+
+            </Suspense>
 
 
             {/* =====================================================

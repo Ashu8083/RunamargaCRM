@@ -100,6 +100,8 @@ def send_otp_email(
             </div>
         """,
     })
+
+    
 def create_login_otp(
     db: Session,
     email: str,

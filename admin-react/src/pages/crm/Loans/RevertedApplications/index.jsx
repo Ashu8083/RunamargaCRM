@@ -1,6 +1,8 @@
-// admin-react/src/pages/Loans/RevertedApplications/index.jsx
+// admin-react/src/pages/crm/Loans/RevertedApplications/index.jsx
 
 import {
+    lazy,
+    Suspense,
     useCallback,
     useEffect,
     useMemo,
@@ -18,14 +20,21 @@ import AgentDropdown from '../../../../components/GlobalModels/Filters/AgentDrop
 import LoanTypeDropdown from '../../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
 import RevertedApplicationsTable from './components/RevertedApplicationsTable'
-import RevertDateModal from './components/RevertDateModal'
-import RevertHistoryModal from './components/RevertHistoryModal'
 
 import {
     getRevertedApplications,
     getRevertHistory,
     getApiErrorMessage,
 } from './API'
+
+const RevertDateModal = lazy(
+    () => import('./components/RevertDateModal')
+)
+
+const RevertHistoryModal = lazy(
+    () => import('./components/RevertHistoryModal')
+)
+
 function RevertedApplications() {
 
     // =========================================================
@@ -40,6 +49,7 @@ function RevertedApplications() {
 
     const [error, setError] =
         useState('')
+
     // =========================================================
     // PAGINATION
     // =========================================================
@@ -315,6 +325,7 @@ function RevertedApplications() {
             pagination.limit,
         ]
     )
+
     // =========================================================
     // CLEAR FILTERS
     // =========================================================
@@ -530,6 +541,7 @@ function RevertedApplications() {
         )
 
     }
+
     // =========================================================
     // PAGINATION
     // =========================================================
@@ -586,6 +598,7 @@ function RevertedApplications() {
         fetchApplications(page)
 
     }
+
     // Filter changes
     useEffect(() => {
 
@@ -596,6 +609,7 @@ function RevertedApplications() {
         selectedAgent,
         selectedDate,
     ])
+
     // =========================================================
     // RENDER
     // =========================================================
@@ -863,6 +877,7 @@ function RevertedApplications() {
                 />
 
             )}
+
             {pagination.totalPages > 0 && (
                 <div className="
         flex
@@ -992,41 +1007,47 @@ function RevertedApplications() {
 
                 </div>
             )}
-            {/* =====================================================
-                CHANGE DATE MODAL
-            ===================================================== */}
 
-            <RevertDateModal
-                open={
-                    showRevertDateModal
-                }
-                application={
-                    selectedApplication
-                }
-                onClose={
-                    handleCloseDateModal
-                }
-                onSubmit={
-                    handleDateSubmit
-                }
-            />
+            <Suspense fallback={null}>
+                {/* =====================================================
+                    CHANGE DATE MODAL
+                ===================================================== */}
 
+                {showRevertDateModal && (
+                    <RevertDateModal
+                        open={
+                            showRevertDateModal
+                        }
+                        application={
+                            selectedApplication
+                        }
+                        onClose={
+                            handleCloseDateModal
+                        }
+                        onSubmit={
+                            handleDateSubmit
+                        }
+                    />
+                )}
 
-            {/* =====================================================
-                CHANGE HISTORY MODAL
-            ===================================================== */}
+                {/* =====================================================
+                    CHANGE HISTORY MODAL
+                ===================================================== */}
 
-            <RevertHistoryModal
-                open={
-                    showRevertHistoryModal
-                }
-                application={
-                    selectedApplication
-                }
-                onClose={
-                    handleCloseHistoryModal
-                }
-            />
+                {showRevertHistoryModal && (
+                    <RevertHistoryModal
+                        open={
+                            showRevertHistoryModal
+                        }
+                        application={
+                            selectedApplication
+                        }
+                        onClose={
+                            handleCloseHistoryModal
+                        }
+                    />
+                )}
+            </Suspense>
 
         </div>
 

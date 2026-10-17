@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+// admin-react/src/pages/crm/EmployeeManagement/Employees/index.jsx
+
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 
 import { EmpAPI } from '../Employees/Api'
 import EmployeeTable from './components/EmployeeTable'
-import EmployeeModal from './components/EmployeeModal'
 import { useToast } from '../../../../components/Toast/ToastProvider'
 
+const EmployeeModal = lazy(() => import('./components/EmployeeModal'))
 
 function Employees() {
 
@@ -264,15 +266,19 @@ function Employees() {
             />
 
 
-            <EmployeeModal
-                open={showModal}
-                employee={editingEmployee}
-                employees={employees}
-                roles={roles}
-                permissions={permissions}
-                onClose={handleCloseModal}
-                onSubmit={handleSubmit}
-            />
+            <Suspense fallback={null}>
+                {showModal && (
+                    <EmployeeModal
+                        open={showModal}
+                        employee={editingEmployee}
+                        employees={employees}
+                        roles={roles}
+                        permissions={permissions}
+                        onClose={handleCloseModal}
+                        onSubmit={handleSubmit}
+                    />
+                )}
+            </Suspense>
 
         </div>
     )

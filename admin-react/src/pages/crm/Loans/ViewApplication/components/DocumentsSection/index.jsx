@@ -1,4 +1,10 @@
-import React, { useState } from 'react'
+// admin-react/src/pages/crm/Loans/ViewApplication/components/DocumentsSection/index.jsx
+
+import React, {
+    lazy,
+    Suspense,
+    useState,
+} from 'react'
 
 import {
     ArrowPathIcon,
@@ -8,7 +14,6 @@ import {
     CheckCircleIcon,
 } from '@heroicons/react/24/outline'
 
-import UploadDocumentModal from '../../modals/UploadDocumentModal'
 import {
     uploadApplicationDocument,
     deleteApplicationDocument,
@@ -18,6 +23,10 @@ import { COLORS } from '../../../../../../constants/colors'
 import {
     getLoanFormConfig,
 } from '../../../CreateApplication/config/loanForms'
+
+const UploadDocumentModal = lazy(
+    () => import('../../modals/UploadDocumentModal')
+)
 
 function DocumentsSection({ application, onRefresh }) {
 
@@ -764,26 +773,30 @@ function DocumentsSection({ application, onRefresh }) {
                 UPLOAD MODAL
             ================================================== */}
 
-            <UploadDocumentModal
-                isOpen={showUploadModal}
+            <Suspense fallback={null}>
+                {showUploadModal && (
+                    <UploadDocumentModal
+                        isOpen={showUploadModal}
 
-                onClose={() => {
+                        onClose={() => {
 
-                    if (!uploading) {
+                            if (!uploading) {
 
-                        setShowUploadModal(false)
-                        setSelectedDocument(null)
+                                setShowUploadModal(false)
+                                setSelectedDocument(null)
 
-                    }
+                            }
 
-                }}
+                        }}
 
-                document={selectedDocument}
+                        document={selectedDocument}
 
-                onSubmit={handleDocumentSubmit}
+                        onSubmit={handleDocumentSubmit}
 
-                loading={uploading}
-            />
+                        loading={uploading}
+                    />
+                )}
+            </Suspense>
 
         </div>
 

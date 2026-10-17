@@ -135,6 +135,13 @@ from app.routes.admin.ApplicationFilter.application_filter_routes import (
 )
 
 # ============================================================================
+# Reminder
+# ============================================================================
+from app.routes.admin.reminders_routes import (
+    router as reminder_router,
+)
+
+# ============================================================================
 # Agent Audit  Logs
 # ============================================================================
 
@@ -282,20 +289,28 @@ router.include_router(agent_analytics_trends)
 # ============================================================================
 # Dashboard 
 # ============================================================================
-
 router.include_router(application_status_router)
 router.include_router(loan_type_distribution_router)
 router.include_router(monthly_trend_router)
 router.include_router(application_funnel_router)
 router.include_router(application_status_applications_router)
 # ============================================================================
-# Application Filter 
+# Profile
+# ============================================================================
+router.include_router(profile_router)
+
+# ============================================================================
+# Application Filter
 # ============================================================================
 
 router.include_router(
     application_filter_router
 )
 
+# ============================================================================
+# Reminder
+# ============================================================================
+router.include_router(reminder_router)
 
 
 # ============================================================================

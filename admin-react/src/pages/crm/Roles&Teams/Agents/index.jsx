@@ -1,12 +1,15 @@
-// admin-react/src/pages/Roles&Teams/Agents/index.jsx
+// admin-react/src/pages/crm/Roles&Teams/Agents/index.jsx
 
-import { useCallback, useEffect, useState } from 'react'
+import {
+    lazy,
+    Suspense,
+    useCallback,
+    useEffect,
+    useState,
+} from 'react'
 
 import AgentTable from './components/AgentTable'
-import AgentModal from './components/AgentModal'
-import AssignedTeamLeadsModal from './components/AssignedTeamLeadsModal'
 
-import PermissionsModal from '../../../../components/GlobalModels/PermissionsModal'
 import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
 
 import {
@@ -23,6 +26,19 @@ import {
     removeTeamLead,
     getApiErrorMessage,
 } from './API'
+
+
+const AgentModal = lazy(
+    () => import('./components/AgentModal')
+)
+
+const AssignedTeamLeadsModal = lazy(
+    () => import('./components/AssignedTeamLeadsModal')
+)
+
+const PermissionsModal = lazy(
+    () => import('../../../../components/GlobalModels/PermissionsModal')
+)
 
 
 const Agents = () => {
@@ -825,63 +841,73 @@ const Agents = () => {
             {/* AGENT CREATE / EDIT MODAL */}
             {/* ================================================================ */}
 
-            <AgentModal
-                open={showAgentModal}
-                agent={selectedAgent}
-                employees={employees}
-                roles={roles}
-                loading={modalLoading}
-                onClose={handleCloseAgentModal}
-                onSubmit={handleSaveAgent}
-            />
+            <Suspense fallback={null}>
+
+                {showAgentModal && (
+                    <AgentModal
+                        open={showAgentModal}
+                        agent={selectedAgent}
+                        employees={employees}
+                        roles={roles}
+                        loading={modalLoading}
+                        onClose={handleCloseAgentModal}
+                        onSubmit={handleSaveAgent}
+                    />
+                )}
 
 
-            {/* ================================================================ */}
-            {/* TEAM LEAD MODAL */}
-            {/* ================================================================ */}
+                {/* ================================================================ */}
+                {/* TEAM LEAD MODAL */}
+                {/* ================================================================ */}
 
-            <AssignedTeamLeadsModal
-                open={showTeamLeadModal}
-                agent={selectedAgent}
-                teamLeads={teamLeads}
-                assignedTeamLead={
-                    assignedTeamLead
-                }
-                loading={modalLoading}
-                onClose={
-                    handleCloseTeamLeadModal
-                }
-                onAssignmentChange={
-                    handleAssignmentChange
-                }
-            />
+                {showTeamLeadModal && (
+                    <AssignedTeamLeadsModal
+                        open={showTeamLeadModal}
+                        agent={selectedAgent}
+                        teamLeads={teamLeads}
+                        assignedTeamLead={
+                            assignedTeamLead
+                        }
+                        loading={modalLoading}
+                        onClose={
+                            handleCloseTeamLeadModal
+                        }
+                        onAssignmentChange={
+                            handleAssignmentChange
+                        }
+                    />
+                )}
 
 
-            {/* ================================================================ */}
-            {/* PERMISSIONS MODAL */}
-            {/* ================================================================ */}
+                {/* ================================================================ */}
+                {/* PERMISSIONS MODAL */}
+                {/* ================================================================ */}
 
-            <PermissionsModal
-                open={showPermissionsModal}
+                {showPermissionsModal && (
+                    <PermissionsModal
+                        open={showPermissionsModal}
 
-                employeeId={
-                    selectedAgent?.employee_id ??
-                    selectedAgent?.employeeId ??
-                    null
-                }
+                        employeeId={
+                            selectedAgent?.employee_id ??
+                            selectedAgent?.employeeId ??
+                            null
+                        }
 
-                contextId={
-                    selectedAgent?.context_id ??
-                    selectedAgent?.contextId ??
-                    null
-                }
+                        contextId={
+                            selectedAgent?.context_id ??
+                            selectedAgent?.contextId ??
+                            null
+                        }
 
-                admin={selectedAgent}
+                        admin={selectedAgent}
 
-                onClose={
-                    handleClosePermissions
-                }
-            />
+                        onClose={
+                            handleClosePermissions
+                        }
+                    />
+                )}
+
+            </Suspense>
 
 
             {/* ================================================================ */}

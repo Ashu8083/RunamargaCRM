@@ -1,4 +1,8 @@
+// admin-react\src\pages\crm\Loans\DuplicateApproval\index.jsx
+
 import {
+    lazy,
+    Suspense,
     useEffect,
     useMemo,
     useState,
@@ -7,13 +11,17 @@ import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
 import DuplicateApprovalTable from '../DuplicateApproval/components/DuplicateApprovalTable'
 import LoanTypeDropdown from "../../../../components/GlobalModels/Filters/LoanTypeDropdown";
-import DuplicateApprovalModal from '../DuplicateApproval/components/DuplicateApprovalModal'
 import {
     getDuplicateApprovals,
     approveDuplicateApproval,
 } from '../DuplicateApproval/Api';
 
 import { getStoredUser,getActiveContext } from '../../../../app/auth'
+
+// Lazy-load DuplicateApprovalModal only when it is rendered.
+const DuplicateApprovalModal = lazy(
+    () => import('../DuplicateApproval/components/DuplicateApprovalModal')
+)
 
 const DuplicateApproval = () => {
 
@@ -691,17 +699,21 @@ const DuplicateApproval = () => {
 
             {showModal && (
 
-                <DuplicateApprovalModal
-                    applications={
-                        selectedApplications
-                    }
-                    onClose={
-                        handleCloseModal
-                    }
-                    onSubmit={
-                        handleApprovalSubmit
-                    }
-                />
+                <Suspense fallback={null}>
+
+                    <DuplicateApprovalModal
+                        applications={
+                            selectedApplications
+                        }
+                        onClose={
+                            handleCloseModal
+                        }
+                        onSubmit={
+                            handleApprovalSubmit
+                        }
+                    />
+
+                </Suspense>
 
             )}
 

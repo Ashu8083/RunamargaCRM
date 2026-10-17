@@ -1,6 +1,12 @@
 // admin-react/src/pages/Analytics/CallAnalytics/Overview/index.jsx
 
-import { useCallback, useEffect, useState } from 'react'
+import {
+    lazy,
+    Suspense,
+    useCallback,
+    useEffect,
+    useState,
+} from 'react'
 
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
@@ -9,13 +15,20 @@ import AgentDropdown from '../../../../../components/GlobalModels/Filters/AgentD
 import RmDropdown from '../../../../../components/GlobalModels/Filters/RmDropdown'
 import TeamLeadDropdown from '../../../../../components/GlobalModels/Filters/TeamLeadDropdown'
 
-import AnalyticsCards from './components/AnalyticsCards'
-import CallActivityGraph from './components/CallActivityGraph'
-
 import {
     getCallAnalyticsOverview,
     getApiErrorMessage,
 } from './API'
+
+// Lazy-load analytics display components.
+// All static imports must be declared before component constants.
+const AnalyticsCards = lazy(
+    () => import('./components/AnalyticsCards')
+)
+
+const CallActivityGraph = lazy(
+    () => import('./components/CallActivityGraph')
+)
 
 
 // =============================================================
@@ -950,17 +963,21 @@ function Overview() {
                 KPI CARDS
             ================================================= */}
 
-            <AnalyticsCards
-                summary={
-                    summary
-                }
-                activeKpi={
-                    activeKpi
-                }
-                onKpiClick={
-                    handleKpiClick
-                }
-            />
+            <Suspense fallback={null}>
+
+                <AnalyticsCards
+                    summary={
+                        summary
+                    }
+                    activeKpi={
+                        activeKpi
+                    }
+                    onKpiClick={
+                        handleKpiClick
+                    }
+                />
+
+            </Suspense>
 
 
             {/* =================================================
@@ -1028,11 +1045,15 @@ function Overview() {
                 GRAPH
             ================================================= */}
 
-            <CallActivityGraph
-                calls={
-                    displayedCalls
-                }
-            />
+            <Suspense fallback={null}>
+
+                <CallActivityGraph
+                    calls={
+                        displayedCalls
+                    }
+                />
+
+            </Suspense>
 
         </div>
 

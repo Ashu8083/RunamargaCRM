@@ -1,6 +1,11 @@
 // admin-react/src/pages/Analytics/AgentAnalytics/Overview/index.jsx
 
-import { useEffect, useState } from 'react'
+import {
+    lazy,
+    Suspense,
+    useEffect,
+    useState,
+} from 'react'
 
 import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 
@@ -9,10 +14,16 @@ import RmDropdown from '../../../../../components/GlobalModels/Filters/RmDropdow
 import TeamLeadDropdown from '../../../../../components/GlobalModels/Filters/TeamLeadDropdown'
 import LoanTypeDropdown from '../../../../../components/GlobalModels/Filters/LoanTypeDropdown'
 
-import PipelineStages from './components/PipelineStages'
-import PipelineInsights from './components/PipelineInsights'
-
 import API from './API'
+
+// Lazy-load analytics display components.
+const PipelineStages = lazy(
+    () => import('./components/PipelineStages')
+)
+
+const PipelineInsights = lazy(
+    () => import('./components/PipelineInsights')
+)
 
 
 // =============================================================
@@ -1281,26 +1292,7 @@ function Overview() {
 
                 {!error && (
 
-                    <div
-                        className="
-                            mt-6
-                            min-w-0
-                        "
-                    >
-
-                        {/* =================================================
-                            PIPELINE INSIGHTS
-                        ================================================= */}
-
-                        <PipelineInsights
-                            counts={counts}
-                            viewType={viewType}
-                        />
-
-
-                        {/* =================================================
-                            APPLICATION PIPELINE
-                        ================================================= */}
+                    <Suspense fallback={null}>
 
                         <div
                             className="
@@ -1309,14 +1301,37 @@ function Overview() {
                             "
                         >
 
-                            <PipelineStages
-                                pipeline={pipeline}
+                            {/* =================================================
+                                PIPELINE INSIGHTS
+                            ================================================= */}
+
+                            <PipelineInsights
+                                counts={counts}
                                 viewType={viewType}
                             />
 
+
+                            {/* =================================================
+                                APPLICATION PIPELINE
+                            ================================================= */}
+
+                            <div
+                                className="
+                                    mt-6
+                                    min-w-0
+                                "
+                            >
+
+                                <PipelineStages
+                                    pipeline={pipeline}
+                                    viewType={viewType}
+                                />
+
+                            </div>
+
                         </div>
 
-                    </div>
+                    </Suspense>
 
                 )}
 
