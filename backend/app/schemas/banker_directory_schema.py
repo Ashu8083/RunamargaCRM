@@ -25,32 +25,31 @@ class CreateBankerDirectorySM(BaseModel):
 class CreateBankerDirectoryRequest(BaseModel):
     bank_id: int
     loan_type_id: int
-    city_id: int
-    state_id: int
-    status: BankerStatusEnum
+    city_id: int | None = None
+    state_id: int | None = None
+    status: BankerStatusEnum = BankerStatusEnum.active
     asms: list[CreateBankerDirectoryASM] = Field(
         default_factory=list
     )
     sms: list[CreateBankerDirectorySM] = Field(
         default_factory=list
-
     )
 
 class BankerDirectoryResponse(BaseModel):
     banker_directory_id: int
 
     bank_id: int
-    bank_name: str
+    bank_name: str | None = ""
     loan_type_id: int
-    loan_type_name: str
-    city_id: int
-    city_name: str
-    state_id: int
-    state_name: str
-    status: BankerStatusEnum
+    loan_type_name: str | None = ""
+    city_id: int | None = None
+    city_name: str | None = ""
+    state_id: int | None = None
+    state_name: str | None = ""
+    status: BankerStatusEnum = BankerStatusEnum.active
 
-    asms: list[CreateBankerDirectoryASM]
-    sms: list[CreateBankerDirectorySM]
+    asms: list[CreateBankerDirectoryASM] = Field(default_factory=list)
+    sms: list[CreateBankerDirectorySM] = Field(default_factory=list)
 
     model_config = {
         "from_attributes": True

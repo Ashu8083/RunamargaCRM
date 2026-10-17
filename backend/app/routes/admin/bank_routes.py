@@ -53,7 +53,7 @@ def create_bank(
 )
 def filter_search_banks(
     bank_filter: BankFilterSearchRequest = Depends(),
-    employee=Depends(check_permission("banks:create")),
+    employee=Depends(check_permission("banks:view")),
     db: Session = Depends(get_db),
 
 ):
@@ -69,7 +69,7 @@ def filter_search_banks(
 )
 def update_bank(
     bank_data: UpdateBankRequest,
-    employee=Depends(check_permission("banks:create")),
+    employee=Depends(check_permission("banks:edit")),
     db: Session = Depends(get_db),
     # employee: Employee = Depends(get_current_employee),
 ):
@@ -89,7 +89,7 @@ def update_bank(
 )
 def delete_bank(
     bank_id: int,
-    employee=Depends(check_permission("banks:create")),
+    employee=Depends(check_permission("banks:delete")),
     db: Session = Depends(get_db),
     # employee: Employee = Depends(get_current_employee),
 ):

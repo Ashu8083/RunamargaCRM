@@ -24,7 +24,10 @@ router = APIRouter(
 
 
 
-@router.post("/create")
+@router.post(
+    "/create",
+    response_model=BankerDirectoryResponse,
+)
 def create_banker_directory(
     banker_directory_data: CreateBankerDirectoryRequest,
     employee=Depends(check_permission("bankers:create")),
@@ -51,30 +54,36 @@ def get_banker_directory(
         banker_directory_id=banker_directory_id,
     )
 
-# @router.get("/")
-# def get_all_banker_directory_route(
-#     page: int = Query(
-#         1,
-#         ge=1,
-#     ),
-#     limit: int = Query(
-#         15,
-#         ge=1,
-#         le=100,
-#     ),
-#     db: Session = Depends(get_db),
-# ):
-#     return get_all_banker_directory_controller(
-#         db=db,
-#         page=page,
-#         limit=limit,
-#     )
+@router.get(
+    "/",
+    response_model=BankerDirectoryPaginatedResponse,
+)
+def get_all_banker_directory_route(
+    page: int = Query(
+        1,
+        ge=1,
+    ),
+    limit: int = Query(
+        15,
+        ge=1,
+        le=100,
+    ),
+    employee=Depends(check_permission("bankers:view")),
+    db: Session = Depends(get_db),
+):
+    return filter_search_banker_directory_controller(
+        db=db,
+        filter_data=BankerFilterSearchRequest(page=page, limit=limit),
+    )
 
-@router.put("/{banker_directory_id}")
+@router.put(
+    "/{banker_directory_id}",
+    response_model=BankerDirectoryResponse,
+)
 def update_banker_directory(
     banker_directory_id: int,
     banker_directory_data: CreateBankerDirectoryRequest,
-    employee=Depends(check_permission("bankers:update")),
+    employee=Depends(check_permission("bankers:edit")),
     db: Session = Depends(get_db),
 ):
 

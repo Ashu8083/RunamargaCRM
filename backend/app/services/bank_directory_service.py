@@ -155,9 +155,7 @@ def get_banker_directory(
             detail="Banker directory not found"
         )
 
-    return banker_directory_to_response(
-        banker_directory
-    )
+    return banker_directory
 
 # =========================================================
 # UPDATE
