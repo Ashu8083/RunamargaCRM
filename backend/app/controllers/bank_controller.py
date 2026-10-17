@@ -60,17 +60,11 @@ def filter_bank_search_controller(
     # employee: Employee,
 ):
 
-    bank = search_filter_bank_service(
+    banks = search_filter_bank_service(
         db=db_session,
         bank_filter=bank_search_filter,
     )
-    if not bank:
-        raise HTTPException(
-            status_code=404,
-            detail="Bank not found",
-
-        )
-    return bank
+    return banks or []
 
 def delete_bank_controller(
     db_session: Session,

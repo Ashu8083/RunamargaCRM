@@ -102,7 +102,6 @@ from .employee_management.face_enrollment_routes import (
 # ============================================================================
 
 from .phone_number_routes import router as phone_number_router
-from .CallManagement.call_logs import router as call_logs_router
 from .CallManagement.call_assignments import (
     router as call_assignment_router,
 )
@@ -246,9 +245,8 @@ router.include_router(attendance_router)
 
 
 # Call Management
-router.include_router(call_logs_router)
 router.include_router(call_assignment_router)
-router.include_router(call_log_router)
+
 # ============================================================================
 # FACE ENROLLMENT
 # ============================================================================
@@ -260,7 +258,6 @@ router.include_router(face_enrollment_router)
 # CALL MANAGEMENT
 # ============================================================================
 router.include_router(phone_number_router)
-router.include_router(call_logs_router)
 router.include_router(call_assignment_router)
 router.include_router(call_reassignment_audit_log_router)
 
