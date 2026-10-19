@@ -1,621 +1,799 @@
-RUNAMARGA CRM
-Authentication, RBAC & Data Access Architecture
-Technical Reference Document
-1. Purpose
-This document defines the authentication, role, context, permission, hierarchy, and data-access architecture for the new Runamarga CRM. It is intended to be the common reference for frontend and backend implementation.
-WHO ARE YOU?
-    ↓
-Authentication
-    ↓
-WHAT CAN YOU DO?
-    ↓
-Role + Active Context + Permissions
-    ↓
-WHICH DATA CAN YOU ACCESS?
-    ↓
-Hierarchy / Data Scope
-2. Core Concepts
-3. Application Architecture
-Frontend
-   ↓
-FastAPI Route
-   ↓
-Controller
-   ↓
-Service
-   ↓
-SQLAlchemy
-   ↓
-PostgreSQL
-routes — HTTP/API endpoints.
-controllers — request coordination.
-services — business and authorization logic.
-schemas — request/response validation.
-models — SQLAlchemy database models.
-security — authentication and permission helpers.
-config — application and database configuration.
-4. Authentication
-4.1 Employee Login Eligibility
-The employees table is the source for determining whether a person is allowed to log in.
-email identifies the employee.
-deleted_at must be NULL.
-deactivate must be false.
-status must be active.
-4.2 OTP Request
-Email
- ↓
-POST /auth/request-otp
- ↓
-Find employee
- ↓
-Validate employee
- ↓
-Generate OTP
- ↓
-Hash OTP
- ↓
-Store hash + expiry
-OTP currently expires after 5 minutes. During development/testing it may be returned in the response; production should use the real delivery mechanism.
-4.3 OTP Verification
-POST /auth/verify-otp
- ↓
-Find employee
- ↓
-Validate employee
- ↓
-Check OTP + expiry
- ↓
-Hash submitted OTP
- ↓
-Compare
- ↓
-Clear OTP
- ↓
-Create Access JWT + Refresh JWT
-4.4 Access vs Refresh Token
-4.5 JWT Payload
-sub — employee ID.
-type — access or refresh.
-exp — expiration timestamp.
-Sensitive personal/business information should not be placed in the JWT.
-4.6 Automatic Refresh
-API request
- ↓
-Access token valid?
- ├─ YES → 200
- └─ NO → 401
-          ↓
-     /auth/refresh
-          ↓
-   Validate refresh token
-          ↓
-    Check auth_tokens
-          ↓
-   Create new access token
-          ↓
-    Retry original API
-          ↓
-        200 OK
-4.7 Logout
-Logout should revoke the current refresh session using revoked_at and clear browser authentication cookies. The short-lived access token naturally expires.
-5. Role Architecture
-A Role represents the employee's broad organizational identity. The current roles are:
-1  admin
-2  Guest
-3  HR
-4  accountant
-5  developer
-6  business
-The current architecture uses ONE primary role per employee:
-employees.role_id → roles.id
-Role is not the same as operational context.
-6. Context Architecture
-A Context represents the operational capacity in which an employee works.
-1  Global
-2  Agent
-3  Relationship Manager
-An employee can have multiple contexts. For example, Business Test 1 can have both AGENT and RM contexts while retaining one primary role.
-6.1 Employee Context
-Employee
-   ↓
-employee_contexts
-   ↓
-Context
-employee_contexts stores employee_id, context_id, reports_to_id, is_default, is_active, and audit/deletion information.
-6.2 Active/Default Context
-One context can be the employee's default context. The active context determines which context-specific permissions are currently used.
-7. Permission Architecture
-A Permission represents a specific action.
-employees:view
-employees:create
-employees:update
-applications:view
-applications:create
-applications:update
-Permissions are stored in permissions. The permission code is the application-level identifier.
-7.1 Permission Assignment
-Permissions are assigned to an employee's context, not simply to the employee.
-Employee
-   ↓
-EmployeeContext
-   ↓
-EmployeeContextPermission
-   ↓
-Permission
-7.2 Context-Specific Permissions
-Business Test 1
- ├─ AGENT
- │   ├─ employees:view
- │   ├─ applications:view
- │   ├─ applications:create
- │   └─ applications:update
- │
- └─ RM
-     ├─ employees:view
-     ├─ applications:view
-     └─ applications:update
-8. Database Relationship
-roles
-  │
-role_id
-  ↓
-employees
-  │
-employee_id
-  ↓
-employee_contexts
-  │       │
-context_id reports_to_id
-  │       └────→ employees
-  ↓
-contexts
-
-employee_contexts
-  ↓
-employee_context_permissions
-  ↓
-permissions
-9. Hierarchy & Data Scope
-Permissions answer 'Can the employee perform this action?' Data scope answers 'Which records can the employee access?'
-Permission
-    +
-Hierarchy / Ownership / Data Scope
-    =
-Actual Data Access
-employee_contexts.reports_to_id stores the reporting relationship and can be used by backend services to determine an employee's operational scope.
-9.1 Example Hierarchy
-Manager
- ├─ RM
- │   ├─ Agent A
- │   └─ Agent B
- └─ RM
-9.2 Agent Access
-An Agent with applications:view should not automatically see every application. The backend combines the permission with the Agent's permitted/assigned data scope.
-9.3 RM Access
-An RM may access their own applications and applications belonging to agents in their permitted hierarchy, according to the backend service rules.
-9.4 Global/Admin Access
-Admin
- ↓
-GLOBAL
- ↓
-Assigned permissions
- ↓
-Global data scope
-10. Frontend RBAC
-10.1 Authentication State
-auth_user
- ├─ user
- ├─ contexts
- └─ active context
-       └─ permissions
-10.2 permissions.js
-permissions.js determines what the employee can do in the active context.
-getCurrentUser()
-      ↓
-getActiveContext()
-      ↓
-activeContext.permissions
-      ↓
-hasPermission()
-10.3 PermissionGate
-Page request
- ↓
-PermissionGate
- ↓
-hasPermission()
- ├─ YES → Render
- └─ NO  → Restrict
-10.4 PageContent
-PageContent renders application routes. It must not rely only on sidebar visibility because users can manually enter URLs.
-/crm/employees
-      ↓
-PageContent
-      ↓
-PermissionGate
-      ↓
-employees:view?
- ├─ YES → Page
- └─ NO  → Restricted
-10.5 Sidebar
-Sidebar permission checks control UI visibility. Actual page access must still be protected by page-level and backend authorization.
-10.6 apiClient
-apiClient handles frontend-to-FastAPI communication, including the API base URL, credentials/cookies, 401 handling, token refresh, and request retry. It is not itself the RBAC system.
-11. Backend Authorization
-The backend is the final security boundary. Frontend permission checks are for UI/UX and cannot be trusted as the final authorization mechanism.
-API Request
- ↓
-Access Token
- ↓
-get_current_employee()
- ↓
-Employee Identity
- ↓
-Permission Validation
- ↓
-Data Scope / Hierarchy
- ↓
-Database Query
- ↓
-Allow / Deny
-12. Employee Creation & RBAC Assignment
-CREATE EMPLOYEE
-      │
-      ├─ Employee
-      │    └─ role_id
-      │
-      ├─ Employee Details
-      │
-      └─ Employee Contexts
-             │
-             ├─ GLOBAL
-             ├─ RM
-             └─ AGENT
-                    │
-                    ↓
-            Context Permissions
-Create or identify the employee.
-Assign the employee's primary role through employees.role_id.
-Create the required EmployeeContext records.
-Mark the appropriate context as default when required.
-Set reports_to_id where a reporting relationship exists.
-Assign permissions through employee_context_permissions.
-13. Seeder Architecture
-1. Roles
-      ↓
-2. Contexts
-      ↓
-3. Employees
-      ↓
-4. Employee Contexts
-      ↓
-5. Employee Context Permissions
-The existing permissions seeder defines Permission records. The employee RBAC seeder assigns existing permissions by permission code rather than hard-coded IDs.
-13.1 Seeder Idempotency
-Run 1 → Create
-Run 2 → Reuse existing records
-Run 3 → Reuse existing records
-14. Current RBAC Example
-Test Admin 1
- └─ GLOBAL
-
-Test Employee
- └─ RM
-     └─ reports to Test Admin 1
-
-Business Test 1
- ├─ AGENT
- │   └─ reports to Test Employee
- └─ RM
-     └─ reports to Test Admin 1
-
-komal mane
- └─ GLOBAL
-15. End-to-End Flow
-LOGIN
- ↓
-Email + OTP
- ↓
-Employee Authentication
- ↓
-Access + Refresh Tokens
- ↓
-Frontend Auth Session
- ↓
-Active Context
- ↓
-Context Permissions
- ↓
-Page Permission
- ↓
-API Request
- ↓
-Backend Authentication
- ↓
-Permission Validation
- ↓
-Data Scope / Hierarchy
- ↓
-Database Query
- ↓
-ALLOW / DENY
-16. Five-Question Mental Model
-17. Project Rules
-18. Main Database Tables
-19. Final Architecture
-AUTHENTICATION
-                         │
-                         ▼
-                      EMPLOYEE
-                         │
-              ┌──────────┴──────────┐
-              ▼                     ▼
-            ROLE                 CONTEXT
-                                    │
-                                    ▼
-                            ACTIVE CONTEXT
-                                    │
-                                    ▼
-                              PERMISSIONS
-                                    │
-                                    ▼
-                              AUTHORIZATION
-                                    │
-                                    ▼
-                              DATA SCOPE
-                                    │
-                                    ▼
-                                HIERARCHY
-                                    │
-                                    ▼
-                              DATABASE DATA
-This architecture keeps identity, organizational role, operational context, actions, and record-level scope separate. That separation is the foundation of the Runamarga CRM authorization model.
-Concept | Question | Responsibility
-Authentication | Who is this employee? | Proves identity and creates an authenticated session.
-Role | What is the employee's broad organizational role? | Identifies the primary organizational role.
-Context | In which operational capacity is the employee working? | Defines the employee's operating context.
-Permission | What actions are allowed? | Defines specific actions such as view/create/update.
-Data Scope | Which records can the employee access? | Limits records according to ownership/hierarchy.
-
-Property | Access JWT | Refresh JWT
-Purpose | Access protected APIs | Renew the authenticated session
-Intended lifetime | 30 minutes | 7 days
-Database | Not stored | Hash stored in auth_tokens
-Employee ID | sub | sub
-Revocation | Short-lived | Can be revoked via auth_tokens
-
-Question | Answer
-1. WHO? | Employee / Authentication
-2. WHAT ROLE? | Primary Role
-3. WHERE / IN WHICH CAPACITY? | Active Context
-4. WHAT CAN THEY DO? | Permissions
-5. WHICH RECORDS? | Data Scope / Hierarchy
-
-Rule | Meaning
-Role ≠ Context | Role is the broad organizational role; Context is the operational capacity.
-Context ≠ Permission | AGENT/RM/GLOBAL does not itself grant an action.
-Permission ≠ Data Scope | applications:view does not automatically grant access to every application.
-One employee can have multiple contexts | The employee still has one primary role.
-Permissions belong to employee-context | Permission assignment is context-specific.
-Frontend is not the final security boundary | Backend permission and data-scope checks must enforce actual access.
-Use permission codes | Seeders/checks should use permission codes rather than hard-coded IDs.
-
-Table | Purpose
-roles | Primary organizational roles.
-employees | Employee identity, status, and primary role.
-contexts | Operational contexts.
-employee_contexts | Assigns contexts and stores hierarchy/default information.
-permissions | Defines available actions.
-employee_context_permissions | Assigns permissions to a specific employee context.
-employee_details | Personal, employment, financial, and identity details.
-auth_tokens | Hashed refresh-session information.
-
-
-
-
-                    LOGIN
-                      │
-                      ▼
-              OTP verification
-                      │
-              ┌───────┴────────┐
-              ▼                ▼
-       access_token       refresh_token
-          cookie             cookie
-              │
-              ▼
-       get_current_employee()
-              │
-              ▼
-           Employee
-              │
-              ▼
-        AccessControl
-              │
-        ┌─────┴─────┐
-        ▼           ▼
-    Context      Permissions
-        │           │
-        └─────┬─────┘
-              ▼
-       Authorization
-              │
-        ┌─────┴─────┐
-        ▼           ▼
-      Allow        403
-Frontend
-   │
-   ▼
-/auth/me
-   │
-   ▼
-current contexts + permissions
-   │
-   ▼
-PermissionGate
-   │
-   ▼
-UI visibility
-
-
-
-
-
-
-
-
-
-
-Runamarga CRM — Authentication & RBAC Flow
-
-How authentication, contexts, permissions, async/sync functions, and PermissionGate work
-
-1. Big Picture
-
-The CRM separates authentication, authorization, context selection, and frontend UI permission checks. The backend database is the source of truth for permissions. The frontend keeps a cached copy for fast UI checks.
-
-Overall flow: Login → HttpOnly access/refresh cookies → /auth/me → database contexts & permissions → localStorage cache → PermissionGate → UI.
-
-2. Authentication: Who is the user?
-
-After OTP verification, the backend creates an access token and a refresh token. The tokens are stored in HttpOnly cookies, so frontend JavaScript does not manually read the access token.
-
-get_current_employee() reads the access-token cookie, validates the JWT, extracts the employee ID, loads the Employee from PostgreSQL, and rejects deleted, deactivated, or inactive employees.
-
-3. Contexts and Permissions
-
-Permissions are not taken directly from the JWT. They are stored in the database through EmployeeContext and EmployeeContextPermission.
-
-Employee → EmployeeContext → Context
-
-EmployeeContext → EmployeeContextPermission → Permission
-
-get_employee_contexts() reads active contexts and their active permission codes.
-
-4. What /auth/me Does
-
-GET /auth/me authenticates the employee using the HttpOnly access token, then reads the employee's current contexts and permissions directly from the database.
-
-Example: { "success": true, "data": { "id": 125, "name": "Employee", "email": "employee@example.com", "role": "Admin", "contexts": [ { "id": 1, "code": "GLOBAL", "name": "Global", "is_default": true, "permissions": ["dashboard:view", "loans:view"] } ] } }
-
-5. Why We Added getStoredUser()
-
-There are now two intentionally different functions.
-
-getCurrentUser() — Asynchronous: calls /auth/me, gets fresh DB-backed user data, and updates localStorage.
-
-getStoredUser() — Synchronous: immediately reads the cached user from localStorage for frontend permission checks.
-
-6. Synchronous vs Asynchronous
-
-Synchronous code returns its result immediately and can be used directly by synchronous functions.
-
-Asynchronous code performs an operation that may take time, such as a network request. It returns a Promise and is normally consumed with await inside an async function.
-
-In this project: const user = getStoredUser() is synchronous; const user = await getCurrentUser() is asynchronous.
-
-PermissionGate and the permission helper functions are synchronous, so they must not call an API request every time they check a permission.
-
-7. Application Startup Flow
-
-App.js checks whether a cached user exists using isAuthenticated(), then calls getCurrentUser() to synchronize the cache with the backend.
-
-1. App starts. 2. isAuthenticated() checks localStorage synchronously. 3. getCurrentUser() calls GET /auth/me. 4. Backend reads current employee and permissions from DB. 5. Fresh user replaces auth_user in localStorage. 6. auth:changed is dispatched. 7. PermissionGate reads the updated cached user. 8. UI reflects the latest permissions.
-
-8. Expired Access Token Flow
-
-If /auth/me returns 401, getCurrentUser() attempts to refresh the access token using the refresh-token cookie, then retries /auth/me.
-
-Flow: /auth/me → 401 → /auth/refresh → new access cookie → /auth/me again → fresh user data.
-
-9. PermissionGate Flow
-
-PermissionGate is a frontend UI guard. It reads permissions from the active context of the stored user.
-
-PermissionGate → hasAnyPermission()/hasAllPermissions() → getStoredUser() → getActiveContext() → context.permissions.
-
-If the required permission exists, the component is rendered; otherwise the fallback is rendered.
-
-10. Important Security Principle
-
-Frontend PermissionGate controls what the user sees. It must not be treated as the real security boundary.
-
-The backend should independently check the required permission before performing protected operations. The database should remain the source of truth.
-
-11. What Happens When a Permission Is Removed
-
-1. Employee initially has dashboard:view in the database. 2. Login returns the permission and caches it in localStorage. 3. An administrator removes dashboard:view from EmployeeContextPermission. 4. The next application/session synchronization calls /auth/me. 5. get_employee_contexts() reads the database again. 6. dashboard:view is no longer returned. 7. localStorage is updated. 8. PermissionGate no longer allows dashboard:view.
-
-12. Current Architecture Diagram
-
-DATABASE
-  └── Employee
-       └── EmployeeContext
-            └── EmployeeContextPermission
-                 └── Permission
-                       ↓
-                  GET /auth/me
-                       ↓
-                getCurrentUser() [async]
-                       ↓
-              localStorage.auth_user
-                       ↓
-                getStoredUser() [sync]
-                       ↓
-                 getActiveContext()
-                       ↓
-                  permissions[]
-                       ↓
-                  PermissionGate
-                       ↓
-                        UI
-
-13. Files Involved
-
-backend/app/core/security.py — authenticates the employee from the HttpOnly access-token cookie.
-
-backend/app/routes/auth_routes.py — exposes /auth/me and login/refresh/logout endpoints.
-
-backend/app/services/auth_service.py — builds current contexts and permissions.
-
-admin-react/src/app/auth.js — manages frontend auth state, fresh-user synchronization, and cached user data.
-
-admin-react/src/app/permissions.js — checks permissions synchronously for the frontend.
-
-admin-react/src/App.js — synchronizes the current user when the application starts.
-
-admin-react/src/app/apiClient.js — handles API requests and access-token refresh/retry behavior.
-
-14. Production-Grade Responsibility
-
-Synchronizing /auth/me fixes stale frontend permission state. For full production-grade authorization, protected backend endpoints must also enforce permissions using the backend AccessControl layer. The frontend should never be the only authorization check.
-
-
-
-
-                    Employee
-                       │
-                       ▼
-                EmployeeContext
-                       │
-                       ▼
-                Active Context
-                       │
-             ┌─────────┴─────────┐
-             ▼                   ▼
-        Permissions        Hierarchy
-             │                   │
-             ▼                   ▼
-       What can user       Which people can
-          DO?              user interact with?
-             │                   │
-             └─────────┬─────────┘
-                       ▼
-              Application Filters API
-                       │
-          ┌────────────┼────────────┐
-          ▼            ▼            ▼
-         RM          Agent       Team Lead
-          │            │            │
-          └────────────┼────────────┘
-                       ▼
-                  React Dropdowns
+RUNAMARGA CRM BACKEND
+Architecture and Source Inventory
+Last reviewed: 2026-10-19
+
+==========================================================================
+1. PURPOSE AND SCOPE
+==========================================================================
+
+This document is the technical map for the FastAPI backend in backend/. It
+records the runtime design, module ownership, and current source inventory so
+that a developer can locate the correct layer before making a change.
+
+Included in the maintained-source inventory:
+- Application Python modules, configuration, SQL trigger definitions, and
+  Alembic migration source.
+- Backend root configuration and dependency files.
+
+Documented but intentionally not enumerated file-by-file:
+- backend/.venv/: local virtual environment; not application source.
+- **/__pycache__/** and *.pyc: generated Python bytecode.
+- backend/app/static/uploads/** (13 files) and
+  backend/app/services/static/uploads/** (3 files): runtime/user-uploaded
+  data. These are not source-code assets.
+- backend/runamarga_new_before_shuffle_migration.dump: database export;
+  restricted operational artifact.
+
+Current source counts:
+- 306 Python modules under backend/app/ (excluding the virtual environment
+  and generated bytecode).
+- 66 route modules, 57 controller modules, 59 service modules, 51 models,
+  and 39 schemas.
+- 68 Alembic revision files.
+
+
+==========================================================================
+2. SYSTEM OVERVIEW
+==========================================================================
+
+Runtime stack
+- API framework: FastAPI.
+- ORM and migrations: SQLAlchemy 2.x and Alembic.
+- Database driver: PostgreSQL through psycopg.
+- Validation: Pydantic 2.x.
+- Authentication: JWT and cookie-oriented security helpers.
+- Real-time features: FastAPI WebSocket routes and in-process listeners.
+- Files: FastAPI StaticFiles serves app/static/uploads at /uploads.
+- Face workflows: InsightFace, ONNX Runtime, OpenCV, Pillow, NumPy, and
+  supporting imaging libraries.
+
+Application entry points
+- HTTP admin API: /api/... via app.routes.admin.
+- Android/API surface: /android/... via app.routes.api.
+- WebSocket endpoints: registered without an additional prefix.
+- Static uploads: /uploads/...
+
+High-level request path
+
+Client -> FastAPI route -> controller -> service -> SQLAlchemy -> PostgreSQL
+                                                    |
+                                             Pydantic/JSON response
+
+Cross-cutting concerns
+- Authentication and token validation: core/security.py and core/api_security.py.
+- Authorization/data scope: core/access_control.py and dependency helpers.
+- Logging/auditing: audit/, log_config.py, audit-log models/services/routes.
+- Validation: schemas/ at API boundaries.
+- File persistence: utils/file_upload.py and static upload storage.
+
+
+==========================================================================
+3. STARTUP, LIFECYCLE, AND ROUTING
+==========================================================================
+
+backend/app/main.py
+- Creates the FastAPI application with an async lifespan.
+- Applies database triggers before listeners are started.
+- Discovers async listener functions named listen_* in app/listeners/.
+- Cancels and awaits listener tasks during shutdown.
+- Mounts /uploads from app/static/uploads.
+- Registers CORS for the configured local frontend origin.
+- Mounts the admin router at /api, API/mobile router at /android, and
+  WebSocket router without a prefix.
+
+Router composition
+- app/routes/admin/__init__.py is the admin-router composition root.
+- app/routes/api/__init__.py is the Android/API composition root.
+- app/routes/admin/websockets/__init__.py is the WebSocket composition root.
+- Individual route files declare endpoint contracts and delegate work to the
+  controller/service layers.
+
+Startup and background components
+- database_triggers/runner.py installs or updates the reminder SQL trigger.
+- listeners/reminder_listener.py contains the automatically discovered
+  reminder listener.
+- scheduler/ contains reminder scheduling utilities. Its deployment command
+  and process ownership must be explicit when scheduling is enabled.
+
+
+==========================================================================
+4. LAYER RESPONSIBILITIES
+==========================================================================
+
+Layer                 Responsibility
+--------------------  ------------------------------------------------------
+routes/               HTTP/WebSocket endpoint declaration, dependency
+                      wiring, and response/status handling.
+controllers/          Request orchestration and hand-off to business logic.
+services/             Business rules, transactions, query composition, and
+                      domain-level authorization decisions.
+schemas/              Pydantic input/output contracts and serialization.
+models/               SQLAlchemy table mappings, relations, and persistence
+                      metadata.
+core/                 Security, access control, logging, and WebSocket auth.
+dependency/           Reusable FastAPI dependency injection adapters.
+config/               Environment-backed settings and database session setup.
+audit/                Reusable audit logging contract and implementation.
+seeders/              Controlled bootstrap/reference-data population.
+migrations/           Versioned database schema evolution through Alembic.
+utils/                Shared technical helpers such as upload persistence.
+
+Boundary rules
+- Routes do not contain business queries that belong in services.
+- Controllers do not duplicate validation already represented by schemas.
+- Services receive request-scoped SQLAlchemy sessions and do not keep ORM
+  entities in a process-wide cache.
+- Database schema changes require a new Alembic revision; do not edit an
+  applied historical migration.
+- Endpoint authorization is enforced server-side. Frontend visibility is not
+  an authorization boundary.
+
+
+==========================================================================
+5. DOMAIN MAP
+==========================================================================
+
+Domain                    Primary implementation areas
+------------------------  ---------------------------------------------------
+Authentication/RBAC       auth, contexts, employees, roles, permissions,
+                          employee_contexts, employee_context_permissions,
+                          auth_tokens, core security/access-control modules.
+Loans                     loan applications, assignments, documents,
+                          addresses, co-applicants, references, processing,
+                          shuffle, duplicates, reverts, team chat.
+Call management           phone numbers, call logs, assignments,
+                          reassignment and audit logging.
+Employees/attendance      employee records/details, attendance, face profiles,
+                          Android attendance APIs and face enrollment.
+Banks and DSA             banks, banker directory, ASM/SM associations, DSA.
+Analytics/dashboard       dashboard, call analytics, agent analytics, filters.
+Audit/logs                admin, employee, agent, team-lead, phone, loan,
+                          assignment, processing, and approval log domains.
+Reference data            states, cities, loan types, contexts, roles,
+                          permissions, common dropdown data.
+Real-time/reminders       reminder trigger/listener/WebSocket and team chat.
+
+
+==========================================================================
+6. ROOT INVENTORY
+==========================================================================
+
+backend/
+  .env.example
+    Environment-variable template. Do not place live credentials in source.
+  alembic.ini
+    Alembic configuration.
+  requirements.txt
+    Pinned Python runtime dependencies.
+  migrations/
+    Alembic environment and revision history; detailed in section 13.
+  app/
+    FastAPI application package; detailed in sections 7-12.
+  runamarga_new_before_shuffle_migration.dump
+    Restricted database dump; operational artifact, not application source.
+  .venv/
+    Local dependency environment; excluded from versioned source inventory.
+
+
+==========================================================================
+7. APPLICATION FOUNDATION INVENTORY
+==========================================================================
+
+app/
+  __init__.py
+    Application package marker.
+  main.py
+    FastAPI factory, lifecycle, CORS, static mount, and router registration.
+
+app/config/
+  __init__.py
+  database.py
+    Builds the PostgreSQL SQLAlchemy engine, session factory, and get_db
+    request dependency.
+  settings.py
+    Loads database and mail settings from environment variables.
+
+app/core/
+  access_control.py
+    Permission, context, hierarchy, and data-scope authorization helpers.
+  api_security.py
+    API-facing security helpers.
+  log_config.py
+    Logging configuration helpers.
+  security.py
+    JWT/cookie authentication and current-employee security helpers.
+  websocket_auth.py
+    Authentication support for WebSocket connections.
+
+app/dependency/
+  __init__.py
+  get_access_control_dependency.py
+    FastAPI dependency adapter for access-control resolution.
+
+app/Enums/
+  __init__.py
+  GenderEnum.py
+  LogAction.py
+
+app/audit/
+  __init__.py
+  audit_service.py
+  schema.py
+
+app/database_triggers/
+  __init__.py
+  reminder_trigger.sql
+    PostgreSQL reminder trigger definition.
+  runner.py
+    Trigger installation/update runner invoked at application startup.
+
+app/listeners/
+  __init__.py
+  reminder_listener.py
+    Background reminder listener discovered by main.py.
+
+app/scheduler/
+  reminder_scheduler.py
+  scheduler_runner.py
+
+app/utils/
+  face_embedding.py
+  file_upload.py
+
+app/websockets/
+  reminder_websocket.py
+  team_chat_websocket.py
+
+
+==========================================================================
+8. DATA MODEL INVENTORY
+==========================================================================
+
+Model conventions
+- All persistent entities are represented in app/models/.
+- Model ownership follows database domain, not endpoint ownership.
+- Relationship and index changes are migrated through Alembic.
+
+app/models/
+  __init__.py
+  base.py
+    SQLAlchemy declarative base/shared model behavior.
+  admin_logs.py
+  agent_audit_logs.py
+  attendance.py
+  audit_logs.py
+  auth_tokens.py
+  bank.py
+  banker_directories.py
+  banker_directory_asms.py
+  banker_directory_sms.py
+  bank_processings.py
+  bank_processing_logs.py
+  call_assignments.py
+  call_assignment_audit_logs.py
+  call_logs.py
+  call_reassignment_audit_logs.py
+  cities.py
+  contexts.py
+  dsa_details.py
+  duplicate_approvals.py
+  duplicate_lead_approval_logs.py
+  employee_audit_logs.py
+  employee_context_permissions.py
+  employee_contexts.py
+  employee_details.py
+  employee_face_profiles.py
+  employee_roles.py
+  employees.py
+  languages.py
+  loan_addresses.py
+  loan_application_audit_logs.py
+  loan_application_status_audit_logs.py
+  loan_applications.py
+  loan_assignments.py
+  loan_coapplicant.py
+  loan_document.py
+  loan_other_details.py
+  loan_reference.py
+  loan_shuffle_history.py
+  loan_type_change_log.py
+  loan_types.py
+  permissions.py
+  phone_number_audit_logs.py
+  phone_numbers.py
+  reminders.py
+  reverted_loans.py
+  roles.py
+  states.py
+  team_chat.py
+  team_lead_audit_logs.py
+
+
+==========================================================================
+9. API ROUTE INVENTORY
+==========================================================================
+
+Admin API composition
+  app/routes/admin/__init__.py
+    Registers the /api route modules below.
+
+Authentication, common, and reference data
+  admin/auth_routes.py
+  admin/common_routes.py
+  admin/context_routes.py
+  admin/state_routes.py
+  admin/city_routes.py
+
+Employees, roles, attendance, and profiles
+  admin/admins_routes.py
+  admin/agents_routes.py
+  admin/team_leads_routes.py
+  admin/employee_routes.py
+  admin/attendance_routes.py
+  admin/employee_management/attendance_routes.py
+  admin/employee_management/face_enrollment_routes.py
+  admin/profile_routes.py
+
+Loans
+  admin/Loans/application_routes.py
+  admin/Loans/edit_application_routes.py
+  admin/Loans/loan_assignment_routes.py
+  admin/Loans/shuffle_loans_routes.py
+  admin/Loans/duplicate_approval_routes.py
+  admin/Loans/reverted_loans_routes.py
+  admin/Loans/team_chat.py
+
+Banks and directories
+  admin/bank_routes.py
+  admin/banker_directory_routes.py
+  admin/dsa_routes.py
+
+Call management
+  admin/CallManagement/call_assignments.py
+  admin/CallManagement/call_logs.py
+  admin/phone_number_routes.py
+  admin/call_reassignment_audit_log_routes.py
+
+Dashboard and analytics
+  admin/Dashboard/application_status.py
+  admin/Dashboard/application_status_applications_routes.py
+  admin/Dashboard/application_funnel_routes.py
+  admin/Dashboard/loan_type_distribution_routes.py
+  admin/Dashboard/monthly_trend_routes.py
+  admin/CallAnalytics/overview_routes.py
+  admin/CallAnalytics/performance_routes.py
+  admin/CallAnalytics/Trends/ad_number_trend_routes.py
+  admin/CallAnalytics/Trends/daily_call_trend_routes.py
+  admin/CallAnalytics/Trends/monthly_call_overview_routes.py
+  admin/CallAnalytics/Trends/performance_trend_routes.py
+  admin/CallAnalytics/Trends/team_lead_call_performance_routes.py
+  admin/AgentAnalytics/overview_routes.py
+  admin/AgentAnalytics/performance_routes.py
+  admin/AgentAnalytics/trends_routes.py
+  admin/ApplicationFilter/application_filter_routes.py
+
+Reminders and audit/log views
+  admin/reminders_routes.py
+  admin/admin_log_routes.py
+  admin/employee_audit_log_routes.py
+  admin/loan_application_audit_log_routes.py
+  admin/loan_application_status_audit_log_routes.py
+  admin/phone_number_audit_log_routes.py
+  admin/Logs/agent_audit_log_routes.py
+  admin/Logs/bank_processing_logs_routes.py
+  admin/Logs/duplicate_lead_approval_log_routes.py
+  admin/Logs/loan_shuffle_logs_routes.py
+  admin/Logs/loan_type_change_logs_routes.py
+  admin/Logs/reverted_loan_logs_routes.py
+  admin/Logs/team_audit_log_routes.py
+
+WebSockets
+  admin/websockets/__init__.py
+  admin/websockets/reminder_websocket.py
+  admin/websockets/team_chat.py
+
+Android/API router composition
+  api/__init__.py
+  api/auth_routes.py
+  api/call_log_api.py
+  api/attendance/__init__.py
+  api/attendance/attendance_routes.py
+
+Top-level package marker
+  routes/__init__.py
+
+
+==========================================================================
+10. CONTROLLER INVENTORY
+==========================================================================
+
+Controllers translate route inputs into service calls.
+
+Core/admin
+  admin_log_controller.py
+  admins_controller.py
+  agent_controller.py
+  attendance_controller.py
+  auth_controller.py
+  bank_controller.py
+  banker_directory_controller.py
+  call_reassignment_audit_log_controller.py
+  city_controller.py
+  contexts_controller.py
+  dsa_details_controller.py
+  employee_audit_log_controller.py
+  employee_controller.py
+  loan_application_audit_log_controller.py
+  loan_application_status_audit_log_controller.py
+  phone_number_audit_log_controller.py
+  phone_numbers_controller.py
+  profile_controller.py
+  reminders_controller.py
+  state_controller.py
+  team_lead_controller.py
+
+Controllers by feature
+  AgentAnalytics/
+    overview_controller.py
+    performance_controller.py
+    trends_controller.py
+  api/auth/
+    auth_controller.py
+  api/attendance/
+    attendance_controller.py
+  ApplicationFilter/
+    application_filter_controller.py
+  CallAnalytics/
+    overview_controller.py
+    performance_controller.py
+    Trends/ad_number_trend_controller.py
+    Trends/daily_call_trend_controller.py
+    Trends/monthly_call_overview_controller.py
+    Trends/performance_trend_controller.py
+    Trends/team_lead_call_performance_controller.py
+  CallManagement/
+    call_assignment_controller.py
+    call_logs_controller.py
+  Dashboard/
+    application_status_controller.py
+    ApplicationFunnelController.py
+    ApplicationStatusApplicationsController.py
+    LoanTypeDistributionController.py
+    MonthlyTrendController.py
+  employee_management/
+    attendance_controller.py
+    face_enrollment_controller.py
+  Loans/
+    application_controller.py
+    duplicate_approval_controller.py
+    edit_controller.py
+    loan_assignment_controller.py
+    revert_application_controller.py
+    shuffle_loans_controller.py
+    team_chat_controller.py
+  Logs/
+    agent_audit_log_controller.py
+    bank_processing_logs_controller.py
+    call_assignment_log_controller.py
+    duplicate_lead_approval_log_controller.py
+    loan_shuffle_logs_controller.py
+    loan_type_change_logs_controller.py
+    team_lead_audit_log_controller.py
+
+
+==========================================================================
+11. SERVICE INVENTORY
+==========================================================================
+
+Services own domain behavior and data queries. A service can be reused by
+multiple routes/controllers but preserves authorization and transaction
+boundaries.
+
+Core/admin
+  admin_log_service.py
+  admins_service.py
+  agent_audit_logs_service.py
+  agent_service.py
+  auditl_log_service.py
+  auth_service.py
+  bank_directory_service.py
+  bank_service.py
+  cities.py
+  contexts.py
+  dsa_service.py
+  employee_audit_log_service.py
+  employee_face_profile_service.py
+  employee_service.py
+  loan_application_audit_log_service.py
+  loan_application_status_audit_log_service.py
+  loan_types.py
+  phone_number_audit_log_service.py
+  profile_service.py
+  reminders_service.py
+  shuffle_loans_service.py
+  states.py
+  team_lead_aduit_log_service.py
+  team_lead_service.py
+
+Services by feature
+  AgentAnalytics/
+    overview_service.py
+    performance_service.py
+    trends_service.py
+  api/auth/
+    auth_service.py
+  api/attendance/
+    attendance_service.py
+  ApplicationFilter/
+    application_filter_service.py
+  CallAnalytics/
+    overview_service.py
+    performance_service.py
+    Trends/ad_number_trend_service.py
+    Trends/daily_call_trend_service.py
+    Trends/monthly_call_overview_service.py
+    Trends/performance_trend_service.py
+    Trends/team_lead_call_performance_service.py
+  CallManagement/
+    call_assignment_service.py
+    call_log_service.py
+    call_reassignment_audit_log_service.py
+  Dashboard/
+    application_funnel_service.py
+    application_status_applications_service.py
+    application_status_service.py
+    loan_type_distribution_service.py
+    monthly_trend_service.py
+  employee_management/
+    attendance_service.py
+    face_enrollment_service.py
+  face/
+    __init__.py
+    face_embedding.py
+    face_profile_service_for_apk.py
+    face_recognition.py
+    face_validation.py
+  Loans/
+    application_service.py
+    duplicate_approval_service.py
+    loan_assignment_service.py
+  logs/
+    bank_processing_logs_service.py
+    duplicate_lead_approval_logs_service.py
+    loan_shuffle_logs_service.py
+    loan_type_change_logs_service.py
+
+
+==========================================================================
+12. SCHEMA, SEEDER, AND SUPPORT INVENTORY
+==========================================================================
+
+Pydantic schemas
+  admin_log_schema.py
+  admins_schema.py
+  agent_schema.py
+  AgentAuditLog.py
+  application_schema.py
+  auth.py
+  bank_schema.py
+  banker_directory_schema.py
+  call_reassignment_audit_log_schema.py
+  city.py
+  contexts.py
+  DSA_schema.py
+  duplicate_approval_schema.py
+  employee_audit_log_schema.py
+  employee_profile_schema.py
+  employee.py
+  loan_application_audit_log_schema.py
+  loan_application_status_audit_log_schema.py
+  loan_type.py
+  phone_number_audit_log_schema.py
+  reminders_schema.py
+  shuffle_loans_schema.py
+  state.py
+  team_chat.py
+  team_lead_schema.py
+  TeamLeadLog.py
+  AgentAnalytics/overview_schema.py
+  AgentAnalytics/performance_schema.py
+  AgentAnalytics/trends_schema.py
+  api/auth/auth_schema.py
+  api/attendance/attendance_schema.py
+  CallAnalytics/call_logs_scheema.py
+  CallAnalytics/overview_schema.py
+  CallAnalytics/performance_schema.py
+  CallAnalytics/Trends/ad_number_trend_schema.py
+  CallAnalytics/Trends/call_performance_trend_schema.py
+  employee_management/attendance_schema.py
+  employee_management/face_enrollment_schema.py
+  Loans/loan_assignment.py
+
+Seeders
+  city_seeder.py
+  employee_rbac_seeder.py
+  loan_type_seeder.py
+  permissions.py
+  run.py
+  state_seeder.py
+
+Seeder execution order
+  1. States and cities.
+  2. Loan types and permission reference data.
+  3. Employee RBAC data after roles, contexts, and permissions exist.
+  4. Use seeders as idempotent bootstrap tooling; do not use them as ad hoc
+     production data repair scripts without review.
+
+
+==========================================================================
+13. DATABASE MIGRATION INVENTORY
+==========================================================================
+
+Alembic framework
+  migrations/env.py
+  migrations/README
+  migrations/script.py.mako
+
+Revision history (68 files)
+  0275d0ba3d0f_create_base_tables.py
+  08f4737e4ece_merge_loan_assignments_and_call_.py
+  09c940a9077c_create_loan_documents_table.py
+  122b78c4d0c7_create_attendance_table.py
+  174e4245fdc9_create_phone_numbers_table.py
+  191be46b449a_restore_missing_duplicate_approvals_and_.py
+  1aec75f634d8_create_duplicate_approvals.py
+  1d9000bf2bb3_create_auth_tokens.py
+  21b2a6aa9af6_upgrade_loan_shuffle_history.py
+  226f44d3f834_dev_ashu_employee_code_added_to_.py
+  2e9710d6e46e_create_call_logs.py
+  331077bf5492_dsa_model_added.py
+  3829bdb14c74_dev_ashu_callassignmentauditlogs_create_.py
+  38a6b0ab45d3_merge_current_migration_heads.py
+  3bfd70d1dde5_add_assigned_from_phone_to_call_.py
+  3efb919b64e1_remove_redundant_phone_employee_unique_.py
+  4058313f01b1_merge_migration_heads.py
+  40c06a71ec75_merge_migration_heads.py
+  4aaa83cde927_create_phone_numbers_table.py
+  4ae955b8443c_create_team_chat_table.py
+  4eeac1d250e3_create_bank_processings_table.py
+  4ffa9a4c3742_create_loan_assignments_table.py
+  51b9c47d546b_create_duplicate_approvals_table.py
+  539e19e7ef9b_add_rm_id_to_duplicate_approvals.py
+  5437c1002ecb_create_reverted_loans_table.py
+  55d16e508d0f_merge_migration_heads.py
+  5cee164372ec_remove_legacy_loan_ownership_columns.py
+  5d02122bc674_convert_loan_application_ownership_to_.py
+  6674ebce4c34_dev_ashu_audit_log_modle_add.py
+  67394766279f_update_call_logs_to_employee_context.py
+  684e345acae7_add_phone_id_to_call_logs.py
+  69cb37642d3a_update_reverted_by_id_from_reverted_.py
+  6b2d2bd6361b_add_from_agent_and_rm_ids_to_loan_.py
+  6c2937497647_update_employee_otp_fields.py
+  77ef8f57497a_add_employee_multiple_roles_table.py
+  785978f8a9b4_dev_ashu_employee_audit_log_create.py
+  7989272e568a_bank_s_model_dsa_and_banker_directory.py
+  835a0f8e3140_bank_s_model_dsa_and_banker_directory.py
+  8c274a999779_change_call_assignments_to_employee_.py
+  8f1231a4cce7_change_reports_to_employee_context.py
+  9125cf1f074c_remove_admin_id_from_call_logs.py
+  999b02bb7584_update_duplicate_approval_and_team_chat_.py
+  9e690ac09e82_create_call_assignments.py
+  a19f28a3bcd4_remove_obsolete_loan_coapplicant_.py
+  a342ef0d9d77_merge_employee_audit_and_loan_shuffle_.py
+  aa732e56f913_create_loan_addresses_table.py
+  ae31427ffdab_create_duplicate_lead_approval_logs.py
+  b515626cfb7d_create_loan_reference_table.py
+  b8356d296335_add_rejected_remarks_to_loan_.py
+  b916860233ec_.py
+  bb15a71ef441_add_loan_types_and_loan_applications.py
+  cb7d614f6ba1_create_employee_rbac_structure.py
+  cd13949c87e7_employee_table_add.py
+  d1d24683bb29_create_duplicate_approvals_table.py
+  d68261f43881_create_bank_processing_logs.py
+  db693eab7dac_merge_migration_heads.py
+  dea22873ce2b_.py
+  e3bb0899c9ab_add_action_by_to_loan_assignments.py
+  e98e585140b2_call_reassign_and_aplication_satatus_.py
+  e9ead7bd46b9_create_reminders_table.py
+  ea7392ad88fb_merge_migration_heads.py
+  eb5f9fd7ed25_allow_null_loan_id_in_duplicate_.py
+  ef08f3f527ca_update_employee_face_profiles.py
+  ef1f8a50b1f2_create_loan_co_applicant_table.py
+  f04cb08aef94_.py
+  f52975b45c63_migrate_duplicate_approval_ownership_to_.py
+  f62e5eb02051_create_loan_type_change_logs.py
+  fa78eb968b27_fix_auth_token_uniqueness.py
+
+Migration operating rules
+- Generate a new revision for every schema, index, constraint, or data
+  backfill change.
+- Verify a single intended Alembic head before release; merge revisions only
+  when parallel branches legitimately create multiple heads.
+- Run upgrades against a disposable database before production.
+- Back up and test reversibility for destructive data/schema operations.
+
+
+==========================================================================
+14. CONFIGURATION, SECURITY, AND OPERATIONS
+==========================================================================
+
+Environment values currently read by app/config/settings.py
+- DATABASE_HOST
+- DATABASE_PORT
+- DATABASE_NAME
+- DATABASE_USER
+- DATABASE_PASSWORD
+- RESEND_API_KEY
+- MAIL_FROM_ADDRESS (default: noreply@runamarga.com)
+- MAIL_FROM_NAME (default: Runamarga Team)
+
+Operational safeguards
+- Keep .env outside version control; .env.example contains names only.
+- Keep database exports and uploaded identity/face images out of source
+  control and restrict access to them.
+- Configure production CORS origins explicitly; localhost-only development
+  origins in main.py are not a production allow-list.
+- Run application instances behind a managed process supervisor and use
+  migration deployment steps separate from API startup.
+- Size SQLAlchemy connection pools according to database capacity and the
+  number of application workers before changing engine configuration.
+- Use structured logging and alerting around startup-trigger installation,
+  listener failures, authentication failures, and background jobs.
+
+
+==========================================================================
+15. MAINTENANCE CHECKLIST
+==========================================================================
+
+Adding an endpoint
+  1. Define or extend the schema contract.
+  2. Implement service behavior and authorization.
+  3. Add controller orchestration.
+  4. Add the route and register it in the appropriate router composition
+     module.
+  5. Add tests for authorization, invalid input, and success/error paths.
+
+Changing data storage
+  1. Update the SQLAlchemy model.
+  2. Create and review an Alembic migration.
+  3. Update schema, service, controller, and route contracts as required.
+  4. Check relevant query indexes and backfill requirements.
+  5. Test upgrade and rollback behavior on non-production data.
+
+Adding cacheable reference data
+  1. Cache serialized values, never request-bound ORM objects.
+  2. Key caches by every authorization, context, and filter dimension.
+  3. Define TTL and explicit invalidation when source data changes.
+  4. Preserve fresh reads for permissions and user-specific access scope.
+
+Pre-release checks
+  - Apply Alembic migrations in a staging-equivalent environment.
+  - Validate protected endpoints with permitted and non-permitted users.
+  - Verify static-upload and face-enrollment paths have suitable storage
+    permissions.
+  - Confirm listener/scheduler ownership avoids duplicate execution across
+    multiple API workers.
+  - Run automated tests once a backend test suite is introduced. No dedicated
+    backend tests directory exists in the current inventory.
+
+
+==========================================================================
+16. OWNERSHIP SUMMARY
+==========================================================================
+
+When locating a change:
+- Endpoint URL or HTTP behavior: routes/.
+- Request orchestration: controllers/.
+- Business rule or database query: services/.
+- Table or relationship: models/ plus migrations/.
+- Payload format: schemas/.
+- Login, permissions, hierarchy, or record scope: core/ and dependency/.
+- Real-time communication: routes/admin/websockets/ and websockets/.
+- Reminders: models/reminders.py, services/reminders_service.py,
+  database_triggers/, listeners/, scheduler/, and WebSocket modules.
+- Face enrollment/recognition: employee_management, employee_face_profiles,
+  services/face/, utils/face_embedding.py, and upload utilities.
+
+Update this file in the same change set whenever a maintained backend module,
+migration, deployment surface, or architectural boundary is added, removed,
+or materially repurposed.
