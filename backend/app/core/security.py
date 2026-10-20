@@ -26,7 +26,7 @@ def create_access_token(employee_id: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    logger.info("access_token called for {}".format(employee_id))
+    # logger.info("access_token called for {}".format(employee_id))
     payload = {
         "sub": str(employee_id),
         "type": "access",
@@ -134,7 +134,7 @@ def get_current_employee(
             detail="Account is inactive",
         )
     request.state.employee = employee
-    logger.info("Employee ID {}".format(employee.__dict__))
+    # logger.info("Employee ID {}".format(employee.__dict__))
 
     # Check for x-employee-context-id or x-context-id header
     context_header = request.headers.get("x-employee-context-id") or request.headers.get("x-context-id")

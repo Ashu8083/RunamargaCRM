@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.config.database import get_db
 from app.core.security import get_current_employee
 from app.models.employees import Employee
-from app.models.loan_assignments import LoanAssignmentStatus
 from app.controllers.Loans.loan_assignment_controller import (
     LoanAssignmentController,
 )
