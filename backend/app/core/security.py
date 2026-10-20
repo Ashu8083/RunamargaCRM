@@ -26,7 +26,7 @@ def create_access_token(employee_id: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    logger.info("access_token called for {}".format(employee_id))
+    # logger.info("access_token called for {}".format(employee_id))
     payload = {
         "sub": str(employee_id),
         "type": "access",

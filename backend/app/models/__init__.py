@@ -24,6 +24,7 @@ from app.models.loan_addresses import LoanAddress
 from app.models.loan_reference import LoanReference
 from app.models.loan_coapplicant import LoanCoApplicant
 from app.models.loan_document import LoanDocument
+from app.models.loan_other_details import LoanOtherDetail
 from app.models.employee_roles import EmployeeRole
 from app.models.reverted_loans import RevertedLoan
 from app.models.attendance import Attendance

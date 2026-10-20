@@ -22,7 +22,7 @@ import RmDropdown from "../../../../../components/GlobalModels/Filters/RmDropdow
 import TeamLeadDropdown from "../../../../../components/GlobalModels/Filters/TeamLeadDropdown";
 import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import StatusDropdown from "../../../../../components/GlobalModels/Filters/StatusDropdown";
-
+import UserPlusIcon from "@heroicons/react/24/outline/UserPlusIcon";
 import apiClient from "../../../../../app/apiClient";
 
 const GlobalChat = lazy(() =>
@@ -354,7 +354,101 @@ function ApplicationsTable({
 
   // Backend already returns the requested page.
   const paginatedApplications = applications;
+  // =========================================================
+  // ASSIGN APPLICATION MODAL
+  // =========================================================
 
+  const [assignmentApplication, setAssignmentApplication] = useState(null);
+  const [eligibleAgents, setEligibleAgents] = useState([]);
+  const [selectedAssignmentAgentId, setSelectedAssignmentAgentId] = useState("");
+  const [assignmentLoading, setAssignmentLoading] = useState(false);
+  const [assignmentSaving, setAssignmentSaving] = useState(false);
+  const [assignmentError, setAssignmentError] = useState("");
+
+  const openAssignmentModal = async (application) => {
+    const applicationId = application.id ?? application.loanId ?? application.loan_id;
+    setAssignmentApplication(application);
+    setEligibleAgents([]);
+    setSelectedAssignmentAgentId("");
+    setAssignmentError("");
+
+    if (!applicationId) {
+      setAssignmentError("Application ID is missing.");
+      return;
+    }
+
+    setAssignmentLoading(true);
+    try {
+      const response = await apiClient({
+        method: "GET",
+        url: `/shuffle-loans/applications/${applicationId}/eligible-agents`,
+      });
+      const data = response.data || {};
+      setEligibleAgents(Array.isArray(data.agents) ? data.agents : []);
+    } catch (error) {
+      setAssignmentError(
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        "Could not load eligible agents. Please try again.",
+      );
+    } finally {
+      setAssignmentLoading(false);
+    }
+  };
+
+  const closeAssignmentModal = () => {
+    if (assignmentSaving) return;
+    setAssignmentApplication(null);
+    setEligibleAgents([]);
+    setSelectedAssignmentAgentId("");
+    setAssignmentError("");
+  };
+
+  const submitApplicationAssignment = async () => {
+    if (!assignmentApplication || !selectedAssignmentAgentId) {
+      setAssignmentError("Please select an agent.");
+      return;
+    }
+
+    const applicationId =
+      assignmentApplication.id ??
+      assignmentApplication.loanId ??
+      assignmentApplication.loan_id;
+
+    setAssignmentSaving(true);
+    setAssignmentError("");
+    try {
+      const response = await apiClient({
+        method: "PATCH",
+        url: "/shuffle-loans/assign",
+        data: {
+          application_ids: [Number(applicationId)],
+          agent_id: Number(selectedAssignmentAgentId),
+        },
+      });
+
+      const updatedApplication = Array.isArray(response.data)
+        ? response.data[0]
+        : response.data;
+
+      if (updatedApplication && onAssignmentChange) {
+        onAssignmentChange(Number(applicationId), updatedApplication);
+      }
+
+      setAssignmentApplication(null);
+      setEligibleAgents([]);
+      setSelectedAssignmentAgentId("");
+      if (onRefresh) await onRefresh();
+    } catch (error) {
+      setAssignmentError(
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        "Assignment failed. Please try again.",
+      );
+    } finally {
+      setAssignmentSaving(false);
+    }
+  };
   const handleLoanTypesLoaded = useCallback(
     (options) => setLoanTypes(options || []),
     [],
@@ -819,6 +913,23 @@ function ApplicationsTable({
 
                       <td className="px-2 py-4">
                         <div className="flex items-center justify-center gap-0">
+                          {/* Assign */}
+                          <button
+                            type="button"
+                            onClick={() => openAssignmentModal(application)}
+                            title="Assign application"
+                            aria-label={`Assign application for ${application.name || "customer"}`}
+                            className="
+                              btn
+                              btn-ghost
+                              btn-sm
+                              btn-square
+                              text-error
+                              hover:bg-error/10
+                                                "
+                          >
+                            <UserPlusIcon className="w-4 h-4" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => onViewApplication?.(application)}
@@ -836,7 +947,7 @@ function ApplicationsTable({
                           >
                             <BellAlertIcon className="w-4 h-4" />
                           </button>
-
+                          
                           <button
                             type="button"
                             onClick={() => handleOpenChat(application)}

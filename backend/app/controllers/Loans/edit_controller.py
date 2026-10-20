@@ -28,7 +28,8 @@ from app.services.loan_application_status_audit_log_service import LoanApplicati
 from app.models.loan_types import LoanType
 from app.models.employee_context_permissions import EmployeeContextPermission
 from app.models.permissions import Permission
-
+from app.models.loan_other_details import LoanOtherDetail
+from app.schemas.application_schema import LoanOtherDetailsUpdateRequest
 
 LOAN_TYPE_PERMISSION_MAP = {
     "personal loan": "loans:personal:view",
@@ -2192,5 +2193,168 @@ def update_bank_processing_workflow(
                 if bank_processing.loggedin_at
                 else None
             ),
+        },
+    }
+
+# =========================================================
+# LOAN OTHER DETAILS
+# =========================================================
+
+def get_application_other_details(
+    db: Session,
+    employee: Employee,
+    application_id: str,
+):
+    # Find application using its public unique ID.
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    # Apply the same application scope used by other edit operations.
+    scoped_query = ApplicationService.apply_scope(
+        query=db.query(LoanApplication),
+        db=db,
+        employee=employee,
+    )
+
+    allowed_application = (
+        scoped_query
+        .filter(LoanApplication.id == application.id)
+        .first()
+    )
+
+    if not allowed_application:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this application",
+        )
+
+    details = (
+        db.query(LoanOtherDetail)
+        .filter(
+            LoanOtherDetail.loan_id == application.id,
+            LoanOtherDetail.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    # No saved details yet is a valid state.
+    return details
+
+
+def update_application_other_details(
+    db: Session,
+    employee: Employee,
+    application_id: str,
+    payload: LoanOtherDetailsUpdateRequest,
+):
+    # Find application.
+    application = (
+        db.query(LoanApplication)
+        .filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not application:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    # Check application access.
+    scoped_query = ApplicationService.apply_scope(
+        query=db.query(LoanApplication),
+        db=db,
+        employee=employee,
+    )
+
+    allowed_application = (
+        scoped_query
+        .filter(LoanApplication.id == application.id)
+        .first()
+    )
+
+    if not allowed_application:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this application",
+        )
+
+    # Find existing details, if any.
+    details = (
+        db.query(LoanOtherDetail)
+        .filter(
+            LoanOtherDetail.loan_id == application.id,
+            LoanOtherDetail.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    # Create the record on the first save.
+    if details is None:
+        details = LoanOtherDetail(
+            loan_id=application.id,
+        )
+        db.add(details)
+
+    # Update only fields explicitly provided in the request.
+    update_data = payload.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(details, field, value)
+
+    # Record the update in the existing application audit log.
+    active_context = AccessControl.get_active_context(
+        db=db,
+        employee=employee,
+    )
+
+    action_by_id = active_context.id if active_context else None
+
+    LoanApplicationAuditLogService.log_audit_log(
+        db=db,
+        action="update_other_details",
+        action_by=action_by_id,
+        action_on=application.id,
+        commit=False,
+    )
+
+    try:
+        db.commit()
+        db.refresh(details)
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to save loan other details",
+        )
+
+    return {
+        "success": True,
+        "message": "Loan other details saved successfully",
+        "data": {
+            "id": details.id,
+            "loan_id": details.loan_id,
+            **{
+                field: getattr(details, field)
+                for field in update_data
+            },
+            "created_at": details.created_at,
+            "updated_at": details.updated_at,
         },
     }

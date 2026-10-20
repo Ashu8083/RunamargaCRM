@@ -909,7 +909,7 @@ function ApplicationHeader({
 
                                 {/* SEND MAIL */}
 
-                                <button
+                                {/* <button
                                     type="button"
                                     onClick={onSendMail}
                                     className="
@@ -932,7 +932,7 @@ function ApplicationHeader({
                                         Send Mail
                                     </span>
 
-                                </button>
+                                </button> */}
 
                             </>
 

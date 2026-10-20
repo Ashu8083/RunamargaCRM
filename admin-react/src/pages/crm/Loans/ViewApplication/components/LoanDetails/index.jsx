@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { COLORS } from '../../../../../../constants/colors'
 import { updateApplicationLoanDetails } from '../LoanDetails/Api'
-function Field({ label, value }) {
+function Field({ label, value, type='text' }) {
 
     return (
         <div>
@@ -28,6 +28,8 @@ function EditField({
     label,
     value,
     onChange,
+
+    type = 'text',
 }) {
 
     return (
@@ -38,7 +40,7 @@ function EditField({
             </label>
 
             <input
-                type="text"
+                 type={type}
                 value={value ?? ''}
                 onChange={(event) =>
                     onChange(event.target.value)
@@ -353,8 +355,11 @@ function LoanDetails({
 
                                 <EditField
                                     label="Date of Birth"
+                                    type="date"
                                     value={
                                         editCommonFields.date_of_birth
+                                            ? String(editCommonFields.date_of_birth).slice(0, 10)
+                                            : ''
                                     }
                                     onChange={(value) =>
                                         handleCommonFieldChange(
@@ -479,7 +484,7 @@ function LoanDetails({
 
 
                                 <Field
-                                    label="Date of Birth"
+                                    label="Date of Birth" type='date'
                                     value={
                                         commonFields.date_of_birth
                                     }

@@ -7,12 +7,24 @@ from app.config.database import get_db
 from app.core.security import get_current_employee
 from app.models.employees import Employee
 from app.controllers.Loans.edit_controller import (
-    update_application_loan_type,assign_bank,
-    update_application_status,update_application_header,update_application_loan_details,add_application_address,add_application_reference,add_application_co_applicant,upload_application_document,delete_application_document,update_bank_processing_workflow
+    update_application_loan_type,
+    assign_bank,
+    update_application_status,
+    update_application_header,
+    update_application_loan_details,
+    add_application_address,
+    add_application_reference,
+    add_application_co_applicant,
+    upload_application_document,
+    delete_application_document,
+    update_bank_processing_workflow,
+    get_application_other_details,
+    update_application_other_details,
 )
 from app.schemas.application_schema import (
     UpdateApplicationLoanTypeRequest,
-    UpdateApplicationStatusRequest,ApplicationHeaderUpdate,ApplicationLoanDetailsUpdate,AddApplicationAddressRequest,AddApplicationReferenceRequest,AddApplicationCoApplicantRequest,UploadApplicationDocumentRequest,AssignBankRequest,UpdateBankProcessingWorkflowRequest
+    UpdateApplicationStatusRequest,ApplicationHeaderUpdate,ApplicationLoanDetailsUpdate,AddApplicationAddressRequest,AddApplicationReferenceRequest,AddApplicationCoApplicantRequest,UploadApplicationDocumentRequest,AssignBankRequest,UpdateBankProcessingWorkflowRequest,LoanOtherDetailsUpdateRequest,
+    LoanOtherDetailsResponse
 )
 
 
@@ -205,4 +217,38 @@ async def update_bank_processing_workflow_route(
         processing_id=processing_id,
         action=payload.action,
         data=payload.data,
+    )
+
+# =========================================================
+# LOAN OTHER DETAILS
+# =========================================================
+
+@router.get(
+    "/{application_id}/other-details",
+    response_model=LoanOtherDetailsResponse | None,
+)
+def get_application_other_details_route(
+    application_id: str,
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
+):
+    return get_application_other_details(
+        db=db,
+        employee=employee,
+        application_id=application_id,
+    )
+
+
+@router.put("/{application_id}/other-details")
+def update_application_other_details_route(
+    application_id: str,
+    payload: LoanOtherDetailsUpdateRequest,
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
+):
+    return update_application_other_details(
+        db=db,
+        employee=employee,
+        application_id=application_id,
+        payload=payload,
     )
