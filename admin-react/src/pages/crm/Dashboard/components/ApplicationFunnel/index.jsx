@@ -16,13 +16,6 @@ import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/Loa
 import { getApplicationFunnelData } from "./API";
 
 const STAGE_CONFIG = {
-    "Docs Pending": {
-        icon: DocumentTextIcon,
-        iconClass: "text-orange-600 dark:text-orange-400",
-        iconBg: "bg-orange-50 dark:bg-orange-950/40",
-        border: "border-orange-100 dark:border-orange-900/60",
-        accent: "bg-orange-500",
-    },
     "In Process": {
         icon: ClockIcon,
         iconClass: "text-amber-600 dark:text-amber-400",
@@ -65,7 +58,6 @@ const STAGE_CONFIG = {
 };
 
 const SUCCESS_STAGES = [
-    "Docs Pending",
     "In Process",
     "Login",
     "Sanctioned",

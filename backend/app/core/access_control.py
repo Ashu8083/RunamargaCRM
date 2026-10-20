@@ -11,6 +11,8 @@ from app.models.permissions import Permission
 from app.models.employee_context_permissions import (
     EmployeeContextPermission,
 )
+from app.models.loan_types import LoanType
+from app.models.loan_assignments import LoanAssignment, LoanAssignmentStatus
 
 class AccessControl:
 
@@ -684,6 +686,77 @@ class AccessControl:
             )
 
         return []
+
+    # =========================================================
+    # ELIGIBLE AGENTS FOR A LOAN TYPE
+    # =========================================================
+
+    @staticmethod
+    def get_eligible_agents(
+        db: Session,
+        employee: Employee,
+        loan_type_id: int,
+        context_id: Optional[int] = None,
+    ) -> list[EmployeeContext]:
+        """Return visible agents whose loan assignment is active for a loan type.
+
+        Eligibility is based on:
+          - the agent being visible under the existing reporting hierarchy;
+          - the requested loan type existing;
+          - an active, non-deleted loan_assignments row for the exact
+            employee_context_id + loan_type_id pair.
+
+        Loan permissions are deliberately not checked here. The manager's
+        loan_assignments configuration controls whether an agent is eligible
+        for the requested loan type.
+
+        The returned objects are EmployeeContext rows. Callers should store
+        EmployeeContext.id in LoanApplication.agent_context_id.
+        """
+        if not employee or not loan_type_id:
+            return []
+
+        # Resolve/validate the loan type by ID. Eligibility does not depend on
+        # its display name; the same ID is matched against loan_assignments.
+        loan_type = (
+            db.query(LoanType)
+            .filter(LoanType.id == loan_type_id)
+            .first()
+        )
+        if not loan_type:
+            return []
+
+        # Preserve AccessControl's existing visibility/reporting rules.
+        visible_agents = AccessControl.get_visible_agents(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+        if not visible_agents:
+            return []
+
+        visible_agent_context_ids = [agent_context.id for agent_context in visible_agents]
+
+        eligible_context_ids = {
+            row[0]
+            for row in (
+                db.query(LoanAssignment.employee_context_id)
+                .filter(
+                    LoanAssignment.employee_context_id.in_(visible_agent_context_ids),
+                    LoanAssignment.loan_type_id == loan_type.id,
+                    LoanAssignment.status == LoanAssignmentStatus.active,
+                    LoanAssignment.deleted_at.is_(None),
+                )
+                .distinct()
+                .all()
+            )
+        }
+
+        return [
+            agent_context
+            for agent_context in visible_agents
+            if agent_context.id in eligible_context_ids
+        ]
 
     # =========================================================
     # VISIBLE TEAM LEADS

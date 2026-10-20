@@ -38,6 +38,7 @@ class ApplicationService:
     ) -> Query:
 
         if not employee:
+            print("[SCOPE DEBUG] No employee")
             return query.filter(False)
 
         context = AccessControl.get_active_context(
@@ -47,21 +48,39 @@ class ApplicationService:
         )
 
         if not context or not context.context:
+            print(
+                f"[SCOPE DEBUG] Invalid context. "
+                f"context_id={context_id}, context={context}"
+            )
             return query.filter(False)
 
         family = AccessControl.get_context_family(
             context.context.code
         )
 
+        print(
+            f"[SCOPE DEBUG] Employee ID: {employee.id}, "
+            f"Context ID: {context.id}, "
+            f"Context Code: {context.context.code}, "
+            f"Family: {family}"
+        )
+
         if family in {"GLOBAL", "MANAGER"}:
+            print("[SCOPE DEBUG] Applying GLOBAL/MANAGER scope")
             return query
 
         if family == "AGENT":
+            print(
+                f"[SCOPE DEBUG] Filtering agent_context_id={context.id}"
+            )
             return query.filter(
                 LoanApplication.agent_context_id == context.id
             )
 
         if family == "RM":
+            print(
+                f"[SCOPE DEBUG] Filtering rm_context_id={context.id}"
+            )
             return query.filter(
                 LoanApplication.rm_context_id == context.id
             )
@@ -78,7 +97,13 @@ class ApplicationService:
                 for agent_context in agent_contexts
             ]
 
+            print(
+                f"[SCOPE DEBUG] Team lead agent contexts: "
+                f"{agent_context_ids}"
+            )
+
             if not agent_context_ids:
+                print("[SCOPE DEBUG] No visible agent contexts")
                 return query.filter(False)
 
             return query.filter(
@@ -87,6 +112,7 @@ class ApplicationService:
                 )
             )
 
+        print(f"[SCOPE DEBUG] Unknown family: {family}")
         return query.filter(False)
     # =========================================================
     # GET APPLICATIONS
@@ -806,7 +832,7 @@ class ApplicationService:
             city_id=payload.city_id,
 
             status=LoanStatus.docspending,
-            applied_date=date.today(),
+            docspending_date=date.today(),
         )
 
         db.add(application)

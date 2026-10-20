@@ -14,15 +14,7 @@ import { getActiveContext } from "../../../../../app/auth";
    ============================================================= */
 
 const STATUS_CONFIG = {
-    "Docs Pending": {
-        background: "rgb(255 247 219 / 0.95)",
-        darkBackground: "rgb(100 75 20 / 0.55)",
-        border: "#F5D98A",
-        darkBorder: "#A8852F",
-        accent: "#EAB308",
-        text: "#854D0E",
-        darkText: "#FDE68A",
-    },
+ 
     "In Process": {
         background: "rgb(232 245 208 / 0.95)",
         darkBackground: "rgb(63 88 28 / 0.55)",
@@ -93,7 +85,6 @@ const MAX_WEIGHT = 1.12;
 const FIRST_ROW_RATIO = 0.52;
 
 const STATUS_ORDER = [
-    "Docs Pending",
     "In Process",
     "Rejected",
     "Login",
@@ -1065,7 +1056,7 @@ function ApplicationStatus() {
                 mt-3
                 mb-4
                 grid
-                grid-cols-3
+                grid-cols-5
                 gap-1
                 overflow-visible
                 rounded-xl

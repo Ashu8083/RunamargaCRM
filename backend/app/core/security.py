@@ -134,7 +134,6 @@ def get_current_employee(
             detail="Account is inactive",
         )
     request.state.employee = employee
-    logger.info("Employee ID {}".format(employee.__dict__))
 
     # Check for x-employee-context-id or x-context-id header
     context_header = request.headers.get("x-employee-context-id") or request.headers.get("x-context-id")
@@ -156,7 +155,7 @@ def get_employee_id_from_refresh_token(token: str) -> int:
         raise ValueError("Invalid refresh token")
 
     employee_id = payload.get("sub")
-
+    
     if not employee_id:
         raise ValueError("Refresh token is missing employee ID")
 

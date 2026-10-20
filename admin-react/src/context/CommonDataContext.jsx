@@ -21,7 +21,25 @@ export const CommonDataProvider = ({ children }) => {
   // ---------------------------------------------------------
   // COMPLETED DATA CACHE
   // ---------------------------------------------------------
+  // ---------------------------------------------------------
+  // LOAN TYPES CACHE
+  // ---------------------------------------------------------
 
+  const loanTypesCache = useRef(new Map())
+
+  // ---------------------------------------------------------
+  // LOAN TYPES REQUESTS CURRENTLY RUNNING
+  // ---------------------------------------------------------
+
+  const loanTypesInFlight = useRef(new Map())
+
+  // ---------------------------------------------------------
+  // LOAN TYPES LOADING / ERROR STATE
+  // ---------------------------------------------------------
+
+  const [loadingLoanTypes, setLoadingLoanTypes] = useState(false)
+
+  const [loanTypesError, setLoanTypesError] = useState('')
   const agentsCache = useRef(new Map())
   const rmsCache = useRef(new Map())
 
@@ -65,7 +83,10 @@ export const CommonDataProvider = ({ children }) => {
 
       agentsInFlight.current.clear()
       rmsInFlight.current.clear()
+      loanTypesCache.current.clear()
+      loanTypesInFlight.current.clear()
 
+      setLoanTypesError('')
       setAgentsError('')
       setRmsError('')
     }
@@ -315,20 +336,117 @@ export const CommonDataProvider = ({ children }) => {
 
     return request
   }, [activeContext?.id])
+  // =========================================================
+  // LOAN TYPES
+  // =========================================================
 
+  const getLoanTypes = useCallback(async () => {
+    if (!activeContext?.id) {
+      return []
+    }
+
+    const cacheKey = String(activeContext.id)
+
+    // -------------------------------------------------------
+    // 1. RETURN COMPLETED CACHE
+    // -------------------------------------------------------
+
+    if (loanTypesCache.current.has(cacheKey)) {
+      return loanTypesCache.current.get(cacheKey)
+    }
+
+    // -------------------------------------------------------
+    // 2. RETURN EXISTING REQUEST
+    // -------------------------------------------------------
+
+    if (loanTypesInFlight.current.has(cacheKey)) {
+      return loanTypesInFlight.current.get(cacheKey)
+    }
+
+    // -------------------------------------------------------
+    // 3. CREATE NEW REQUEST
+    // -------------------------------------------------------
+
+    setLoadingLoanTypes(true)
+    setLoanTypesError('')
+
+    const request = apiClient({
+      method: 'GET',
+      url: '/common/loan-types',
+      params: {
+        context_id: activeContext.id,
+      },
+    })
+      .then((response) => {
+        const data = response.data
+
+        const formattedLoanTypes = Array.isArray(data)
+          ? data
+            .filter(
+              (loanType) =>
+                loanType &&
+                loanType.id !== undefined &&
+                loanType.id !== null &&
+                loanType.name
+            )
+            .map((loanType) => ({
+              id: Number(loanType.id),
+              name: loanType.name,
+            }))
+          : []
+
+        // Save completed result
+        loanTypesCache.current.set(
+          cacheKey,
+          formattedLoanTypes
+        )
+
+        return formattedLoanTypes
+      })
+      .catch((error) => {
+        console.error(
+          'Failed to fetch loan types:',
+          error
+        )
+
+        setLoanTypesError(
+          'Unable to load loan types.'
+        )
+
+        throw error
+      })
+      .finally(() => {
+        loanTypesInFlight.current.delete(cacheKey)
+
+        setLoadingLoanTypes(false)
+      })
+
+    // -------------------------------------------------------
+    // STORE REQUEST IMMEDIATELY
+    // -------------------------------------------------------
+
+    loanTypesInFlight.current.set(
+      cacheKey,
+      request
+    )
+
+    return request
+  }, [activeContext?.id])
   // =========================================================
   // CLEAR CACHE
   // =========================================================
-
   const clearCommonDataCache = () => {
     agentsCache.current.clear()
     rmsCache.current.clear()
+    loanTypesCache.current.clear()
 
     agentsInFlight.current.clear()
     rmsInFlight.current.clear()
+    loanTypesInFlight.current.clear()
 
     setAgentsError('')
     setRmsError('')
+    setLoanTypesError('')
   }
 
   // =========================================================
@@ -342,12 +460,15 @@ export const CommonDataProvider = ({ children }) => {
 
         getAgents,
         getRms,
+        getLoanTypes,
 
         loadingAgents,
         loadingRms,
+        loadingLoanTypes,
 
         agentsError,
         rmsError,
+        loanTypesError,
 
         clearCommonDataCache,
       }}
@@ -377,10 +498,10 @@ export const useCommonData = () => {
 
 
 export const useActiveContext = () => {
-    const { activeContext } = useCommonData();
+  const { activeContext } = useCommonData();
 
-    return {
-        activeContext,
-        contextId: activeContext?.id ?? null,
-    };
+  return {
+    activeContext,
+    contextId: activeContext?.id ?? null,
+  };
 };

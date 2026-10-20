@@ -13,11 +13,105 @@ from app.models.employee_contexts import EmployeeContext
 from app.models.contexts import Context
 from app.models.loan_types import LoanType
 from app.models.loan_shuffle_history import LoanShuffleHistory
+from app.models.loan_assignments import LoanAssignment, LoanAssignmentStatus
 
 from app.core.access_control import AccessControl
 
 
 class ShuffleLoansService:
+
+    @staticmethod
+    def _get_eligible_agents_for_application(
+        db: Session,
+        application: LoanApplication,
+        employee: Employee,
+        context_id: Optional[int] = None,
+    ):
+        """Return eligible agents using AccessControl and the application's loan type ID."""
+        if not application.loan_type_id:
+            raise ValueError(
+                "This application has no loan type, so eligible agents cannot be determined."
+            )
+
+        loan_type = (
+            db.query(LoanType)
+            .filter(LoanType.id == application.loan_type_id)
+            .first()
+        )
+        if not loan_type:
+            raise ValueError("The application's loan type could not be found.")
+
+        eligible_contexts = AccessControl.get_eligible_agents(
+            db=db,
+            employee=employee,
+            loan_type_id=application.loan_type_id,
+            context_id=context_id,
+        )
+        employee_ids = [agent_context.employee_id for agent_context in eligible_contexts]
+        employee_names = {
+            row.id: row.name
+            for row in db.query(Employee.id, Employee.name)
+            .filter(Employee.id.in_(employee_ids))
+            .all()
+        } if employee_ids else {}
+
+        return {
+            "loan_type": loan_type.name,
+            "agents": [
+                {
+                    "employee_context_id": agent_context.id,
+                    "employee_id": agent_context.employee_id,
+                    "name": employee_names.get(agent_context.employee_id, "Unknown"),
+                }
+                for agent_context in eligible_contexts
+            ],
+        }
+
+    @staticmethod
+    def get_eligible_agents(
+        db: Session,
+        employee: Employee,
+        application_id: int,
+        context_id: Optional[int] = None,
+    ):
+        """Return eligible agents for one application, after enforcing viewer access."""
+        scope = ShuffleLoansService._get_access_scope(
+            db=db,
+            employee=employee,
+            context_id=context_id,
+        )
+        application = (
+            db.query(LoanApplication)
+            .filter(
+                LoanApplication.id == application_id,
+                LoanApplication.deleted_at.is_(None),
+            )
+            .first()
+        )
+        if not application:
+            raise ValueError("Application was not found.")
+
+        authorized = ShuffleLoansService._apply_access_scope(
+            query=db.query(LoanApplication).filter(
+                LoanApplication.id == application_id,
+                LoanApplication.deleted_at.is_(None),
+            ),
+            scope=scope,
+        ).first()
+        if not authorized:
+            raise PermissionError("You are not allowed to view this application.")
+
+        result = ShuffleLoansService._get_eligible_agents_for_application(
+            db=db,
+            application=application,
+            employee=employee,
+            context_id=scope["context"].id,
+        )
+        return {
+            "application_id": application.id,
+            "loan_type": result["loan_type"],
+            "agents": result["agents"],
+        }
 
     # =========================================================
     # ACCESS CONTROL
@@ -688,6 +782,33 @@ class ShuffleLoansService:
             raise ValueError(
                 "Some selected applications were not found."
             )
+
+        # =====================================================
+        # VALIDATE AGENT ELIGIBILITY FOR EACH LOAN TYPE
+        # =====================================================
+
+        # A visible agent is eligible only if AccessControl confirms
+        # an active loan_assignments row for this application's loan_type_id.
+        if agent_id is not None:
+            for application in applications:
+                eligible_result = (
+                    ShuffleLoansService._get_eligible_agents_for_application(
+                        db=db,
+                        application=application,
+                        employee=employee,
+                        context_id=shuffled_by_context_id,
+                    )
+                )
+                eligible_context_ids = {
+                    item["employee_context_id"]
+                    for item in eligible_result["agents"]
+                }
+                if agent_id not in eligible_context_ids:
+                    raise ValueError(
+                        f'Selected agent is not eligible for application {application.id} '
+                        f'({eligible_result["loan_type"]}). The agent must have an active '
+                        "loan_assignments row for this loan type."
+                    )
 
         # =====================================================
         # BUILD EXACT SHUFFLE HISTORY

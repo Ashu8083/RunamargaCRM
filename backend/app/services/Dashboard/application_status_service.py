@@ -153,6 +153,7 @@ async def get_application_status_data(
             LoanApplication.deleted_at.is_(None),
         )
     )
+    # print("-=-==-=-==-=-=-=-=-=-=",loan_query.__dict(),"-=-==-=-=-=-=-=-=-=-=")
     # =====================================================
     # APPLY EXISTING RBAC SCOPE
     # =====================================================
@@ -162,6 +163,23 @@ async def get_application_status_data(
         employee=employee,
         context_id=context_id,
     )
+    print("\n========== APPLICATION STATUS DEBUG ==========")
+
+    print("Employee:", employee)
+    print("Context ID:", context_id)
+    print("Loan Type ID:", loan_type_id)
+    print("From Date:", from_date)
+    print("To Date:", to_date)
+
+    print("Scoped SQL:")
+    print(
+        loan_query.statement.compile(
+            dialect=db.bind.dialect,
+            compile_kwargs={"literal_binds": False},
+        )
+    )
+
+    print("==============================================\n")
     # =====================================================
     # LOAN TYPE FILTER
     # =====================================================
@@ -258,12 +276,10 @@ async def get_application_status_data(
     # =====================================================
 
     in_process_filter = (
-        (scoped_loans.c.application_status == "inprocess")
-        & (scoped_loans.c.applied_date >= from_date)
-        & (
-            scoped_loans.c.applied_date
-            < to_date + timedelta(days=1)
-        )
+        scoped_loans.c.application_status.in_([
+            "inprocess",
+            "docspending",
+        ])
         & (progressed_loans.c.loan_id.is_(None))
     )
 
@@ -296,53 +312,7 @@ async def get_application_status_data(
         or 0
     )
 
-    # =====================================================
-    # DOCS PENDING
-    # =====================================================
-    # Only applications whose current status is docspending.
-    # Date filter: docspending_date.
-    # Exclude applications that have progressed to
-    # Login, Sanctioned, or Disbursed.
-    # =====================================================
-
-    docs_pending_filter = (
-        (scoped_loans.c.application_status == "docspending")
-        & (scoped_loans.c.docspending_date >= from_datetime)
-        & (
-            scoped_loans.c.docspending_date
-            < to_datetime_exclusive
-        )
-        & (progressed_loans.c.loan_id.is_(None))
-    )
-
-    docs_pending_count = (
-        db.query(
-            func.count(scoped_loans.c.loan_id)
-        )
-        .outerjoin(
-            progressed_loans,
-            progressed_loans.c.loan_id == scoped_loans.c.loan_id,
-        )
-        .filter(docs_pending_filter)
-        .scalar()
-        or 0
-    )
-
-    docs_pending_amount = (
-        db.query(
-            func.coalesce(
-                func.sum(scoped_loans.c.loan_amt),
-                0,
-            )
-        )
-        .outerjoin(
-            progressed_loans,
-            progressed_loans.c.loan_id == scoped_loans.c.loan_id,
-        )
-        .filter(docs_pending_filter)
-        .scalar()
-        or 0
-    )
+   
     # =====================================================
     # LOGIN
     # =====================================================
@@ -385,8 +355,7 @@ async def get_application_status_data(
         )
         .filter(
             BankProcessing.deleted_at.is_(None),
-            BankProcessing.loggedin_at >= from_datetime,
-            BankProcessing.loggedin_at < to_datetime_exclusive,
+            BankProcessing.loggedin_at.isnot(None),
             ~scoped_loans.c.application_status.in_(
                 [
                     "rejected",
@@ -470,8 +439,7 @@ async def get_application_status_data(
         .filter(
             BankProcessing.deleted_at.is_(None),
             BankProcessing.status == "sanctioned",
-            BankProcessing.sanctioned_at >= from_datetime,
-            BankProcessing.sanctioned_at < to_datetime_exclusive,
+            BankProcessing.sanctioned_at.isnot(None),
         )
         .subquery(
             name="sanctioned_processing"
@@ -628,11 +596,7 @@ async def get_application_status_data(
     # BUILD RESPONSE
     # =====================================================
     data = [
-        {
-            "status": "Docs Pending",
-            "count": int(docs_pending_count),
-            "amount": float(docs_pending_amount),
-        },
+    
         {
             "status": "In Process",
             "count": int(
@@ -687,7 +651,6 @@ async def get_application_status_data(
         for item in data
     )
     pending_statuses = {
-        "Docs Pending",
         "In Process",
         "Login",
         "Sanctioned",

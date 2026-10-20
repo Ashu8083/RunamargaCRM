@@ -31,7 +31,6 @@ from app.services.Loans.application_service import ApplicationService
 
 STATUS_PRIORITY = {
     "inprocess": 1,
-    "docspending": 1,
     "rejected": 2,
     "revert_rejected": 2,
     "login": 3,
@@ -46,7 +45,6 @@ STATUS_PRIORITY = {
 
 STATUS_LABELS = {
     "inprocess": "In Process",
-    "docspending": "Docs Pending",
     "rejected": "Rejected",
     "revert_rejected": "Rejected",
     "login": "Login",
@@ -378,26 +376,19 @@ def get_application_status_applications(
         )
 
         inprocess_condition = and_(
-            loan_status_text == "inprocess",
-            LoanApplication.applied_date >= from_date,
-            LoanApplication.applied_date < to_date_exclusive,
+            loan_status_text.in_(
+                [
+                    "inprocess",
+                    "docspending",
+                ]
+            ),
         )
 
         query = query.filter(
             inprocess_condition,
             not_(progressed_exists),
         )
-    # =====================================================
-    # DOCS PENDING
-    # =====================================================
-
-    elif status == "Docs Pending":
-
-        query = query.filter(
-            loan_status_text == "docspending",
-            LoanApplication.docspending_date >= from_date,
-            LoanApplication.docspending_date < to_date_exclusive,
-        )
+    
       
 
     # =====================================================
@@ -430,16 +421,9 @@ def get_application_status_applications(
 
         login_exists = exists().where(
             and_(
-                BankProcessing.loan_id
-                == LoanApplication.id,
-
+                BankProcessing.loan_id == LoanApplication.id,
                 BankProcessing.deleted_at.is_(None),
-
-                BankProcessing.loggedin_at
-                >= from_datetime,
-
-                BankProcessing.loggedin_at
-                < to_datetime_exclusive,
+                BankProcessing.loggedin_at.isnot(None),
             )
         )
 
@@ -465,19 +449,10 @@ def get_application_status_applications(
 
         sanctioned_exists = exists().where(
             and_(
-                BankProcessing.loan_id
-                == LoanApplication.id,
-
+                BankProcessing.loan_id == LoanApplication.id,
                 BankProcessing.deleted_at.is_(None),
-
-                bank_status_text
-                == "sanctioned",
-
-                BankProcessing.sanctioned_at
-                >= from_datetime,
-
-                BankProcessing.sanctioned_at
-                < to_datetime_exclusive,
+                bank_status_text == "sanctioned",
+                BankProcessing.sanctioned_at.isnot(None),
             )
         )
 
@@ -885,36 +860,19 @@ def get_application_status_applications(
 
         if status == "In Process":
 
-            if loan_status == "inprocess":
-
-                if not (
-                    application.applied_date
-                    and from_date
-                    <= application.applied_date
-                    < to_date_exclusive
-                ):
-                    continue
-
-            elif loan_status == "docspending":
-
-                if not (
-                    application.docspending_date
-                    and from_date
-                    <= application.docspending_date
-                    < to_date_exclusive
-                ):
-                    continue
-
-            else:
+            if loan_status not in {
+                "inprocess",
+                "docspending",
+            }:
                 continue
 
+            # Preserve the existing progression check.
             progressed = False
 
             for processing in loan_processings:
 
                 bank_status = (
-                    processing.status
-                    or ""
+                    processing.status or ""
                 ).lower().strip()
 
                 if bank_status in {
@@ -929,24 +887,6 @@ def get_application_status_applications(
                 continue
 
             selected_status = loan_status
-        # -------------------------------------------------
-        # DOCS PENDING
-        # -------------------------------------------------
-
-        elif status == "Docs Pending":
-
-            if loan_status != "docspending":
-                continue
-
-            if not (
-                application.docspending_date
-                and from_date
-                <= application.docspending_date
-                < to_date_exclusive
-            ):
-                continue
-
-            selected_status = "docspending"
         # -------------------------------------------------
         # REJECTED
         # -------------------------------------------------
@@ -982,16 +922,9 @@ def get_application_status_applications(
                 continue
 
             login_processings = [
-
                 processing
-
                 for processing in loan_processings
-
-                if processing.loggedin_at
-
-                and from_datetime
-                <= processing.loggedin_at
-                < to_datetime_exclusive
+                if processing.loggedin_at is not None
             ]
 
             if not login_processings:
@@ -1016,22 +949,13 @@ def get_application_status_applications(
         elif status == "Sanctioned":
 
             sanctioned_processings = [
-
                 processing
-
                 for processing in loan_processings
-
                 if (
-                    processing.status
-                    or ""
-                ).lower().strip()
-                == "sanctioned"
-
-                and processing.sanctioned_at
-
-                and from_datetime
-                <= processing.sanctioned_at
-                < to_datetime_exclusive
+                    (processing.status or "").lower().strip()
+                    == "sanctioned"
+                    and processing.sanctioned_at is not None
+                )
             ]
 
             if not sanctioned_processings:

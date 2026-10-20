@@ -17,8 +17,7 @@ import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
 import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
-
-
+import UserPlusIcon from "@heroicons/react/24/outline/UserPlusIcon";
 import AgentDropdown from "../../../../../components/GlobalModels/Filters/AgentDropdown";
 import RmDropdown from "../../../../../components/GlobalModels/Filters/RmDropdown";
 import TeamLeadDropdown from "../../../../../components/GlobalModels/Filters/TeamLeadDropdown";
@@ -73,6 +72,7 @@ function PendingApplicationsTable({
   onReminder,
   onChat,
   onViewApplication,
+  onAssignApplication,
   onDeleteApplication,
   onRefresh,
   onAssignmentChange,
@@ -1224,12 +1224,10 @@ function PendingApplicationsTable({
                           {application.phone && (
                             <a
                               href={`tel:${application.phone}`}
-                              title={`Call ${
-                                application.name || application.phone
-                              }`}
-                              aria-label={`Call ${
-                                application.name || application.phone
-                              }`}
+                              title={`Call ${application.name || application.phone
+                                }`}
+                              aria-label={`Call ${application.name || application.phone
+                                }`}
                               className="
                                                                     btn
                                                                     btn-ghost
@@ -1411,20 +1409,20 @@ function PendingApplicationsTable({
 
                           {/* INFO ICON */}
 
-                          {isRejectedApplication(
+                         {/*  {isRejectedApplication(
                             application,
                           ) && (
-                            <button
-                              type="button"
-                              onClick={(event) =>
-                                handleInfoClick(
-                                  event,
-                                  application,
-                                )
-                              }
-                              title="View rejection details"
-                              aria-label="View rejection details"
-                              className="
+                              <button
+                                type="button"
+                                onClick={(event) =>
+                                  handleInfoClick(
+                                    event,
+                                    application,
+                                  )
+                                }
+                                title="View rejection details"
+                                aria-label="View rejection details"
+                                className="
                                                                     shrink-0
                                                                     flex
                                                                     items-center
@@ -1433,15 +1431,15 @@ function PendingApplicationsTable({
                                                                     hover:text-base-content
                                                                     transition-colors
                                                                 "
-                            >
-                              <InformationCircleIcon
-                                className="
+                              >
+                                <InformationCircleIcon
+                                  className="
                                                                         h-4
                                                                         w-4
                                                                     "
-                              />
-                            </button>
-                          )}
+                                />
+                              </button>
+                            )}*/}
                         </div>
                       </td>
 
@@ -1456,6 +1454,23 @@ function PendingApplicationsTable({
                                                             gap-0
                                                         "
                         >
+                          {/* Assign */}
+                          <button
+                            type="button"
+                            onClick={() => onAssignApplication?.(application)}
+                            title="Assign application"
+                            aria-label={`Assign application for ${application.name || "customer"}`}
+                            className="
+                              btn
+                              btn-ghost
+                              btn-sm
+                              btn-square
+                              text-error
+                              hover:bg-error/10
+                                                "
+                          >
+                            <UserPlusIcon className="w-4 h-4" />
+                          </button>
                           {/* VIEW */}
 
                           <button
@@ -1536,7 +1551,7 @@ function PendingApplicationsTable({
                                                                 "
                             />
                           </button>
-                            {/* DELETE */}
+                          {/* DELETE */}
                           <button
                             type="button"
                             onClick={() => onDeleteApplication?.(application)}
@@ -1648,11 +1663,10 @@ function PendingApplicationsTable({
                     className={`
                                         btn
                                         btn-sm
-                                        ${
-                                          currentPage === page
-                                            ? "btn-primary"
-                                            : "btn-ghost"
-                                        }
+                                        ${currentPage === page
+                        ? "btn-primary"
+                        : "btn-ghost"
+                      }
                                     `}
                   >
                     {page}
@@ -1772,11 +1786,11 @@ function PendingApplicationsTable({
                 selectedInfoApplication,
               )
                 ? getRevertedByName(
-                    selectedInfoApplication,
-                  ) || "—"
+                  selectedInfoApplication,
+                ) || "—"
                 : getRejectedByName(
-                    selectedInfoApplication,
-                  ) || "—"}
+                  selectedInfoApplication,
+                ) || "—"}
             </div>
 
             {/* DATE */}
@@ -1796,11 +1810,11 @@ function PendingApplicationsTable({
                   selectedInfoApplication,
                 )
                   ? getRevertedDate(
-                      selectedInfoApplication,
-                    )
+                    selectedInfoApplication,
+                  )
                   : getRejectedDate(
-                      selectedInfoApplication,
-                    ),
+                    selectedInfoApplication,
+                  ),
               )}
             </div>
 
@@ -1822,11 +1836,11 @@ function PendingApplicationsTable({
                   selectedInfoApplication,
                 )
                   ? getRevertedReason(
-                      selectedInfoApplication,
-                    ) || "—"
+                    selectedInfoApplication,
+                  ) || "—"
                   : getRejectedReason(
-                      selectedInfoApplication,
-                    ) || "—"}
+                    selectedInfoApplication,
+                  ) || "—"}
               </span>
             </div>
           </div>,

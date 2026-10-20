@@ -15,7 +15,6 @@ from app.services.Loans.application_service import ApplicationService
 
 
 FUNNEL_STATUSES = [
-    "Docs Pending",
     "In Process",
     "Login",
     "Sanctioned",
@@ -82,9 +81,9 @@ def _build_stage_processing_query(
     Return one BankProcessing record per application
     for the requested lifecycle stage.
 
-    Used for:
-        Login
-        Sanctioned
+    Used for Login and Sanctioned for applications in the selected
+    applied_date cohort. Stage timestamps determine whether a stage
+    was reached, not which month the application belongs to.
 
     Disbursed is handled separately because multiple
     disbursement records must contribute to the total amount.
@@ -125,9 +124,15 @@ def _build_stage_processing_query(
             func.lower(
                 BankProcessing.status
             ) == status,
+            # Login and Sanctioned must not include applications
+            # whose main LoanApplication status is rejected.
+            func.lower(
+                cast(
+                    scoped_applications.c.application_status,
+                    String,
+                )
+            ).notin_(["rejected", "revert_rejected"]),
             timestamp_column.isnot(None),
-            timestamp_column >= from_date,
-            timestamp_column < to_date_exclusive,
         )
         .subquery(
             name=f"{status}_processing"
@@ -166,20 +171,18 @@ def get_application_funnel(
     """
     Return application funnel data.
 
-    Each funnel stage is calculated independently.
+    This is a monthly application cohort funnel.
 
-    One LoanApplication can therefore appear in multiple stages.
+    First, select applications whose applied_date falls inside the
+    selected date range. Then classify each selected application into
+    one stage based on its current main status and processing history.
+    Stage timestamps do not determine cohort membership.
 
-    Current-month default:
-        First day of current month -> today.
+    Docs Pending and In Process are combined into "In Process".
+    Each application should appear in only one stage:
+        Rejected > Disbursed > Sanctioned > Login > In Process.
 
-    Stage dates:
-
-        In Process -> LoanApplication.applied_date
-        Login      -> BankProcessing.loggedin_at
-        Sanctioned -> BankProcessing.sanctioned_at
-        Disbursed  -> BankProcessing.disbursed_at
-        Rejected   -> LoanApplication.rejection_date
+    The cohort date is always LoanApplication.applied_date.
 
     Disbursed:
 
@@ -235,17 +238,39 @@ def get_application_funnel(
     # DATE RANGE — CURRENT MONTH ONLY
     # =========================================================
 
+      # =========================================================
+    # DATE RANGE — CURRENT MONTH BY DEFAULT
+    # =========================================================
+
     today = date.today()
 
-    # First day of the current month
-    from_date = today.replace(day=1)
+    # No dates supplied: default to the current month.
+    if from_date is None and to_date is None:
+        from_date = today.replace(day=1)
+        to_date = today
 
-    # First day after today; exclusive upper bound
-    to_date_exclusive = today + timedelta(days=1)
+    # Only to_date supplied: start from the first day
+    # of the selected month.
+    elif from_date is None:
+        from_date = to_date.replace(day=1)
 
-    # Date displayed in the API response
-    response_to_date = today
+    # Only from_date supplied: use today as the end date.
+    elif to_date is None:
+        to_date = today
 
+    # Validate the selected range.
+    if from_date > to_date:
+        raise HTTPException(
+            status_code=400,
+            detail="from_date cannot be greater than to_date.",
+        )
+
+    # Inclusive end date:
+    # If to_date is October 17, include all of October 17.
+    to_date_exclusive = to_date + timedelta(days=1)
+
+    # Dates returned in the API response.
+    response_to_date = to_date
     # =========================================================
     # BASE APPLICATION SCOPE
     # =========================================================
@@ -261,24 +286,21 @@ def get_application_funnel(
             LoanApplication.loan_amt.label(
                 "loan_amount"
             ),
-            LoanApplication.docspending_date.label(
-                "docspending_date"
-            ),
             LoanApplication.applied_date.label(
                 "applied_date"
             ),
             LoanApplication.status.label(
                 "application_status"
             ),
-            LoanApplication.rejection_date.label(
-                "rejection_date"
-            ),
         )
         .filter(
             LoanApplication.deleted_at.is_(None),
+            LoanApplication.applied_date >= from_date,
+            LoanApplication.applied_date < to_date_exclusive,
         )
     )
 
+    # print(application_query,to_date, "0-0--=-=-=0=--90-90-=-==-=-=-=-=====")
     application_query = (
         ApplicationService.apply_scope(
             query=application_query,
@@ -315,16 +337,27 @@ def get_application_funnel(
 
 
     # =========================================================
-    # DOCS PENDING
+    # IN PROCESS (includes Docs Pending)
     # =========================================================
-    # Only applications currently in docspending status.
-    # Date: LoanApplication.docspending_date.
+    # Cohort membership is determined only by applied_date.
+    # Docs Pending is not returned as a separate stage.
+    # Applications with any qualifying Login/Sanctioned/Disbursed
+    # history are classified in the furthest stage reached instead.
     # =========================================================
 
-    docs_pending_query = (
+
+    # Cohort is already filtered by applied_date.
+    # Applications with qualifying Login/Sanctioned/Disbursed
+    # history are counted in their furthest reached stage.
+    # =========================================================
+
+    # Combine current inprocess and docspending statuses.
+    # Exclude applications with qualifying Login/Sanctioned/
+    # Disbursed history, regardless of when that stage was reached.
+    in_process_query = (
         db.query(
             scoped_applications.c.loan_id.label("loan_id"),
-            literal("Docs Pending").label("stage"),
+            literal("In Process").label("stage"),
             _money(
                 scoped_applications.c.loan_amount
             ).label("stage_amount"),
@@ -335,46 +368,25 @@ def get_application_funnel(
                     scoped_applications.c.application_status,
                     String,
                 )
-            ) == "docspending",
-            scoped_applications.c.docspending_date >= from_date,
-            scoped_applications.c.docspending_date < to_date_exclusive,
-        )
-    )
-    # =========================================================
-    # IN PROCESS
-    #
-    # Application created during the selected period.
-    #
-    # Funnel behavior intentionally allows the same
-    # application to also appear in Login/Sanctioned/
-    # Disbursed.
-    # =========================================================
-
-    in_process_query = (
-        db.query(
-            scoped_applications.c.loan_id.label(
-                "loan_id"
-            ),
-            literal("In Process").label(
-                "stage"
-            ),
-            _money(
-                scoped_applications.c.loan_amount
-            ).label(
-                "stage_amount"
-            ),
-        )
-        .filter(
-             func.lower(
-                cast(
-                    scoped_applications.c.application_status,
-                    String,
-                )
-            ) == "inprocess",
-            scoped_applications.c.applied_date
-            >= from_date,
-            scoped_applications.c.applied_date
-            < to_date_exclusive,
+            ).in_(["inprocess", "docspending"]),
+            ~db.query(BankProcessing.id).filter(
+                BankProcessing.loan_id == scoped_applications.c.loan_id,
+                BankProcessing.deleted_at.is_(None),
+                func.lower(BankProcessing.status) == "login",
+                BankProcessing.loggedin_at.isnot(None),
+            ).exists(),
+            ~db.query(BankProcessing.id).filter(
+                BankProcessing.loan_id == scoped_applications.c.loan_id,
+                BankProcessing.deleted_at.is_(None),
+                func.lower(BankProcessing.status) == "sanctioned",
+                BankProcessing.sanctioned_at.isnot(None),
+            ).exists(),
+            ~db.query(BankProcessing.id).filter(
+                BankProcessing.loan_id == scoped_applications.c.loan_id,
+                BankProcessing.deleted_at.is_(None),
+                func.lower(BankProcessing.status) == "disbursed",
+                BankProcessing.disbursed_at.isnot(None),
+            ).exists(),
         )
     )
 
@@ -382,8 +394,7 @@ def get_application_funnel(
     # LOGIN
     #
     # One application counted once.
-    # Latest login record inside selected period is used
-    # for the stage amount.
+    # Latest login record across all dates is used for the stage amount.
     # =========================================================
 
     login_query = _build_stage_processing_query(
@@ -398,6 +409,24 @@ def get_application_funnel(
         ),
         from_date=from_date,
         to_date_exclusive=to_date_exclusive,
+    )
+
+    # Login is the furthest stage only when no Sanctioned or
+    # Disbursed processing record exists for this application.
+    login_loan_id = login_query.column_descriptions[0]["expr"]
+    login_query = login_query.filter(
+        ~db.query(BankProcessing.id).filter(
+            BankProcessing.loan_id == login_loan_id,
+            BankProcessing.deleted_at.is_(None),
+            func.lower(BankProcessing.status) == "sanctioned",
+            BankProcessing.sanctioned_at.isnot(None),
+        ).exists(),
+        ~db.query(BankProcessing.id).filter(
+            BankProcessing.loan_id == login_loan_id,
+            BankProcessing.deleted_at.is_(None),
+            func.lower(BankProcessing.status) == "disbursed",
+            BankProcessing.disbursed_at.isnot(None),
+        ).exists(),
     )
 
     login_query = login_query.with_entities(
@@ -419,7 +448,7 @@ def get_application_funnel(
     # SANCTIONED
     #
     # One application counted once.
-    # Latest sanctioned record inside selected period is used.
+    # Latest sanctioned record across all dates is used.
     # =========================================================
 
     sanctioned_query = _build_stage_processing_query(
@@ -434,6 +463,18 @@ def get_application_funnel(
         ),
         from_date=from_date,
         to_date_exclusive=to_date_exclusive,
+    )
+
+    # Sanctioned is the furthest stage only when the application
+    # has not subsequently reached Disbursed.
+    sanctioned_loan_id = sanctioned_query.column_descriptions[0]["expr"]
+    sanctioned_query = sanctioned_query.filter(
+        ~db.query(BankProcessing.id).filter(
+            BankProcessing.loan_id == sanctioned_loan_id,
+            BankProcessing.deleted_at.is_(None),
+            func.lower(BankProcessing.status) == "disbursed",
+            BankProcessing.disbursed_at.isnot(None),
+        ).exists(),
     )
 
     sanctioned_query = sanctioned_query.with_entities(
@@ -499,9 +540,14 @@ def get_application_funnel(
             func.lower(
                 BankProcessing.status
             ) == "disbursed",
+            # A rejected main application must not appear as Disbursed.
+            func.lower(
+                cast(
+                    scoped_applications.c.application_status,
+                    String,
+                )
+            ).notin_(["rejected", "revert_rejected"]),
             BankProcessing.disbursed_at.isnot(None),
-            BankProcessing.disbursed_at >= from_date,
-            BankProcessing.disbursed_at < to_date_exclusive,
         )
         .subquery(
             name="disbursed_rows"
@@ -569,25 +615,19 @@ def get_application_funnel(
                     "revert_rejected",
                 ]
             ),
-            scoped_applications.c.rejection_date
-            >= from_date,
-            scoped_applications.c.rejection_date
-            < to_date_exclusive,
         )
     )
 
     # =========================================================
     # COMBINE ALL STAGES
     #
-    # UNION ALL is intentional.
-    #
-    # One application can appear in multiple funnel stages.
+    # UNION ALL combines the mutually exclusive stage queries.
+    # Each application is intended to appear in only one stage.
     # =========================================================
 
     all_stage_rows = (
-        docs_pending_query
+        in_process_query
         .union_all(
-            in_process_query,
             login_query,
             sanctioned_query,
             disbursed_query,
@@ -701,14 +741,15 @@ def get_application_funnel(
     # =========================================================
     # UNIQUE APPLICATION COUNT
     #
-    # This is NOT the sum of funnel stage counts.
+    # This is the distinct number of applications received in
+    # the selected applied_date cohort, not the sum of stage counts.
     # =========================================================
 
     total_applications = (
         db.query(
             func.count(
                 func.distinct(
-                    unique_stage_rows.c.loan_id
+                    scoped_applications.c.loan_id
                 )
             )
         )
