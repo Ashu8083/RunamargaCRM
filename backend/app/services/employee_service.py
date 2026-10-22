@@ -39,14 +39,13 @@ from app.utils.file_upload import (
     DOCUMENT_EXTS,
 )
 
-
+from app.core.log_config import logger
 # =============================================================
 # CONSTANTS
 # =============================================================
 
 RESTRICTED_ROLES = {
     "admin",
-    "business",
 }
 
 
@@ -1211,7 +1210,6 @@ def update_employee_block_status(
         },
     }
 
-
 # =============================================================
 # DELETE EMPLOYEE
 # =============================================================
@@ -1230,8 +1228,8 @@ def delete_employee(
             status_code=403,
             detail="Permission denied",
         )
-    reports_to_id = employee.contexts.reports_to_id
 
+    # Find the employee being deleted
     target = (
         db.query(Employee)
         .filter(
@@ -1247,14 +1245,40 @@ def delete_employee(
             detail="Employee not found",
         )
 
+    # Get the target employee's Global context
+    global_context = _get_global_context(db)
+
+    target_context = (
+        db.query(EmployeeContext)
+        .filter(
+            EmployeeContext.employee_id == target.id,
+            EmployeeContext.context_id == global_context.id,
+            EmployeeContext.is_active.is_(True),
+        )
+        .first()
+    )
+
+    reports_to_id = (
+        target_context.reports_to_id
+        if target_context
+        else None
+    )
+
+    logger.info(
+        f"Deleting employee ID: {target.id}, "
+        f"Reports To ID: {reports_to_id}"
+    )
+
+    # Soft delete
     target.deleted_at = datetime.utcnow()
 
+    # Audit log
     log_employee_action(
         db=db,
         action="delete",
         action_by=employee.id,
         action_on=target.id,
-        report_to= reports_to_id
+        report_to=reports_to_id,
     )
 
     db.commit()

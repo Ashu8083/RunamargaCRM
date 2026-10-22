@@ -78,14 +78,16 @@ from .banker_directory_routes import router as banker_directory_router
 # ============================================================================
 from .employee_routes import router as employee_router
 from .employee_management.attendance_routes import router as employement_management_attendance_router
-
+from .leave_management_routes import router as leave_management_router
+# Face Enrollment
+from .employee_management.attendance_routes import router as attendance_router
+from .holiday_routes import router as holiday_router
 
 # ============================================================================
 # My Attendance
 # ============================================================================
+from .attendance_routes import router as profile_attendance_router
 
-# Face Enrollment
-from .employee_management.attendance_routes import router as attendance_router
 
 
 # ============================================================================
@@ -238,11 +240,14 @@ router.include_router(banker_directory_router)
 # ============================================================================
 router.include_router(employee_router)
 router.include_router(employement_management_attendance_router)
+router.include_router(leave_management_router)
+router.include_router(holiday_router)
 
 # ============================================================================
 # My Attendance
 # ============================================================================
 router.include_router(attendance_router)
+router.include_router(profile_attendance_router)
 
 
 # Call Management

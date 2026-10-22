@@ -26,7 +26,6 @@ const Layout = lazy(() => import('./containers/Layout'));
 
 const Login = lazy(() => import('./pages/crm/Login'));
 
-
 // =========================================================
 // WEBSITE
 // =========================================================
@@ -48,12 +47,12 @@ const WhatsappButton = lazy(
     () => import('./pages/website/WhatsappButton')
 );
 
-
 // =========================================================
 // INITIALIZATION
 // =========================================================
 
 initializeApp();
+
 function ContextAwareCRM() {
     const { activeContext } = useCommonData();
 
@@ -67,13 +66,15 @@ function ContextAwareCRM() {
 // =========================================================
 
 function App() {
-
     const [authenticated, setAuthenticated] = useState(
         isAuthenticated()
     );
 
-    useEffect(() => {
+    // Prevent protected routes from redirecting before
+    // the existing cookie-based session is checked.
+    const [authChecking, setAuthChecking] = useState(true);
 
+    useEffect(() => {
         themeChange(false);
 
         const syncAuthState = () => {
@@ -91,13 +92,9 @@ function App() {
         );
 
         const refreshUserSession = async () => {
-
-            if (!isAuthenticated()) {
-                return;
-            }
-
             try {
-
+                // Always attempt session restoration.
+                // Do not require auth_user in localStorage first.
                 await getCurrentUser();
 
                 setAuthenticated(true);
@@ -105,24 +102,22 @@ function App() {
                 window.dispatchEvent(
                     new Event('auth:changed')
                 );
-
             } catch (error) {
-
                 console.error(
-                    'Failed to refresh user session:',
+                    'Failed to restore user session:',
                     error
                 );
 
                 clearAuthSession();
-
                 setAuthenticated(false);
+            } finally {
+                setAuthChecking(false);
             }
         };
 
         refreshUserSession();
 
         return () => {
-
             window.removeEventListener(
                 'auth:changed',
                 syncAuthState
@@ -133,22 +128,16 @@ function App() {
                 syncAuthState
             );
         };
-
     }, []);
 
-
     return (
-
         <Router>
-
             <Routes>
-
                 {/* =================================================
                     WEBSITE
                 ================================================= */}
 
                 <Route element={<WebsiteLayout />}>
-
                     <Route
                         path="/"
                         element={<Home />}
@@ -158,6 +147,7 @@ function App() {
                         path="/about"
                         element={<About />}
                     />
+
                     <Route
                         path="/apply-now"
                         element={<ApplyNow />}
@@ -192,9 +182,7 @@ function App() {
                         path="/website-login"
                         element={<WebsiteLogin />}
                     />
-
                 </Route>
-
 
                 {/* =================================================
                     CRM LOGIN
@@ -203,23 +191,20 @@ function App() {
                 <Route
                     path="/login"
                     element={
-                        authenticated
-                            ? (
-                                <Navigate
-                                    to="/crm/dashboard"
-                                    replace
-                                />
-                            )
-                            : (
-                                <Login
-                                    onLogin={() =>
-                                        setAuthenticated(true)
-                                    }
-                                />
-                            )
+                        authChecking ? null : authenticated ? (
+                            <Navigate
+                                to="/crm/dashboard"
+                                replace
+                            />
+                        ) : (
+                            <Login
+                                onLogin={() => {
+                                    setAuthenticated(true);
+                                }}
+                            />
+                        )
                     }
                 />
-
 
                 {/* =================================================
                     CRM
@@ -228,17 +213,16 @@ function App() {
                 <Route
                     path="/crm/*"
                     element={
-                        authenticated
-                            ? <ContextAwareCRM />
-                            : (
-                                <Navigate
-                                    to="/login"
-                                    replace
-                                />
-                            )
+                        authChecking ? null : authenticated ? (
+                            <ContextAwareCRM />
+                        ) : (
+                            <Navigate
+                                to="/login"
+                                replace
+                            />
+                        )
                     }
                 />
-
 
                 {/* =================================================
                     FALLBACK
@@ -253,9 +237,7 @@ function App() {
                         />
                     }
                 />
-
             </Routes>
-
         </Router>
     );
 }

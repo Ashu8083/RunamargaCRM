@@ -52,65 +52,6 @@ const getProfileImage = (user) => {
 }
 
 
-// =============================================================
-// MOCK API
-// =============================================================
-
-// const fetchProfile = async () => {
-//     return new Promise((resolve) => {
-//         setTimeout(() => {
-//             resolve({
-//                 user: {
-//                     id: 'RM-1024',
-//                     name: 'Aravind Kumar',
-//                     email: 'aravind@runamarga.com',
-//                     phone: '+91 98765 43210',
-//                     gender: 'male',
-//                     profileImage: '',
-//                     role: 'Relationship Manager',
-//                     department: 'Loan Operations',
-//                     joinedDate: '15/06/2024',
-//                 },
-//
-//                 documents: [
-//                     {
-//                         id: 1,
-//                         name: 'Aadhaar Card',
-//                         type: 'Identity Proof',
-//                         submittedDate: '18/06/2024',
-//                         status: 'verified',
-//                         path: '/documents/aadhaar.pdf',
-//                     },
-//                     {
-//                         id: 2,
-//                         name: 'PAN Card',
-//                         type: 'Identity Proof',
-//                         submittedDate: '18/06/2024',
-//                         status: 'verified',
-//                         path: '/documents/pan.pdf',
-//                     },
-//                     {
-//                         id: 3,
-//                         name: 'Address Proof',
-//                         type: 'Address Proof',
-//                         submittedDate: '19/06/2024',
-//                         status: 'pending',
-//                         path: '/documents/address-proof.pdf',
-//                     },
-//                     {
-//                         id: 4,
-//                         name: 'Employment Certificate',
-//                         type: 'Employment Document',
-//                         submittedDate: '20/06/2024',
-//                         status: 'verified',
-//                         path: '/documents/employment-certificate.pdf',
-//                     },
-//                 ],
-//             })
-//         }, 500)
-//     })
-// }
-
 
 // =============================================================
 // STATUS TEXT

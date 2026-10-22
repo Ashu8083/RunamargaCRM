@@ -1,9 +1,15 @@
-// admin-react\src\pages\Attendance\components\LeaveApplicationModal.jsx
-import { useState } from 'react'
+// admin-react/src/pages/Attendance/components/LeaveApplicationModal.jsx
+
+import { useEffect, useState } from 'react'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 
-function LeaveApplicationModal({ onClose, onSubmit }) {
+function LeaveApplicationModal({
+    onClose,
+    onSubmit,
+    initialData = null,
+    submitting = false,
+}) {
 
     const [formData, setFormData] = useState({
         category: '',
@@ -15,8 +21,27 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
     const [error, setError] = useState('')
 
 
-    const handleChange = (event) => {
+    // =============================================================
+    // INITIALIZE FORM FOR APPLY / EDIT
+    // =============================================================
 
+    useEffect(() => {
+        setFormData({
+            category: initialData?.category || '',
+            fromDate: initialData?.fromDate || '',
+            toDate: initialData?.toDate || '',
+            reason: initialData?.reason || '',
+        })
+
+        setError('')
+    }, [initialData])
+
+
+    // =============================================================
+    // FORM CHANGE
+    // =============================================================
+
+    const handleChange = (event) => {
         const { name, value } = event.target
 
         setFormData((previous) => ({
@@ -28,8 +53,11 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
     }
 
 
-    const handleSubmit = (event) => {
+    // =============================================================
+    // FORM SUBMIT
+    // =============================================================
 
+    const handleSubmit = (event) => {
         event.preventDefault()
 
         if (!formData.category) {
@@ -52,9 +80,23 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
             return
         }
 
-        onSubmit?.(formData)
+        if (formData.category === 'Half Day Leave') {
+            setError(
+                'Half Day Leave is not currently supported by the backend. Please select Full Day Leave or Work From Home.'
+            )
+            return
+        }
+
+        onSubmit?.({
+            ...formData,
+            reason: formData.reason.trim(),
+        })
     }
 
+
+    // =============================================================
+    // RENDER
+    // =============================================================
 
     return (
         <dialog
@@ -71,29 +113,29 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                     <div className="flex items-center gap-2">
 
                         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-
                             <CalendarDaysIcon className="w-4 h-4 text-primary" />
-
                         </div>
 
                         <div>
 
                             <h3 className="text-lg font-semibold">
-                                Apply for Leave
+                                {initialData ? 'Update Leave Request' : 'Apply for Leave'}
                             </h3>
 
                             <p className="text-xs text-base-content/50 mt-0.5">
-                                Submit a request for approval
+                                {initialData
+                                    ? 'Update your pending leave request'
+                                    : 'Submit a request for approval'}
                             </p>
 
                         </div>
 
                     </div>
 
-
                     <button
                         type="button"
                         onClick={onClose}
+                        disabled={submitting}
                         className="btn btn-sm btn-ghost btn-circle"
                         aria-label="Close"
                     >
@@ -114,19 +156,18 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                         <div>
 
                             <label className="label px-0">
-
                                 <span className="label-text text-sm font-medium">
                                     Request Type
                                 </span>
-
                             </label>
-
 
                             <select
                                 name="category"
                                 value={formData.category}
                                 onChange={handleChange}
                                 className="select select-bordered w-full"
+                                disabled={submitting}
+                                required
                             >
 
                                 <option value="" disabled>
@@ -145,15 +186,13 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                                     Work From Home
                                 </option>
 
-                                <option value="Leaving Early">
-                                    Leaving Early
-                                </option>
-
-                                <option value="Coming Late">
-                                    Coming Late
-                                </option>
-
                             </select>
+
+                            {formData.category === 'Half Day Leave' && (
+                                <p className="text-xs text-warning mt-2">
+                                    Half-day leave requires backend support before it can be submitted.
+                                </p>
+                            )}
 
                         </div>
 
@@ -165,11 +204,9 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                             <div>
 
                                 <label className="label px-0">
-
                                     <span className="label-text text-sm font-medium">
                                         From Date
                                     </span>
-
                                 </label>
 
                                 <input
@@ -178,19 +215,18 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                                     value={formData.fromDate}
                                     onChange={handleChange}
                                     className="input input-bordered w-full"
+                                    disabled={submitting}
+                                    required
                                 />
 
                             </div>
 
-
                             <div>
 
                                 <label className="label px-0">
-
                                     <span className="label-text text-sm font-medium">
                                         To Date
                                     </span>
-
                                 </label>
 
                                 <input
@@ -200,6 +236,8 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                                     min={formData.fromDate || undefined}
                                     onChange={handleChange}
                                     className="input input-bordered w-full"
+                                    disabled={submitting}
+                                    required
                                 />
 
                             </div>
@@ -212,11 +250,9 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                         <div>
 
                             <label className="label px-0">
-
                                 <span className="label-text text-sm font-medium">
                                     Reason
                                 </span>
-
                             </label>
 
                             <textarea
@@ -226,6 +262,8 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                                 placeholder="Enter the reason for your request..."
                                 rows={4}
                                 className="textarea textarea-bordered w-full resize-none"
+                                disabled={submitting}
+                                required
                             />
 
                             <p className="text-[11px] text-base-content/50 mt-1.5">
@@ -238,15 +276,11 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                         {/* Error */}
 
                         {error && (
-
                             <div className="rounded-lg border border-error/20 bg-error/5 px-3 py-2">
-
                                 <p className="text-xs text-error">
                                     {error}
                                 </p>
-
                             </div>
-
                         )}
 
                     </div>
@@ -260,6 +294,7 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                             type="button"
                             onClick={onClose}
                             className="btn btn-sm btn-ghost"
+                            disabled={submitting}
                         >
                             Cancel
                         </button>
@@ -267,8 +302,20 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
                         <button
                             type="submit"
                             className="btn btn-sm btn-primary"
+                            disabled={
+                                submitting ||
+                                formData.category === 'Half Day Leave'
+                            }
                         >
-                            Submit for Approval
+                            {submitting && (
+                                <span className="loading loading-spinner loading-xs" />
+                            )}
+
+                            {submitting
+                                ? 'Saving...'
+                                : initialData
+                                    ? 'Update Leave'
+                                    : 'Submit for Approval'}
                         </button>
 
                     </div>
@@ -283,7 +330,13 @@ function LeaveApplicationModal({ onClose, onSubmit }) {
             <form
                 method="dialog"
                 className="modal-backdrop"
-                onClick={onClose}
+                onClick={(event) => {
+                    event.preventDefault()
+
+                    if (!submitting) {
+                        onClose?.()
+                    }
+                }}
             >
                 <button type="button">
                     close

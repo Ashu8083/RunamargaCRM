@@ -1,3 +1,4 @@
+# backend\migrations\env.py
 from logging.config import fileConfig
 from app.config.settings import settings
 from app.models.base import Base
