@@ -415,7 +415,20 @@ const sidebarmenu = [
         parent: "Employee Management",
         permission: PERMISSIONS.EMPLOYEE_ATTENDANCE_VIEW,
       },
-
+      {
+        path: "/crm/holiday",
+        icon: <CalendarIcon className={submenuIconClasses} />,
+        name: "Holidays",
+        parent: "Employee Management",
+        permission: PERMISSIONS.HOLIDAY_VIEW,
+      },
+      {
+        path: "/crm/leave-management",
+        icon: <CalendarIcon className={submenuIconClasses} />,
+        name: "Leave Management",
+        parent: "Employee Management",
+        permission: PERMISSIONS.LEAVE_MANAGEMENT_VIEW,
+      },
        {
         path: "/crm/face-enrollment",
         icon: <CalendarIcon className={submenuIconClasses} />,

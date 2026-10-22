@@ -36,7 +36,7 @@ def get_employee_profile_route(
             email=employee.email,
             phone=employee.phone,
             role=employee.role.name,
-            employee_code=employee.employee_code,
+            employee_code=employee.employee_code or "",
             gender=employee_details.gender if employee_details else None,
             joining_date=employee_details.joining_date if employee_details else None,
             aadhar_card=employee_details.aadhar_card if employee_details else None,

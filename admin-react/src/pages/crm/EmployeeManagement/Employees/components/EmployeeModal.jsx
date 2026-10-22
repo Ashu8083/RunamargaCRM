@@ -645,7 +645,7 @@ function EmployeeModal({
                       {roles
                         .filter(
                           (role) =>
-                            !["admin", "business"].includes(
+                            !["admin"].includes(
                               role.name?.toLowerCase()
                             )
                         )

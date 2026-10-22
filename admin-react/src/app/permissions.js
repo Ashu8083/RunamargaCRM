@@ -67,6 +67,11 @@ export const PERMISSIONS = Object.freeze({
   EMPLOYEE_ATTENDANCE_VIEW:
     "employee-attendance:view",
 
+  HOLIDAY_VIEW:
+    "holidays:view",
+  LEAVE_MANAGEMENT_VIEW:
+    "leave:view",
+
   FACE_ENROLLMENT_VIEW:
     "face-enrollment:view",
 
