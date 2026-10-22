@@ -1,6 +1,6 @@
 # backend/app/controllers/api/auth/auth_controller.py
 
-from fastapi import UploadFile
+from fastapi import UploadFile, logger
 from sqlalchemy.orm import Session
 
 from app.schemas.api.auth.auth_schema import (
@@ -9,6 +9,7 @@ from app.schemas.api.auth.auth_schema import (
     FaceEnrollmentResponse,
     FaceLoginResponse,
     RefreshTokenResponse,
+    LogoutResponse,
 )
 
 from app.services.api.auth.auth_service import (
@@ -16,6 +17,7 @@ from app.services.api.auth.auth_service import (
     enroll_employee_face,
     face_login,
     refresh_access_token,
+    logout_employee,
 )
 
 
@@ -307,9 +309,10 @@ async def face_login_controller(
     image_bytes = await image.read()
 
     if not image_bytes:
-
+        logger.info("Face image is required.")
         raise ValueError(
             "Face image is required."
+
         )
 
     # --------------------------------------------------------------------
@@ -327,6 +330,7 @@ async def face_login_controller(
         longitude=longitude,
     )
 
+
     # --------------------------------------------------------------------
     # Return successful authentication response.
     # --------------------------------------------------------------------
@@ -340,6 +344,10 @@ async def face_login_controller(
         ],
         employee_code=result[
             "employee_code"
+        ],
+
+        employee_context_id=result[
+            "employee_context_id"
         ],
         employee_name=result[
             "employee_name"
@@ -356,6 +364,10 @@ async def face_login_controller(
         ],
         face_registered=result[
             "face_registered"
+        ],
+        phone_number_id=
+        result[
+            "phone_number_id"
         ],
         matched_capture_type=result.get(
             "matched_capture_type"
@@ -412,4 +424,36 @@ def refresh_token_controller(
             "access_token"
         ],
         token_type="bearer",
+    )
+
+
+# ========================================================================
+# LOGOUT
+# ========================================================================
+#
+# Android logout controller.
+# Revokes active refresh token sessions and blacklists access token.
+#
+# ========================================================================
+
+def logout_controller(
+    db: Session,
+    employee_id: int | None = None,
+    access_token: str | None = None,
+    refresh_token: str | None = None,
+    device_id: str | None = None,
+) -> LogoutResponse:
+
+    result = logout_employee(
+        db=db,
+        employee_id=employee_id,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        device_id=device_id,
+    )
+
+    return LogoutResponse(
+        success=result["success"],
+        message=result["message"],
+        revoked_tokens_count=result["revoked_tokens_count"],
     )

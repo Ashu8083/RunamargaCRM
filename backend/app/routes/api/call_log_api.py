@@ -10,7 +10,7 @@ from app.controllers.CallManagement.call_logs_controller import (
     get_call_history,
     create_call_logs,
 )
-from app.core.security import get_current_employee
+from app.core.api_security import get_current_api_employee
 
 
 router = APIRouter(
@@ -23,7 +23,7 @@ router = APIRouter(
 def cal_logs_create(
     call_log_schema : CallLogsCreateSchema,
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_employee),
+    employee: Employee = Depends(get_current_api_employee),
 ):
     call_logs = create_call_logs(db, employee, call_log_schema)
 

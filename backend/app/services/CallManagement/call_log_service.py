@@ -145,7 +145,7 @@ class CallLogService:
             PhoneNumber.employee_id == employee.id,
             PhoneNumber.id == call_log_schema.phone_id,
         ).first()
-        logger.info(f"<==================== Creating call log for phone number{phone_numbers.id} ===================>")
+
 
         call_log = CallLog(
             phone_number=call_log_schema.phone_number,

@@ -97,6 +97,8 @@ class FaceLoginResponse(BaseModel):
 
     employee_id: int
 
+    employee_context_id: int
+
     employee_code: str
 
     employee_name: str
@@ -110,6 +112,8 @@ class FaceLoginResponse(BaseModel):
     face_status: str
 
     face_registered: bool
+    
+    phone_number_id  : int
 
     matched_capture_type: str | None = None
 
@@ -191,13 +195,21 @@ class FaceEnrollmentResponse(BaseModel):
 
 
 # ========================================================================
-# REFRESH TOKEN RESPONSE
+# REFRESH TOKEN REQUEST & RESPONSE
 # ========================================================================
 #
-# Returned when Android exchanges a valid refresh token for a new
-# access token.
+# Android sends refresh_token in request body.
 #
 # ========================================================================
+
+class RefreshTokenRequest(BaseModel):
+
+    refresh_token: str = Field(
+        ...,
+        min_length=1,
+        description="Refresh token to exchange for a new access token.",
+    )
+
 
 class RefreshTokenResponse(BaseModel):
 
@@ -206,3 +218,33 @@ class RefreshTokenResponse(BaseModel):
     access_token: str
 
     token_type: str = "bearer"
+
+
+# ========================================================================
+# LOGOUT REQUEST & RESPONSE
+# ========================================================================
+#
+# Used for Android logout API to revoke session and tokens.
+#
+# ========================================================================
+
+class LogoutRequest(BaseModel):
+
+    refresh_token: str | None = Field(
+        default=None,
+        description="Optional refresh token to revoke. If omitted, tokens are resolved from Authorization header or employee session.",
+    )
+
+    device_id: str | None = Field(
+        default=None,
+        description="Optional device ID to scope revocation.",
+    )
+
+
+class LogoutResponse(BaseModel):
+
+    success: bool = True
+
+    message: str = "Logout successful. Token revoked."
+
+    revoked_tokens_count: int = 0

@@ -7,11 +7,12 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 
-from fastapi import Cookie, Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.models.employees import Employee
+from app.models.auth_tokens import AuthToken
 
 
 # ------------------------------------------------------------------------
@@ -27,7 +28,7 @@ JWT_ALGORITHM = "HS256"
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
-TEMPORARY_ENROLLMENT_EXPIRE_MINUTES = 5
+TEMPORARY_ENROLLMENT_EXPIRE_MINUTES = 60
 
 # ------------------------------------------------------------------------
 # TOKEN TYPES
@@ -200,6 +201,35 @@ def decode_token(
 
 
 # ------------------------------------------------------------------------
+# DECODE TOKEN WITHOUT EXPIRATION VALIDATION
+# ------------------------------------------------------------------------
+
+def decode_token_unverified_exp(
+    token: str,
+) -> dict:
+    """
+    Decode and validate a JWT signature while ignoring expiration.
+    Useful for logout to identify employee even if access_token or
+    refresh_token has just expired.
+    """
+
+    try:
+
+        return jwt.decode(
+            token,
+            JWT_SECRET_KEY,
+            algorithms=[JWT_ALGORITHM],
+            options={"verify_exp": False},
+        )
+
+    except jwt.InvalidTokenError:
+
+        raise ValueError(
+            "Invalid token"
+        )
+
+
+# ------------------------------------------------------------------------
 # GET EMPLOYEE ID FROM ACCESS TOKEN
 # ------------------------------------------------------------------------
 
@@ -328,18 +358,30 @@ def get_employee_id_from_face_enrollment_token(
 # ------------------------------------------------------------------------
 
 def get_current_api_employee(
+    request: Request,
     db: Session = Depends(get_db),
-    access_token: str | None = Cookie(default=None),
 ) -> Employee:
     """
     Get the currently authenticated employee using
-    the normal access token.
+    the normal access token from the Authorization header.
 
-    This dependency accepts ONLY:
-        type = access
+    Accepts:
+        Authorization: Bearer <token>
+        X-Access-Token: <token>
+
+    Checks that token is not revoked in auth_tokens table.
     """
 
-    if not access_token:
+    raw_token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        raw_token = auth_header.split(" ", 1)[1].strip()
+    elif auth_header:
+        raw_token = auth_header.strip()
+    elif request.headers.get("X-Access-Token"):
+        raw_token = request.headers.get("X-Access-Token").strip()
+
+    if not raw_token:
 
         raise HTTPException(
             status_code=401,
@@ -349,7 +391,7 @@ def get_current_api_employee(
     try:
 
         employee_id = get_employee_id_from_access_token(
-            access_token
+            raw_token
         )
 
     except ValueError as exc:
@@ -357,6 +399,26 @@ def get_current_api_employee(
         raise HTTPException(
             status_code=401,
             detail=str(exc),
+        )
+
+    # --------------------------------------------------------------------
+    # Check if this access token has been revoked
+    # --------------------------------------------------------------------
+    token_h = hash_token(raw_token)
+    revoked_token = (
+        db.query(AuthToken)
+        .filter(
+            AuthToken.employee_id == employee_id,
+            AuthToken.token_hash == token_h,
+            AuthToken.revoked_at.isnot(None),
+        )
+        .first()
+    )
+
+    if revoked_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Token has been revoked",
         )
 
     employee = (
