@@ -100,67 +100,7 @@ function Applications() {
         useState(false)
 
 
-    // =========================================================
-    // STATUS NORMALIZER
-    // =========================================================
-
-    const normalizeStatus = (status) => {
-
-        const value = String(status || '')
-            .trim()
-            .toLowerCase()
-            .replace(/[_-]/g, ' ')
-
-        if (
-            value === 'revert rejected' ||
-            value === 'reverted rejected' ||
-            value === 'revert reject'
-        ) {
-            return 'Revert Rejected'
-        }
-
-        if (
-            value === 'rejected' ||
-            value === 'reject'
-        ) {
-            return 'Rejected'
-        }
-
-        if (
-            value === 'inprocess' ||
-            value === 'in process' ||
-            value === 'in progress' ||
-            value === 'processing'
-        ) {
-            return 'In Process'
-        }
-
-        if (
-            value === 'docspending' ||
-            value === 'docs pending' ||
-            value === 'documents pending' ||
-            value === 'document pending'
-        ) {
-            return 'Docs Pending'
-        }
-
-        if (
-            value === 'sanctioned' ||
-            value === 'sanction'
-        ) {
-            return 'Sanctioned'
-        }
-
-        if (
-            value === 'disbursed' ||
-            value === 'disbursement'
-        ) {
-            return 'Disbursed'
-        }
-
-        return String(status || '')
-    }
-
+    
 
     // =========================================================
     // FETCH APPLICATIONS

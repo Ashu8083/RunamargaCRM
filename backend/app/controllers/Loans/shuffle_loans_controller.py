@@ -65,3 +65,17 @@ class ShuffleLoansController:
             rm_id=payload.rm_id,
             loan_type_id=payload.loan_type_id,
         )
+
+    @staticmethod
+    def assign_random_agent(
+        db: Session,
+        employee: Employee,
+        application_id: int,
+        shuffled_by_context_id: int,
+    ):
+        return ShuffleLoansService.assign_random_agent(
+            db=db,
+            employee=employee,
+            application_id=application_id,
+            shuffled_by_context_id=shuffled_by_context_id,
+        )

@@ -101,3 +101,59 @@ def assign_shuffle_loans_route(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+
+
+@router.patch("/applications/{application_id}/assign-random")
+def assign_random_agent(
+    application_id: int,
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_employee),
+):
+    try:
+        active_context = AccessControl.get_active_context(
+            db=db,
+            employee=employee,
+        )
+
+        if not active_context:
+            raise HTTPException(
+                status_code=403,
+                detail="No active employee context found.",
+            )
+
+        return ShuffleLoansController.assign_random_agent(
+            db=db,
+            employee=employee,
+            application_id=application_id,
+            shuffled_by_context_id=active_context.id,
+        )
+
+    except PermissionError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        )
+
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except Exception:
+        db.rollback()
+        import traceback
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to assign application to an eligible agent.",
+        )

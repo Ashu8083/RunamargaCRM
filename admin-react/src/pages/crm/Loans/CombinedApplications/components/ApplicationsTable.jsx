@@ -580,33 +580,45 @@ function ApplicationsTable({
   const [assignmentError, setAssignmentError] = useState("");
 
   const openAssignmentModal = async (application) => {
-    const applicationId = application.id ?? application.loanId ?? application.loan_id;
-    setAssignmentApplication(application);
-    setEligibleAgents([]);
-    setSelectedAssignmentAgentId("");
-    setAssignmentError("");
+    const confirmed = window.confirm(
+      "Are you sure you want to move this application to Processing Team?"
+    );
+
+    if (!confirmed) return;
+
+    const applicationId =
+      application.id ?? application.loanId ?? application.loan_id;
 
     if (!applicationId) {
-      setAssignmentError("Application ID is missing.");
+      window.alert("Application ID is missing.");
       return;
     }
 
-    setAssignmentLoading(true);
     try {
       const response = await apiClient({
-        method: "GET",
-        url: `/shuffle-loans/applications/${applicationId}/eligible-agents`,
+        method: "PATCH",
+        url: `/shuffle-loans/applications/${applicationId}/assign-random`,
       });
-      const data = response.data || {};
-      setEligibleAgents(Array.isArray(data.agents) ? data.agents : []);
+
+      const updatedApplication = Array.isArray(response.data)
+        ? response.data[0]
+        : response.data;
+
+      if (updatedApplication && onAssignmentChange) {
+        onAssignmentChange(Number(applicationId), updatedApplication);
+      }
+
+      if (onRefresh) {
+        await onRefresh();
+      }
+
+      window.alert("Application successfully assigned to Processing Team.");
     } catch (error) {
-      setAssignmentError(
+      window.alert(
         error?.response?.data?.detail ||
-          error?.response?.data?.message ||
-          "Could not load eligible agents. Please try again.",
+        error?.response?.data?.message ||
+        "Assignment failed. Please try again."
       );
-    } finally {
-      setAssignmentLoading(false);
     }
   };
 
@@ -618,51 +630,6 @@ function ApplicationsTable({
     setAssignmentError("");
   };
 
-  const submitApplicationAssignment = async () => {
-    if (!assignmentApplication || !selectedAssignmentAgentId) {
-      setAssignmentError("Please select an agent.");
-      return;
-    }
-
-    const applicationId =
-      assignmentApplication.id ??
-      assignmentApplication.loanId ??
-      assignmentApplication.loan_id;
-
-    setAssignmentSaving(true);
-    setAssignmentError("");
-    try {
-      const response = await apiClient({
-        method: "PATCH",
-        url: "/shuffle-loans/assign",
-        data: {
-          application_ids: [Number(applicationId)],
-          agent_id: Number(selectedAssignmentAgentId),
-        },
-      });
-
-      const updatedApplication = Array.isArray(response.data)
-        ? response.data[0]
-        : response.data;
-
-      if (updatedApplication && onAssignmentChange) {
-        onAssignmentChange(Number(applicationId), updatedApplication);
-      }
-
-      setAssignmentApplication(null);
-      setEligibleAgents([]);
-      setSelectedAssignmentAgentId("");
-      if (onRefresh) await onRefresh();
-    } catch (error) {
-      setAssignmentError(
-        error?.response?.data?.detail ||
-          error?.response?.data?.message ||
-          "Assignment failed. Please try again.",
-      );
-    } finally {
-      setAssignmentSaving(false);
-    }
-  };
 
   const handleLoanTypesLoaded = useCallback((options) => {
     setLoanTypes(options || []);
@@ -1548,14 +1515,14 @@ function ApplicationsTable({
                                                                     truncate
                                                                     hover:opacity-80
                                                                     ${getStatusClass(
-                                                                      status,
-                                                                    )}
+                              status,
+                            )}
                                                                 `}
                           >
                             {status}
                           </button>
 
-                        {/*  {(status === "Rejected" ||
+                          {/*  {(status === "Rejected" ||
                             status === "Revert Rejected") && (
                               <button
                                 type="button"
@@ -1598,7 +1565,7 @@ function ApplicationsTable({
                                                             gap-0
                                                         "
                         >
-                           {/* Assign */}
+                          {/* Assign */}
                           <button
                             type="button"
                             onClick={() => openAssignmentModal(application)}
@@ -1889,11 +1856,11 @@ function ApplicationsTable({
                 selectedInfoApplication,
               )
                 ? getRevertedByName(
-                    selectedInfoApplication,
-                  ) || "—"
+                  selectedInfoApplication,
+                ) || "—"
                 : getRejectedByName(
-                    selectedInfoApplication,
-                  ) || "—"}
+                  selectedInfoApplication,
+                ) || "—"}
             </div>
 
             {/* DATE */}
@@ -1913,11 +1880,11 @@ function ApplicationsTable({
                   selectedInfoApplication,
                 )
                   ? getRevertedDate(
-                      selectedInfoApplication,
-                    )
+                    selectedInfoApplication,
+                  )
                   : getRejectedDate(
-                      selectedInfoApplication,
-                    ),
+                    selectedInfoApplication,
+                  ),
               )}
             </div>
 
@@ -1943,144 +1910,18 @@ function ApplicationsTable({
                   selectedInfoApplication,
                 )
                   ? getRevertedReason(
-                      selectedInfoApplication,
-                    ) || "—"
+                    selectedInfoApplication,
+                  ) || "—"
                   : getRejectedReason(
-                      selectedInfoApplication,
-                    ) || "—"}
+                    selectedInfoApplication,
+                  ) || "—"}
               </span>
             </div>
           </div>,
           document.body,
         )}
 
-      {/* =================================================
-                ASSIGN APPLICATION MODAL
-            ================================================= */}
-      {assignmentApplication && createPortal(
-        <div
-          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeAssignmentModal();
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="assign-application-title"
-            className="w-full max-w-md rounded-2xl border border-base-300 bg-base-100 p-5 shadow-2xl"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id="assign-application-title" className="text-lg font-semibold text-base-content">
-                  Assign Application
-                </h2>
-                <p className="mt-1 text-sm text-base-content/60">
-                  Select an agent eligible for this loan type.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeAssignmentModal}
-                disabled={assignmentSaving}
-                aria-label="Close assignment modal"
-                className="btn btn-ghost btn-sm btn-square"
-              >
-                <span aria-hidden="true">×</span>
-              </button>
-            </div>
-
-            <div className="mt-5 rounded-xl border border-base-300 bg-base-200/40 p-3">
-              <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-                Customer
-              </div>
-              <div className="mt-1 font-semibold text-base-content">
-                {assignmentApplication.name || "Unknown customer"}
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-                <span className="text-base-content/60">Loan type</span>
-                <span className="text-right font-medium text-base-content">
-                  {getLoanTypeName(assignmentApplication, loanTypes)}
-                </span>
-              </div>
-              {(assignmentApplication.unique_id || assignmentApplication.loanId) && (
-                <div className="mt-1 flex items-center justify-between gap-3 text-sm">
-                  <span className="text-base-content/60">Application ID</span>
-                  <span className="font-medium text-base-content">
-                    {assignmentApplication.unique_id || assignmentApplication.loanId}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4">
-              <label htmlFor="eligible-agent-select" className="mb-2 block text-sm font-medium text-base-content">
-                Processing agent
-              </label>
-              {assignmentLoading ? (
-                <div className="flex items-center gap-2 rounded-lg border border-base-300 px-3 py-3 text-sm text-base-content/60">
-                  <span className="loading loading-spinner loading-sm" />
-                  Loading eligible agents…
-                </div>
-              ) : (
-                <select
-                  id="eligible-agent-select"
-                  value={selectedAssignmentAgentId}
-                  onChange={(event) => setSelectedAssignmentAgentId(event.target.value)}
-                  disabled={assignmentSaving || eligibleAgents.length === 0}
-                  className="select select-bordered w-full"
-                >
-                  <option value="">
-                    {eligibleAgents.length ? "Select an agent" : "No eligible agents available"}
-                  </option>
-                  {eligibleAgents.map((agent) => (
-                    <option
-                      key={agent.employee_context_id}
-                      value={agent.employee_context_id}
-                    >
-                      {agent.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {assignmentError && (
-                <p role="alert" className="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 text-sm text-error">
-                  {assignmentError}
-                </p>
-              )}
-              {!assignmentLoading && !assignmentError && eligibleAgents.length === 0 && (
-                <p className="mt-2 text-xs text-base-content/60">
-                  No active agent has the required loan permission and loan assignment.
-                </p>
-              )}
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeAssignmentModal}
-                disabled={assignmentSaving}
-                className="btn btn-ghost"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={submitApplicationAssignment}
-                disabled={assignmentLoading || assignmentSaving || !selectedAssignmentAgentId}
-                className="btn bg-[#8BCF00] text-black hover:bg-[#78B300]"
-              >
-                {assignmentSaving ? (
-                  <><span className="loading loading-spinner loading-xs" /> Assigning…</>
-                ) : (
-                  "Assign"
-                )}
-              </button>
-            </div>
-          </section>
-        </div>,
-        document.body,
-      )}
+     
 
       {/* =================================================
                 GLOBAL CHAT

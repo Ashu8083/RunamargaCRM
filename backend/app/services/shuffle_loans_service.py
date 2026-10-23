@@ -3,10 +3,9 @@
 
 from math import ceil
 from typing import Optional
-
+import random
 from sqlalchemy import or_, func
 from sqlalchemy.orm import Session, aliased
-
 from app.models.loan_applications import LoanApplication
 from app.models.employees import Employee
 from app.models.employee_contexts import EmployeeContext
@@ -1221,3 +1220,78 @@ class ShuffleLoansService:
                 else None
             ),
         }
+
+
+
+    @staticmethod
+    def assign_random_agent(
+        db: Session,
+        employee: Employee,
+        application_id: int,
+        shuffled_by_context_id: int,
+    ):
+        """Assign one application to a randomly selected eligible agent."""
+
+        # Resolve the current employee's access scope.
+        scope = ShuffleLoansService._get_access_scope(
+            db=db,
+            employee=employee,
+            context_id=shuffled_by_context_id,
+        )
+
+        # Find the application.
+        application = (
+            db.query(LoanApplication)
+            .filter(
+                LoanApplication.id == application_id,
+                LoanApplication.deleted_at.is_(None),
+            )
+            .first()
+        )
+
+        if not application:
+            raise ValueError("Application was not found.")
+
+        # Verify that the employee is authorized to access this application.
+        authorized = ShuffleLoansService._apply_access_scope(
+            query=db.query(LoanApplication).filter(
+                LoanApplication.id == application_id,
+                LoanApplication.deleted_at.is_(None),
+            ),
+            scope=scope,
+        ).first()
+
+        if not authorized:
+            raise PermissionError(
+                "You are not allowed to assign this application."
+            )
+
+        # Get eligible agents for this application's loan type.
+        eligible_result = (
+            ShuffleLoansService._get_eligible_agents_for_application(
+                db=db,
+                application=application,
+                employee=employee,
+                context_id=scope["context"].id,
+            )
+        )
+
+        eligible_agents = eligible_result["agents"]
+
+        if not eligible_agents:
+            raise ValueError(
+                "No eligible agents are available for this loan type."
+            )
+
+        # Randomly select an eligible agent.
+        selected_agent = random.choice(eligible_agents)
+
+        # Reuse the existing assignment logic for validation,
+        # history recording, database updates, and response data.
+        return ShuffleLoansService.assign_shuffle_loans(
+            db=db,
+            employee=employee,
+            application_ids=[application_id],
+            shuffled_by_context_id=shuffled_by_context_id,
+            agent_id=selected_agent["employee_context_id"],
+        )
