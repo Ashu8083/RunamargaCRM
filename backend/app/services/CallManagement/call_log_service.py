@@ -147,6 +147,9 @@ class CallLogService:
         ).first()
 
 
+
+
+
         call_log = CallLog(
             phone_number=call_log_schema.phone_number,
             call_type=call_log_schema.call_type,
@@ -157,7 +160,6 @@ class CallLogService:
             attended_at=call_log_schema.attended_at,
             phone_id = phone_numbers.id,
             employee_context_id = call_log_schema.employee_context_id,
-
         )
         db.add(call_log)
         db.commit()

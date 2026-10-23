@@ -1,6 +1,6 @@
 # backend/app/schemas/api/auth/auth_schema.py
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ========================================================================
@@ -97,7 +97,9 @@ class FaceLoginResponse(BaseModel):
 
     employee_id: int
 
-    employee_context_id: int
+    employee_context_id: int | None = None
+
+    context_name: str | None = None
 
     employee_code: str
 
@@ -112,8 +114,6 @@ class FaceLoginResponse(BaseModel):
     face_status: str
 
     face_registered: bool
-    
-    phone_number_id  : int
 
     matched_capture_type: str | None = None
 
@@ -248,3 +248,40 @@ class LogoutResponse(BaseModel):
     message: str = "Logout successful. Token revoked."
 
     revoked_tokens_count: int = 0
+
+
+# ========================================================================
+# EMPLOYEE CONTEXT RESPONSE
+# ========================================================================
+#
+# Represents an employee's context (role assignment).
+# When an employee has multiple contexts, all contexts are returned.
+#
+# ========================================================================
+
+class EmployeeContextResponse(BaseModel):
+
+    id: int
+    name: str
+    context_id: int | None = None
+    employee_context_id: int | None = None
+    code: str | None = None
+    is_default: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+
+# ========================================================================
+# RM PHONE NUMBER RESPONSE
+# ========================================================================
+#
+# Fetched based on employee_context_id for RM context only.
+#
+# ========================================================================
+
+class RMPhoneNumberResponse(BaseModel):
+
+    phone_number_id: int
+
+    model_config = ConfigDict(from_attributes=True)

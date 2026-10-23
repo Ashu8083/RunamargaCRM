@@ -10,7 +10,7 @@ import numpy as np
 
 from sqlalchemy.orm import Session
 
-from app.models import phone_numbers, PhoneNumber, EmployeeContext
+from app.models import phone_numbers, PhoneNumber, EmployeeContext, Context
 from app.models.employees import Employee
 from app.core.log_config import logger
 from app.models.employee_face_profiles import EmployeeFaceProfile
@@ -1525,17 +1525,31 @@ def face_login(
         .first()
     )
 
-    phone_numbers_id = (
-        db.query(PhoneNumber.id).filter(
-            PhoneNumber.employee_id == employee_id,
-        ).scalar()
+    # --------------------------------------------------------------------
+    # Resolve employee context (default or active)
+    # --------------------------------------------------------------------
+    emp_context = (
+        db.query(EmployeeContext)
+        .join(
+            Context,
+            EmployeeContext.context_id == Context.id,
+        )
+        .filter(
+            EmployeeContext.employee_id == employee_id,
+            EmployeeContext.is_active.is_(True),
+            EmployeeContext.deleted_at.is_(None),
+            Context.is_active.is_(True),
+        )
+        .order_by(
+            EmployeeContext.is_default.desc(),
+            EmployeeContext.id.asc(),
+        )
+        .first()
     )
 
-    employee_context_id = None
+    employee_context_id = emp_context.id if emp_context else None
+    context_name = emp_context.context.name if (emp_context and emp_context.context) else None
 
-    employee_context_id = db.query(EmployeeContext.id).filter(
-        EmployeeContext.employee_id == employee_id,
-    ).scalar()
     employee = validate_employee_for_api_login(
         employee
     )
@@ -1589,11 +1603,15 @@ def face_login(
         longitude=longitude,
     )
 
-    logger.info(f"employee login successful phone number id {phone_numbers_id}, employee context id {employee_context_id}")
+    logger.info(
+        f"employee login successful employee_id={employee.id}, "
+        f"employee_context_id={employee_context_id}, context_name={context_name}"
+    )
     return {
         "message": "Face login successful",
         "employee_id": employee.id,
-        "employee_context_id" : employee_context_id,
+        "employee_context_id": employee_context_id,
+        "context_name": context_name,
         "employee_code": employee.email,
         "employee_name": employee.name,
         "access_token": access_token,
@@ -1601,7 +1619,6 @@ def face_login(
         "token_type": "bearer",
         "face_status": "MATCH",
         "face_registered": True,
-        "phone_number_id" :phone_numbers_id,
         "matched_capture_type": face_result.get(
             "capture_type"
         ),
@@ -1609,6 +1626,124 @@ def face_login(
             "similarity"
         ),
     }
+
+
+# ------------------------------------------------------------------------
+# GET EMPLOYEE CONTEXTS
+# ------------------------------------------------------------------------
+
+def get_employee_contexts_service(
+    db: Session,
+    employee_id: int,
+) -> list[dict]:
+    """
+    Fetch all active contexts for an employee by employee_id.
+    Returns a list of contexts with context id and name.
+    """
+    employee = (
+        db.query(Employee)
+        .filter(
+            Employee.id == employee_id,
+            Employee.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not employee:
+        raise ValueError(f"Employee with ID {employee_id} not found.")
+
+    employee_contexts = (
+        db.query(EmployeeContext)
+        .join(
+            Context,
+            EmployeeContext.context_id == Context.id,
+        )
+        .filter(
+            EmployeeContext.employee_id == employee_id,
+            EmployeeContext.is_active.is_(True),
+            EmployeeContext.deleted_at.is_(None),
+            Context.is_active.is_(True),
+        )
+        .order_by(
+            EmployeeContext.is_default.desc(),
+            EmployeeContext.id.asc(),
+        )
+        .all()
+    )
+
+    return [
+        {
+            "id": ec.id,
+            "employee_context_id": ec.id,
+            "context_id": ec.context_id,
+            "name": ec.context.name if ec.context else "",
+            "code": ec.context.code if ec.context else "",
+            "is_default": bool(ec.is_default),
+        }
+        for ec in employee_contexts
+    ]
+
+
+# ------------------------------------------------------------------------
+# GET RM PHONE NUMBER
+# ------------------------------------------------------------------------
+
+def get_rm_phone_number_service(
+    db: Session,
+    employee_context_id: int,
+) -> dict:
+    """
+    Fetch phone number based on employee_context_id for RM context only.
+    """
+    employee_context = (
+        db.query(EmployeeContext)
+        .join(
+            Context,
+            EmployeeContext.context_id == Context.id,
+        )
+        .filter(
+            EmployeeContext.id == employee_context_id,
+            EmployeeContext.is_active.is_(True),
+            EmployeeContext.deleted_at.is_(None),
+            Context.is_active.is_(True),
+        )
+        .first()
+    )
+
+    if not employee_context:
+        raise ValueError(
+            f"Employee context with ID {employee_context_id} not found or inactive."
+        )
+
+    context_code = (employee_context.context.code or "").strip().upper()
+    context_name = (employee_context.context.name or "").strip()
+
+    # Validate that this is strictly RM context
+    if context_code != "RM" and "RM" not in context_name.upper():
+        raise PermissionError(
+            f"Phone number can only be fetched for RM context. Current context is '{context_name}' ({context_code})."
+        )
+
+    phone_record = (
+        db.query(PhoneNumber)
+        .filter(
+            PhoneNumber.employee_id == employee_context.employee_id,
+            PhoneNumber.deleted_at.is_(None),
+        )
+        .order_by(PhoneNumber.id.desc())
+        .first()
+    )
+
+    if not phone_record:
+        raise ValueError(
+            f"No phone number assigned to employee (context ID: {employee_context_id})."
+        )
+
+    return {
+        "phone_number_id": phone_record.id,
+    }
+
+
 
 
 # ------------------------------------------------------------------------

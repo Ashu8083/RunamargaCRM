@@ -10,7 +10,10 @@ from app.schemas.api.auth.auth_schema import (
     FaceLoginResponse,
     RefreshTokenResponse,
     LogoutResponse,
+    EmployeeContextResponse,
+    RMPhoneNumberResponse,
 )
+
 
 from app.services.api.auth.auth_service import (
     identify_employee,
@@ -18,7 +21,10 @@ from app.services.api.auth.auth_service import (
     face_login,
     refresh_access_token,
     logout_employee,
+    get_employee_contexts_service,
+    get_rm_phone_number_service,
 )
+
 
 
 # ========================================================================
@@ -345,10 +351,12 @@ async def face_login_controller(
         employee_code=result[
             "employee_code"
         ],
-
-        employee_context_id=result[
+        employee_context_id=result.get(
             "employee_context_id"
-        ],
+        ),
+        context_name=result.get(
+            "context_name"
+        ),
         employee_name=result[
             "employee_name"
         ],
@@ -365,10 +373,6 @@ async def face_login_controller(
         face_registered=result[
             "face_registered"
         ],
-        phone_number_id=
-        result[
-            "phone_number_id"
-        ],
         matched_capture_type=result.get(
             "matched_capture_type"
         ),
@@ -379,7 +383,54 @@ async def face_login_controller(
 
 
 # ========================================================================
+# GET EMPLOYEE CONTEXTS
+# ========================================================================
+#
+# Fetches all active contexts for an employee by employee_id.
+# If the employee has multiple contexts, all are returned with id and name.
+#
+# ========================================================================
+
+def get_employee_contexts_controller(
+    db: Session,
+    employee_id: int,
+) -> list[EmployeeContextResponse]:
+
+    contexts = get_employee_contexts_service(
+        db=db,
+        employee_id=employee_id,
+    )
+
+    return [
+        EmployeeContextResponse(**ctx)
+        for ctx in contexts
+    ]
+
+
+# ========================================================================
+# GET RM PHONE NUMBER
+# ========================================================================
+#
+# Fetches phone number based on employee_context_id for RM context only.
+#
+# ========================================================================
+
+def get_rm_phone_number_controller(
+    db: Session,
+    employee_context_id: int,
+) -> RMPhoneNumberResponse:
+
+    result = get_rm_phone_number_service(
+        db=db,
+        employee_context_id=employee_context_id,
+    )
+
+    return RMPhoneNumberResponse(**result)
+
+
+# ========================================================================
 # REFRESH ACCESS TOKEN
+
 # ========================================================================
 #
 # Android sends the refresh token.

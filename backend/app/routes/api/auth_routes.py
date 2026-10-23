@@ -20,6 +20,8 @@ from app.controllers.api.auth.auth_controller import (
     face_login_controller,
     refresh_token_controller,
     logout_controller,
+    get_employee_contexts_controller,
+    get_rm_phone_number_controller,
 )
 
 from app.schemas.api.auth.auth_schema import (
@@ -31,7 +33,11 @@ from app.schemas.api.auth.auth_schema import (
     RefreshTokenResponse,
     LogoutRequest,
     LogoutResponse,
+    EmployeeContextResponse,
+    RMPhoneNumberResponse,
 )
+
+
 
 
 # ========================================================================
@@ -174,7 +180,7 @@ def identify_employee(
 #
 # This endpoint DOES NOT require a normal access token.
 #
-# Instead it requires the short-lived:
+#Instead it requires the short-lived:
 #
 #     face_enrollment
 #
@@ -496,58 +502,113 @@ def logout(
     # --------------------------------------------------------------------
     # 1. Resolve access token (Authorization or X-Access-Token header)
     # --------------------------------------------------------------------
-    raw_access_token = None
-
-    auth_header = http_request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        raw_access_token = auth_header.split(" ", 1)[1].strip()
-    elif auth_header:
-        raw_access_token = auth_header.strip()
-    elif http_request.headers.get("X-Access-Token"):
-        raw_access_token = http_request.headers.get("X-Access-Token").strip()
-
-    # --------------------------------------------------------------------
-    # 2. Resolve refresh token (Body or Header)
-    # --------------------------------------------------------------------
-    raw_refresh_token = (
-        (body.refresh_token if body else None)
-        or http_request.headers.get("X-Refresh-Token")
-    )
-
-    # --------------------------------------------------------------------
-    # 3. Resolve device ID (Body or Header)
-    # --------------------------------------------------------------------
-    device_id = (
-        (body.device_id if body else None)
-        or http_request.headers.get("X-Device-ID")
-    )
-
-    if not isinstance(raw_access_token, str):
         raw_access_token = None
-    if not isinstance(raw_refresh_token, str):
-        raw_refresh_token = None
-    if not isinstance(device_id, str):
-        device_id = None
 
-    # --------------------------------------------------------------------
-    # Validate token presence
-    # --------------------------------------------------------------------
-    if not raw_access_token and not raw_refresh_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication token required for logout.",
+        auth_header = http_request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            raw_access_token = auth_header.split(" ", 1)[1].strip()
+        elif auth_header:
+            raw_access_token = auth_header.strip()
+        elif http_request.headers.get("X-Access-Token"):
+            raw_access_token = http_request.headers.get("X-Access-Token").strip()
+
+        # --------------------------------------------------------------------
+        # 2. Resolve refresh token (Body or Header)
+        # --------------------------------------------------------------------
+        raw_refresh_token = (
+            (body.refresh_token if body else None)
+            or http_request.headers.get("X-Refresh-Token")
         )
 
+        # --------------------------------------------------------------------
+        # 3. Resolve device ID (Body or Header)
+        # --------------------------------------------------------------------
+        device_id = (
+            (body.device_id if body else None)
+            or http_request.headers.get("X-Device-ID")
+        )
+
+        if not isinstance(raw_access_token, str):
+            raw_access_token = None
+        if not isinstance(raw_refresh_token, str):
+            raw_refresh_token = None
+        if not isinstance(device_id, str):
+            device_id = None
+
+        # --------------------------------------------------------------------
+        # Validate token presence
+        # --------------------------------------------------------------------
+        if not raw_access_token and not raw_refresh_token:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication token required for logout.",
+            )
+
+        try:
+            return logout_controller(
+                db=db,
+                access_token=raw_access_token,
+                refresh_token=raw_refresh_token,
+                device_id=device_id,
+            )
+
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=401,
+                detail=str(exc),
+        )
+
+
+# ========================================================================
+# FETCH EMPLOYEE CONTEXTS
+# ========================================================================
+
+@router.get(
+    "/employee-contexts/{employee_id}",
+    response_model=list[EmployeeContextResponse],
+    summary="Fetch employee contexts by employee ID",
+)
+def get_employee_contexts(
+    employee_id: int,
+    db: Session = Depends(get_db),
+):
     try:
-        return logout_controller(
+        return get_employee_contexts_controller(
             db=db,
-            access_token=raw_access_token,
-            refresh_token=raw_refresh_token,
-            device_id=device_id,
+            employee_id=employee_id,
         )
-
     except ValueError as exc:
         raise HTTPException(
-            status_code=401,
+            status_code=404,
+            detail=str(exc),
+        )
+
+
+# ========================================================================
+# FETCH RM PHONE NUMBER
+# ========================================================================
+
+@router.get(
+    "/phone-number/{employee_context_id}",
+    response_model=RMPhoneNumberResponse,
+    summary="Fetch phone number for RM context by employee context ID",
+)
+def get_rm_phone_number(
+    employee_context_id: int,
+    db: Session = Depends(get_db),
+):
+    try:
+        return get_rm_phone_number_controller(
+            db=db,
+            employee_context_id=employee_context_id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
             detail=str(exc),
         )
