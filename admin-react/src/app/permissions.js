@@ -69,8 +69,20 @@ export const PERMISSIONS = Object.freeze({
 
   HOLIDAY_VIEW:
     "holidays:view",
+  HOLIDAY_CREATE:
+    "holidays:create",
+  HOLIDAY_UPDATE:
+    "holidays:update",
+  HOLIDAY_DELETE:
+    "holidays:delete",
   LEAVE_MANAGEMENT_VIEW:
     "leave:view",
+  LEAVE_CREATE:
+    "leave:create",
+  LEAVE_UPDATE:
+    "leave:update",
+  LEAVE_DELETE:
+    "leave:delete",
 
   FACE_ENROLLMENT_VIEW:
     "face-enrollment:view",
@@ -266,6 +278,12 @@ export const PERMISSIONS = Object.freeze({
 
   PHONE_NUMBERS_VIEW:
     "phone:numbers:view",
+
+  CALL_REMINDER_VIEW:
+    "call:reminder:view",
+
+  REMINDERS_VIEW:
+    "reminder:view",
 
   // =========================================================================
   // CALL ANALYTICS

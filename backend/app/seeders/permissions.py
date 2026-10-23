@@ -17,7 +17,7 @@ from app.models.permissions import Permission
 PERMISSIONS = [
     ("Dashboard View", "dashboard:view"),
     ("Application Filter View", "application-filter:view"),
-    ("Profile View", "profile:view"),
+    ("Profile View", "profile:view", "common"),
 
     # Roles
     ("Role View", "roles:view"),
@@ -53,6 +53,14 @@ PERMISSIONS = [
     ("Attendance View", "attendance:view"),
     ("Employee Attendance View", "employee-attendance:view"),
     ("Face Enrollment View", "face-enrollment:view"),
+    ("Holidays View", "holidays:view", "Permission to view holidays"),
+    ("Holidays Create", "holidays:create", "Permission to create a holiday"),
+    ("Holidays Update", "holidays:update", "Permission to update a holiday"),
+    ("Holidays Delete", "holidays:delete", "Permission to delete a holiday"),
+    ("Leave View", "leave:view", "Permission to view leave management"),
+    ("Leave Create", "leave:create", "Permission to create a leave request"),
+    ("Leave Update", "leave:update", "Permission to update a leave request"),
+    ("Leave Delete", "leave:delete", "Permission to delete a leave request"),
 
     # Dashboard
     ("Conversion Funnel", "dashboard:conversion-funnel"),
@@ -124,6 +132,8 @@ PERMISSIONS = [
     ("Call Number Assign", "calls:number:assign"),
     ("Call Number Exchange", "calls:number:exchange"),
     ("Phone Numbers View", "phone:numbers:view"),
+    ("Call Reminder", "call:reminder:view"),
+    ("Reminder View", "reminder:view"),
 
     # Call Analytics
     (
@@ -264,7 +274,13 @@ PERMISSIONS = [
 # ============================================================
 
 def seed_permissions(db: Session) -> None:
-    for name, code in PERMISSIONS:
+    for permission_data in PERMISSIONS:
+        name, code = permission_data[:2]
+        description = (
+            permission_data[2]
+            if len(permission_data) > 2
+            else None
+        )
         permission = (
             db.query(Permission)
             .filter(Permission.code == code)
@@ -275,12 +291,15 @@ def seed_permissions(db: Session) -> None:
             # Already exists → update
             permission.name = name
             permission.is_active = True
+            if description is not None:
+                permission.description = description
         else:
             # Doesn't exist → create
             db.add(
                 Permission(
                     name=name,
                     code=code,
+                    description=description,
                     is_active=True,
                 )
             )

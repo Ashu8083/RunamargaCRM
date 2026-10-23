@@ -1,62 +1,63 @@
 // admin-react/src/routes/sidebarmenu.js
-import Squares2X2Icon from "@heroicons/react/24/outline/Squares2X2Icon";
-import CalendarDaysIcon from "@heroicons/react/24/outline/CalendarDaysIcon";
-import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
 
-import UserIcon from "@heroicons/react/24/outline/UserIcon";
+import Squares2X2Icon from "@heroicons/react/24/outline/Squares2X2Icon";
+import FunnelIcon from "@heroicons/react/24/outline/FunnelIcon";
+import CalendarDaysIcon from "@heroicons/react/24/outline/CalendarDaysIcon";
 import UserCircleIcon from "@heroicons/react/24/outline/UserCircleIcon";
-import UsersIcon from "@heroicons/react/24/outline/UsersIcon";
-import UserGroupIcon from "@heroicons/react/24/outline/UserGroupIcon";
-import ShieldCheckIcon from "@heroicons/react/24/outline/ShieldCheckIcon";
 
 import KeyIcon from "@heroicons/react/24/outline/KeyIcon";
+import UsersIcon from "@heroicons/react/24/outline/UsersIcon";
+import UserIcon from "@heroicons/react/24/outline/UserIcon";
+import ShieldCheckIcon from "@heroicons/react/24/outline/ShieldCheckIcon";
 
 import DocumentPlusIcon from "@heroicons/react/24/outline/DocumentPlusIcon";
 import DocumentTextIcon from "@heroicons/react/24/outline/DocumentTextIcon";
-import ClipboardDocumentCheckIcon from "@heroicons/react/24/outline/ClipboardDocumentCheckIcon";
-import DocumentDuplicateIcon from "@heroicons/react/24/outline/DocumentDuplicateIcon";
-
 import ClockIcon from "@heroicons/react/24/outline/ClockIcon";
 import ArrowsRightLeftIcon from "@heroicons/react/24/outline/ArrowsRightLeftIcon";
 import ArrowUturnLeftIcon from "@heroicons/react/24/outline/ArrowUturnLeftIcon";
+import DocumentDuplicateIcon from "@heroicons/react/24/outline/DocumentDuplicateIcon";
+import DocumentCheckIcon from "@heroicons/react/24/outline/DocumentCheckIcon";
+
+import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
+import ArrowUpOnSquareIcon from "@heroicons/react/24/outline/ArrowUpOnSquareIcon";
+import DevicePhoneMobileIcon from "@heroicons/react/24/outline/DevicePhoneMobileIcon";
+import BellIcon from "@heroicons/react/24/outline/BellIcon";
+
+import ChartBarIcon from "@heroicons/react/24/outline/ChartBarIcon";
+import ChartPieIcon from "@heroicons/react/24/outline/ChartPieIcon";
+import PresentationChartLineIcon from "@heroicons/react/24/outline/PresentationChartLineIcon";
+import ArrowTrendingUpIcon from "@heroicons/react/24/outline/ArrowTrendingUpIcon";
+
+import RectangleGroupIcon from "@heroicons/react/24/outline/RectangleGroupIcon";
+import ChartBarSquareIcon from "@heroicons/react/24/outline/ChartBarSquareIcon";
+import TrophyIcon from "@heroicons/react/24/outline/TrophyIcon";
+import SignalIcon from "@heroicons/react/24/outline/SignalIcon";
 
 import BuildingLibraryIcon from "@heroicons/react/24/outline/BuildingLibraryIcon";
 import IdentificationIcon from "@heroicons/react/24/outline/IdentificationIcon";
 import BriefcaseIcon from "@heroicons/react/24/outline/BriefcaseIcon";
 
-import FunnelIcon from "@heroicons/react/24/outline/FunnelIcon";
+import BuildingOfficeIcon from "@heroicons/react/24/outline/BuildingOfficeIcon";
+import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
+import SunIcon from "@heroicons/react/24/outline/SunIcon";
+import ClipboardDocumentCheckIcon from "@heroicons/react/24/outline/ClipboardDocumentCheckIcon";
+import FaceSmileIcon from "@heroicons/react/24/outline/FaceSmileIcon";
 
-import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
-import DevicePhoneMobileIcon from "@heroicons/react/24/outline/DevicePhoneMobileIcon";
-import ArrowUpOnSquareIcon from "@heroicons/react/24/outline/ArrowUpOnSquareIcon";
-
-import ChartBarIcon from "@heroicons/react/24/outline/ChartBarIcon";
-import ArrowTrendingUpIcon from "@heroicons/react/24/outline/ArrowTrendingUpIcon";
-
-import BellIcon from "@heroicons/react/24/outline/BellIcon";
-
-/*
- * Log-specific icons
- *
- * Keeping these separate makes the Logs section easier to maintain
- * and makes the icon intent immediately obvious.
- */
 import ShieldExclamationIcon from "@heroicons/react/24/outline/ShieldExclamationIcon";
-import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
+import BuildingOffice2Icon from "@heroicons/react/24/outline/BuildingOffice2Icon";
+import FingerPrintIcon from "@heroicons/react/24/outline/FingerPrintIcon";
+import AcademicCapIcon from "@heroicons/react/24/outline/AcademicCapIcon";
+import ArrowsPointingOutIcon from "@heroicons/react/24/outline/ArrowsPointingOutIcon";
 import UserPlusIcon from "@heroicons/react/24/outline/UserPlusIcon";
-import PencilSquareIcon from "@heroicons/react/24/outline/PencilSquareIcon";
-import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
+import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
+import TagIcon from "@heroicons/react/24/outline/TagIcon";
+import Square2StackIcon from "@heroicons/react/24/outline/Square2StackIcon";
 import BanknotesIcon from "@heroicons/react/24/outline/BanknotesIcon";
 import ClipboardDocumentListIcon from "@heroicons/react/24/outline/ClipboardDocumentListIcon";
-import DocumentCheckIcon from "@heroicons/react/24/outline/DocumentCheckIcon";
-import PhoneArrowUpRightIcon from "@heroicons/react/24/outline/PhoneArrowUpRightIcon";
-import PhoneArrowDownLeftIcon from "@heroicons/react/24/outline/PhoneArrowDownLeftIcon";
-import BuildingOffice2Icon from "@heroicons/react/24/outline/BuildingOffice2Icon";
-import RectangleStackIcon from "@heroicons/react/24/outline/RectangleStackIcon";
 import ArrowPathRoundedSquareIcon from "@heroicons/react/24/outline/ArrowPathRoundedSquareIcon";
-import ExclamationTriangleIcon from "@heroicons/react/24/outline/ExclamationTriangleIcon";
-import AdjustmentsHorizontalIcon from "@heroicons/react/24/outline/AdjustmentsHorizontalIcon";
-import TagIcon from "@heroicons/react/24/outline/TagIcon";
+import BackwardIcon from "@heroicons/react/24/outline/BackwardIcon";
+import PhoneArrowDownLeftIcon from "@heroicons/react/24/outline/PhoneArrowDownLeftIcon";
+import PhoneArrowUpRightIcon from "@heroicons/react/24/outline/PhoneArrowUpRightIcon";
 
 import { PERMISSIONS } from "../app/permissions";
 
@@ -171,6 +172,7 @@ const sidebarmenu = [
         parent: "Loans",
         permission: PERMISSIONS.LOANS_VIEW,
       },
+
       // {
       //   path: "/crm/rm-applications",
       //   icon: <DocumentTextIcon className={submenuIconClasses} />,
@@ -261,6 +263,7 @@ const sidebarmenu = [
         parent: "Call Management",
         permission: PERMISSIONS.PHONE_NUMBERS_VIEW,
       },
+
       {
         path: "/crm/reminders",
         icon: <BellIcon className={submenuIconClasses} />,
@@ -293,7 +296,7 @@ const sidebarmenu = [
         submenu: [
           {
             path: "/crm/call-analytics/call-overview",
-            icon: <ChartBarIcon className={submenuIconClasses} />,
+            icon: <ChartPieIcon className={submenuIconClasses} />,
             name: "Call Overview",
             parent: "Call Analytics",
             permission: PERMISSIONS.CALL_ANALYTICS_OVERVIEW_VIEW,
@@ -301,7 +304,7 @@ const sidebarmenu = [
 
           {
             path: "/crm/call-analytics/call-performance",
-            icon: <UserGroupIcon className={submenuIconClasses} />,
+            icon: <PresentationChartLineIcon className={submenuIconClasses} />,
             name: "Call Performance",
             parent: "Call Analytics",
             permission: PERMISSIONS.CALL_ANALYTICS_AGENT_PERFORMANCE_VIEW,
@@ -325,12 +328,12 @@ const sidebarmenu = [
         type: "submenu",
         name: "Agent Analytics",
         parent: "Analytics",
-        icon: <UserGroupIcon className={submenuIconClasses} />,
+        icon: <RectangleGroupIcon className={submenuIconClasses} />,
 
         submenu: [
           {
             path: "/crm/agent-analytics/agent-overview",
-            icon: <ChartBarIcon className={submenuIconClasses} />,
+            icon: <ChartBarSquareIcon className={submenuIconClasses} />,
             name: "Agent Overview",
             parent: "Agent Analytics",
             permission: PERMISSIONS.AGENT_ANALYTICS_OVERVIEW_VIEW,
@@ -338,7 +341,7 @@ const sidebarmenu = [
 
           {
             path: "/crm/agent-analytics/agent-performance",
-            icon: <UserGroupIcon className={submenuIconClasses} />,
+            icon: <TrophyIcon className={submenuIconClasses} />,
             name: "Agent Performance",
             parent: "Agent Analytics",
             permission: PERMISSIONS.AGENT_Performance_OVERVIEW_VIEW,
@@ -346,7 +349,7 @@ const sidebarmenu = [
 
           {
             path: "/crm/agent-analytics/agent-trends",
-            icon: <ArrowTrendingUpIcon className={submenuIconClasses} />,
+            icon: <SignalIcon className={submenuIconClasses} />,
             name: "Agent Trends",
             parent: "Agent Analytics",
             permission: PERMISSIONS.CALL_ANALYTICS_CALL_TRENDS_VIEW,
@@ -402,7 +405,7 @@ const sidebarmenu = [
     submenu: [
       {
         path: "/crm/employees",
-        icon: <UserCircleIcon className={submenuIconClasses} />,
+        icon: <BuildingOfficeIcon className={submenuIconClasses} />,
         name: "Employees",
         parent: "Employee Management",
         permission: PERMISSIONS.EMPLOYEES_VIEW,
@@ -415,23 +418,26 @@ const sidebarmenu = [
         parent: "Employee Management",
         permission: PERMISSIONS.EMPLOYEE_ATTENDANCE_VIEW,
       },
+
       {
         path: "/crm/holiday",
-        icon: <CalendarIcon className={submenuIconClasses} />,
+        icon: <SunIcon className={submenuIconClasses} />,
         name: "Holidays",
         parent: "Employee Management",
         permission: PERMISSIONS.HOLIDAY_VIEW,
       },
+
       {
         path: "/crm/leave-management",
-        icon: <CalendarIcon className={submenuIconClasses} />,
+        icon: <ClipboardDocumentCheckIcon className={submenuIconClasses} />,
         name: "Leave Management",
         parent: "Employee Management",
         permission: PERMISSIONS.LEAVE_MANAGEMENT_VIEW,
       },
-       {
+
+      {
         path: "/crm/face-enrollment",
-        icon: <CalendarIcon className={submenuIconClasses} />,
+        icon: <FaceSmileIcon className={submenuIconClasses} />,
         name: "Face Enrollment",
         parent: "Employee Management",
         permission: PERMISSIONS.FACE_ENROLLMENT_VIEW,
@@ -441,23 +447,7 @@ const sidebarmenu = [
 
   /* =======================================================
    * LOGS
-   *
-   * Each log has its own contextual icon:
-   * - Admin actions       → Shield
-   * - Status changes      → Arrow path
-   * - Assignments         → User/group
-   * - Creation            → User plus
-   * - Editing             → Pencil
-   * - Deletion            → Trash
-   * - Bank processing     → Banknotes
-   * - Calls               → Phone arrows
-   * - Employees           → Building/person
-   * - Phone numbers       → Mobile
-   * - Shuffle/revert      → Rotation/history
    * ======================================================= */
-  // =========================================================
-  // LOGS
-  // =========================================================
 
   {
     type: "section",
@@ -483,6 +473,7 @@ const sidebarmenu = [
       //   parent: "Logs",
       //   permission: PERMISSIONS.ROLE_LOGS_VIEW,
       // },
+
       /* -----------------------------------------------------
        * EMPLOYEE & USER MANAGEMENT
        * ----------------------------------------------------- */
@@ -497,7 +488,7 @@ const sidebarmenu = [
 
       {
         path: "/crm/agent-logs",
-        icon: <UserIcon className={submenuIconClasses} />,
+        icon: <FingerPrintIcon className={submenuIconClasses} />,
         name: "Agent Logs",
         parent: "Logs",
         permission: PERMISSIONS.AGENT_LOGS_VIEW,
@@ -505,18 +496,19 @@ const sidebarmenu = [
 
       {
         path: "/crm/team-lead-logs",
-        icon: <UsersIcon className={submenuIconClasses} />,
+        icon: <AcademicCapIcon className={submenuIconClasses} />,
         name: "Team Lead Logs",
         parent: "Logs",
         permission: PERMISSIONS.TEAM_LEAD_LOGS_VIEW,
       },
+
       /* -----------------------------------------------------
        * AGENT & TEAM ASSIGNMENT
        * ----------------------------------------------------- */
 
       {
         path: "/crm/agent-assignment-logs",
-        icon: <UserGroupIcon className={submenuIconClasses} />,
+        icon: <ArrowsPointingOutIcon className={submenuIconClasses} />,
         name: "Agent Assignment Logs",
         parent: "Logs",
         permission: PERMISSIONS.AGENT_ASSIGNMENT_LOGS_VIEW,
@@ -568,7 +560,7 @@ const sidebarmenu = [
 
       {
         path: "/crm/duplicate-lead-logs",
-        icon: <DocumentDuplicateIcon className={submenuIconClasses} />,
+        icon: <Square2StackIcon className={submenuIconClasses} />,
         name: "Duplicate Lead Logs",
         parent: "Logs",
         permission: PERMISSIONS.DUPLICATE_LEAD_LOGS_VIEW,
@@ -596,7 +588,7 @@ const sidebarmenu = [
 
       {
         path: "/crm/loan-shuffle-logs",
-        icon: <ArrowsRightLeftIcon className={submenuIconClasses} />,
+        icon: <ArrowPathRoundedSquareIcon className={submenuIconClasses} />,
         name: "Loan Shuffle Logs",
         parent: "Logs",
         permission: PERMISSIONS.LOAN_SHUFFLE_LOGS_VIEW,
@@ -604,7 +596,7 @@ const sidebarmenu = [
 
       {
         path: "/crm/reverted-history-logs",
-        icon: <ArrowUturnLeftIcon className={submenuIconClasses} />,
+        icon: <BackwardIcon className={submenuIconClasses} />,
         name: "Reverted History Logs",
         parent: "Logs",
         permission: PERMISSIONS.REVERTED_HISTORY_LOGS_VIEW,
@@ -636,7 +628,7 @@ const sidebarmenu = [
 
       {
         path: "/crm/phone-number-logs",
-        icon: <DevicePhoneMobileIcon className={submenuIconClasses} />,
+        icon: <PhoneArrowUpRightIcon className={submenuIconClasses} />,
         name: "Phone Number Logs",
         parent: "Logs",
         permission: PERMISSIONS.PHONE_NUMBER_LOGS_VIEW,

@@ -8,12 +8,14 @@ import pkgutil
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.database_triggers.runner import apply_database_triggers
 from app import listeners as listeners_package
+from app.core.request_gate import request_gate
 from app.routes.admin import router as admin_router
 from app.routes.admin.websockets import router as websocket_router
 from app.routes.api import router as api_router
@@ -93,6 +95,52 @@ app = FastAPI(
     title="Runamarga CRM API",
     lifespan=lifespan,
 )
+
+
+# ============================================================
+# GLOBAL HTTP REQUEST LOAD CONTROL
+# ============================================================
+
+@app.middleware("http")
+async def control_request_load(
+    request: Request,
+    call_next,
+):
+    path = request.url.path
+
+    # Preserve static upload serving without entering the API gate.
+    if path == "/uploads" or path.startswith("/uploads/"):
+        return await call_next(request)
+
+    # Admin router is mounted under /api.
+    # Other HTTP endpoints, including /android, use normal priority.
+    is_admin = path == "/api" or path.startswith("/api/")
+
+    admitted = await request_gate.acquire(
+        is_admin=is_admin,
+    )
+
+    if not admitted:
+        logger.warning(
+            "Request rejected by load gate: method=%s path=%s",
+            request.method,
+            path,
+        )
+
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "Server is busy. Please retry shortly."
+            },
+            headers={"Retry-After": "3"},
+        )
+
+    try:
+        return await call_next(request)
+    finally:
+        await request_gate.release(
+            is_admin=is_admin,
+        )
 
 
 # ============================================================

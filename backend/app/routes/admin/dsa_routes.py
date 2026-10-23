@@ -47,7 +47,7 @@ async def create_dsa(
 async def update_dsa(
     dsa_id: int,
     update_dsa_request: DSACreateRequest,
-    employee=Depends(check_permission("dsa:update")),
+    employee=Depends(check_permission("dsa:edit")),
     db: Session = Depends(get_db),
 ):
     return update_dsa_details(
