@@ -23,6 +23,7 @@ from app.services.api.auth.auth_service import (
     logout_employee,
     get_employee_contexts_service,
     get_rm_phone_number_service,
+    get_employee_phone_number_service,
 )
 
 
@@ -357,6 +358,10 @@ async def face_login_controller(
         context_name=result.get(
             "context_name"
         ),
+        contexts=[
+            EmployeeContextResponse(**ctx)
+            for ctx in result.get("contexts", [])
+        ],
         employee_name=result[
             "employee_name"
         ],
@@ -423,6 +428,19 @@ def get_rm_phone_number_controller(
     result = get_rm_phone_number_service(
         db=db,
         employee_context_id=employee_context_id,
+    )
+
+    return RMPhoneNumberResponse(**result)
+
+
+def get_employee_phone_number_controller(
+    db: Session,
+    employee_id: int,
+) -> RMPhoneNumberResponse:
+
+    result = get_employee_phone_number_service(
+        db=db,
+        employee_id=employee_id,
     )
 
     return RMPhoneNumberResponse(**result)

@@ -78,8 +78,7 @@ from .employee_management.attendance_routes import router as employement_managem
 # My Attendance
 # ============================================================================
 
-# Face Enrollment
-from .employee_management.attendance_routes import router as attendance_router
+from .attendance_routes import router as attendance_router
 
 
 # ============================================================================
@@ -218,8 +217,6 @@ router.include_router(employement_management_attendance_router)
 router.include_router(attendance_router)
 
 
-# Call Management
-router.include_router(call_assignment_router)
 
 # ============================================================================
 # FACE ENROLLMENT

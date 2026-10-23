@@ -36,7 +36,6 @@ async def punch_in(
     image: UploadFile = File(...),
     latitude: float | None = Form(default=None),
     longitude: float | None = Form(default=None),
-    accuracy: float | None = Form(default=None),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_api_employee),
 ):
@@ -57,7 +56,6 @@ async def punch_in(
     attendance_data = AttendanceActionRequest(
         latitude=latitude,
         longitude=longitude,
-        accuracy=accuracy,
     )
 
     return await punch_in_controller(
@@ -80,7 +78,6 @@ async def punch_out(
     image: UploadFile = File(...),
     latitude: float | None = Form(default=None),
     longitude: float | None = Form(default=None),
-    accuracy: float | None = Form(default=None),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_api_employee),
 ):
@@ -102,7 +99,6 @@ async def punch_out(
     attendance_data = AttendanceActionRequest(
         latitude=latitude,
         longitude=longitude,
-        accuracy=accuracy,
     )
 
     return await punch_out_controller(

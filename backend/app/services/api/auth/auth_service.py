@@ -1526,9 +1526,9 @@ def face_login(
     )
 
     # --------------------------------------------------------------------
-    # Resolve employee context (default or active)
+    # Resolve employee contexts (default and all active contexts)
     # --------------------------------------------------------------------
-    emp_context = (
+    active_contexts = (
         db.query(EmployeeContext)
         .join(
             Context,
@@ -1544,11 +1544,24 @@ def face_login(
             EmployeeContext.is_default.desc(),
             EmployeeContext.id.asc(),
         )
-        .first()
+        .all()
     )
 
+    emp_context = active_contexts[0] if active_contexts else None
     employee_context_id = emp_context.id if emp_context else None
     context_name = emp_context.context.name if (emp_context and emp_context.context) else None
+
+    contexts_list = [
+        {
+            "id": ec.id,
+            "employee_context_id": ec.id,
+            "context_id": ec.context_id,
+            "name": ec.context.name if ec.context else "",
+            "code": ec.context.code if ec.context else "",
+            "is_default": bool(ec.is_default),
+        }
+        for ec in active_contexts
+    ]
 
     employee = validate_employee_for_api_login(
         employee
@@ -1605,13 +1618,15 @@ def face_login(
 
     logger.info(
         f"employee login successful employee_id={employee.id}, "
-        f"employee_context_id={employee_context_id}, context_name={context_name}"
+        f"employee_context_id={employee_context_id}, context_name={context_name}, "
+        f"contexts_count={len(contexts_list)}"
     )
     return {
         "message": "Face login successful",
         "employee_id": employee.id,
         "employee_context_id": employee_context_id,
         "context_name": context_name,
+        "contexts": contexts_list,
         "employee_code": employee.email,
         "employee_name": employee.name,
         "access_token": access_token,
@@ -1685,49 +1700,37 @@ def get_employee_contexts_service(
 
 
 # ------------------------------------------------------------------------
-# GET RM PHONE NUMBER
+# GET PHONE NUMBER BASED ON EMPLOYEE
 # ------------------------------------------------------------------------
 
-def get_rm_phone_number_service(
+def get_employee_phone_number_service(
     db: Session,
-    employee_context_id: int,
+    employee_id: int,
 ) -> dict:
     """
-    Fetch phone number based on employee_context_id for RM context only.
+    Fetch phone number based on employee_id.
+    Validates that the employee is allowed (active, not deactivated) and returns their assigned phone number.
     """
-    employee_context = (
-        db.query(EmployeeContext)
-        .join(
-            Context,
-            EmployeeContext.context_id == Context.id,
-        )
+    employee = (
+        db.query(Employee)
         .filter(
-            EmployeeContext.id == employee_context_id,
-            EmployeeContext.is_active.is_(True),
-            EmployeeContext.deleted_at.is_(None),
-            Context.is_active.is_(True),
+            Employee.id == employee_id,
+            Employee.deleted_at.is_(None),
         )
         .first()
     )
 
-    if not employee_context:
+    if not employee:
         raise ValueError(
-            f"Employee context with ID {employee_context_id} not found or inactive."
+            f"Employee with ID {employee_id} not found."
         )
 
-    context_code = (employee_context.context.code or "").strip().upper()
-    context_name = (employee_context.context.name or "").strip()
-
-    # Validate that this is strictly RM context
-    if context_code != "RM" and "RM" not in context_name.upper():
-        raise PermissionError(
-            f"Phone number can only be fetched for RM context. Current context is '{context_name}' ({context_code})."
-        )
+    validate_employee_for_api_login(employee)
 
     phone_record = (
         db.query(PhoneNumber)
         .filter(
-            PhoneNumber.employee_id == employee_context.employee_id,
+            PhoneNumber.employee_id == employee.id,
             PhoneNumber.deleted_at.is_(None),
         )
         .order_by(PhoneNumber.id.desc())
@@ -1736,12 +1739,40 @@ def get_rm_phone_number_service(
 
     if not phone_record:
         raise ValueError(
-            f"No phone number assigned to employee (context ID: {employee_context_id})."
+            f"No phone number assigned to employee (ID: {employee.id})."
         )
 
     return {
         "phone_number_id": phone_record.id,
+        "phone": phone_record.phone,
     }
+
+
+def get_rm_phone_number_service(
+    db: Session,
+    employee_context_id: int,
+) -> dict:
+    """
+    Fetch phone number based on employee_context_id or employee_id.
+    Does not filter on employee context; validates that the employee is allowed and fetches the assigned number.
+    """
+    employee_context = (
+        db.query(EmployeeContext)
+        .filter(
+            EmployeeContext.id == employee_context_id,
+            EmployeeContext.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    target_employee_id = (
+        employee_context.employee_id if employee_context else employee_context_id
+    )
+
+    return get_employee_phone_number_service(
+        db=db,
+        employee_id=target_employee_id,
+    )
 
 
 

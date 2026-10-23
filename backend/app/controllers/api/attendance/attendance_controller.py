@@ -35,13 +35,19 @@ async def punch_in_controller(
     if image is None:
         raise HTTPException(
             status_code=400,
-            detail="Face image is required for punch in.",
+            detail={
+                "code": "IMAGE_REQUIRED",
+                "message": "Face image is required for punch in.",
+            },
         )
 
     if not image.filename:
         raise HTTPException(
             status_code=400,
-            detail="Invalid face image.",
+            detail={
+                "code": "INVALID_IMAGE",
+                "message": "Invalid face image file.",
+            },
         )
 
     image_bytes = await image.read()
@@ -49,7 +55,10 @@ async def punch_in_controller(
     if not image_bytes:
         raise HTTPException(
             status_code=400,
-            detail="Face image cannot be empty.",
+            detail={
+                "code": "EMPTY_IMAGE",
+                "message": "Face image cannot be empty.",
+            },
         )
 
     result = await punch_in(
@@ -58,7 +67,6 @@ async def punch_in_controller(
         image_bytes=image_bytes,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
-        accuracy=attendance_data.accuracy,
     )
 
     return AttendanceResponse(**result)
@@ -84,13 +92,19 @@ async def punch_out_controller(
     if image is None:
         raise HTTPException(
             status_code=400,
-            detail="Face image is required for punch out.",
+            detail={
+                "code": "IMAGE_REQUIRED",
+                "message": "Face image is required for punch out.",
+            },
         )
 
     if not image.filename:
         raise HTTPException(
             status_code=400,
-            detail="Invalid face image.",
+            detail={
+                "code": "INVALID_IMAGE",
+                "message": "Invalid face image file.",
+            },
         )
 
     image_bytes = await image.read()
@@ -98,7 +112,10 @@ async def punch_out_controller(
     if not image_bytes:
         raise HTTPException(
             status_code=400,
-            detail="Face image cannot be empty.",
+            detail={
+                "code": "EMPTY_IMAGE",
+                "message": "Face image cannot be empty.",
+            },
         )
 
     result = await punch_out(
@@ -107,7 +124,6 @@ async def punch_out_controller(
         image_bytes=image_bytes,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
-        accuracy=attendance_data.accuracy,
     )
 
     return AttendanceResponse(**result)
@@ -130,7 +146,6 @@ async def lunch_out_controller(
         employee=employee,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
-        accuracy=attendance_data.accuracy,
     )
 
     return AttendanceResponse(**result)
@@ -153,7 +168,6 @@ async def lunch_in_controller(
         employee=employee,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
-        accuracy=attendance_data.accuracy,
     )
 
     return AttendanceResponse(**result)

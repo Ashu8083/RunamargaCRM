@@ -13,6 +13,8 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.api_security import get_current_api_employee, oauth2_scheme
+from app.models.employees import Employee
 
 from app.controllers.api.auth.auth_controller import (
     identify_employee_controller,
@@ -21,7 +23,7 @@ from app.controllers.api.auth.auth_controller import (
     refresh_token_controller,
     logout_controller,
     get_employee_contexts_controller,
-    get_rm_phone_number_controller,
+    get_employee_phone_number_controller,
 )
 
 from app.schemas.api.auth.auth_schema import (
@@ -148,7 +150,10 @@ def identify_employee(
 
         raise HTTPException(
             status_code=401,
-            detail=str(exc),
+            detail={
+                "code": "IDENTIFY_FAILED",
+                "message": str(exc),
+            },
         )
 
 
@@ -274,7 +279,10 @@ async def face_enrollment(
 
         raise HTTPException(
             status_code=401,
-            detail=str(exc),
+            detail={
+                "code": "ENROLLMENT_FAILED",
+                "message": str(exc),
+            },
         )
 
 
@@ -417,7 +425,10 @@ async def face_login(
 
         raise HTTPException(
             status_code=401,
-            detail=str(exc),
+            detail={
+                "code": "LOGIN_FAILED",
+                "message": str(exc),
+            },
         )
 
 
@@ -456,7 +467,10 @@ def refresh_token(
     if not token:
         raise HTTPException(
             status_code=401,
-            detail="Refresh token required.",
+            detail={
+                "code": "REFRESH_TOKEN_REQUIRED",
+                "message": "Refresh token is required. Please provide it in the request body or X-Refresh-Token header.",
+            },
         )
 
     try:
@@ -466,9 +480,20 @@ def refresh_token(
         )
 
     except ValueError as exc:
+        error_message = str(exc)
+        if "expired" in error_message.lower():
+            error_code = "REFRESH_TOKEN_EXPIRED"
+        elif "revoked" in error_message.lower():
+            error_code = "REFRESH_TOKEN_REVOKED"
+        else:
+            error_code = "REFRESH_FAILED"
+
         raise HTTPException(
             status_code=401,
-            detail=str(exc),
+            detail={
+                "code": error_code,
+                "message": error_message,
+            },
         )
 
 
@@ -493,10 +518,13 @@ def refresh_token(
 @router.post(
     "/logout",
     response_model=LogoutResponse,
+    dependencies=[Depends(oauth2_scheme)],
+    summary="Logout employee and revoke active tokens",
 )
 def logout(
     http_request: Request,
     body: LogoutRequest | None = None,
+    current_employee: Employee = Depends(get_current_api_employee),
     db: Session = Depends(get_db),
 ):
     # --------------------------------------------------------------------
@@ -541,7 +569,10 @@ def logout(
         if not raw_access_token and not raw_refresh_token:
             raise HTTPException(
                 status_code=401,
-                detail="Authentication token required for logout.",
+                detail={
+                    "code": "LOGOUT_TOKEN_REQUIRED",
+                    "message": "An access token or refresh token is required to logout.",
+                },
             )
 
         try:
@@ -555,7 +586,10 @@ def logout(
         except ValueError as exc:
             raise HTTPException(
                 status_code=401,
-                detail=str(exc),
+                detail={
+                    "code": "LOGOUT_FAILED",
+                    "message": str(exc),
+                },
         )
 
 
@@ -564,51 +598,60 @@ def logout(
 # ========================================================================
 
 @router.get(
-    "/employee-contexts/{employee_id}",
+    "/employee-contexts",
     response_model=list[EmployeeContextResponse],
-    summary="Fetch employee contexts by employee ID",
+    summary="Fetch all contexts for the authenticated employee (from token)",
 )
 def get_employee_contexts(
-    employee_id: int,
     db: Session = Depends(get_db),
+    current_employee: Employee = Depends(get_current_api_employee),
 ):
     try:
         return get_employee_contexts_controller(
             db=db,
-            employee_id=employee_id,
+            employee_id=current_employee.id,
         )
     except ValueError as exc:
         raise HTTPException(
             status_code=404,
-            detail=str(exc),
+            detail={
+                "code": "CONTEXT_NOT_FOUND",
+                "message": str(exc),
+            },
         )
 
 
 # ========================================================================
-# FETCH RM PHONE NUMBER
+# FETCH PHONE NUMBER BASED ON AUTHENTICATED EMPLOYEE
 # ========================================================================
 
 @router.get(
-    "/phone-number/{employee_context_id}",
+    "/phone-number",
     response_model=RMPhoneNumberResponse,
-    summary="Fetch phone number for RM context by employee context ID",
+    summary="Fetch phone number of the authenticated employee (from token)",
 )
-def get_rm_phone_number(
-    employee_context_id: int,
+def get_employee_phone_number(
     db: Session = Depends(get_db),
+    current_employee: Employee = Depends(get_current_api_employee),
 ):
     try:
-        return get_rm_phone_number_controller(
+        return get_employee_phone_number_controller(
             db=db,
-            employee_context_id=employee_context_id,
+            employee_id=current_employee.id,
         )
     except PermissionError as exc:
         raise HTTPException(
-            status_code=400,
-            detail=str(exc),
+            status_code=403,
+            detail={
+                "code": "PERMISSION_DENIED",
+                "message": str(exc),
+            },
         )
     except ValueError as exc:
         raise HTTPException(
             status_code=404,
-            detail=str(exc),
+            detail={
+                "code": "PHONE_NUMBER_NOT_FOUND",
+                "message": str(exc),
+            },
         )

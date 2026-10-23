@@ -22,12 +22,6 @@ class AttendanceActionRequest(BaseModel):
         description="Current device longitude.",
     )
 
-    accuracy: float | None = Field(
-        default=None,
-        ge=0,
-        description="Current GPS accuracy in meters.",
-    )
-
 
 class AttendanceResponse(BaseModel):
     """

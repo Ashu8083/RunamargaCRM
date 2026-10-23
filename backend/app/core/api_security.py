@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 
 from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
@@ -354,11 +355,22 @@ def get_employee_id_from_face_enrollment_token(
 
 
 # ------------------------------------------------------------------------
+# HTTP BEARER SECURITY SCHEME FOR OPENAPI
+# ------------------------------------------------------------------------
+
+oauth2_scheme = HTTPBearer(
+    auto_error=False,
+    description="Bearer access token in Authorization header",
+)
+
+
+# ------------------------------------------------------------------------
 # CURRENT API EMPLOYEE
 # ------------------------------------------------------------------------
 
 def get_current_api_employee(
     request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> Employee:
     """
@@ -373,19 +385,26 @@ def get_current_api_employee(
     """
 
     raw_token = None
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        raw_token = auth_header.split(" ", 1)[1].strip()
-    elif auth_header:
-        raw_token = auth_header.strip()
-    elif request.headers.get("X-Access-Token"):
-        raw_token = request.headers.get("X-Access-Token").strip()
+    if credentials and credentials.credentials:
+        raw_token = credentials.credentials.strip()
+
+    if not raw_token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            raw_token = auth_header.split(" ", 1)[1].strip()
+        elif auth_header:
+            raw_token = auth_header.strip()
+        elif request.headers.get("X-Access-Token"):
+            raw_token = request.headers.get("X-Access-Token").strip()
 
     if not raw_token:
 
         raise HTTPException(
             status_code=401,
-            detail="Authentication required",
+            detail={
+                "code": "AUTH_REQUIRED",
+                "message": "Authentication required. Please provide a valid access token in the Authorization header.",
+            },
         )
 
     try:
@@ -396,9 +415,22 @@ def get_current_api_employee(
 
     except ValueError as exc:
 
+        error_message = str(exc)
+
+        # Map known token errors to specific codes
+        if "expired" in error_message.lower():
+            error_code = "TOKEN_EXPIRED"
+        elif "invalid" in error_message.lower():
+            error_code = "INVALID_TOKEN"
+        else:
+            error_code = "AUTH_FAILED"
+
         raise HTTPException(
             status_code=401,
-            detail=str(exc),
+            detail={
+                "code": error_code,
+                "message": error_message,
+            },
         )
 
     # --------------------------------------------------------------------
@@ -418,7 +450,10 @@ def get_current_api_employee(
     if revoked_token:
         raise HTTPException(
             status_code=401,
-            detail="Token has been revoked",
+            detail={
+                "code": "TOKEN_REVOKED",
+                "message": "Your session has been revoked. Please login again.",
+            },
         )
 
     employee = (
@@ -434,14 +469,20 @@ def get_current_api_employee(
 
         raise HTTPException(
             status_code=401,
-            detail="Employee not found",
+            detail={
+                "code": "EMPLOYEE_NOT_FOUND",
+                "message": "Employee account not found. Please contact your administrator.",
+            },
         )
 
     if employee.deactivate:
 
         raise HTTPException(
             status_code=401,
-            detail="Account is deactivated",
+            detail={
+                "code": "ACCOUNT_DEACTIVATED",
+                "message": "Your account has been deactivated. Please contact your administrator.",
+            },
         )
 
     if employee.status not in (
@@ -451,7 +492,10 @@ def get_current_api_employee(
 
         raise HTTPException(
             status_code=401,
-            detail="Account is inactive",
+            detail={
+                "code": "ACCOUNT_INACTIVE",
+                "message": "Your account is currently inactive. Please contact your administrator.",
+            },
         )
 
     return employee

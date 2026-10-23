@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.config.settings import settings
 from app.models.attendance import Attendance
 from app.models.employee_face_profiles import EmployeeFaceProfile
 from app.models.employees import Employee
@@ -24,11 +25,8 @@ from app.services.face.face_validation import (
     validate_face_blur,
     validate_face_brightness,
 )
+from app.utils.geo import haversine_distance
 
-
-# ------------------------------------------------------------------------
-# CONFIGURATION
-# ------------------------------------------------------------------------
 
 # Project root:
 #
@@ -412,14 +410,20 @@ def generate_verified_face_embedding(
 
         raise HTTPException(
             status_code=400,
-            detail=str(exc),
+            detail={
+                "code": "FACE_DETECTION_ERROR",
+                "message": str(exc),
+            },
         )
 
     except Exception:
 
         raise HTTPException(
             status_code=500,
-            detail="Face detection failed.",
+            detail={
+                "code": "FACE_DETECTION_FAILED",
+                "message": "Face detection failed. Please try again with a clearer image.",
+            },
         )
 
     # ------------------------------------------------------------
@@ -556,14 +560,20 @@ def generate_verified_face_embedding(
 
         raise HTTPException(
             status_code=400,
-            detail=str(exc),
+            detail={
+                "code": "EMBEDDING_ERROR",
+                "message": str(exc),
+            },
         )
 
     except Exception:
 
         raise HTTPException(
             status_code=500,
-            detail="Face embedding generation failed.",
+            detail={
+                "code": "EMBEDDING_FAILED",
+                "message": "Face embedding generation failed. Please try again with a clearer image.",
+            },
         )
 
     # ------------------------------------------------------------
@@ -577,14 +587,20 @@ def generate_verified_face_embedding(
 
         raise HTTPException(
             status_code=500,
-            detail="Invalid generated face embedding.",
+            detail={
+                "code": "INVALID_EMBEDDING",
+                "message": "Invalid generated face embedding. Please try again.",
+            },
         )
 
     if len(embedding) != 512:
 
         raise HTTPException(
             status_code=500,
-            detail="Invalid generated face embedding dimension.",
+            detail={
+                "code": "INVALID_EMBEDDING_DIMENSION",
+                "message": "Invalid face embedding dimension. Please try again.",
+            },
         )
 
     return (
@@ -667,14 +683,20 @@ def verify_employee_face(
 
         raise HTTPException(
             status_code=500,
-            detail=str(exc),
+            detail={
+                "code": "FACE_VERIFY_ERROR",
+                "message": str(exc),
+            },
         )
 
     except Exception:
 
         raise HTTPException(
             status_code=500,
-            detail="Face verification failed.",
+            detail={
+                "code": "FACE_VERIFY_FAILED",
+                "message": "Face verification failed. Please try again.",
+            },
         )
 
     # ------------------------------------------------------------
@@ -685,7 +707,10 @@ def verify_employee_face(
 
         raise HTTPException(
             status_code=400,
-            detail="No registered face embeddings found for this employee.",
+            detail={
+                "code": "NO_STORED_EMBEDDINGS",
+                "message": "No registered face embeddings found for this employee. Please complete face enrollment first.",
+            },
         )
 
     # ------------------------------------------------------------
@@ -1215,7 +1240,6 @@ async def punch_in(
     image_bytes: bytes,
     latitude: float | None = None,
     longitude: float | None = None,
-    accuracy: float | None = None,
 ) -> dict:
     """
     Punch in an employee using face recognition.
@@ -1252,7 +1276,45 @@ async def punch_in(
     )
 
     # ------------------------------------------------------------
-    # 2. Validate image
+    # 2. Validate GPS location (required for Work From Office)
+    # ------------------------------------------------------------
+
+    if employee.status != "WFH":
+
+        if latitude is None or longitude is None:
+
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "LOCATION_REQUIRED",
+                    "message": "GPS location (latitude and longitude) is required for Work From Office punch in.",
+                },
+            )
+
+        distance_m = haversine_distance(
+            lat1=latitude,
+            lon1=longitude,
+            lat2=settings.OFFICE_LATITUDE,
+            lon2=settings.OFFICE_LONGITUDE,
+        )
+
+        if distance_m > settings.OFFICE_RADIUS_METERS:
+
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "OUTSIDE_OFFICE_LOCATION",
+                    "message": (
+                        f"You are {distance_m:.0f} meters away from the office. "
+                        f"Punch in is only allowed within {settings.OFFICE_RADIUS_METERS:.0f} meters."
+                    ),
+                    "distance_meters": round(distance_m, 2),
+                    "allowed_radius_meters": settings.OFFICE_RADIUS_METERS,
+                },
+            )
+
+    # ------------------------------------------------------------
+    # 3. Validate image
     # ------------------------------------------------------------
 
     if not image_bytes:
@@ -1326,7 +1388,6 @@ async def punch_in(
                 check_in=now,
                 check_in_latitude=latitude,
                 check_in_longitude=longitude,
-                check_in_accuracy=accuracy,
                 check_in_confidence=face_similarity,
                 is_wfh=(
                     employee.status == "WFH"
@@ -1346,10 +1407,6 @@ async def punch_in(
 
             attendance.check_in_longitude = (
                 longitude
-            )
-
-            attendance.check_in_accuracy = (
-                accuracy
             )
 
             attendance.check_in_confidence = (
@@ -1419,7 +1476,6 @@ async def punch_out(
     image_bytes: bytes,
     latitude: float | None = None,
     longitude: float | None = None,
-    accuracy: float | None = None,
 ) -> dict:
     """
     Punch out an employee using face recognition.
@@ -1442,7 +1498,45 @@ async def punch_out(
     )
 
     # ------------------------------------------------------------
-    # 2. Validate image
+    # 2. Validate GPS location (required for Work From Office)
+    # ------------------------------------------------------------
+
+    if employee.status != "WFH":
+
+        if latitude is None or longitude is None:
+
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "LOCATION_REQUIRED",
+                    "message": "GPS location (latitude and longitude) is required for Work From Office punch out.",
+                },
+            )
+
+        distance_m = haversine_distance(
+            lat1=latitude,
+            lon1=longitude,
+            lat2=settings.OFFICE_LATITUDE,
+            lon2=settings.OFFICE_LONGITUDE,
+        )
+
+        if distance_m > settings.OFFICE_RADIUS_METERS:
+
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "OUTSIDE_OFFICE_LOCATION",
+                    "message": (
+                        f"You are {distance_m:.0f} meters away from the office. "
+                        f"Punch out is only allowed within {settings.OFFICE_RADIUS_METERS:.0f} meters."
+                    ),
+                    "distance_meters": round(distance_m, 2),
+                    "allowed_radius_meters": settings.OFFICE_RADIUS_METERS,
+                },
+            )
+
+    # ------------------------------------------------------------
+    # 3. Validate image
     # ------------------------------------------------------------
 
     if not image_bytes:
@@ -1537,10 +1631,6 @@ async def punch_out(
             longitude
         )
 
-        attendance.check_out_accuracy = (
-            accuracy
-        )
-
         attendance.check_out_confidence = (
             face_similarity
         )
@@ -1590,7 +1680,6 @@ def lunch_out(
     employee: Employee,
     latitude: float | None = None,
     longitude: float | None = None,
-    accuracy: float | None = None,
 ) -> dict:
     """
     Mark lunch out.
@@ -1704,7 +1793,6 @@ def lunch_in(
     employee: Employee,
     latitude: float | None = None,
     longitude: float | None = None,
-    accuracy: float | None = None,
 ) -> dict:
     """
     Mark lunch in.

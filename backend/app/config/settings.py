@@ -25,5 +25,20 @@ class Settings:
         "Runamarga Team",
     )
 
+    # ----------------------------------------------------------------
+    # Office Geofence
+    # Update the values in .env with your actual office coordinates.
+    # OFFICE_RADIUS_METERS = maximum allowed distance from office (meters)
+    # ----------------------------------------------------------------
+    OFFICE_LATITUDE: float = float(
+        os.getenv("OFFICE_LATITUDE", "18.5204")
+    )
+    OFFICE_LONGITUDE: float = float(
+        os.getenv("OFFICE_LONGITUDE", "73.8567")
+    )
+    OFFICE_RADIUS_METERS: float = float(
+        os.getenv("OFFICE_RADIUS_METERS", "200")
+    )
+
 
 settings = Settings()

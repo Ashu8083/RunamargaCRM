@@ -71,6 +71,27 @@ class EmployeeIdentifyResponse(BaseModel):
 
 
 # ========================================================================
+# EMPLOYEE CONTEXT RESPONSE
+# ========================================================================
+#
+# Represents an employee's context (role assignment).
+# When an employee has multiple contexts, all contexts are returned.
+#
+# ========================================================================
+
+class EmployeeContextResponse(BaseModel):
+
+    id: int
+    name: str
+    context_id: int | None = None
+    employee_context_id: int | None = None
+    code: str | None = None
+    is_default: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ========================================================================
 # FACE LOGIN RESPONSE
 # ========================================================================
 #
@@ -100,6 +121,8 @@ class FaceLoginResponse(BaseModel):
     employee_context_id: int | None = None
 
     context_name: str | None = None
+
+    contexts: list[EmployeeContextResponse] = Field(default_factory=list)
 
     employee_code: str
 
@@ -250,25 +273,6 @@ class LogoutResponse(BaseModel):
     revoked_tokens_count: int = 0
 
 
-# ========================================================================
-# EMPLOYEE CONTEXT RESPONSE
-# ========================================================================
-#
-# Represents an employee's context (role assignment).
-# When an employee has multiple contexts, all contexts are returned.
-#
-# ========================================================================
-
-class EmployeeContextResponse(BaseModel):
-
-    id: int
-    name: str
-    context_id: int | None = None
-    employee_context_id: int | None = None
-    code: str | None = None
-    is_default: bool = False
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -283,5 +287,6 @@ class EmployeeContextResponse(BaseModel):
 class RMPhoneNumberResponse(BaseModel):
 
     phone_number_id: int
+    phone: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
