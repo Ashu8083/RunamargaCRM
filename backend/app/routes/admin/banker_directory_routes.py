@@ -74,7 +74,7 @@ def get_banker_directory(
 def update_banker_directory(
     banker_directory_id: int,
     banker_directory_data: CreateBankerDirectoryRequest,
-    employee=Depends(check_permission("bankers:update")),
+    employee=Depends(check_permission("bankers:edit")),
     db: Session = Depends(get_db),
 ):
 
