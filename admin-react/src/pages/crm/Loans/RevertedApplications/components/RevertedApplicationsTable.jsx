@@ -5,6 +5,9 @@ import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import ClockIcon from '@heroicons/react/24/outline/ClockIcon'
 import CalendarDaysIcon from '@heroicons/react/24/outline/CalendarDaysIcon'
 import ChatBubbleLeftRightIcon from '@heroicons/react/24/outline/ChatBubbleLeftRightIcon'
+import { PERMISSIONS, hasPermission } from '../../../../../app/permissions'
+
+const canEdit = hasPermission(PERMISSIONS.LOANS_REVERT_EDIT)
 
 
 function RevertedApplicationsTable({
@@ -727,6 +730,7 @@ function RevertedApplicationsTable({
                                                         )
                                                     }
                                                     title="Change reverted date"
+                                                    disabled={!canEdit}
                                                     aria-label={
                                                         `Change reverted date for ${applicantName}`
                                                     }

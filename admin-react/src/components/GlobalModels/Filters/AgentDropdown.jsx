@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'
 import { useCommonData } from '../../../context/CommonDataContext'
+import {
+  PERMISSIONS,
+  hasPermission,
+} from '../../../app/permissions'
 
 const AgentDropdown = ({
   value = '',
@@ -21,14 +25,19 @@ const AgentDropdown = ({
   // Optional Team Lead EmployeeContext ID
   teamLeadContextId = null,
 }) => {
-  const {
-    activeContext,
-    getAgents,
-  } = useCommonData()
+  const { activeContext, getAgents } = useCommonData()
 
   const [agents, setAgents] = useState([])
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState('')
+
+  // =========================================================
+  // CHECK AGENT VIEW PERMISSION
+  // =========================================================
+
+  const canSelectAgents = hasPermission(
+    PERMISSIONS.AGENTS_VIEW
+  )
 
   // =========================================================
   // LOAD AGENTS FROM SHARED DATA PROVIDER
@@ -48,9 +57,7 @@ const AgentDropdown = ({
       setFetchError('')
 
       try {
-        const data = await getAgents(
-          teamLeadContextId
-        )
+        const data = await getAgents(teamLeadContextId)
 
         if (!isMounted) return
 
@@ -58,15 +65,10 @@ const AgentDropdown = ({
       } catch (error) {
         if (!isMounted) return
 
-        console.error(
-          'Failed to load agents:',
-          error
-        )
+        console.error('Failed to load agents:', error)
 
         setAgents([])
-        setFetchError(
-          'Unable to load agents.'
-        )
+        setFetchError('Unable to load agents.')
       } finally {
         if (isMounted) {
           setLoading(false)
@@ -100,8 +102,7 @@ const AgentDropdown = ({
     }
 
     const exists = agents.some(
-      (agent) =>
-        String(agent.id) === String(value)
+      (agent) => String(agent.id) === String(value)
     )
 
     if (exists) {
@@ -125,17 +126,17 @@ const AgentDropdown = ({
   // HANDLE CHANGE
   // =========================================================
 
-  const handleChange = (
-    selectedValue,
-    selectedOption
-  ) => {
+  const handleChange = (selectedValue, selectedOption) => {
     if (
-      typeof onChange === 'function'
+      !canSelectAgents ||
+      disabled ||
+      loading
     ) {
-      onChange(
-        selectedValue,
-        selectedOption
-      )
+      return
+    }
+
+    if (typeof onChange === 'function') {
+      onChange(selectedValue, selectedOption)
     }
   }
 
@@ -143,21 +144,17 @@ const AgentDropdown = ({
   // ERROR
   // =========================================================
 
-  const dropdownError =
-    error || fetchError
+  const dropdownError = error || fetchError
 
   // =========================================================
   // RENDER
   // =========================================================
 
   return (
-    <div
-      className={`w-full ${className}`}
-    >
+    <div className={`box-border w-full min-w-0 ${className}`}>
       {label && (
         <label
           className="
-            mb-1.5
             block
             text-sm
             font-medium
@@ -179,21 +176,19 @@ const AgentDropdown = ({
         options={dropdownAgents}
         onChange={handleChange}
         includeAllOption={false}
+        showLabel={false}
         searchPlaceholder="Search Agent"
         placeholder={
-          loading
-            ? 'Loading Agents...'
-            : placeholder
+          loading ? 'Loading Agents...' : placeholder
         }
         disabled={
-          disabled || loading
+          disabled ||
+          loading ||
+          !canSelectAgents
         }
-        getOptionValue={
-          (option) => option.id
-        }
-        getOptionLabel={
-          (option) => option.name
-        }
+        className="box-border w-full min-w-0"
+        getOptionValue={(option) => option.id}
+        getOptionLabel={(option) => option.name}
       />
 
       {dropdownError && (

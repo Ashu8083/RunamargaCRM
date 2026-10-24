@@ -24,6 +24,8 @@ import {
     createApplication,
     deleteCallAssignment,
 } from './Api'
+import { PERMISSIONS, hasPermission } from '../../../../app/permissions'
+
 
 const AssignNumbersModal = lazy(
     () => import('./components/AssignNumbersModal')
@@ -45,6 +47,7 @@ const ExchangeNumberModal = lazy(
     () => import('./components/ExchangeNumberModal')
 )
 
+const canAssign = hasPermission(PERMISSIONS.CALL_ASSIGNMENT_ASSIGN)
 // =============================================================
 // STATUS OPTIONS
 // =============================================================
@@ -1458,6 +1461,7 @@ function CallAssignment() {
                     <button
                         type="button"
                         onClick={openAssignModal}
+                        disabled={!canAssign}
                         className="
                             inline-flex
                             h-10

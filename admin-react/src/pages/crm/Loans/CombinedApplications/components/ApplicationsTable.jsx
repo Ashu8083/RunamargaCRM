@@ -23,24 +23,16 @@ import TeamLeadDropdown from "../../../../../components/GlobalModels/Filters/Tea
 import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import StatusDropdown from "../../../../../components/GlobalModels/Filters/StatusDropdown";
 import apiClient from "../../../../../app/apiClient";
-import { PERMISSIONS,hasPermission } from "../../../../../app/permissions";
+import { PERMISSIONS, hasPermission } from '../../../../../app/permissions'
 
-const canChangeRM = hasPermission(PERMISSIONS.LOANS_CHANGE_RM);
 const canChangeLoanType = hasPermission(PERMISSIONS.LOANS_CHANGE_LOAN_TYPE)
-const canChangeAgent = hasPermission(PERMISSIONS.LOANS_CHANGE_AGENT);
-const canChangeStatus =  hasPermission(PERMISSIONS.LOANS_STATUS_UPDATE);
-const canAssignAgent = hasPermission(PERMISSIONS.LOANS_AGENT_ASSIGNMENT);
-const canViewApplication = hasPermission(PERMISSIONS.LOANS_APPLICATION_VIEW);
-const canAddReminder = hasPermission(PERMISSIONS.LOANS_ADD_REMINDER);
-const canViewChat = hasPermission(PERMISSIONS.LOANS_REMARKS_VIEW);
-const canDeleteApplication = hasPermission(PERMISSIONS.LOANS_DELETE);
-const canSelectTeamLeads = hasPermission(PERMISSIONS.TEAM_LEADS_VIEW);
-const canSelectAgents = hasPermission(PERMISSIONS.AGENTS_VIEW);
-const canSelectRM = hasPermission(PERMISSIONS.RM_VIEW);
+const canChangeStatus = hasPermission(PERMISSIONS.LOANS_STATUS_UPDATE)
+const canAssignAgent = hasPermission(PERMISSIONS.LOANS_AGENT_ASSIGNMENT)
+const canViewApplication = hasPermission(PERMISSIONS.LOANS_APPLICATION_VIEW)
+const canAddReminder = hasPermission(PERMISSIONS.LOANS_ADD_REMINDER)
+const canViewChat = hasPermission(PERMISSIONS.LOANS_REMARKS_VIEW)
+const canDeleteApplication = hasPermission(PERMISSIONS.LOANS_DELETE)
 
-// =============================================================
-// LAZY-LOADED GLOBAL CHAT
-// =============================================================
 
 const GlobalChat = lazy(
   () =>
@@ -49,19 +41,16 @@ const GlobalChat = lazy(
     ),
 );
 
-// =============================================================
-// CONSTANTS
-// =============================================================
-
 const STATUS_OPTIONS = [
-  { label: 'In Process', value: 'inprocess' },
-  { label: 'Docs Pending', value: 'docspending' },
-  { label: 'Rejected', value: 'rejected' },
-  { label: 'Sanctioned', value: 'sanctioned' },
-  { label: 'Disbursed', value: 'disbursed' },
-  { label: 'Login', value: 'login' },
-  { label: 'Revert Rejected', value: 'revert_rejected' },
-]
+  { label: "In Process", value: "inprocess" },
+  { label: "Docs Pending", value: "docspending" },
+  { label: "Rejected", value: "rejected" },
+  { label: "Sanctioned", value: "sanctioned" },
+  { label: "Disbursed", value: "disbursed" },
+  { label: "Login", value: "login" },
+  { label: "Revert Rejected", value: "revert_rejected" },
+];
+
 // =============================================================
 // HELPERS
 // =============================================================
@@ -70,30 +59,24 @@ const getAgentName = (application) => {
   if (application.agent && typeof application.agent === "object") {
     return application.agent.name || "N/A";
   }
-
   if (
     application.processingAgent &&
     typeof application.processingAgent === "object"
   ) {
     return application.processingAgent.name || "N/A";
   }
-
   if (application.agentName && typeof application.agentName === "string") {
     return application.agentName;
   }
-
   if (application.agent_name && typeof application.agent_name === "string") {
     return application.agent_name;
   }
-
   if (typeof application.processingAgent === "string") {
     return application.processingAgent;
   }
-
   if (typeof application.processing_agent === "string") {
     return application.processing_agent;
   }
-
   return "N/A";
 };
 
@@ -101,19 +84,9 @@ const getRMName = (application) => {
   if (application.rm && typeof application.rm === "object") {
     return application.rm.name || "N/A";
   }
-
-  if (typeof application.rmName === "string") {
-    return application.rmName;
-  }
-
-  if (typeof application.rm_name === "string") {
-    return application.rm_name;
-  }
-
-  if (typeof application.rm === "string") {
-    return application.rm;
-  }
-
+  if (typeof application.rmName === "string") return application.rmName;
+  if (typeof application.rm_name === "string") return application.rm_name;
+  if (typeof application.rm === "string") return application.rm;
   return "N/A";
 };
 
@@ -121,19 +94,12 @@ const getTeamLeadName = (application) => {
   if (application.teamLead && typeof application.teamLead === "object") {
     return application.teamLead.name || "N/A";
   }
-
   if (application.team_lead && typeof application.team_lead === "object") {
     return application.team_lead.name || "N/A";
   }
-
-  if (typeof application.teamLeadName === "string") {
-    return application.teamLeadName;
-  }
-
-  if (typeof application.team_lead_name === "string") {
+  if (typeof application.teamLeadName === "string") return application.teamLeadName;
+  if (typeof application.team_lead_name === "string")
     return application.team_lead_name;
-  }
-
   return "N/A";
 };
 
@@ -141,43 +107,23 @@ const getAppliedBy = (application) => {
   if (application.appliedBy && typeof application.appliedBy === "object") {
     return application.appliedBy.name || "N/A";
   }
-
   if (application.applied_by && typeof application.applied_by === "object") {
     return application.applied_by.name || "N/A";
   }
-
   if (application.createdBy && typeof application.createdBy === "object") {
     return application.createdBy.name || "N/A";
   }
-
   if (application.created_by && typeof application.created_by === "object") {
     return application.created_by.name || "N/A";
   }
-
-  if (typeof application.appliedBy === "string") {
-    return application.appliedBy;
-  }
-
-  if (typeof application.applied_by === "string") {
-    return application.applied_by;
-  }
-
-  if (typeof application.createdBy === "string") {
-    return application.createdBy;
-  }
-
-  if (typeof application.created_by === "string") {
-    return application.created_by;
-  }
-
-  if (typeof application.appliedByName === "string") {
+  if (typeof application.appliedBy === "string") return application.appliedBy;
+  if (typeof application.applied_by === "string") return application.applied_by;
+  if (typeof application.createdBy === "string") return application.createdBy;
+  if (typeof application.created_by === "string") return application.created_by;
+  if (typeof application.appliedByName === "string")
     return application.appliedByName;
-  }
-
-  if (typeof application.applied_by_name === "string") {
+  if (typeof application.applied_by_name === "string")
     return application.applied_by_name;
-  }
-
   return "N/A";
 };
 
@@ -185,51 +131,25 @@ const getReferral = (application) => {
   if (application.referral && typeof application.referral === "object") {
     return application.referral.name || "N/A";
   }
-
   if (application.referredBy && typeof application.referredBy === "object") {
     return application.referredBy.name || "N/A";
   }
-
   if (application.referred_by && typeof application.referred_by === "object") {
     return application.referred_by.name || "N/A";
   }
-
   if (application.referrer && typeof application.referrer === "object") {
     return application.referrer.name || "N/A";
   }
-
-  if (typeof application.referral === "string") {
-    return application.referral;
-  }
-
-  if (typeof application.referralName === "string") {
-    return application.referralName;
-  }
-
-  if (typeof application.referral_name === "string") {
+  if (typeof application.referral === "string") return application.referral;
+  if (typeof application.referralName === "string") return application.referralName;
+  if (typeof application.referral_name === "string")
     return application.referral_name;
-  }
-
-  if (typeof application.referredBy === "string") {
-    return application.referredBy;
-  }
-
-  if (typeof application.referred_by === "string") {
-    return application.referred_by;
-  }
-
-  if (typeof application.referrer === "string") {
-    return application.referrer;
-  }
-
-  if (typeof application.referrerName === "string") {
-    return application.referrerName;
-  }
-
-  if (typeof application.referrer_name === "string") {
+  if (typeof application.referredBy === "string") return application.referredBy;
+  if (typeof application.referred_by === "string") return application.referred_by;
+  if (typeof application.referrer === "string") return application.referrer;
+  if (typeof application.referrerName === "string") return application.referrerName;
+  if (typeof application.referrer_name === "string")
     return application.referrer_name;
-  }
-
   return "N/A";
 };
 
@@ -248,10 +168,6 @@ const getAgentId = (application) =>
   application.agent?.id ??
   application.processingAgent?.id ??
   null;
-
-// =============================================================
-// REJECTION HELPERS
-// =============================================================
 
 const getRevertedReason = (application) =>
   application.reverted_reason ?? application.revertedReason ?? null;
@@ -283,39 +199,26 @@ const getRejectedByName = (application) =>
   application.rejectedBy ??
   null;
 
-// =============================================================
-// LOAN TYPE
-// =============================================================
-
 const getLoanTypeName = (application, loanTypes = []) => {
   if (application.loanType && typeof application.loanType === "string") {
     return application.loanType;
   }
-
   if (application.loan_type && typeof application.loan_type === "string") {
     return application.loan_type;
   }
-
   const loanTypeId =
     application.loanTypeId ??
     application.loan_type_id ??
     application.loanType?.id ??
     application.loan_type?.id;
-
   if (loanTypeId === null || loanTypeId === undefined || loanTypeId === "") {
     return "Not Assigned";
   }
-
   const loanType = loanTypes.find(
     (item) => String(item.id) === String(loanTypeId),
   );
-
   return loanType?.name || "Not Assigned";
 };
-
-// =============================================================
-// AMOUNT
-// =============================================================
 
 const getAmount = (application) => {
   const amount =
@@ -323,37 +226,22 @@ const getAmount = (application) => {
     application.loan_amount ??
     application.loan_amt ??
     application.amount;
-
   if (amount === null || amount === undefined || amount === "") {
     return "N/A";
   }
-
   const numericAmount = Number(
     String(amount).replace(/,/g, "").replace(/₹/g, "").trim(),
   );
-
   if (Number.isNaN(numericAmount)) {
     return String(amount);
   }
-
   return `₹${numericAmount.toLocaleString("en-IN")}`;
 };
 
-// =============================================================
-// DATE
-// =============================================================
-
 const formatDate = (value) => {
-  if (!value) {
-    return "N/A";
-  }
-
+  if (!value) return "N/A";
   const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return String(value);
-  }
-
+  if (Number.isNaN(date.getTime())) return String(value);
   return [
     String(date.getDate()).padStart(2, "0"),
     String(date.getMonth() + 1).padStart(2, "0"),
@@ -371,149 +259,78 @@ const getAppliedDate = (application) =>
     application.created_at,
   );
 
-// =============================================================
-// STATUS
-// =============================================================
-
 const normalizeStatus = (value) => {
-  if (!value) {
-    return "N/A";
-  }
-
+  if (!value) return "N/A";
   const normalized = String(value)
     .trim()
     .toLowerCase()
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ");
-
   switch (normalized) {
     case "revert rejected":
     case "reverted rejected":
     case "revertreject":
     case "revert reject":
       return "Revert Rejected";
-
     case "rejected":
     case "reject":
       return "Rejected";
-
     case "inprocess":
     case "in process":
     case "in progress":
     case "processing":
       return "In Process";
-
     case "docspending":
     case "docs pending":
     case "document pending":
     case "documents pending":
       return "Docs Pending";
-
     case "sanctioned":
     case "sanction":
       return "Sanctioned";
-
     case "disbursed":
     case "disbursement":
       return "Disbursed";
-
     case "login":
       return "Login";
-
     default:
       return String(value);
   }
 };
 
-// =============================================================
-// DISPLAY STATUS
-// =============================================================
-
 const getApplicationStatus = (application) => {
   const baseStatus = normalizeStatus(application.status);
-
   const revertedReason = getRevertedReason(application);
-
   if (baseStatus === "Rejected" && revertedReason) {
     return "Revert Rejected";
   }
-
   return baseStatus;
 };
-
-// =============================================================
-// STATUS CLASS
-// =============================================================
 
 const getStatusClass = (status) => {
   switch (normalizeStatus(status)) {
     case "In Process":
-      return `
-                text-[#78B300]
-                border-[#8BCF00]/40
-                bg-[#8BCF00]/10
-            `;
-
+      return `text-[#78B300] border-[#8BCF00]/40 bg-[#8BCF00]/10`;
     case "Docs Pending":
-      return `
-                text-orange-600
-                border-orange-300
-                bg-orange-50
-            `;
-
+      return `text-orange-600 border-orange-300 bg-orange-50`;
     case "Rejected":
-      return `
-                text-error
-                border-error/30
-                bg-error/5
-            `;
-
+      return `text-error border-error/30 bg-error/5`;
     case "Revert Rejected":
-      return `
-                text-yellow-600
-                border-yellow-300
-                bg-yellow-50
-            `;
-
+      return `text-yellow-600 border-yellow-300 bg-yellow-50`;
     case "Sanctioned":
-      return `
-                text-blue-600
-                border-blue-300
-                bg-blue-50
-            `;
-
+      return `text-blue-600 border-blue-300 bg-blue-50`;
     case "Disbursed":
-      return `
-                text-purple-600
-                border-purple-300
-                bg-purple-50
-            `;
-
+      return `text-purple-600 border-purple-300 bg-purple-50`;
     default:
-      return `
-                text-base-content/60
-                border-base-300
-                bg-base-200/50
-            `;
+      return `text-base-content/60 border-base-300 bg-base-200/50`;
   }
 };
-
-// =============================================================
-// TABLE CELL
-// =============================================================
 
 function Cell({ children, title, className = "" }) {
   return (
     <span
       title={title ?? String(children ?? "")}
-      className={`
-                block
-                min-w-0
-                overflow-hidden
-                text-ellipsis
-                whitespace-nowrap
-                ${className}
-            `}
+      className={`block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap ${className}`}
     >
       {children}
     </span>
@@ -528,24 +345,17 @@ function ApplicationsTable({
   applications = [],
   search,
   setSearch,
-
   statuses = STATUS_OPTIONS,
-
   selectedLoanType,
   setSelectedLoanType,
-
   selectedRM,
   setSelectedRM,
-
   selectedTeamLead,
   setSelectedTeamLead,
-
   selectedAgent,
   setSelectedAgent,
-
   selectedStatus,
   setSelectedStatus,
-
   onClearFilters,
   onLoanTypeChange,
   onStatusChange,
@@ -553,11 +363,9 @@ function ApplicationsTable({
   onChat,
   onViewApplication,
   onAssignApplication,
-
   onRefresh,
   onAssignmentChange,
   onDeleteApplication,
-  // Server-side pagination
   currentPage = 1,
   pageSize = 10,
   totalApplications = 0,
@@ -566,38 +374,16 @@ function ApplicationsTable({
   onPageSizeChange,
 }) {
   const [loanTypes, setLoanTypes] = useState([]);
-
-  // =========================================================
-  // STATE
-  // =========================================================
-
-  const [selectedInfoApplication, setSelectedInfoApplication] =
-    useState(null);
-
+  const [selectedInfoApplication, setSelectedInfoApplication] = useState(null);
   const [infoPopupPosition, setInfoPopupPosition] = useState(null);
-
   const [chatOpen, setChatOpen] = useState(false);
-
   const [selectedChatApplication, setSelectedChatApplication] = useState(null);
-
   const [expandedPhoneId, setExpandedPhoneId] = useState(null);
-
-  // =========================================================
-  // ASSIGN APPLICATION MODAL
-  // =========================================================
-
-  const [assignmentApplication, setAssignmentApplication] = useState(null);
-  const [eligibleAgents, setEligibleAgents] = useState([]);
-  const [selectedAssignmentAgentId, setSelectedAssignmentAgentId] = useState("");
-  const [assignmentLoading, setAssignmentLoading] = useState(false);
-  const [assignmentSaving, setAssignmentSaving] = useState(false);
-  const [assignmentError, setAssignmentError] = useState("");
 
   const openAssignmentModal = async (application) => {
     const confirmed = window.confirm(
-      "Are you sure you want to move this application to Processing Team?"
+      "Are you sure you want to move this application to Processing Team?",
     );
-
     if (!confirmed) return;
 
     const applicationId =
@@ -621,59 +407,20 @@ function ApplicationsTable({
       if (updatedApplication && onAssignmentChange) {
         onAssignmentChange(Number(applicationId), updatedApplication);
       }
-
-      if (onRefresh) {
-        await onRefresh();
-      }
-
+      if (onRefresh) await onRefresh();
       window.alert("Application successfully assigned to Processing Team.");
     } catch (error) {
       window.alert(
         error?.response?.data?.detail ||
         error?.response?.data?.message ||
-        "Assignment failed. Please try again."
+        "Assignment failed. Please try again.",
       );
     }
   };
 
-  const closeAssignmentModal = () => {
-    if (assignmentSaving) return;
-    setAssignmentApplication(null);
-    setEligibleAgents([]);
-    setSelectedAssignmentAgentId("");
-    setAssignmentError("");
-  };
-
-
   const handleLoanTypesLoaded = useCallback((options) => {
     setLoanTypes(options || []);
   }, []);
-
-  const updateApplicationAssignment = async ({
-    applicationId,
-    rmId,
-    agentId,
-  }) => {
-    const payload = {
-      application_ids: [applicationId],
-    };
-
-    if (rmId !== undefined) {
-      payload.rm_id = rmId;
-    }
-
-    if (agentId !== undefined) {
-      payload.agent_id = agentId;
-    }
-
-    const response = await apiClient({
-      method: "PATCH",
-      url: "/shuffle-loans/assign",
-      data: payload,
-    });
-
-    return response.data;
-  };
 
   const handleAgentChange = async (application, newAgentId) => {
     const applicationId =
@@ -684,9 +431,8 @@ function ApplicationsTable({
       newAgentId === undefined ||
       newAgentId === null ||
       newAgentId === ""
-    ) {
+    )
       return;
-    }
 
     try {
       const response = await apiClient({
@@ -719,9 +465,8 @@ function ApplicationsTable({
       newRmId === undefined ||
       newRmId === null ||
       newRmId === ""
-    ) {
+    )
       return;
-    }
 
     try {
       const response = await apiClient({
@@ -745,396 +490,224 @@ function ApplicationsTable({
     }
   };
 
-  // =========================================================
-  // INFO POPUP
-  // =========================================================
-
   const handleInfoClick = (event, application) => {
     const rect = event.currentTarget.getBoundingClientRect();
-
     const popupWidth = 320;
     const popupHeight = 280;
     const spacing = 10;
     const viewportPadding = 16;
 
     let left = rect.right + spacing;
-
     if (left + popupWidth > window.innerWidth - viewportPadding) {
       left = rect.left - popupWidth - spacing;
     }
-
-    if (left < viewportPadding) {
-      left = viewportPadding;
-    }
+    if (left < viewportPadding) left = viewportPadding;
 
     let top = rect.bottom + spacing;
-
     if (top + popupHeight > window.innerHeight - viewportPadding) {
       top = rect.top - popupHeight - spacing;
     }
+    if (top < viewportPadding) top = viewportPadding;
 
-    if (top < viewportPadding) {
-      top = viewportPadding;
-    }
-
-    const isSameApplication =
-      selectedInfoApplication?.id === application.id;
-
-    if (isSameApplication) {
+    if (selectedInfoApplication?.id === application.id) {
       setSelectedInfoApplication(null);
-
       setInfoPopupPosition(null);
-
       return;
     }
 
     setSelectedInfoApplication(application);
-
-    setInfoPopupPosition({
-      top,
-      left,
-    });
+    setInfoPopupPosition({ top, left });
   };
 
-  // =========================================================
-  // CLOSE POPUP ON SCROLL / RESIZE
-  // =========================================================
-
   useEffect(() => {
-    if (!selectedInfoApplication) {
-      return;
-    }
-
+    if (!selectedInfoApplication) return;
     const closePopup = () => {
       setSelectedInfoApplication(null);
-
       setInfoPopupPosition(null);
     };
-
     window.addEventListener("scroll", closePopup, true);
-
     window.addEventListener("resize", closePopup);
-
     return () => {
       window.removeEventListener("scroll", closePopup, true);
-
       window.removeEventListener("resize", closePopup);
     };
   }, [selectedInfoApplication]);
 
-  // =========================================================
-  // FILTER STATUS OPTIONS
-  // =========================================================
-
   const statusOptions = statuses?.length ? statuses : STATUS_OPTIONS;
-
-  useEffect(() => {
-    // console.log("STATUS OPTIONS CHANGED:", statusOptions);
-  }, [statusOptions]);
-  // =========================================================
-  // CHAT
-  // =========================================================
 
   const handleOpenChat = (application) => {
     setSelectedChatApplication(application);
-
     setChatOpen(true);
-
     onChat?.(application);
   };
 
   const handleCloseChat = () => {
     setChatOpen(false);
-
     setSelectedChatApplication(null);
   };
-
-  // =========================================================
-  // PHONE
-  // =========================================================
 
   const handlePhoneClick = (application) => {
     const applicationId =
       application.id ?? application.loanId ?? application.loan_id;
-
     setExpandedPhoneId((currentId) =>
       currentId === applicationId ? null : applicationId,
     );
   };
 
-  const startIndex =
-    Math.max(0, (currentPage - 1) * pageSize);
+  const startIndex = Math.max(0, (currentPage - 1) * pageSize);
 
-  // =========================================================
-  // SEARCH
-  // =========================================================
-
-  const handleSearchChange = (event) => {
-    setSearch(event.target.value);
-  };
+  const handleSearchChange = (event) => setSearch(event.target.value);
 
   // =========================================================
   // RENDER
   // =========================================================
 
   return (
-    <div className="">
+    <div className="w-full flex flex-col gap-3">
       {/* =================================================
                 FILTERS
             ================================================= */}
 
-      <div
-        className="
-                    card
-                    bg-base-100
-                    border
-                    border-base-300
-                    shadow-sm
-                "
-      >
-        <div
-          className="
-                        p-3
-                        flex
-                        items-center
-                        gap-2
-                        w-full
-                    "
-        >
-          {/* SEARCH */}
+      <div className="card bg-base-100 border border-base-300 shadow-sm w-full">
+        <div className="p-3 sm:p-4">
+          <div className="flex flex-col gap-2">
+            {/* SEARCH */}
 
-          <div className="flex-1 min-w-0">
-            <div className="relative">
-              <SearchIcon
-                className="
-                                    pointer-events-none
-                                    absolute
-                                    left-3
-                                    top-1/2
-                                    h-4
-                                    w-4
-                                    -translate-y-1/2
-                                    text-base-content/35
-                                "
-              />
-
+            <div className="relative w-full">
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/35" />
               <input
                 type="text"
                 value={search}
                 onChange={handleSearchChange}
-                placeholder="
-                                    Search name, loan ID, email or Agent...
-                                "
-                className="
-                                    input
-                                    input-bordered
-                                    h-10
-                                    min-h-10
-                                    w-full
-                                    pl-9
-                                "
+                placeholder="Search name, loan ID, email or Agent..."
+                className="input input-bordered h-10 min-h-10 w-full pl-9 text-sm"
               />
             </div>
+
+            {/* FILTER DROPDOWNS + ACTIONS */}
+
+            <div className="flex flex-col xl:flex-row xl:items-center gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:flex-1 xl:grid-cols-5 gap-2">
+                <div className="w-full">
+                  <LoanTypeDropdown
+                    label=""
+                    value={selectedLoanType}
+                    onChange={setSelectedLoanType}
+                    onOptionsLoaded={handleLoanTypesLoaded}
+                    allLabel="All Loan Types"
+                    placeholder="All Loan Types"
+                    searchPlaceholder="Search loan type"
+                    emptyMessage="No loan types found"
+                  />
+                </div>
+
+                <div className="w-full">
+                  <RmDropdown
+                    label=""
+                    value={selectedRM}
+                    onChange={setSelectedRM}
+                    allLabel="All RMs"
+                    placeholder="All RMs"
+                    searchPlaceholder="Search RM"
+                    emptyMessage="No RMs found"
+                    teamLeadContextId={selectedTeamLead}
+                  />
+                </div>
+
+                <div className="w-full">
+                  <TeamLeadDropdown
+                    label=""
+                    value={selectedTeamLead}
+                    onChange={setSelectedTeamLead}
+                    allLabel="All Team Leads"
+                    placeholder="All Team Leads"
+                    searchPlaceholder="Search Team Lead"
+                    emptyMessage="No Team Leads found"
+                  />
+                </div>
+
+                <div className="w-full">
+                  <AgentDropdown
+                    label=""
+                    value={selectedAgent}
+                    onChange={setSelectedAgent}
+                    allLabel="All Agents"
+                    placeholder="All Agents"
+                    searchPlaceholder="Search Agent"
+                    emptyMessage="No Agents found"
+                    teamLeadContextId={selectedTeamLead}
+                  />
+                </div>
+
+                <div className="w-full">
+                  <StatusDropdown
+                    label=""
+                    value={selectedStatus}
+                    onChange={setSelectedStatus}
+                    options={statusOptions}
+                    allLabel="All Statuses"
+                    placeholder="All Statuses"
+                    searchPlaceholder="Search status"
+                    emptyMessage="No statuses found"
+                  />
+                </div>
+              </div>
+
+              {/* ACTIONS */}
+
+              <div className="flex items-center justify-end gap-2 xl:shrink-0">
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="btn btn-ghost btn-sm h-10 min-h-10"
+                >
+                  Clear
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  title="Refresh applications"
+                  className="btn btn-sm btn-square h-10 min-h-10 border-[#8BCF00] text-[#78B300] hover:bg-[#8BCF00] hover:text-white"
+                >
+                  <ArrowPathIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
-
-          {/* LOAN TYPE */}
-
-          <div className="w-44 shrink-0">
-            <LoanTypeDropdown
-              label=""
-              value={selectedLoanType}
-              onChange={setSelectedLoanType}
-              onOptionsLoaded={handleLoanTypesLoaded}
-              allLabel="All Loan Types"
-              placeholder="All Loan Types"
-              searchPlaceholder="Search loan type"
-              emptyMessage="No loan types found"
-            />
-          </div>
-
-          {/* RM */}
-
-          <div className="w-44 shrink-0">
-            {/* RM */}
-
-            <RmDropdown
-              label=""
-              value={selectedRM}
-              onChange={setSelectedRM}
-              allLabel="All RMs"
-              placeholder="All RMs"
-              searchPlaceholder="Search RM"
-              emptyMessage="No RMs found"
-              disabled={!canSelectRM}
-              teamLeadContextId={selectedTeamLead}
-            />
-          </div>
-
-          {/* TEAM LEAD */}
-
-          <div className="w-44 shrink-0">
-            <TeamLeadDropdown
-              label=""
-              value={selectedTeamLead}
-              onChange={setSelectedTeamLead}
-              disabled={!canSelectTeamLeads}
-              allLabel="All Team Leads"
-              placeholder="All Team Leads"
-              searchPlaceholder="Search Team Lead"
-              emptyMessage="No Team Leads found"
-            />
-          </div>
-
-          {/* AGENT */}
-
-          <div className="w-44 shrink-0">
-            <AgentDropdown
-              label=""
-              value={selectedAgent}
-              onChange={setSelectedAgent}
-              allLabel="All Agents"
-              disabled={!canSelectAgents}
-              placeholder="All Agents"
-              searchPlaceholder="Search Agent"
-              emptyMessage="No Agents found"
-              teamLeadContextId={selectedTeamLead}
-            />
-          </div>
-
-          {/* STATUS */}
-
-          <div className="w-44 shrink-0">
-            <StatusDropdown
-              label=""
-              value={selectedStatus}
-              onChange={setSelectedStatus}
-              options={statusOptions}
-              allLabel="All Statuses"
-              placeholder="All Statuses"
-              searchPlaceholder="Search status"
-              emptyMessage="No statuses found"
-            />
-          </div>
-
-          {/* CLEAR */}
-
-          <button
-            type="button"
-            onClick={onClearFilters}
-            className="
-                            btn
-                            btn-ghost
-                            btn-sm
-                            h-10
-                            min-h-10
-                            shrink-0
-                        "
-          >
-            Clear
-          </button>
-
-          {/* REFRESH */}
-
-          <button
-            type="button"
-            onClick={onRefresh}
-            title="Refresh applications"
-            className="
-                            btn
-                            btn-sm
-                            btn-square
-                            h-10
-                            min-h-10
-                            shrink-0
-                            border-[#8BCF00]
-                            text-[#78B300]
-                            hover:bg-[#8BCF00]
-                            hover:text-white
-                        "
-          >
-            <ArrowPathIcon className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
       {/* =================================================
-                TABLE
+                DESKTOP TABLE (lg and above)
             ================================================= */}
 
-      <div
-        className="
-                    card
-                    bg-base-100
-                    border
-                    border-base-300
-                    shadow-sm
-                    w-full
-                    overflow-hidden
-                "
-      >
-        <div
-          className="
-                        w-full
-                        overflow-x-auto
-                        touch-pan-x
-                        overscroll-x-contain
-                    "
-        >
-          <table
-            className="
-                            w-full
-                            min-w-[1300px]
-                            table-fixed
-                            border-collapse
-                        "
-          >
+      <div className="hidden lg:block card bg-base-100 border border-base-300 shadow-sm w-full">
+        {/*
+          SCROLL CONTAINER:
+          - overflow-x-auto → horizontal scroll when columns don't fit
+          - overflow-y-visible → dropdown menus below the trigger are NOT clipped
+          - On some browsers `overflow-x-auto` forces `overflow-y-auto` implicitly.
+            Using `overflow-y-visible` on the parent + no max-height avoids that.
+        */}
+        <div className="w-full overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[1200px] border-collapse">
             <colgroup>
-              {/* # */}
-              <col className="w-[3%]" />
-
-              {/* Name */}
-              <col className="w-[10%]" />
-
-              {/* Phone */}
-              <col className="w-[7%]" />
-
-              {/* Loan Type */}
-              <col className="w-[7%]" />
-
-              {/* Loan Amount */}
-              <col className="w-[7%]" />
-
-              {/* Applied Date */}
-              <col className="w-[7%]" />
-
-              {/* Applied By */}
-              {/* <col className="w-[7%]" /> */}
-
-              {/* Referral */}
-              <col className="w-[7%]" />
-
-              {/* RM */}
-              <col className="w-[13%]" />
-
-              {/* Processing Agent */}
-              <col className="w-[13%]" />
-
-              {/* Status */}
-              <col className="w-[9%]" />
-
-              {/* Actions */}
-              <col className="w-[8%]" />
+              <col style={{ width: "48px" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "250px" }} />
             </colgroup>
 
-            {/* HEADER */}
-
             <thead>
-              <tr
-                className="
-                                border-b
-                                border-base-300
-                            "
-              >
+              <tr className="border-b border-base-300 bg-base-200/40">
                 {[
                   "#",
                   "Name",
@@ -1142,7 +715,6 @@ function ApplicationsTable({
                   "Loan Type",
                   "Loan Amount",
                   "Applied Date",
-                  // "Applied By",
                   "Referral",
                   "RM",
                   "Processing Agent",
@@ -1151,14 +723,7 @@ function ApplicationsTable({
                 ].map((heading) => (
                   <th
                     key={heading}
-                    className="
-                                                px-3
-                                                py-3
-                                                text-left
-                                                text-[11px]
-                                                font-semibold
-                                                text-base-content/70
-                                            "
+                    className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70"
                   >
                     {heading}
                   </th>
@@ -1166,19 +731,12 @@ function ApplicationsTable({
               </tr>
             </thead>
 
-            {/* BODY */}
-
             <tbody>
               {!applications.length ? (
                 <tr>
                   <td
-                    colSpan="12"
-                    className="
-                                            text-center
-                                            py-12
-                                            text-sm
-                                            text-base-content/50
-                                        "
+                    colSpan="11"
+                    className="text-center py-12 text-sm text-base-content/50"
                   >
                     No applications found
                   </td>
@@ -1190,518 +748,200 @@ function ApplicationsTable({
                     application.loanId ??
                     application.loan_id ??
                     index;
-
                   const phone = application.phone || "N/A";
-
-                  const phoneExpanded =
-                    expandedPhoneId === applicationId;
-
-                  const status =
-                    getApplicationStatus(application);
-
-                  const loanTypeName =
-                    getLoanTypeName(
-                      application,
-                      loanTypes,
-                    );
-
-                  // const appliedBy =
-                  //     getAppliedBy(
-                  //         application
-                  //     );
-
-                  const referral =
-                    getReferral(application);
-
-                  const amount =
-                    getAmount(application);
-
-                  const appliedDate =
-                    getAppliedDate(application);
+                  const phoneExpanded = expandedPhoneId === applicationId;
+                  const status = getApplicationStatus(application);
+                  const loanTypeName = getLoanTypeName(application, loanTypes);
+                  const referral = getReferral(application);
+                  const amount = getAmount(application);
+                  const appliedDate = getAppliedDate(application);
 
                   return (
                     <tr
                       key={applicationId}
-                      className="
-                                                    border-b
-                                                    border-base-300
-                                                    last:border-b-0
-                                                    hover:bg-base-200/30
-                                                "
+                      className="border-b border-base-300 last:border-b-0 hover:bg-base-200/30 transition-colors"
                     >
-                      {/* # */}
-
-                      <td
-                        className="
-                                                    px-3
-                                                    py-4
-                                                "
-                      >
-                        <Cell
-                          className="
-                                                            text-sm
-                                                            text-base-content/70
-                                                        "
-                        >
+                      <td className="px-3 py-4">
+                        <Cell className="text-sm text-base-content/70">
                           {startIndex + index + 1}
                         </Cell>
                       </td>
 
-                      {/* NAME */}
-
-                      <td
-                        className="
-                                                    px-3
-                                                    py-4
-                                                "
-                      >
+                      <td className="px-3 py-4">
                         <Cell
                           title={application.name}
-                          className="
-                                                            text-sm
-                                                            font-medium
-                                                        "
+                          className="text-sm font-medium"
                         >
                           {application.name || "N/A"}
                         </Cell>
                       </td>
 
-                      {/* PHONE */}
-
-                      <td
-                        className="
-                                                    px-3
-                                                    py-4
-                                                "
-                      >
-                        <div
-                          className="
-                                                            flex
-                                                            items-center
-                                                            gap-1
-                                                            min-w-0
-                                                        "
-                        >
+                      <td className="px-3 py-4">
+                        <div className="flex items-center gap-1 min-w-0">
                           <button
                             type="button"
-                            onClick={() =>
-                              handlePhoneClick(
-                                application,
-                              )
-                            }
+                            onClick={() => handlePhoneClick(application)}
                             title={
                               phoneExpanded
                                 ? "Collapse phone number"
                                 : "Show full phone number"
                             }
-                            className="
-                                                                min-w-0
-                                                                flex-1
-                                                                text-left
-                                                                text-sm
-                                                                hover:text-[#78B300]
-                                                            "
+                            className="min-w-0 flex-1 text-left text-sm hover:text-[#78B300]"
                           >
                             <span
                               className={
-                                phoneExpanded
-                                  ? "break-all"
-                                  : "block truncate"
+                                phoneExpanded ? "break-all" : "block truncate"
                               }
                             >
                               {phone}
                             </span>
                           </button>
-
                           {application.phone && (
                             <a
                               href={`tel:${application.phone}`}
-                              title={`Call ${application.name || application.phone
-                                }`}
-                              aria-label={`Call ${application.name || application.phone
-                                }`}
-                              className="
-                                                                    btn
-                                                                    btn-ghost
-                                                                    btn-xs
-                                                                    btn-square
-                                                                    shrink-0
-                                                                    rounded-full
-                                                                    text-[#78B300]
-                                                                    hover:bg-[#8BCF00]/10
-                                                                "
+                              title={`Call ${
+                                application.name || application.phone
+                              }`}
+                              aria-label={`Call ${
+                                application.name || application.phone
+                              }`}
+                              className="btn btn-ghost btn-xs btn-square shrink-0 rounded-full text-[#78B300] hover:bg-[#8BCF00]/10"
                             >
-                              <PhoneIcon
-                                className="
-                                                                        w-4
-                                                                        h-4
-                                                                    "
-                              />
+                              <PhoneIcon className="w-4 h-4" />
                             </a>
                           )}
                         </div>
                       </td>
 
-                      {/* LOAN TYPE */}
-
-                      <td
-                        className="
-                                                    px-3
-                                                    py-4
-                                                "
-                      >
+                      <td className="px-3 py-4">
                         <button
                           type="button"
-                          onClick={() =>
-                            onLoanTypeChange?.(
-                              application,
-                            )
-                          }
-                          disabled={!canChangeLoanType}
+                          onClick={() => {
+                            if (!canChangeLoanType) return
+                            onLoanTypeChange?.(application)
+                          }}
                           title={loanTypeName}
-                          className="
-                                                            max-w-full
-                                                            inline-flex
-                                                            items-center
-                                                            px-2.5
-                                                            py-1
-                                                            rounded-full
-                                                            border
-                                                            border-[#8BCF00]/40
-                                                            bg-[#8BCF00]/10
-                                                            text-[#78B300]
-                                                            text-xs
-                                                            font-medium
-                                                            truncate
-                                                            hover:bg-[#8BCF00]/20
-                                                        "
+                          disabled={!canChangeLoanType}
+                          className="max-w-full inline-flex items-center px-2.5 py-1 rounded-full border border-[#8BCF00]/40 bg-[#8BCF00]/10 text-[#78B300] text-xs font-medium truncate hover:bg-[#8BCF00]/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {loanTypeName}
                         </button>
                       </td>
 
-                      {/* LOAN AMOUNT */}
-
-                      <td
-                        className="
-                                                    px-3
-                                                    py-4
-                                                "
-                      >
-                        <Cell
-                          title={amount}
-                          className="
-                                                            text-sm
-                                                            font-medium
-                                                        "
-                        >
+                      <td className="px-3 py-4">
+                        <Cell title={amount} className="text-sm font-medium">
                           {amount}
                         </Cell>
                       </td>
 
-                      {/* APPLIED DATE */}
-
-                      <td
-                        className="
-                                                    px-3
-                                                    py-4
-                                                "
-                      >
-                        <Cell
-                          title={appliedDate}
-                          className="text-sm"
-                        >
+                      <td className="px-3 py-4">
+                        <Cell title={appliedDate} className="text-sm">
                           {appliedDate}
                         </Cell>
                       </td>
 
-                      {/* APPLIED BY */}
-
-                      {/* <td className="
-                                                    px-3
-                                                    py-4
-                                                ">
-
-                                                    <Cell
-                                                        title={
-                                                            appliedBy
-                                                        }
-                                                        className="text-sm"
-                                                    >
-                                                        {
-                                                            appliedBy
-                                                        }
-                                                    </Cell>
-
-                                                </td> */}
-
-                      {/* REFERRAL */}
-
-                      <td
-                        className="
-                                                    px-3
-                                                    py-4
-                                                "
-                      >
-                        <Cell
-                          title={referral}
-                          className="text-sm"
-                        >
+                      <td className="px-3 py-4">
+                        <Cell title={referral} className="text-sm">
                           {referral}
                         </Cell>
                       </td>
 
-                      {/* RM */}
-
-                      <td
-                        className="
-                                                    px-3
-                                                    py-4
-                                                "
-                      >
+                      <td className="px-3 py-4">
                         <RmDropdown
-                          value={application.rmId ?? application.rm_context_id ?? ""}
-                          onChange={(value) =>
-                            handleRmChange(
-                              application,
-                              value,
-                            )
+                          value={
+                            application.rmId ??
+                            application.rm_context_id ??
+                            ""
                           }
-                          disabled={!canChangeRM}
+                          onChange={(value) =>
+                            handleRmChange(application, value)
+                          }
                         />
                       </td>
 
-                      {/* PROCESSING AGENT */}
-
-                      <td
-                        className="
-                                                px-3
-                                                py-4
-                                                align-middle
-                                            "
-                      >
+                      <td className="px-3 py-4 align-middle">
                         <AgentDropdown
                           value={
                             application.agentId ??
                             application.agent_context_id ??
                             ""
                           }
-                          disabled={!canChangeAgent}
                           onChange={(value) =>
-                            handleAgentChange(
-                              application,
-                              value,
-                            )
+                            handleAgentChange(application, value)
                           }
                         />
                       </td>
 
-                      {/* STATUS */}
-
-                      <td
-                        className="
-                                                    px-3
-                                                    py-4
-                                                    align-middle
-                                                "
-                      >
-                        <div
-                          className="
-                                                            flex
-                                                            items-center
-                                                            gap-1.5
-                                                            min-w-0
-                                                        "
-                        >
+                      <td className="px-3 py-4 align-middle">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <button
                             type="button"
-                            onClick={() =>
-                              onStatusChange?.(
-                                application,
-                              )
-                            }
-                            disabled={!canChangeStatus}
+                            onClick={() => onStatusChange?.(application)}
                             title={status}
-                            className={`
-                                                                    max-w-full
-                                                                    shrink-0
-                                                                    inline-flex
-                                                                    items-center
-                                                                    px-2.5
-                                                                    py-1
-                                                                    rounded-full
-                                                                    border
-                                                                    text-xs
-                                                                    font-medium
-                                                                    truncate
-                                                                    hover:opacity-80
-                                                                    ${getStatusClass(
+                            disabled={!canChangeStatus}
+                            className={`max-w-full shrink-0 inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-medium truncate hover:opacity-80 ${getStatusClass(
                               status,
-                            )}
-                                                                `}
+                            )}`}
                           >
                             {status}
                           </button>
-
-                          {/*  {(status === "Rejected" ||
-                            status === "Revert Rejected") && (
-                              <button
-                                type="button"
-                                onClick={(event) =>
-                                  handleInfoClick(event, application)
-                                }
-                                title="View rejection details"
-                                aria-label="View rejection details"
-                                className="
-                                                                    shrink-0
-                                                                    text-base-content/50
-                                                                    hover:text-base-content
-                                                                    transition-colors
-                                                                "
-                              >
-                                <InformationCircleIcon
-                                  className="
-                                                                        h-4
-                                                                        w-4
-                                                                    "
-                                />
-                              </button>
-                            )} */}
                         </div>
                       </td>
 
-                      {/* ACTIONS */}
-
-                      <td
-                        className="
-                                                    px-2
-                                                    py-4
-                                                "
-                      >
-                        <div
-                          className="
-                                                            flex
-                                                            items-center
-                                                            justify-center
-                                                            gap-0
-                                                        "
-                        >
-                          {/* Assign */}
+                      <td className="px-2 py-4">
+                        <div className="flex items-center justify-center gap-0">
                           <button
                             type="button"
                             onClick={() => openAssignmentModal(application)}
                             title="Assign application"
-                            aria-label={`Assign application for ${application.name || "customer"}`}
                             disabled={!canAssignAgent}
-                            className="
-                              btn
-                              btn-ghost
-                              btn-sm
-                              btn-square
-                              text-error
-                              hover:bg-error/10
-                                                "
+                            aria-label={`Assign application for ${
+                              application.name || "customer"
+                            }`}
+                            className="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10"
                           >
                             <UserPlusIcon className="w-4 h-4" />
                           </button>
-                          {/* VIEW */}
 
                           <button
                             type="button"
-                            onClick={() =>
-                              onViewApplication?.(
-                                application,
-                              )
-                            }
-                            disabled={!canViewApplication}
+                            onClick={() => onViewApplication?.(application)}
                             title="View application"
-                            className="
-                                                                btn
-                                                                btn-ghost
-                                                                btn-sm
-                                                                btn-square
-                                                                hover:bg-[#8BCF00]/10
-                                                                hover:text-[#78B300]
-                                                            "
+                            disabled={!canViewApplication}
+                            className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
                           >
-                            <EyeIcon
-                              className="
-                                                                    w-4
-                                                                    h-4
-                                                                "
-                            />
+                            <EyeIcon className="w-4 h-4" />
                           </button>
-
-                          {/* REMINDER */}
 
                           <button
                             type="button"
-                            onClick={() =>
-                              onReminder?.(
-                                application,
-                              )
-                            }
-                            disabled={!canAddReminder}
+                            onClick={() => onReminder?.(application)}
                             title="Add reminder"
-                            className="
-                                                                btn
-                                                                btn-ghost
-                                                                btn-sm
-                                                                btn-square
-                                                                hover:bg-[#8BCF00]/10
-                                                                hover:text-[#78B300]
-                                                            "
+                            disabled={!canAddReminder}
+                            className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
                           >
-                            <BellAlertIcon
-                              className="
-                                                                    w-4
-                                                                    h-4
-                                                                "
-                            />
+                            <BellAlertIcon className="w-4 h-4" />
                           </button>
-
-                          {/* CHAT */}
 
                           <button
                             type="button"
-                            onClick={() =>
-                              handleOpenChat(
-                                application,
-                              )
-                            }
-                            disabled={!canViewChat}
+                            onClick={() => handleOpenChat(application)}
                             title="Open chat"
-                            className="
-                                                                btn
-                                                                btn-ghost
-                                                                btn-sm
-                                                                btn-square
-                                                                hover:bg-[#8BCF00]/10
-                                                                hover:text-[#78B300]
-                                                            "
+                            disabled={!canViewChat}
+                            className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
                           >
-                            <ChatBubbleLeftRightIcon
-                              className="
-                                                                    w-4
-                                                                    h-4
-                                                                "
-                            />
+                            <ChatBubbleLeftRightIcon className="w-4 h-4" />
                           </button>
-                          {/* DELETE */}
+
                           <button
                             type="button"
                             onClick={() => onDeleteApplication?.(application)}
                             title="Delete application"
-                            aria-label={`Delete application for ${application.name || "customer"}`}
                             disabled={!canDeleteApplication}
-                            className="
-                              btn
-                              btn-ghost
-                              btn-sm
-                              btn-square
-                              text-error
-                              hover:bg-error/10
-                                                "
+                            aria-label={`Delete application for ${
+                              application.name || "customer"
+                            }`}
+                            className="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10"
                           >
                             <TrashIcon className="w-4 h-4" />
                           </button>
@@ -1716,35 +956,234 @@ function ApplicationsTable({
         </div>
       </div>
 
-      {totalApplications > 0 && (
-        <div
-          className="
-            flex
-            flex-wrap
-            items-center
-            justify-between
-            gap-3
-            mt-3
-        "
-        >
-          {/* ROWS PER PAGE */}
+      {/* =================================================
+                MOBILE / TABLET CARD LIST (below lg)
+            ================================================= */}
 
+      <div className="lg:hidden w-full flex flex-col gap-3">
+        {!applications.length ? (
+          <div className="card bg-base-100 border border-base-300 shadow-sm w-full">
+            <div className="text-center py-12 text-sm text-base-content/50">
+              No applications found
+            </div>
+          </div>
+        ) : (
+          applications.map((application, index) => {
+            const applicationId =
+              application.id ??
+              application.loanId ??
+              application.loan_id ??
+              index;
+            const phone = application.phone || "N/A";
+            const phoneExpanded = expandedPhoneId === applicationId;
+            const status = getApplicationStatus(application);
+            const loanTypeName = getLoanTypeName(application, loanTypes);
+            const referral = getReferral(application);
+            const amount = getAmount(application);
+            const appliedDate = getAppliedDate(application);
+
+            return (
+              <div
+                key={applicationId}
+                className="card bg-base-100 border border-base-300 shadow-sm w-full"
+              >
+                <div className="p-4 flex flex-col gap-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="text-xs font-semibold text-base-content/50 pt-0.5 shrink-0">
+                        #{startIndex + index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-base-content break-words">
+                          {application.name || "N/A"}
+                        </div>
+                        <div className="text-xs text-base-content/60 mt-0.5">
+                          {appliedDate}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onStatusChange?.(application)}
+                      title={status}
+                      className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-medium ${getStatusClass(
+                        status,
+                      )}`}
+                    >
+                      {status}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        Phone
+                      </div>
+                      <div className="flex items-center gap-1 min-w-0 mt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handlePhoneClick(application)}
+                          className="min-w-0 flex-1 text-left text-sm hover:text-[#78B300] break-all"
+                          title={
+                            phoneExpanded
+                              ? "Collapse phone number"
+                              : "Show full phone number"
+                          }
+                        >
+                          {phone}
+                        </button>
+                        {application.phone && (
+                          <a
+                            href={`tel:${application.phone}`}
+                            title={`Call ${
+                              application.name || application.phone
+                            }`}
+                            aria-label={`Call ${
+                              application.name || application.phone
+                            }`}
+                            className="btn btn-ghost btn-xs btn-square shrink-0 rounded-full text-[#78B300] hover:bg-[#8BCF00]/10"
+                          >
+                            <PhoneIcon className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        Loan Type
+                      </div>
+                      <div className="mt-0.5 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => onLoanTypeChange?.(application)}
+                          title={loanTypeName}
+                          className="max-w-full inline-flex items-center px-2.5 py-1 rounded-full border border-[#8BCF00]/40 bg-[#8BCF00]/10 text-[#78B300] text-xs font-medium truncate hover:bg-[#8BCF00]/20"
+                        >
+                          {loanTypeName}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        Loan Amount
+                      </div>
+                      <div className="mt-0.5 text-sm font-medium break-words">
+                        {amount}
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        Referral
+                      </div>
+                      <div className="mt-0.5 text-sm break-words">
+                        {referral}
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        RM
+                      </div>
+                      <div className="mt-0.5 min-w-0">
+                        <RmDropdown
+                          value={
+                            application.rmId ??
+                            application.rm_context_id ??
+                            ""
+                          }
+                          onChange={(value) =>
+                            handleRmChange(application, value)
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        Processing Agent
+                      </div>
+                      <div className="mt-0.5 min-w-0">
+                        <AgentDropdown
+                          value={
+                            application.agentId ??
+                            application.agent_context_id ??
+                            ""
+                          }
+                          onChange={(value) =>
+                            handleAgentChange(application, value)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1 pt-2 border-t border-base-300 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => openAssignmentModal(application)}
+                      title="Assign application"
+                      className="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10"
+                    >
+                      <UserPlusIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onViewApplication?.(application)}
+                      title="View application"
+                      className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
+                    >
+                      <EyeIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onReminder?.(application)}
+                      title="Add reminder"
+                      className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
+                    >
+                      <BellAlertIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenChat(application)}
+                      title="Open chat"
+                      className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
+                    >
+                      <ChatBubbleLeftRightIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteApplication?.(application)}
+                      title="Delete application"
+                      className="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* =================================================
+                PAGINATION
+            ================================================= */}
+
+      {totalApplications > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap bg-base-100 border border-base-300 rounded-lg px-3 py-2">
           <div className="flex items-center gap-2 text-sm text-base-content/60">
             <span>Rows per page:</span>
-
             <select
               value={pageSize}
-              onChange={(event) => {
-                onPageSizeChange?.(
-                  Number(event.target.value),
-                );
-              }}
-              className="
-                    select
-                    select-bordered
-                    select-sm
-                    w-20
-                "
+              onChange={(event) =>
+                onPageSizeChange?.(Number(event.target.value))
+              }
+              className="select select-bordered select-sm w-20"
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -1753,55 +1192,32 @@ function ApplicationsTable({
             </select>
           </div>
 
-          {/* SHOWING */}
-
           <div className="text-sm text-base-content/60">
             Showing {startIndex + 1}
             {"–"}
-            {Math.min(
-              startIndex + pageSize,
-              totalApplications,
-            )}{" "}
-            of {totalApplications}
+            {Math.min(startIndex + pageSize, totalApplications)} of{" "}
+            {totalApplications}
           </div>
 
-          {/* NAVIGATION */}
-
           {totalPages > 1 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
                 disabled={currentPage === 1}
-                onClick={() =>
-                  onPageChange?.(
-                    Math.max(
-                      currentPage - 1,
-                      1,
-                    ),
-                  )
-                }
+                onClick={() => onPageChange?.(Math.max(currentPage - 1, 1))}
               >
                 Previous
               </button>
-
               <span className="px-2 text-sm text-base-content/60">
                 Page {currentPage} of {totalPages}
               </span>
-
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
-                disabled={
-                  currentPage === totalPages
-                }
+                disabled={currentPage === totalPages}
                 onClick={() =>
-                  onPageChange?.(
-                    Math.min(
-                      currentPage + 1,
-                      totalPages,
-                    ),
-                  )
+                  onPageChange?.(Math.min(currentPage + 1, totalPages))
                 }
               >
                 Next
@@ -1819,135 +1235,50 @@ function ApplicationsTable({
         infoPopupPosition &&
         createPortal(
           <div
-            className="
-                            fixed
-                            z-[9999]
-                            w-80
-                            rounded-xl
-                            border
-                            border-base-300
-                            bg-base-100
-                            p-4
-                            shadow-xl
-                        "
+            className="fixed z-[9999] w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-base-300 bg-base-100 p-4 shadow-xl"
             style={{
               top: infoPopupPosition.top,
               left: infoPopupPosition.left,
             }}
           >
-            {/* TITLE */}
-
-            <div
-              className="
-                            text-sm
-                            font-semibold
-                            text-base-content
-                        "
-            >
+            <div className="text-sm font-semibold text-base-content">
               Rejection Details
             </div>
 
-            {/* TYPE */}
-
-            <div
-              className="
-                            mt-3
-                            text-sm
-                            text-base-content
-                        "
-            >
-              <span className="font-semibold">
-                Type:
-              </span>{" "}
-              {getRevertedReason(
-                selectedInfoApplication,
-              )
+            <div className="mt-3 text-sm text-base-content">
+              <span className="font-semibold">Type:</span>{" "}
+              {getRevertedReason(selectedInfoApplication)
                 ? "Reverted"
                 : "Rejected"}
             </div>
 
-            {/* BY */}
-
-            <div
-              className="
-                            mt-1
-                            text-sm
-                            text-base-content
-                        "
-            >
-              <span className="font-semibold">
-                By:
-              </span>{" "}
-              {getRevertedReason(
-                selectedInfoApplication,
-              )
-                ? getRevertedByName(
-                  selectedInfoApplication,
-                ) || "—"
-                : getRejectedByName(
-                  selectedInfoApplication,
-                ) || "—"}
+            <div className="mt-1 text-sm text-base-content">
+              <span className="font-semibold">By:</span>{" "}
+              {getRevertedReason(selectedInfoApplication)
+                ? getRevertedByName(selectedInfoApplication) || "—"
+                : getRejectedByName(selectedInfoApplication) || "—"}
             </div>
 
-            {/* DATE */}
-
-            <div
-              className="
-                            mt-1
-                            text-sm
-                            text-base-content
-                        "
-            >
-              <span className="font-semibold">
-                Date:
-              </span>{" "}
+            <div className="mt-1 text-sm text-base-content">
+              <span className="font-semibold">Date:</span>{" "}
               {formatDate(
-                getRevertedReason(
-                  selectedInfoApplication,
-                )
-                  ? getRevertedDate(
-                    selectedInfoApplication,
-                  )
-                  : getRejectedDate(
-                    selectedInfoApplication,
-                  ),
+                getRevertedReason(selectedInfoApplication)
+                  ? getRevertedDate(selectedInfoApplication)
+                  : getRejectedDate(selectedInfoApplication),
               )}
             </div>
 
-            {/* REMARKS */}
-
-            <div
-              className="
-                            mt-3
-                            text-sm
-                            leading-5
-                            text-base-content
-                        "
-            >
-              <span className="font-semibold">
-                Remarks:
-              </span>{" "}
-              <span
-                className="
-                                break-words
-                            "
-              >
-                {getRevertedReason(
-                  selectedInfoApplication,
-                )
-                  ? getRevertedReason(
-                    selectedInfoApplication,
-                  ) || "—"
-                  : getRejectedReason(
-                    selectedInfoApplication,
-                  ) || "—"}
+            <div className="mt-3 text-sm leading-5 text-base-content">
+              <span className="font-semibold">Remarks:</span>{" "}
+              <span className="break-words">
+                {getRevertedReason(selectedInfoApplication)
+                  ? getRevertedReason(selectedInfoApplication) || "—"
+                  : getRejectedReason(selectedInfoApplication) || "—"}
               </span>
             </div>
           </div>,
           document.body,
         )}
-
-     
 
       {/* =================================================
                 GLOBAL CHAT
@@ -1958,20 +1289,10 @@ function ApplicationsTable({
           <GlobalChat
             open={chatOpen}
             onClose={handleCloseChat}
-            loanId={getLoanId(
-              selectedChatApplication,
-            )}
-            agentId={getAgentId(
-              selectedChatApplication,
-            )}
-            customerName={
-              selectedChatApplication.name ||
-              "Customer"
-            }
-            customerPhone={
-              selectedChatApplication.phone ||
-              ""
-            }
+            loanId={getLoanId(selectedChatApplication)}
+            agentId={getAgentId(selectedChatApplication)}
+            customerName={selectedChatApplication.name || "Customer"}
+            customerPhone={selectedChatApplication.phone || ""}
           />
         )}
       </Suspense>

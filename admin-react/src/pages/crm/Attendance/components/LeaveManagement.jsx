@@ -20,6 +20,8 @@ import {
   cancelMyLeaveRequest,
 } from "../api";
 
+const canEdit = hasPermission(PERMISSIONS.LEAVE_UPDATE)
+const canDelete = hasPermission(PERMISSIONS.LEAVE_DELETE)
 const LeaveApplicationModal = lazy(() => import("./LeaveApplicationModal"));
 
 const DEFAULT_LEAVE_BALANCE = {
@@ -571,7 +573,7 @@ function LeaveManagement() {
                                 onClick={() => handleEdit(request)}
                                 className="btn btn-xs btn-ghost"
                                 title="Edit leave"
-                                disabled={processingLeaveId === request.id}
+                                disabled={processingLeaveId === request.id || !canEdit}
                               >
                                 <PencilSquareIcon className="w-4 h-4" />
                               </button>
@@ -581,7 +583,7 @@ function LeaveManagement() {
                                 onClick={() => handleCancel(request)}
                                 className="btn btn-xs btn-ghost text-error"
                                 title="Cancel leave"
-                                disabled={processingLeaveId === request.id}
+                                disabled={processingLeaveId === request.id || !canDelete}
                               >
                                 {processingLeaveId === request.id ? (
                                   <span className="loading loading-spinner loading-xs" />

@@ -1,13 +1,9 @@
 // admin-react/src/components/GlobalModels/Filters/LoanTypeDropdown.jsx
 
-
- // admin-react/src/components/GlobalModels/Filters/LoanTypeDropdown.jsx
-
 import { useEffect, useState } from 'react'
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'
 import { useCommonData } from '../../../context/CommonDataContext'
-
 
 const LoanTypeDropdown = ({
     value = '',
@@ -22,7 +18,6 @@ const LoanTypeDropdown = ({
     required = false,
     onOptionsLoaded,
 }) => {
-
     const {
         getLoanTypes,
         loadingLoanTypes,
@@ -30,7 +25,6 @@ const LoanTypeDropdown = ({
     } = useCommonData()
 
     const [loanTypes, setLoanTypes] = useState([])
-
 
     // =========================================================
     // FETCH LOAN TYPES
@@ -54,7 +48,6 @@ const LoanTypeDropdown = ({
                 if (typeof onOptionsLoaded === 'function') {
                     onOptionsLoaded(normalizedData)
                 }
-
             } catch (fetchError) {
                 if (!isMounted) return
 
@@ -72,9 +65,7 @@ const LoanTypeDropdown = ({
         return () => {
             isMounted = false
         }
-
     }, [getLoanTypes, onOptionsLoaded])
-
 
     // =========================================================
     // HANDLE SELECTION
@@ -92,13 +83,11 @@ const LoanTypeDropdown = ({
         }
     }
 
-
     // =========================================================
     // ERROR
     // =========================================================
 
     const dropdownError = error || loanTypesError
-
 
     // =========================================================
     // COMPONENT UI
@@ -118,7 +107,6 @@ const LoanTypeDropdown = ({
             {label && (
                 <label
                     className="
-                        mb-1.5
                         block
                         text-xs
                         font-medium
@@ -142,30 +130,23 @@ const LoanTypeDropdown = ({
                 value={value}
                 options={loanTypes}
                 onChange={handleChange}
-
                 includeAllOption={false}
                 showLabel={false}
-
                 placeholder={
                     loadingLoanTypes
                         ? 'Loading Loan Types...'
                         : placeholder
                 }
-
                 searchPlaceholder="Search Loan Type"
-
                 loading={loadingLoanTypes}
-
                 disabled={
                     disabled || loadingLoanTypes
                 }
-
                 className="
                     box-border
                     w-full
                     min-w-0
                 "
-
                 buttonClassName={`
                     box-border
                     h-10
@@ -175,9 +156,7 @@ const LoanTypeDropdown = ({
                     rounded-lg
                     ${buttonClassName}
                 `}
-
                 menuClassName={menuClassName}
-
                 getOptionValue={(option) => option.id}
                 getOptionLabel={(option) => option.name}
             />

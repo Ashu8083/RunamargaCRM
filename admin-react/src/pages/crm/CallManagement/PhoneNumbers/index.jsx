@@ -1,11 +1,9 @@
 // admin-react/src/pages/CallManagement/PhoneNumbers/index.jsx
-
 import {
     useEffect,
     useMemo,
     useState,
 } from 'react'
-
 
 // =============================================================
 // PHONE NUMBER COMPONENTS
@@ -15,7 +13,6 @@ import PhoneNumberSummary from './components/PhoneNumberSummary'
 import PhoneNumberTable from './components/PhoneNumberTable'
 import AddPhoneNumber from './components/AddPhoneNumber'
 import PhoneNumberDetails from './components/PhoneNumberDetails'
-
 
 // =============================================================
 // API
@@ -27,7 +24,6 @@ import {
     updatePhoneNumber,
 } from './Api'
 
-
 // =============================================================
 // GLOBAL COMPONENTS
 // =============================================================
@@ -35,13 +31,11 @@ import {
 import EmployeeDropdown from '../../../../components/GlobalModels/Filters/EmployeeDropdown'
 import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
 
-
 // =============================================================
 // COMPONENT
 // =============================================================
 
 function PhoneNumbers() {
-
 
     // =========================================================
     // PHONE NUMBERS STATE
@@ -52,46 +46,15 @@ function PhoneNumbers() {
         setPhoneNumbers,
     ] = useState([])
 
-
     const [
         loading,
         setLoading,
     ] = useState(false)
 
-
     const [
         error,
         setError,
     ] = useState('')
-
-
-    // =========================================================
-    // FILTER STATE
-    // =========================================================
-
-    const [
-        search,
-        setSearch,
-    ] = useState('')
-
-
-    const [
-        employeeId,
-        setEmployeeId,
-    ] = useState('')
-
-
-    const [
-        status,
-        setStatus,
-    ] = useState('')
-
-
-    const [
-        trackable,
-        setTrackable,
-    ] = useState('')
-
 
     // =========================================================
     // ADD / EDIT DRAWER STATE
@@ -102,12 +65,10 @@ function PhoneNumbers() {
         setShowNumberDrawer,
     ] = useState(false)
 
-
     const [
         editingPhoneNumber,
         setEditingPhoneNumber,
     ] = useState(null)
-
 
     // =========================================================
     // DETAILS STATE
@@ -118,12 +79,10 @@ function PhoneNumbers() {
         setSelectedPhoneNumber,
     ] = useState(null)
 
-
     const [
         showDetails,
         setShowDetails,
     ] = useState(false)
-
 
     // =========================================================
     // FEEDBACK MODAL STATE
@@ -133,17 +92,11 @@ function PhoneNumbers() {
         feedback,
         setFeedback,
     ] = useState({
-
         open: false,
-
         type: 'success',
-
         title: '',
-
         message: '',
-
     })
-
 
     // =========================================================
     // NORMALIZE STATUS
@@ -157,11 +110,8 @@ function PhoneNumbers() {
             value === 'active' ||
             value === 'Active'
         ) {
-
             return 'Active'
-
         }
-
 
         if (
             value === 0 ||
@@ -169,16 +119,11 @@ function PhoneNumbers() {
             value === 'inactive' ||
             value === 'Inactive'
         ) {
-
             return 'Inactive'
-
         }
 
-
         return value || 'Inactive'
-
     }
-
 
     // =========================================================
     // NORMALIZE PHONE NUMBER
@@ -189,7 +134,6 @@ function PhoneNumbers() {
         if (!item) {
             return item
         }
-
 
         return {
 
@@ -202,7 +146,6 @@ function PhoneNumbers() {
             id:
                 item.id,
 
-
             // -------------------------------------------------
             // PHONE NUMBER
             // -------------------------------------------------
@@ -211,7 +154,6 @@ function PhoneNumbers() {
                 item.number ??
                 item.phone ??
                 '',
-
 
             // -------------------------------------------------
             // EMPLOYEE
@@ -222,12 +164,10 @@ function PhoneNumbers() {
                 item.employee_id ??
                 null,
 
-
             employeeName:
                 item.employeeName ??
                 item.employee_name ??
                 null,
-
 
             // -------------------------------------------------
             // TEAM
@@ -238,12 +178,10 @@ function PhoneNumbers() {
                 item.team_id ??
                 null,
 
-
             teamName:
                 item.teamName ??
                 item.team_name ??
                 null,
-
 
             // -------------------------------------------------
             // STATUS
@@ -253,7 +191,6 @@ function PhoneNumbers() {
                 normalizeStatus(
                     item.status
                 ),
-
 
             // -------------------------------------------------
             // TRACKABLE
@@ -266,7 +203,6 @@ function PhoneNumbers() {
                 item.trackable === 1 ||
                 item.trackable === 'Yes',
 
-
             // -------------------------------------------------
             // DATES
             // -------------------------------------------------
@@ -276,18 +212,15 @@ function PhoneNumbers() {
                 item.assigned_at ??
                 null,
 
-
             createdAt:
                 item.createdAt ??
                 item.created_at ??
                 null,
 
-
             updatedAt:
                 item.updatedAt ??
                 item.updated_at ??
                 null,
-
 
             // -------------------------------------------------
             // HISTORY
@@ -297,11 +230,8 @@ function PhoneNumbers() {
                 item.assignmentHistory ??
                 item.assignment_history ??
                 [],
-
         }
-
     }
-
 
     // =========================================================
     // CLOSE FEEDBACK
@@ -310,15 +240,10 @@ function PhoneNumbers() {
     const closeFeedback = () => {
 
         setFeedback((previous) => ({
-
             ...previous,
-
             open: false,
-
         }))
-
     }
-
 
     // =========================================================
     // SHOW SUCCESS
@@ -330,19 +255,12 @@ function PhoneNumbers() {
     ) => {
 
         setFeedback({
-
             open: true,
-
             type: 'success',
-
             title,
-
             message,
-
         })
-
     }
-
 
     // =========================================================
     // SHOW ERROR
@@ -354,19 +272,12 @@ function PhoneNumbers() {
     ) => {
 
         setFeedback({
-
             open: true,
-
             type: 'error',
-
             title,
-
             message,
-
         })
-
     }
-
 
     // =========================================================
     // EXTRACT API ERROR
@@ -377,16 +288,11 @@ function PhoneNumbers() {
         const detail =
             error?.response?.data?.detail
 
-
         if (typeof detail === 'string') {
-
             return detail
-
         }
 
-
         if (Array.isArray(detail)) {
-
             return detail
                 .map(
                     (item) =>
@@ -394,32 +300,25 @@ function PhoneNumbers() {
                         String(item)
                 )
                 .join(', ')
-
         }
-
 
         if (
             detail &&
             typeof detail === 'object'
         ) {
-
             return (
                 detail.message ||
                 detail.error ||
                 JSON.stringify(detail)
             )
-
         }
-
 
         return (
             error?.response?.data?.message ||
             error?.message ||
             'The operation could not be completed. Please try again.'
         )
-
     }
-
 
     // =========================================================
     // LOAD PHONE NUMBERS
@@ -430,13 +329,10 @@ function PhoneNumbers() {
         try {
 
             setLoading(true)
-
             setError('')
-
 
             const data =
                 await getPhoneNumbers()
-
 
             const records =
                 Array.isArray(data)
@@ -445,13 +341,11 @@ function PhoneNumbers() {
                         ? data.data
                         : []
 
-
             setPhoneNumbers(
                 records.map(
                     normalizePhoneNumber
                 )
             )
-
 
         } catch (error) {
 
@@ -460,256 +354,68 @@ function PhoneNumbers() {
                 error
             )
 
-
             const message =
                 getErrorMessage(error)
 
-
             setError(message)
-
 
             showError(
                 'Unable to Load Phone Numbers',
                 message
             )
 
-
         } finally {
 
             setLoading(false)
 
         }
-
     }
-
 
     // =========================================================
     // INITIAL LOAD
     // =========================================================
 
     useEffect(() => {
-
         loadPhoneNumbers()
-
     }, [])
-
-
-    // =========================================================
-    // FILTER PHONE NUMBERS
-    // =========================================================
-
-    const filteredPhoneNumbers =
-        useMemo(() => {
-
-            const searchValue =
-                search
-                    .trim()
-                    .toLowerCase()
-
-
-            return phoneNumbers.filter(
-                (phoneNumber) => {
-
-
-                    // -------------------------------------------------
-                    // SEARCH
-                    // -------------------------------------------------
-
-                    if (searchValue) {
-
-                        const searchableValues = [
-
-                            phoneNumber.number,
-
-                            phoneNumber.phone,
-
-                            phoneNumber.employeeName,
-
-                            phoneNumber.employee_name,
-
-                            phoneNumber.teamName,
-
-                            phoneNumber.team_name,
-
-                        ]
-
-
-                        const matchesSearch =
-                            searchableValues.some(
-                                (value) =>
-                                    value !== null &&
-                                    value !== undefined &&
-                                    String(value)
-                                        .toLowerCase()
-                                        .includes(
-                                            searchValue
-                                        )
-                            )
-
-
-                        if (!matchesSearch) {
-
-                            return false
-
-                        }
-
-                    }
-
-
-                    // -------------------------------------------------
-                    // EMPLOYEE
-                    // -------------------------------------------------
-
-                    if (employeeId) {
-
-                        if (
-                            String(
-                                phoneNumber.employeeId
-                            ) !==
-                            String(
-                                employeeId
-                            )
-                        ) {
-
-                            return false
-
-                        }
-
-                    }
-
-
-                    // -------------------------------------------------
-                    // STATUS
-                    // -------------------------------------------------
-
-                    if (status) {
-
-                        if (
-                            normalizeStatus(
-                                phoneNumber.status
-                            ) !==
-                            status
-                        ) {
-
-                            return false
-
-                        }
-
-                    }
-
-
-                    // -------------------------------------------------
-                    // TRACKABLE
-                    // -------------------------------------------------
-
-                    if (trackable) {
-
-                        const isTrackable =
-                            phoneNumber.trackable === true
-
-
-                        if (
-                            trackable === 'Yes' &&
-                            !isTrackable
-                        ) {
-
-                            return false
-
-                        }
-
-
-                        if (
-                            trackable === 'No' &&
-                            isTrackable
-                        ) {
-
-                            return false
-
-                        }
-
-                    }
-
-
-                    return true
-
-                }
-            )
-
-        }, [
-
-            phoneNumbers,
-
-            search,
-
-            employeeId,
-
-            status,
-
-            trackable,
-
-        ])
-
 
     // =========================================================
     // SUMMARY
     // =========================================================
 
-    const summary =
-        useMemo(() => {
+    const summary = useMemo(() => {
 
-            return {
+        return {
 
-                totalNumbers:
-                    phoneNumbers.length,
+            totalNumbers:
+                phoneNumbers.length,
 
+            activeNumbers:
+                phoneNumbers.filter(
+                    (item) =>
+                        normalizeStatus(
+                            item.status
+                        ) === 'Active'
+                ).length,
 
-                activeNumbers:
-                    phoneNumbers.filter(
-                        (item) =>
-                            normalizeStatus(
-                                item.status
-                            ) === 'Active'
-                    ).length,
+            inactiveNumbers:
+                phoneNumbers.filter(
+                    (item) =>
+                        normalizeStatus(
+                            item.status
+                        ) === 'Inactive'
+                ).length,
 
+            trackableNumbers:
+                phoneNumbers.filter(
+                    (item) =>
+                        item.trackable === true
+                ).length,
+        }
 
-                inactiveNumbers:
-                    phoneNumbers.filter(
-                        (item) =>
-                            normalizeStatus(
-                                item.status
-                            ) === 'Inactive'
-                    ).length,
-
-
-                trackableNumbers:
-                    phoneNumbers.filter(
-                        (item) =>
-                            item.trackable === true
-                    ).length,
-
-            }
-
-        }, [
-            phoneNumbers,
-        ])
-
-
-    // =========================================================
-    // RESET FILTERS
-    // =========================================================
-
-    const handleReset = () => {
-
-        setSearch('')
-
-        setEmployeeId('')
-
-        setStatus('')
-
-        setTrackable('')
-
-    }
-
+    }, [
+        phoneNumbers,
+    ])
 
     // =========================================================
     // OPEN ADD DRAWER
@@ -718,11 +424,9 @@ function PhoneNumbers() {
     const handleAddPhoneNumber = () => {
 
         setEditingPhoneNumber(null)
-
         setShowNumberDrawer(true)
 
     }
-
 
     // =========================================================
     // OPEN EDIT DRAWER
@@ -740,7 +444,6 @@ function PhoneNumbers() {
 
     }
 
-
     // =========================================================
     // CLOSE ADD / EDIT DRAWER
     // =========================================================
@@ -748,17 +451,14 @@ function PhoneNumbers() {
     const handleCloseNumberDrawer = () => {
 
         setShowNumberDrawer(false)
-
         setEditingPhoneNumber(null)
 
     }
-
 
     // =========================================================
     // SAVE PHONE NUMBER
     //
     // Used for:
-    //
     // 1. CREATE
     // 2. UPDATE
     // =========================================================
@@ -771,10 +471,9 @@ function PhoneNumbers() {
 
             setError('')
 
-
-            // =====================================================
+            // -------------------------------------------------
             // PREPARE DATA
-            // =====================================================
+            // -------------------------------------------------
 
             const payload = {
 
@@ -797,57 +496,33 @@ function PhoneNumbers() {
                     normalizeStatus(
                         data.status
                     ),
-
             }
 
-
-            // =====================================================
+            // -------------------------------------------------
             // EDIT
-            // =====================================================
+            // -------------------------------------------------
 
             if (editingPhoneNumber) {
 
                 await updatePhoneNumber(
-
                     editingPhoneNumber.id,
-
                     payload
-
                 )
-
-
-                // -------------------------------------------------
-                // Reload from backend
-                // -------------------------------------------------
 
                 await loadPhoneNumbers()
 
-
-                // -------------------------------------------------
-                // Close drawer
-                // -------------------------------------------------
-
                 handleCloseNumberDrawer()
 
-
-                // -------------------------------------------------
-                // Success
-                // -------------------------------------------------
-
                 showSuccess(
-
                     'Phone Number Updated',
-
                     'The phone number was updated successfully.'
-
                 )
 
             }
 
-
-            // =====================================================
+            // -------------------------------------------------
             // ADD
-            // =====================================================
+            // -------------------------------------------------
 
             else {
 
@@ -855,35 +530,16 @@ function PhoneNumbers() {
                     payload
                 )
 
-
-                // -------------------------------------------------
-                // Reload from backend
-                // -------------------------------------------------
-
                 await loadPhoneNumbers()
-
-
-                // -------------------------------------------------
-                // Close drawer
-                // -------------------------------------------------
 
                 handleCloseNumberDrawer()
 
-
-                // -------------------------------------------------
-                // Success
-                // -------------------------------------------------
-
                 showSuccess(
-
                     'Phone Number Added',
-
                     'The phone number was added successfully.'
-
                 )
 
             }
-
 
         } catch (error) {
 
@@ -892,51 +548,28 @@ function PhoneNumbers() {
                 error
             )
 
-
             const message =
                 getErrorMessage(error)
 
-
             setError(message)
-
-
-            // -------------------------------------------------
-            // ADD ERROR
-            // -------------------------------------------------
 
             if (!editingPhoneNumber) {
 
                 showError(
-
                     'Unable to Add Phone Number',
-
                     message
-
                 )
 
-            }
-
-
-            // -------------------------------------------------
-            // UPDATE ERROR
-            // -------------------------------------------------
-
-            else {
+            } else {
 
                 showError(
-
                     'Unable to Update Phone Number',
-
                     message
-
                 )
 
             }
-
         }
-
     }
-
 
     // =========================================================
     // VIEW DETAILS
@@ -954,7 +587,6 @@ function PhoneNumbers() {
 
     }
 
-
     // =========================================================
     // CLOSE DETAILS
     // =========================================================
@@ -962,22 +594,17 @@ function PhoneNumbers() {
     const handleCloseDetails = () => {
 
         setShowDetails(false)
-
         setSelectedPhoneNumber(null)
 
     }
-
 
     // =========================================================
     // REFRESH
     // =========================================================
 
     const handleRefresh = async () => {
-
         await loadPhoneNumbers()
-
     }
-
 
     // =========================================================
     // RENDER
@@ -990,241 +617,6 @@ function PhoneNumbers() {
             p-4
             sm:p-6
         ">
-
-
-            {/* =================================================
-                FILTERS + ADD BUTTON
-            ================================================= */}
-
-            <div className="
-                card
-                border
-                border-base-300
-                bg-base-100
-                shadow-sm
-            ">
-
-                <div className="
-                    card-body
-                    p-4
-                ">
-
-                    <div className="
-                        grid
-                        grid-cols-1
-                        gap-3
-                        lg:grid-cols-12
-                    ">
-
-
-                        {/* =====================================
-                            SEARCH
-                        ===================================== */}
-
-                        <div className="
-                            lg:col-span-3
-                        ">
-
-                            <label className="
-                                input
-                                input-bordered
-                                flex
-                                w-full
-                                items-center
-                                gap-3
-                            ">
-
-                                <span className="
-                                    text-xs
-                                    text-base-content/40
-                                ">
-                                    Search
-                                </span>
-
-
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(event) =>
-                                        setSearch(
-                                            event.target.value
-                                        )
-                                    }
-                                    placeholder="Number or employee..."
-                                    className="grow"
-                                />
-
-                            </label>
-
-                        </div>
-
-
-                        {/* =====================================
-                            EMPLOYEE
-                        ===================================== */}
-
-                        <div className="
-                            lg:col-span-2
-                        ">
-
-                            <EmployeeDropdown
-                                value={
-                                    employeeId
-                                }
-                                onChange={
-                                    setEmployeeId
-                                }
-                            />
-
-                        </div>
-
-
-                        {/* =====================================
-                            STATUS
-                        ===================================== */}
-
-                        <div className="
-                            lg:col-span-2
-                        ">
-
-                            <select
-                                value={status}
-                                onChange={(event) =>
-                                    setStatus(
-                                        event.target.value
-                                    )
-                                }
-                                className="
-                                    select
-                                    select-bordered
-                                    w-full
-                                "
-                            >
-
-                                <option value="">
-                                    All Status
-                                </option>
-
-                                <option value="Active">
-                                    Active
-                                </option>
-
-                                <option value="Inactive">
-                                    Inactive
-                                </option>
-
-                            </select>
-
-                        </div>
-
-
-                        {/* =====================================
-                            TRACKABLE
-                        ===================================== */}
-
-                        <div className="
-                            lg:col-span-2
-                        ">
-
-                            <select
-                                value={trackable}
-                                onChange={(event) =>
-                                    setTrackable(
-                                        event.target.value
-                                    )
-                                }
-                                className="
-                                    select
-                                    select-bordered
-                                    w-full
-                                "
-                            >
-
-                                <option value="">
-                                    All Trackable
-                                </option>
-
-                                <option value="Yes">
-                                    Trackable
-                                </option>
-
-                                <option value="No">
-                                    Not Trackable
-                                </option>
-
-                            </select>
-
-                        </div>
-
-
-                        {/* =====================================
-                            RESET
-                        ===================================== */}
-
-                        <div className="
-                            lg:col-span-1
-                        ">
-
-                            <button
-                                type="button"
-                                onClick={
-                                    handleReset
-                                }
-                                className="
-                                    btn
-                                    btn-ghost
-                                    w-full
-                                "
-                            >
-                                Reset
-                            </button>
-
-                        </div>
-
-
-                        {/* =====================================
-                            ADD PHONE NUMBER
-                        ===================================== */}
-
-                        <div className="
-                            lg:col-span-2
-                        ">
-
-                            <button
-                                type="button"
-                                onClick={
-                                    handleAddPhoneNumber
-                                }
-                                className="
-                                    btn
-                                    w-full
-                                    border-[#8BCF00]
-                                    bg-[#8BCF00]
-                                    text-white
-                                    hover:border-[#6FA800]
-                                    hover:bg-[#6FA800]
-                                "
-                            >
-
-                                <span className="
-                                    text-lg
-                                    leading-none
-                                ">
-                                    +
-                                </span>
-
-                                Add Phone Number
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
 
             {/* =================================================
                 ERROR STATE
@@ -1242,13 +634,10 @@ function PhoneNumbers() {
                     text-sm
                     text-error
                 ">
-
                     {error}
-
                 </div>
 
             )}
-
 
             {/* =================================================
                 LOADING
@@ -1268,13 +657,10 @@ function PhoneNumbers() {
                     text-sm
                     text-base-content/50
                 ">
-
                     Loading phone numbers...
-
                 </div>
 
             )}
-
 
             {/* =================================================
                 SUMMARY
@@ -1283,154 +669,121 @@ function PhoneNumbers() {
             {!loading && (
 
                 <PhoneNumberSummary
-
                     totalNumbers={
                         summary.totalNumbers
                     }
-
                     activeNumbers={
                         summary.activeNumbers
                     }
-
                     inactiveNumbers={
                         summary.inactiveNumbers
                     }
-
                     trackableNumbers={
                         summary.trackableNumbers
                     }
-
                 />
 
             )}
 
-
             {/* =================================================
-                TABLE
+                TABLE WITH FILTERS
             ================================================= */}
 
             {!loading && (
 
                 <PhoneNumberTable
-
                     phoneNumbers={
-                        filteredPhoneNumbers
+                        phoneNumbers
                     }
-
                     onEdit={
                         handleEditPhoneNumber
                     }
-
                     onViewDetails={
                         handleViewDetails
                     }
-
+                    onAdd={
+                        handleAddPhoneNumber
+                    }
                     onRefresh={
                         handleRefresh
                     }
-
                     EmployeeDropdown={
                         EmployeeDropdown
                     }
-
                 />
 
             )}
-
 
             {/* =================================================
                 ADD / EDIT PHONE NUMBER DRAWER
             ================================================= */}
 
             <AddPhoneNumber
-
                 open={
                     showNumberDrawer
                 }
-
                 phoneNumber={
                     editingPhoneNumber
                 }
-
                 EmployeeDropdown={
                     EmployeeDropdown
                 }
-
                 onClose={
                     handleCloseNumberDrawer
                 }
-
                 onSubmit={
                     handleSavePhoneNumber
                 }
-
             />
-
 
             {/* =================================================
                 PHONE NUMBER DETAILS
             ================================================= */}
 
             <PhoneNumberDetails
-
                 open={
                     showDetails
                 }
-
                 phoneNumber={
                     selectedPhoneNumber
                 }
-
                 onClose={
                     handleCloseDetails
                 }
-
             />
-
 
             {/* =================================================
                 FEEDBACK MODAL
             ================================================= */}
 
             <FeedbackModal
-
                 open={
                     feedback.open
                 }
-
                 type={
                     feedback.type
                 }
-
                 title={
                     feedback.title
                 }
-
                 message={
                     feedback.message
                 }
-
                 autoClose={
                     feedback.type === 'success'
                 }
-
                 autoCloseDuration={2500}
-
                 showCloseButton={
                     feedback.type !== 'success'
                 }
-
                 onClose={
                     closeFeedback
                 }
-
             />
 
         </div>
 
     )
-
 }
-
 
 export default PhoneNumbers
