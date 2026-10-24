@@ -26,18 +26,18 @@ import UserPlusIcon from "@heroicons/react/24/outline/UserPlusIcon";
 import apiClient from "../../../../../app/apiClient";
 
 const GlobalChat = lazy(() =>
-  import("../../../../../components/GlobalModels/Loans/GlobalChat")
+  import("../../../../../components/GlobalModels/Loans/GlobalChat"),
 );
 
 const STATUS_OPTIONS = [
-  { label: 'In Process', value: 'inprocess' },
-  { label: 'Docs Pending', value: 'docspending' },
-  { label: 'Rejected', value: 'rejected' },
-  { label: 'Sanctioned', value: 'sanctioned' },
-  { label: 'Disbursed', value: 'disbursed' },
-  { label: 'Login', value: 'login' },
-  { label: 'Revert Rejected', value: 'revert_rejected' },
-]
+  { label: "In Process", value: "inprocess" },
+  { label: "Docs Pending", value: "docspending" },
+  { label: "Rejected", value: "rejected" },
+  { label: "Sanctioned", value: "sanctioned" },
+  { label: "Disbursed", value: "disbursed" },
+  { label: "Login", value: "login" },
+  { label: "Revert Rejected", value: "revert_rejected" },
+];
 
 const NAME_FIELDS = {
   agent: [
@@ -352,79 +352,29 @@ function ApplicationsTable({
 
   const startIndex = (currentPage - 1) * pageSizeValue;
 
-  // Backend already returns the requested page.
   const paginatedApplications = applications;
-  // =========================================================
-  // ASSIGN APPLICATION MODAL
-  // =========================================================
 
-  const [assignmentApplication, setAssignmentApplication] = useState(null);
-  const [eligibleAgents, setEligibleAgents] = useState([]);
-  const [selectedAssignmentAgentId, setSelectedAssignmentAgentId] = useState("");
-  const [assignmentLoading, setAssignmentLoading] = useState(false);
-  const [assignmentSaving, setAssignmentSaving] = useState(false);
-  const [assignmentError, setAssignmentError] = useState("");
+
 
   const openAssignmentModal = async (application) => {
-    const applicationId = application.id ?? application.loanId ?? application.loan_id;
-    setAssignmentApplication(application);
-    setEligibleAgents([]);
-    setSelectedAssignmentAgentId("");
-    setAssignmentError("");
+    const confirmed = window.confirm(
+      "Are you sure you want to move this application to Processing Team?",
+    );
 
-    if (!applicationId) {
-      setAssignmentError("Application ID is missing.");
-      return;
-    }
-
-    setAssignmentLoading(true);
-    try {
-      const response = await apiClient({
-        method: "GET",
-        url: `/shuffle-loans/applications/${applicationId}/eligible-agents`,
-      });
-      const data = response.data || {};
-      setEligibleAgents(Array.isArray(data.agents) ? data.agents : []);
-    } catch (error) {
-      setAssignmentError(
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
-        "Could not load eligible agents. Please try again.",
-      );
-    } finally {
-      setAssignmentLoading(false);
-    }
-  };
-
-  const closeAssignmentModal = () => {
-    if (assignmentSaving) return;
-    setAssignmentApplication(null);
-    setEligibleAgents([]);
-    setSelectedAssignmentAgentId("");
-    setAssignmentError("");
-  };
-
-  const submitApplicationAssignment = async () => {
-    if (!assignmentApplication || !selectedAssignmentAgentId) {
-      setAssignmentError("Please select an agent.");
-      return;
-    }
+    if (!confirmed) return;
 
     const applicationId =
-      assignmentApplication.id ??
-      assignmentApplication.loanId ??
-      assignmentApplication.loan_id;
+      application.id ?? application.loanId ?? application.loan_id;
 
-    setAssignmentSaving(true);
-    setAssignmentError("");
+    if (!applicationId) {
+      window.alert("Application ID is missing.");
+      return;
+    }
+
     try {
       const response = await apiClient({
         method: "PATCH",
-        url: "/shuffle-loans/assign",
-        data: {
-          application_ids: [Number(applicationId)],
-          agent_id: Number(selectedAssignmentAgentId),
-        },
+        url: `/shuffle-loans/applications/${applicationId}/assign-random`,
       });
 
       const updatedApplication = Array.isArray(response.data)
@@ -435,20 +385,20 @@ function ApplicationsTable({
         onAssignmentChange(Number(applicationId), updatedApplication);
       }
 
-      setAssignmentApplication(null);
-      setEligibleAgents([]);
-      setSelectedAssignmentAgentId("");
-      if (onRefresh) await onRefresh();
+      if (onRefresh) {
+        await onRefresh();
+      }
+
+      window.alert("Application successfully assigned to Processing Team.");
     } catch (error) {
-      setAssignmentError(
+      window.alert(
         error?.response?.data?.detail ||
         error?.response?.data?.message ||
         "Assignment failed. Please try again.",
       );
-    } finally {
-      setAssignmentSaving(false);
     }
   };
+
   const handleLoanTypesLoaded = useCallback(
     (options) => setLoanTypes(options || []),
     [],
@@ -556,12 +506,10 @@ function ApplicationsTable({
     };
 
     window.addEventListener("scroll", closePopup, true);
-
     window.addEventListener("resize", closePopup);
 
     return () => {
       window.removeEventListener("scroll", closePopup, true);
-
       window.removeEventListener("resize", closePopup);
     };
   }, [selectedInfoApplication]);
@@ -585,12 +533,22 @@ function ApplicationsTable({
     );
   };
 
+  // =========================================================
+  // RENDER
+  // =========================================================
+
   return (
-    <div>
-      <div className="card bg-base-100 border border-base-300 shadow-sm">
-        <div className="p-3 flex items-center gap-2 w-full flex-wrap">
-          <div className="flex-1 min-w-[220px]">
-            <div className="relative">
+    <div className="w-full flex flex-col gap-3">
+      {/* =================================================
+                FILTERS
+            ================================================= */}
+
+      <div className="card bg-base-100 border border-base-300 shadow-sm w-full">
+        <div className="p-3 sm:p-4">
+          <div className="flex flex-col gap-2">
+            {/* SEARCH */}
+
+            <div className="relative w-full">
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/35" />
 
               <input
@@ -598,113 +556,129 @@ function ApplicationsTable({
                 value={search || ""}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search name, loan ID, email or Agent..."
-                className="input input-bordered h-10 min-h-10 w-full pl-9"
+                className="input input-bordered h-10 min-h-10 w-full pl-9 text-sm"
               />
             </div>
+
+            {/* FILTER DROPDOWNS + ACTIONS */}
+
+            <div className="flex flex-col xl:flex-row xl:items-center gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:flex-1 xl:grid-cols-5 gap-2">
+                <div className="w-full">
+                  <LoanTypeDropdown
+                    label=""
+                    value={selectedLoanType}
+                    onChange={setSelectedLoanType}
+                    onOptionsLoaded={handleLoanTypesLoaded}
+                    allLabel="All Loan Types"
+                    placeholder="All Loan Types"
+                    searchPlaceholder="Search loan type"
+                    emptyMessage="No loan types found"
+                  />
+                </div>
+
+                <div className="w-full">
+                  <RmDropdown
+                    label=""
+                    value={selectedRM}
+                    onChange={setSelectedRM}
+                    allLabel="All RMs"
+                    placeholder="All RMs"
+                    searchPlaceholder="Search RM"
+                    emptyMessage="No RMs found"
+                    teamLeadContextId={selectedTeamLead}
+                  />
+                </div>
+
+                <div className="w-full">
+                  <TeamLeadDropdown
+                    label=""
+                    value={selectedTeamLead}
+                    onChange={setSelectedTeamLead}
+                    allLabel="All Team Leads"
+                    placeholder="All Team Leads"
+                    searchPlaceholder="Search Team Lead"
+                    emptyMessage="No Team Leads found"
+                  />
+                </div>
+
+                <div className="w-full">
+                  <AgentDropdown
+                    label=""
+                    value={selectedAgent}
+                    onChange={setSelectedAgent}
+                    allLabel="All Agents"
+                    placeholder="All Agents"
+                    searchPlaceholder="Search Agent"
+                    emptyMessage="No Agents found"
+                    teamLeadContextId={selectedTeamLead}
+                  />
+                </div>
+
+                <div className="w-full">
+                  <StatusDropdown
+                    label=""
+                    value={selectedStatus}
+                    onChange={setSelectedStatus}
+                    options={statusOptions}
+                    allLabel="All Statuses"
+                    placeholder="All Statuses"
+                    searchPlaceholder="Search status"
+                    emptyMessage="No statuses found"
+                  />
+                </div>
+              </div>
+
+              {/* ACTIONS */}
+
+              <div className="flex items-center justify-end gap-2 xl:shrink-0">
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="btn btn-ghost btn-sm h-10 min-h-10"
+                >
+                  Clear
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  title="Refresh applications"
+                  className="btn btn-sm btn-square h-10 min-h-10 border-[#8BCF00] text-[#78B300] hover:bg-[#8BCF00] hover:text-white"
+                >
+                  <ArrowPathIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div className="w-44 shrink-0">
-            <LoanTypeDropdown
-              label=""
-              value={selectedLoanType}
-              onChange={setSelectedLoanType}
-              onOptionsLoaded={handleLoanTypesLoaded}
-              allLabel="All Loan Types"
-              placeholder="All Loan Types"
-              searchPlaceholder="Search loan type"
-              emptyMessage="No loan types found"
-            />
-          </div>
-
-          <div className="w-44 shrink-0">
-            <RmDropdown
-              label=""
-              value={selectedRM}
-              onChange={setSelectedRM}
-              allLabel="All RMs"
-              placeholder="All RMs"
-              searchPlaceholder="Search RM"
-              emptyMessage="No RMs found"
-              teamLeadContextId={selectedTeamLead}
-            />
-          </div>
-
-          <div className="w-44 shrink-0">
-            <TeamLeadDropdown
-              label=""
-              value={selectedTeamLead}
-              onChange={setSelectedTeamLead}
-              allLabel="All Team Leads"
-              placeholder="All Team Leads"
-              searchPlaceholder="Search Team Lead"
-              emptyMessage="No Team Leads found"
-            />
-          </div>
-
-          <div className="w-44 shrink-0">
-            <AgentDropdown
-              label=""
-              value={selectedAgent}
-              onChange={setSelectedAgent}
-              allLabel="All Agents"
-              placeholder="All Agents"
-              searchPlaceholder="Search Agent"
-              emptyMessage="No Agents found"
-              teamLeadContextId={selectedTeamLead}
-            />
-          </div>
-
-          <div className="w-44 shrink-0">
-            <StatusDropdown
-              label=""
-              value={selectedStatus}
-              onChange={setSelectedStatus}
-              options={statusOptions}
-              allLabel="All Statuses"
-              placeholder="All Statuses"
-              searchPlaceholder="Search status"
-              emptyMessage="No statuses found"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={onClearFilters}
-            className="btn btn-ghost btn-sm h-10 min-h-10 shrink-0"
-          >
-            Clear
-          </button>
-
-          <button
-            type="button"
-            onClick={onRefresh}
-            title="Refresh applications"
-            className="btn btn-sm btn-square h-10 min-h-10 shrink-0 border-[#8BCF00] text-[#78B300] hover:bg-[#8BCF00] hover:text-white"
-          >
-            <ArrowPathIcon className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
-      <div className="card bg-base-100 border border-base-300 shadow-sm w-full overflow-hidden mt-3">
-        <div className="w-full overflow-x-auto touch-pan-x overscroll-x-contain">
-          <table className="w-full min-w-[1300px] table-fixed border-collapse">
+      {/* =================================================
+                DESKTOP TABLE (lg and above)
+            ================================================= */}
+
+      <div className="hidden lg:block card bg-base-100 border border-base-300 shadow-sm w-full">
+        {/* Horizontal scroll when narrow, no y clipping for dropdowns */}
+
+        <div className="w-full overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[1200px] border-collapse">
             <colgroup>
-              <col className="w-[3%]" />
-              <col className="w-[10%]" />
-              <col className="w-[7%]" />
-              <col className="w-[7%]" />
-              <col className="w-[7%]" />
-              <col className="w-[7%]" />
-              <col className="w-[7%]" />
-              <col className="w-[13%]" />
-              <col className="w-[13%]" />
-              <col className="w-[9%]" />
-              <col className="w-[8%]" />
+              <col style={{ width: "48px" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "250px" }} />
             </colgroup>
 
             <thead>
-              <tr className="border-b border-base-300">
+              <tr className="border-b border-base-300 bg-base-200/40">
                 {[
                   "#",
                   "Name",
@@ -720,7 +694,7 @@ function ApplicationsTable({
                 ].map((heading) => (
                   <th
                     key={heading}
-                    className="px-3 py-3 text-left text-[11px] font-semibold text-base-content/70"
+                    className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-base-content/70"
                   >
                     {heading}
                   </th>
@@ -732,7 +706,7 @@ function ApplicationsTable({
               {!applications.length ? (
                 <tr>
                   <td
-                    colSpan="12"
+                    colSpan={11}
                     className="text-center py-12 text-sm text-base-content/50"
                   >
                     No applications found
@@ -740,30 +714,23 @@ function ApplicationsTable({
                 </tr>
               ) : (
                 paginatedApplications.map((application, index) => {
-                  const applicationId = getApplicationId(application) ?? index;
+                  const applicationId =
+                    getApplicationId(application) ?? index;
 
                   const phone = application.phone || "N/A";
-
                   const phoneExpanded = expandedPhoneId === applicationId;
-
                   const status = getApplicationStatus(application);
-
                   const loanTypeName = getLoanTypeName(application, loanTypes);
-
                   const agentName = getAgentName(application);
-
                   const rmName = getRMName(application);
-
                   const referral = getReferral(application);
-
                   const amount = getAmount(application);
-
                   const appliedDate = getAppliedDate(application);
 
                   return (
                     <tr
                       key={applicationId}
-                      className="border-b border-base-300 last:border-b-0 hover:bg-base-200/30"
+                      className="border-b border-base-300 last:border-b-0 hover:bg-base-200/30 transition-colors"
                     >
                       <td className="px-3 py-4">
                         <Cell className="text-sm text-base-content/70">
@@ -913,23 +880,17 @@ function ApplicationsTable({
 
                       <td className="px-2 py-4">
                         <div className="flex items-center justify-center gap-0">
-                          {/* Assign */}
                           <button
                             type="button"
                             onClick={() => openAssignmentModal(application)}
                             title="Assign application"
-                            aria-label={`Assign application for ${application.name || "customer"}`}
-                            className="
-                              btn
-                              btn-ghost
-                              btn-sm
-                              btn-square
-                              text-error
-                              hover:bg-error/10
-                                                "
+                            aria-label={`Assign application for ${application.name || "customer"
+                              }`}
+                            className="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10"
                           >
                             <UserPlusIcon className="w-4 h-4" />
                           </button>
+
                           <button
                             type="button"
                             onClick={() => onViewApplication?.(application)}
@@ -947,7 +908,7 @@ function ApplicationsTable({
                           >
                             <BellAlertIcon className="w-4 h-4" />
                           </button>
-                          
+
                           <button
                             type="button"
                             onClick={() => handleOpenChat(application)}
@@ -956,20 +917,14 @@ function ApplicationsTable({
                           >
                             <ChatBubbleLeftRightIcon className="w-4 h-4" />
                           </button>
-                          {/* DELETE */}
+
                           <button
                             type="button"
                             onClick={() => onDeleteApplication?.(application)}
                             title="Delete application"
-                            aria-label={`Delete application for ${application.name || "customer"}`}
-                            className="
-                              btn
-                              btn-ghost
-                              btn-sm
-                              btn-square
-                              text-error
-                              hover:bg-error/10
-                                                "
+                            aria-label={`Delete application for ${application.name || "customer"
+                              }`}
+                            className="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10"
                           >
                             <TrashIcon className="w-4 h-4" />
                           </button>
@@ -984,8 +939,260 @@ function ApplicationsTable({
         </div>
       </div>
 
+      {/* =================================================
+                MOBILE / TABLET CARD LIST (below lg)
+            ================================================= */}
+
+      <div className="lg:hidden w-full flex flex-col gap-3">
+        {!applications.length ? (
+          <div className="card bg-base-100 border border-base-300 shadow-sm w-full">
+            <div className="text-center py-12 text-sm text-base-content/50">
+              No applications found
+            </div>
+          </div>
+        ) : (
+          paginatedApplications.map((application, index) => {
+            const applicationId = getApplicationId(application) ?? index;
+
+            const phone = application.phone || "N/A";
+            const phoneExpanded = expandedPhoneId === applicationId;
+            const status = getApplicationStatus(application);
+            const loanTypeName = getLoanTypeName(application, loanTypes);
+            const referral = getReferral(application);
+            const amount = getAmount(application);
+            const appliedDate = getAppliedDate(application);
+
+            return (
+              <div
+                key={applicationId}
+                className="card bg-base-100 border border-base-300 shadow-sm w-full"
+              >
+                <div className="p-4 flex flex-col gap-3">
+                  {/* HEADER */}
+
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className="text-xs font-semibold text-base-content/50 pt-0.5 shrink-0">
+                        #{startIndex + index + 1}
+                      </span>
+
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-base-content break-words">
+                          {application.name || "N/A"}
+                        </div>
+                        <div className="text-xs text-base-content/60 mt-0.5">
+                          {appliedDate}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onStatusChange?.(application)}
+                        title={status}
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-medium ${getStatusClass(
+                          status,
+                        )}`}
+                      >
+                        {status}
+                      </button>
+
+                      {(status === "Rejected" ||
+                        status === "Revert Rejected") && (
+                          <button
+                            type="button"
+                            onClick={(event) =>
+                              handleInfoClick(event, application)
+                            }
+                            title="View rejection details"
+                            aria-label="View rejection details"
+                            className="text-base-content/50 hover:text-base-content transition-colors"
+                          >
+                            <InformationCircleIcon className="h-4 w-4" />
+                          </button>
+                        )}
+                    </div>
+                  </div>
+
+                  {/* DETAILS */}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        Phone
+                      </div>
+                      <div className="flex items-center gap-1 min-w-0 mt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handlePhoneClick(application)}
+                          className="min-w-0 flex-1 text-left text-sm hover:text-[#78B300] break-all"
+                          title={
+                            phoneExpanded
+                              ? "Collapse phone number"
+                              : "Show full phone number"
+                          }
+                        >
+                          {phone}
+                        </button>
+
+                        {application.phone && (
+                          <a
+                            href={`tel:${application.phone}`}
+                            title={`Call ${application.name || application.phone
+                              }`}
+                            aria-label={`Call ${application.name || application.phone
+                              }`}
+                            className="btn btn-ghost btn-xs btn-square shrink-0 rounded-full text-[#78B300] hover:bg-[#8BCF00]/10"
+                          >
+                            <PhoneIcon className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        Loan Type
+                      </div>
+                      <div className="mt-0.5 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => onLoanTypeChange?.(application)}
+                          title={loanTypeName}
+                          className="max-w-full inline-flex items-center px-2.5 py-1 rounded-full border border-[#8BCF00]/40 bg-[#8BCF00]/10 text-[#78B300] text-xs font-medium truncate hover:bg-[#8BCF00]/20"
+                        >
+                          {loanTypeName}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        Loan Amount
+                      </div>
+                      <div className="mt-0.5 text-sm font-medium break-words">
+                        {amount}
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        Referral
+                      </div>
+                      <div className="mt-0.5 text-sm break-words">
+                        {referral}
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        RM
+                      </div>
+                      <div className="mt-0.5 min-w-0">
+                        <RmDropdown
+                          value={
+                            application.rm?.id ??
+                            application.rm_id ??
+                            application.rm_context_id ??
+                            ""
+                          }
+                          fallbackLabel={
+                            application.rm?.name ?? application.rm_name ?? ""
+                          }
+                          onChange={(value) =>
+                            handleRmChange(application, value)
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-base-content/45">
+                        Processing Agent
+                      </div>
+                      <div className="mt-0.5 min-w-0">
+                        <AgentDropdown
+                          value={
+                            application.agent?.id ??
+                            application.agent_id ??
+                            application.agent_context_id ??
+                            ""
+                          }
+                          fallbackLabel={
+                            application.agent?.name ??
+                            application.agent_name ??
+                            ""
+                          }
+                          onChange={(value) =>
+                            handleAgentChange(application, value)
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ACTIONS */}
+
+                  <div className="flex items-center justify-end gap-1 pt-2 border-t border-base-300 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => openAssignmentModal(application)}
+                      title="Assign application"
+                      className="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10"
+                    >
+                      <UserPlusIcon className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onViewApplication?.(application)}
+                      title="View application"
+                      className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
+                    >
+                      <EyeIcon className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onReminder?.(application)}
+                      title="Add reminder"
+                      className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
+                    >
+                      <BellAlertIcon className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenChat(application)}
+                      title="Open chat"
+                      className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
+                    >
+                      <ChatBubbleLeftRightIcon className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onDeleteApplication?.(application)}
+                      title="Delete application"
+                      className="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* =================================================
+                PAGINATION
+            ================================================= */}
+
       {totalApplications > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap bg-base-100 border border-base-300 rounded-lg px-3 py-2">
           <div className="text-sm text-base-content/60">
             {pageSizeValue} rows per page
           </div>
@@ -997,7 +1204,7 @@ function ApplicationsTable({
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <button
                 type="button"
                 className="btn btn-sm btn-ghost"
@@ -1026,11 +1233,15 @@ function ApplicationsTable({
         </div>
       )}
 
+      {/* =================================================
+                REJECTION DETAILS POPUP
+            ================================================= */}
+
       {selectedInfoApplication &&
         infoPopupPosition &&
         createPortal(
           <div
-            className="fixed z-[9999] w-80 rounded-xl border border-base-300 bg-base-100 p-4 shadow-xl"
+            className="fixed z-[9999] w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-base-300 bg-base-100 p-4 shadow-xl"
             style={infoPopupPosition}
           >
             <div className="text-sm font-semibold text-base-content">
@@ -1072,6 +1283,10 @@ function ApplicationsTable({
           document.body,
         )}
 
+      {/* =================================================
+                GLOBAL CHAT
+            ================================================= */}
+
       <Suspense fallback={null}>
         {selectedChatApplication && (
           <GlobalChat
@@ -1084,6 +1299,8 @@ function ApplicationsTable({
           />
         )}
       </Suspense>
+
+
     </div>
   );
 }
