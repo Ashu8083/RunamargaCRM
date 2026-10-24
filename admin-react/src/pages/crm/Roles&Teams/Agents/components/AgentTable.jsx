@@ -9,6 +9,15 @@ import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon'
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
+import {PERMISSIONS,hasPermission,} from '../../../../../app/permissions';
+
+const canAddAgent = hasPermission(PERMISSIONS.AGENTS_CREATE);
+const canEditAgent = hasPermission(PERMISSIONS.AGENTS_EDIT);
+const canDeleteAgent = hasPermission(PERMISSIONS.AGENTS_DELETE);
+const canManageTeamLeads = hasPermission(PERMISSIONS.AGENTS_TEAM_LEADS_MANAGE);
+const canManagePermissions = hasPermission(PERMISSIONS.AGENTS_PERMISSIONS_MANAGE);
+const canChangeStatus = hasPermission(PERMISSIONS.AGENTS_STATUS_CHANGE);
+
 
 
 const AgentTable = ({
@@ -211,6 +220,7 @@ const AgentTable = ({
                     <button
                         type="button"
                         onClick={onAdd}
+                        disabled={!canAddAgent}
                         className="
                             inline-flex
                             shrink-0
@@ -631,20 +641,12 @@ const AgentTable = ({
                                                 py-4
                                             ">
 
-                                                <select
-                                                    value={
-                                                        isActive
-                                                            ? 'Active'
-                                                            : 'Inactive'
-                                                    }
-
+                                              <select
+                                                    value={isActive ? "Active" : "Inactive"}
                                                     onChange={(event) =>
-                                                        onStatusChange(
-                                                            agent,
-                                                            event.target.value
-                                                        )
+                                                        onStatusChange(agent, event.target.value)
                                                     }
-
+                                                    disabled={!canChangeStatus}
                                                     className={`
                                                         rounded-full
                                                         border-0
@@ -653,23 +655,19 @@ const AgentTable = ({
                                                         text-xs
                                                         font-semibold
                                                         outline-none
-                                                        ${getStatusClass(
+                                                        disabled:cursor-not-allowed
+                                                        disabled:opacity-100
+                                                        ${
                                                             isActive
-                                                        )}
+                                                                ? "text-green-600 disabled:text-green-600"
+                                                                : "text-red-600 disabled:text-red-600"
+                                                        }
                                                     `}
                                                 >
-
-                                                    <option value="Active">
-                                                        Active
-                                                    </option>
-
-                                                    <option value="Inactive">
-                                                        Inactive
-                                                    </option>
-
+                                                    <option value="Active">Active</option>
+                                                    <option value="Inactive">Inactive</option>
                                                 </select>
-
-                                            </td>
+                                                                                            </td>
 
 
                                             {/* ==================================================
@@ -752,140 +750,87 @@ const AgentTable = ({
                                                 ACTIONS
                                             ================================================== */}
 
-                                            <td className="
-                                                whitespace-nowrap
-                                                px-6
-                                                py-4
-                                            ">
+                                         <td className="whitespace-nowrap px-6 py-4">
+                                            <div className="flex items-center justify-end gap-2">
 
-                                                <div className="
-                                                    flex
-                                                    items-center
-                                                    justify-end
-                                                    gap-2
-                                                ">
+                                                {/* EDIT */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onEdit(agent)}
+                                                    disabled={!canEditAgent}
+                                                    title="Edit Agent"
+                                                    className="
+                                                        rounded-lg p-2 text-blue-600 transition
+                                                        hover:bg-blue-50
+                                                        dark:text-blue-400 dark:hover:bg-blue-900/20
+                                                        disabled:cursor-not-allowed disabled:opacity-100
+                                                    "
+                                                >
+                                                    <PencilIcon className="h-5 w-5" />
+                                                </button>
 
-                                                    {/* EDIT */}
+                                                {/* TEAM LEAD */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onManageTeamLeads(agent)}
+                                                    disabled={!canManageTeamLeads}
+                                                    title="Manage Team Lead"
+                                                    className="
+                                                        rounded-lg p-2 text-purple-600 transition
+                                                        hover:bg-purple-50
+                                                        dark:text-purple-400 dark:hover:bg-purple-900/20
+                                                        disabled:cursor-not-allowed disabled:opacity-100
+                                                    "
+                                                >
+                                                    <UserGroupIcon className="h-5 w-5" />
+                                                </button>
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            onEdit(agent)
+                                                {/* PERMISSIONS */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onManagePermissions(agent)}
+                                                    title="Manage Permissions"
+                                                    disabled={!isActive || !canManagePermissions}
+                                                    className={`
+                                                        rounded-lg p-2 transition
+                                                        disabled:cursor-not-allowed disabled:opacity-100
+                                                        ${
+                                                            isActive
+                                                                ? `
+                                                                    text-green-600
+                                                                    hover:bg-green-50
+                                                                    dark:text-green-400
+                                                                    dark:hover:bg-green-900/20
+                                                                `
+                                                                : `
+                                                                    cursor-not-allowed
+                                                                    text-gray-400
+                                                                    dark:text-gray-600
+                                                                `
                                                         }
-                                                        title="Edit Agent"
-                                                        className="
-                                                            rounded-lg
-                                                            p-2
-                                                            text-blue-600
-                                                            transition
-                                                            hover:bg-blue-50
-                                                            dark:text-blue-400
-                                                            dark:hover:bg-blue-900/20
-                                                        "
-                                                    >
+                                                    `}
+                                                >
+                                                    <ShieldCheckIcon className="h-5 w-5" />
+                                                </button>
 
-                                                        <PencilIcon
-                                                            className="h-5 w-5"
-                                                        />
+                                                {/* DELETE */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onDelete(agent)}
+                                                    disabled={!canDeleteAgent}
+                                                    title="Delete Agent"
+                                                    className="
+                                                        rounded-lg p-2 text-red-600 transition
+                                                        hover:bg-red-50
+                                                        dark:text-red-400 dark:hover:bg-red-900/20
+                                                        disabled:cursor-not-allowed disabled:opacity-100
+                                                    "
+                                                >
+                                                    <TrashIcon className="h-5 w-5" />
+                                                </button>
 
-                                                    </button>
-
-
-                                                    {/* TEAM LEAD */}
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            onManageTeamLeads(
-                                                                agent
-                                                            )
-                                                        }
-                                                        title="Manage Team Lead"
-                                                        className="
-                                                            rounded-lg
-                                                            p-2
-                                                            text-purple-600
-                                                            transition
-                                                            hover:bg-purple-50
-                                                            dark:text-purple-400
-                                                            dark:hover:bg-purple-900/20
-                                                        "
-                                                    >
-
-                                                        <UserGroupIcon
-                                                            className="h-5 w-5"
-                                                        />
-
-                                                    </button>
-
-
-                                                    {/* PERMISSIONS */}
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            onManagePermissions(
-                                                                agent
-                                                            )
-                                                        }
-                                                        title="Manage Permissions"
-                                                        disabled={!isActive}
-                                                        className={`
-                                                            rounded-lg
-                                                            p-2
-                                                            transition
-                                                            ${
-                                                                isActive
-                                                                    ? `
-                                                                        text-green-600
-                                                                        hover:bg-green-50
-                                                                        dark:text-green-400
-                                                                        dark:hover:bg-green-900/20
-                                                                    `
-                                                                    : `
-                                                                        cursor-not-allowed
-                                                                        text-gray-400
-                                                                        dark:text-gray-600
-                                                                    `
-                                                            }
-                                                        `}
-                                                    >
-
-                                                        <ShieldCheckIcon
-                                                            className="h-5 w-5"
-                                                        />
-
-                                                    </button>
-
-
-                                                    {/* DELETE */}
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            onDelete(agent)
-                                                        }
-                                                        title="Delete Agent"
-                                                        className="
-                                                            rounded-lg
-                                                            p-2
-                                                            text-red-600
-                                                            transition
-                                                            hover:bg-red-50
-                                                            dark:text-red-400
-                                                            dark:hover:bg-red-900/20
-                                                        "
-                                                    >
-
-                                                        <TrashIcon
-                                                            className="h-5 w-5"
-                                                        />
-
-                                                    </button>
-
-                                                </div>
-
-                                            </td>
+                                            </div>
+                                        </td>
 
                                         </tr>
 

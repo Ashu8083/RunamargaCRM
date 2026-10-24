@@ -9,6 +9,13 @@ import PencilSquareIcon from '@heroicons/react/24/outline/PencilSquareIcon'
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
 import ShieldCheckIcon from '@heroicons/react/24/outline/ShieldCheckIcon'
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
+import {PERMISSIONS,hasPermission,} from '../../../../../app/permissions';
+
+const canCreateAdmin = hasPermission(PERMISSIONS.ADMINS_CREATE);
+const canEditAdmin = hasPermission(PERMISSIONS.ADMINS_EDIT);
+const canDeleteAdmin = hasPermission(PERMISSIONS.ADMINS_DELETE);
+const canManagePermissions = hasPermission(PERMISSIONS.ADMINS_PERMISSIONS_MANAGE);
+const canChangeStatus = hasPermission(PERMISSIONS.ADMINS_STATUS_CHANGE);
 
 
 function AdminTable({
@@ -174,6 +181,7 @@ function AdminTable({
                     <button
                         type="button"
                         onClick={onCreate}
+                        disabled={!canCreateAdmin}
                         className="
                             btn
                             btn-primary
@@ -370,38 +378,26 @@ function AdminTable({
 
                                             <td>
 
-                                                <select
-                                                    value={
-                                                        isActive
-                                                            ? 'Active'
-                                                            : 'Inactive'
-                                                    }
+                                               <select
+                                                    value={isActive ? "Active" : "Inactive"}
                                                     onChange={(e) =>
-                                                        onStatusChange?.(
-                                                            admin,
-                                                            e.target.value
-                                                        )
+                                                        onStatusChange?.(admin, e.target.value)
                                                     }
+                                                    disabled={!canChangeStatus}
                                                     className={`
                                                         select
                                                         select-sm
                                                         select-bordered
+                                                        disabled:opacity-100
                                                         ${
                                                             isActive
-                                                                ? 'text-success'
-                                                                : 'text-error'
+                                                                ? "text-success disabled:text-success"
+                                                                : "text-error disabled:text-error"
                                                         }
                                                     `}
                                                 >
-
-                                                    <option value="Active">
-                                                        Active
-                                                    </option>
-
-                                                    <option value="Inactive">
-                                                        Inactive
-                                                    </option>
-
+                                                    <option value="Active">Active</option>
+                                                    <option value="Inactive">Inactive</option>
                                                 </select>
 
                                             </td>
@@ -455,7 +451,7 @@ function AdminTable({
 
                                                     <button
                                                         type="button"
-                                                        disabled={!isActive}
+                                                        disabled={!isActive || !canManagePermissions}
                                                         onClick={() =>
                                                             onManagePermissions?.(
                                                                 admin
@@ -481,6 +477,7 @@ function AdminTable({
                                                         onClick={() =>
                                                             onEdit?.(admin)
                                                         }
+                                                        disabled={!canEditAdmin}
                                                         className="
                                                             btn
                                                             btn-ghost
@@ -501,6 +498,7 @@ function AdminTable({
                                                         onClick={() =>
                                                             onDelete?.(admin)
                                                         }
+                                                        disabled={!canDeleteAdmin}
                                                         className="
                                                             btn
                                                             btn-ghost

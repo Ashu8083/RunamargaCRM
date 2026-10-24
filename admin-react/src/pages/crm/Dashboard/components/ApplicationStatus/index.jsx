@@ -662,246 +662,196 @@ function ApplicationStatus() {
 
                 {/* FILTER BAR */}
 
-                <div
+               
+{/* FILTER SECTION */}
+<div
+    className="
+        mt-3
+        w-full
+        rounded-xl
+        border
+        border-gray-200
+        bg-gray-50/80
+        p-2
+        dark:border-gray-700
+        dark:bg-gray-800/60
+    "
+>
+    <div
+        className="
+            grid
+            w-full
+            grid-cols-1
+            gap-2
+            sm:grid-cols-2
+            xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(180px,1.2fr)_40px]
+            xl:gap-2
+        "
+    >
+        {/* FROM DATE */}
+        <div className="w-full min-w-0">
+            <input
+                type="date"
+                value={fromDate}
+                max={toDate || undefined}
+                onChange={(event) => {
+                    setFromDate(event.target.value);
+                    setHoveredStatus(null);
+                }}
+                aria-label="From date"
+                title="From date"
+                className="
+                    box-border
+                    block
+                    h-10
+                    w-full
+                    min-w-0
+                    rounded-lg
+                    border
+                    border-gray-200
+                    bg-white
+                    px-3
+                    text-sm
+                    font-medium
+                    text-gray-700
+                    outline-none
+                    transition-colors
+                    hover:border-gray-300
+                    focus:border-indigo-500
+                    focus:ring-2
+                    focus:ring-indigo-100
+                    dark:border-gray-600
+                    dark:bg-gray-800
+                    dark:text-gray-200
+                    dark:[color-scheme:dark]
+                    dark:hover:border-gray-500
+                    dark:focus:border-indigo-400
+                    dark:focus:ring-indigo-900/40
+                "
+            />
+        </div>
+
+        {/* TO DATE */}
+        <div className="w-full min-w-0">
+            <input
+                type="date"
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={(event) => {
+                    setToDate(event.target.value);
+                    setHoveredStatus(null);
+                }}
+                aria-label="To date"
+                title="To date"
+                className="
+                    box-border
+                    block
+                    h-10
+                    w-full
+                    min-w-0
+                    rounded-lg
+                    border
+                    border-gray-200
+                    bg-white
+                    px-3
+                    text-sm
+                    font-medium
+                    text-gray-700
+                    outline-none
+                    transition-colors
+                    hover:border-gray-300
+                    focus:border-indigo-500
+                    focus:ring-2
+                    focus:ring-indigo-100
+                    dark:border-gray-600
+                    dark:bg-gray-800
+                    dark:text-gray-200
+                    dark:[color-scheme:dark]
+                    dark:hover:border-gray-500
+                    dark:focus:border-indigo-400
+                    dark:focus:ring-indigo-900/40
+                "
+            />
+        </div>
+
+        {/* LOAN TYPE */}
+        <div className="w-full min-w-0">
+            <div className="h-10 w-full min-w-0">
+                <LoanTypeDropdown
+                    label=""
+                    value={loanType}
+                    onChange={(value) => {
+                        setLoanType(value);
+                        setHoveredStatus(null);
+                    }}
+                />
+            </div>
+        </div>
+
+        {/* CLEAR FILTERS */}
+        <div
+            className="
+                flex
+                w-full
+                items-center
+                justify-end
+                sm:justify-start
+                xl:justify-center
+            "
+        >
+            <button
+                type="button"
+                onClick={handleClearFilters}
+                aria-label="Clear all filters"
+                title="Clear all filters"
+                className="
+                    group
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-lg
+                    border
+                    border-gray-200
+                    bg-white
+                    text-gray-500
+                    shadow-sm
+                    outline-none
+                    transition-colors
+                    hover:border-red-200
+                    hover:bg-red-50
+                    hover:text-red-500
+                    focus:border-indigo-500
+                    focus:ring-2
+                    focus:ring-indigo-100
+                    active:scale-95
+                    dark:border-gray-600
+                    dark:bg-gray-800
+                    dark:text-gray-400
+                    dark:hover:border-red-900/60
+                    dark:hover:bg-red-950/40
+                    dark:hover:text-red-400
+                    dark:focus:border-indigo-400
+                    dark:focus:ring-indigo-900/40
+                "
+            >
+                <TrashIcon
                     className="
-                        mt-3
-                        w-full
-                        rounded-xl
-                        border
-                        border-gray-200
-                        bg-gray-50/80
-                        p-2
-                        dark:border-gray-700
-                        dark:bg-gray-800/60
+                        h-4
+                        w-4
+                        transition-transform
+                        duration-150
+                        group-hover:scale-105
                     "
-                >
-                    <div
-                        className="
-                            grid
-                            w-full
-                            grid-cols-1
-                            gap-2
-                            sm:grid-cols-[minmax(130px,1fr)_minmax(130px,1fr)]
-                            lg:grid-cols-[minmax(135px,1fr)_minmax(135px,1fr)_minmax(155px,1.1fr)_36px]
-                            lg:items-center
-                        "
-                    >
-                        {/* FROM DATE */}
+                    aria-hidden="true"
+                />
+            </button>
+        </div>
+    </div>
+</div>
 
-                        <div
-                            className="
-                                min-w-0
-                                w-full
-                            "
-                        >
-                            <input
-                                type="date"
-                                value={fromDate}
-                                max={
-                                    toDate ||
-                                    undefined
-                                }
-                                onChange={(
-                                    event
-                                ) => {
-                                    setFromDate(
-                                        event
-                                            .target
-                                            .value
-                                    );
-
-                                    setHoveredStatus(
-                                        null
-                                    );
-                                }}
-                                aria-label="From date"
-                                className="
-                                    block
-                                    h-9
-                                    w-full
-                                    appearance-none
-                                    rounded-lg
-                                    border
-                                    border-gray-200
-                                    bg-white
-                                    px-3
-                                    text-[11px]
-                                    font-medium
-                                    leading-none
-                                    text-gray-700
-                                    outline-none
-                                    transition-all
-                                    duration-150
-                                    hover:border-gray-300
-                                    focus:border-indigo-500
-                                    focus:ring-2
-                                    focus:ring-indigo-100
-                                    dark:border-gray-600
-                                    dark:bg-gray-800
-                                    dark:text-gray-200
-                                    dark:[color-scheme:dark]
-                                    dark:hover:border-gray-500
-                                    dark:focus:border-indigo-400
-                                    dark:focus:ring-indigo-900/40
-                                "
-                            />
-                        </div>
-
-                        {/* TO DATE */}
-
-                        <div
-                            className="
-                                min-w-0
-                                w-full
-                            "
-                        >
-                            <input
-                                type="date"
-                                value={toDate}
-                                min={
-                                    fromDate ||
-                                    undefined
-                                }
-                                onChange={(
-                                    event
-                                ) => {
-                                    setToDate(
-                                        event
-                                            .target
-                                            .value
-                                    );
-
-                                    setHoveredStatus(
-                                        null
-                                    );
-                                }}
-                                aria-label="To date"
-                                className="
-                                    block
-                                    h-9
-                                    w-full
-                                    appearance-none
-                                    rounded-lg
-                                    border
-                                    border-gray-200
-                                    bg-white
-                                    px-3
-                                    text-[11px]
-                                    font-medium
-                                    leading-none
-                                    text-gray-700
-                                    outline-none
-                                    transition-all
-                                    duration-150
-                                    hover:border-gray-300
-                                    focus:border-indigo-500
-                                    focus:ring-2
-                                    focus:ring-indigo-100
-                                    dark:border-gray-600
-                                    dark:bg-gray-800
-                                    dark:text-gray-200
-                                    dark:[color-scheme:dark]
-                                    dark:hover:border-gray-500
-                                    dark:focus:border-indigo-400
-                                    dark:focus:ring-indigo-900/40
-                                "
-                            />
-                        </div>
-
-                        {/* LOAN TYPE */}
-
-                        <div
-                            className="
-                                min-w-0
-                                w-full
-                            "
-                        >
-                            <div
-                                className="
-                                    h-9
-                                    w-full
-                                "
-                            >
-                                <LoanTypeDropdown
-                                    label=""
-                                    value={
-                                        loanType
-                                    }
-                                    onChange={(
-                                        value
-                                    ) => {
-                                        setLoanType(
-                                            value
-                                        );
-
-                                        setHoveredStatus(
-                                            null
-                                        );
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* CLEAR */}
-
-                        <button
-                            type="button"
-                            onClick={
-                                handleClearFilters
-                            }
-                            aria-label="Clear all filters"
-                            title="Clear all filters"
-                            className="
-                                group
-                                flex
-                                h-9
-                                w-full
-                                shrink-0
-                                items-center
-                                justify-center
-                                self-center
-                                rounded-lg
-                                border
-                                border-gray-200
-                                bg-white
-                                text-gray-500
-                                shadow-sm
-                                outline-none
-                                transition-all
-                                duration-150
-                                hover:border-red-200
-                                hover:bg-red-50
-                                hover:text-red-500
-                                hover:shadow-sm
-                                focus:border-indigo-500
-                                focus:outline-none
-                                focus:ring-2
-                                focus:ring-indigo-100
-                                active:scale-95
-                                lg:w-9
-                                dark:border-gray-600
-                                dark:bg-gray-800
-                                dark:text-gray-400
-                                dark:hover:border-red-900/60
-                                dark:hover:bg-red-950/40
-                                dark:hover:text-red-400
-                                dark:focus:border-indigo-400
-                                dark:focus:ring-indigo-900/40
-                            "
-                        >
-                            <TrashIcon
-                                className="
-                                    h-4
-                                    w-4
-                                    transition-transform
-                                    duration-150
-                                    group-hover:scale-105
-                                "
-                                aria-hidden="true"
-                            />
-                        </button>
-                    </div>
-                </div>
             </div>
 
             {/* =================================================

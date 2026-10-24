@@ -23,6 +23,20 @@ import TeamLeadDropdown from "../../../../../components/GlobalModels/Filters/Tea
 import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import StatusDropdown from "../../../../../components/GlobalModels/Filters/StatusDropdown";
 import apiClient from "../../../../../app/apiClient";
+import { PERMISSIONS,hasPermission } from "../../../../../app/permissions";
+
+const canChangeRM = hasPermission(PERMISSIONS.LOANS_CHANGE_RM);
+const canChangeLoanType = hasPermission(PERMISSIONS.LOANS_CHANGE_LOAN_TYPE)
+const canChangeAgent = hasPermission(PERMISSIONS.LOANS_CHANGE_AGENT);
+const canChangeStatus =  hasPermission(PERMISSIONS.LOANS_STATUS_UPDATE);
+const canAssignAgent = hasPermission(PERMISSIONS.LOANS_AGENT_ASSIGNMENT);
+const canViewApplication = hasPermission(PERMISSIONS.LOANS_APPLICATION_VIEW);
+const canAddReminder = hasPermission(PERMISSIONS.LOANS_ADD_REMINDER);
+const canViewChat = hasPermission(PERMISSIONS.LOANS_REMARKS_VIEW);
+const canDeleteApplication = hasPermission(PERMISSIONS.LOANS_DELETE);
+const canSelectTeamLeads = hasPermission(PERMISSIONS.TEAM_LEADS_VIEW);
+const canSelectAgents = hasPermission(PERMISSIONS.AGENTS_VIEW);
+const canSelectRM = hasPermission(PERMISSIONS.RM_VIEW);
 
 // =============================================================
 // LAZY-LOADED GLOBAL CHAT
@@ -951,6 +965,7 @@ function ApplicationsTable({
               placeholder="All RMs"
               searchPlaceholder="Search RM"
               emptyMessage="No RMs found"
+              disabled={!canSelectRM}
               teamLeadContextId={selectedTeamLead}
             />
           </div>
@@ -962,6 +977,7 @@ function ApplicationsTable({
               label=""
               value={selectedTeamLead}
               onChange={setSelectedTeamLead}
+              disabled={!canSelectTeamLeads}
               allLabel="All Team Leads"
               placeholder="All Team Leads"
               searchPlaceholder="Search Team Lead"
@@ -977,6 +993,7 @@ function ApplicationsTable({
               value={selectedAgent}
               onChange={setSelectedAgent}
               allLabel="All Agents"
+              disabled={!canSelectAgents}
               placeholder="All Agents"
               searchPlaceholder="Search Agent"
               emptyMessage="No Agents found"
@@ -1340,6 +1357,7 @@ function ApplicationsTable({
                               application,
                             )
                           }
+                          disabled={!canChangeLoanType}
                           title={loanTypeName}
                           className="
                                                             max-w-full
@@ -1449,6 +1467,7 @@ function ApplicationsTable({
                               value,
                             )
                           }
+                          disabled={!canChangeRM}
                         />
                       </td>
 
@@ -1467,6 +1486,7 @@ function ApplicationsTable({
                             application.agent_context_id ??
                             ""
                           }
+                          disabled={!canChangeAgent}
                           onChange={(value) =>
                             handleAgentChange(
                               application,
@@ -1500,6 +1520,7 @@ function ApplicationsTable({
                                 application,
                               )
                             }
+                            disabled={!canChangeStatus}
                             title={status}
                             className={`
                                                                     max-w-full
@@ -1571,6 +1592,7 @@ function ApplicationsTable({
                             onClick={() => openAssignmentModal(application)}
                             title="Assign application"
                             aria-label={`Assign application for ${application.name || "customer"}`}
+                            disabled={!canAssignAgent}
                             className="
                               btn
                               btn-ghost
@@ -1591,6 +1613,7 @@ function ApplicationsTable({
                                 application,
                               )
                             }
+                            disabled={!canViewApplication}
                             title="View application"
                             className="
                                                                 btn
@@ -1618,6 +1641,7 @@ function ApplicationsTable({
                                 application,
                               )
                             }
+                            disabled={!canAddReminder}
                             title="Add reminder"
                             className="
                                                                 btn
@@ -1645,6 +1669,7 @@ function ApplicationsTable({
                                 application,
                               )
                             }
+                            disabled={!canViewChat}
                             title="Open chat"
                             className="
                                                                 btn
@@ -1668,6 +1693,7 @@ function ApplicationsTable({
                             onClick={() => onDeleteApplication?.(application)}
                             title="Delete application"
                             aria-label={`Delete application for ${application.name || "customer"}`}
+                            disabled={!canDeleteApplication}
                             className="
                               btn
                               btn-ghost
