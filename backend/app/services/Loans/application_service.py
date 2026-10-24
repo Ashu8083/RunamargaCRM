@@ -66,21 +66,21 @@ class ApplicationService:
         )
 
         if family in {"GLOBAL", "MANAGER"}:
-            print("[SCOPE DEBUG] Applying GLOBAL/MANAGER scope")
+            # print("[SCOPE DEBUG] Applying GLOBAL/MANAGER scope")
             return query
 
         if family == "AGENT":
-            print(
-                f"[SCOPE DEBUG] Filtering agent_context_id={context.id}"
-            )
+            # print(
+            #     f"[SCOPE DEBUG] Filtering agent_context_id={context.id}"
+            # )
             return query.filter(
                 LoanApplication.agent_context_id == context.id
             )
 
         if family == "RM":
-            print(
-                f"[SCOPE DEBUG] Filtering rm_context_id={context.id}"
-            )
+            # print(
+            #     f"[SCOPE DEBUG] Filtering rm_context_id={context.id}"
+            # )
             return query.filter(
                 LoanApplication.rm_context_id == context.id
             )
@@ -97,13 +97,13 @@ class ApplicationService:
                 for agent_context in agent_contexts
             ]
 
-            print(
-                f"[SCOPE DEBUG] Team lead agent contexts: "
-                f"{agent_context_ids}"
-            )
+            # print(
+            #     f"[SCOPE DEBUG] Team lead agent contexts: "
+            #     f"{agent_context_ids}"
+            # )
 
             if not agent_context_ids:
-                print("[SCOPE DEBUG] No visible agent contexts")
+                # print("[SCOPE DEBUG] No visible agent contexts")
                 return query.filter(False)
 
             return query.filter(
@@ -112,7 +112,7 @@ class ApplicationService:
                 )
             )
 
-        print(f"[SCOPE DEBUG] Unknown family: {family}")
+        # print(f"[SCOPE DEBUG] Unknown family: {family}")
         return query.filter(False)
     # =========================================================
     # GET APPLICATIONS

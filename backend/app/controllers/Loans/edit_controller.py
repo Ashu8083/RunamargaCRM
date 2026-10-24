@@ -1965,49 +1965,36 @@ def update_bank_processing_workflow(
                 employee_context_id=active_context.id,
             )
         )
-
     # --------------------------------------------------------
-    # REJECT
+    # REJECT BANK PROCESSING
     # --------------------------------------------------------
 
     elif action == "reject":
 
-        remarks = data.get(
-            "remarks"
-        )
+        remarks = data.get("remarks")
 
-        if not remarks:
+        if not remarks or not remarks.strip():
             raise HTTPException(
                 status_code=400,
                 detail="remarks is required for rejection",
             )
 
+        # Update ONLY the bank-processing record.
         bank_processing.status = "rejected"
 
-        bank_processing.remarks = remarks
+        bank_processing.remarks = remarks.strip()
 
-        bank_processing.rejected_at = (
-            datetime.now()
-        )
+        bank_processing.rejected_at = datetime.now()
 
-        bank_processing.approved_by = (
-            employee.id
-        )
+        bank_processing.approved_by = employee.id
 
-        application.status = (
-            LoanStatus.rejected
-        )
-
-        application.rejection_date = (
-            datetime.now().date()
-        )
-
-        application.rejected_remarks = (
-            remarks
-        )
+        # IMPORTANT:
+        # Do NOT update the main application status here.
+        # Do NOT update the main application's rejection date.
+        # Do NOT update the main application's rejection remarks.
 
         # ----------------------------------------------------
-        # REJECTED LOG
+        # REJECTED AUDIT LOG
         # ----------------------------------------------------
 
         db.add(

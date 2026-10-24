@@ -4,10 +4,11 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.admin_logs import AdminLogs
 from app.models.employee_contexts import EmployeeContext
 from app.schemas.admin_log_schema import AdminLogResponse
-
+from app.models.employees import Employee
 
 def get_admin_logs_controller(
     db: Session,
+    employee: Employee,
     skip: int = 0,
     limit: int = 100,
     action: Optional[str] = None,

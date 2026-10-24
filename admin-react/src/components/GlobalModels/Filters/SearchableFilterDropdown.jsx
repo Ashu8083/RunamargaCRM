@@ -1,6 +1,5 @@
 // admin-react\src\components\GlobalModels\Filters\SearchableFilterDropdown.jsx
 
-
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import ChevronDownIcon from '@heroicons/react/24/outline/ChevronDownIcon'
@@ -42,33 +41,25 @@ function normalizeOption(
     getOptionValue,
     getOptionLabel
 ) {
-
     if (
         typeof option === 'string' ||
         typeof option === 'number'
     ) {
-
         return {
             key: `${String(option)}-${index}`,
             value: option,
             label: String(option),
             originalOption: option,
         }
-
     }
 
+    const value = getOptionValue
+        ? getOptionValue(option)
+        : getDefaultOptionValue(option)
 
-    const value =
-        getOptionValue
-            ? getOptionValue(option)
-            : getDefaultOptionValue(option)
-
-
-    const label =
-        getOptionLabel
-            ? getOptionLabel(option)
-            : getDefaultOptionLabel(option)
-
+    const label = getOptionLabel
+        ? getOptionLabel(option)
+        : getDefaultOptionLabel(option)
 
     return {
         key: `${String(value || label)}-${index}`,
@@ -76,7 +67,6 @@ function normalizeOption(
         label: String(label || value || ''),
         originalOption: option,
     }
-
 }
 
 
@@ -97,32 +87,28 @@ function SearchableFilterDropdown({
     loading = false,
     showLabel = true,
     includeAllOption = true,
-    className = 'min-w-[180px] flex-1',
+    className = 'w-full min-w-0',
     buttonClassName = '',
     menuClassName = '',
     disabled = false,
     getOptionValue,
     getOptionLabel,
 }) {
-
     const [search, setSearch] = useState('')
-
     const [open, setOpen] = useState(false)
 
     const dropdownRef = useRef(null)
-
+    const buttonRef = useRef(null)
+    const searchInputRef = useRef(null)
 
     // =========================================================
     // NORMALIZED OPTIONS
     // =========================================================
 
     const normalizedOptions = useMemo(() => {
-
-        const sourceOptions =
-            Array.isArray(options)
-                ? options
-                : defaultOptions
-
+        const sourceOptions = Array.isArray(options)
+            ? options
+            : defaultOptions
 
         return sourceOptions
             .map((option, index) =>
@@ -134,11 +120,9 @@ function SearchableFilterDropdown({
                 )
             )
             .filter((option) => {
-
                 if (!option.label) {
                     return false
                 }
-
 
                 if (
                     includeAllOption &&
@@ -147,11 +131,8 @@ function SearchableFilterDropdown({
                     return false
                 }
 
-
                 return true
-
             })
-
     }, [
         defaultOptions,
         getOptionLabel,
@@ -160,45 +141,58 @@ function SearchableFilterDropdown({
         options,
     ])
 
-
     // =========================================================
     // CLOSE ON OUTSIDE CLICK
     // =========================================================
 
     useEffect(() => {
-
         const handleClickOutside = (event) => {
-
             if (
                 dropdownRef.current &&
                 !dropdownRef.current.contains(event.target)
             ) {
-
                 setOpen(false)
                 setSearch('')
-
             }
-
         }
-
 
         document.addEventListener(
             'mousedown',
             handleClickOutside
         )
 
-
         return () => {
-
             document.removeEventListener(
                 'mousedown',
                 handleClickOutside
             )
-
         }
-
     }, [])
 
+    // =========================================================
+    // CLOSE ON ESCAPE
+    // =========================================================
+
+    useEffect(() => {
+        if (!open) return
+
+        const handleEscape = (event) => {
+            if (event.key === 'Escape') {
+                setOpen(false)
+                setSearch('')
+                buttonRef.current?.focus()
+            }
+        }
+
+        document.addEventListener('keydown', handleEscape)
+
+        return () => {
+            document.removeEventListener(
+                'keydown',
+                handleEscape
+            )
+        }
+    }, [open])
 
     // =========================================================
     // SELECTED OPTION
@@ -209,124 +203,94 @@ function SearchableFilterDropdown({
             String(option.value) === String(value)
     )
 
-
     // =========================================================
     // DISPLAY VALUE
     // =========================================================
 
     const displayValue =
         selectedOption?.label ||
-        (
-            value
-                ? String(value)
-                : placeholder || allLabel
-        )
-        // console.log(displayValue)
+        (value ? String(value) : placeholder || allLabel)
 
     // =========================================================
     // FILTER OPTIONS
     // =========================================================
 
     const filteredOptions = useMemo(() => {
-
-        const searchValue =
-            search
-                .trim()
-                .toLowerCase()
-
+        const searchValue = search.trim().toLowerCase()
 
         if (!searchValue) {
             return normalizedOptions
         }
 
-
-        return normalizedOptions.filter(
-            (option) =>
-                option.label
-                    .toLowerCase()
-                    .includes(searchValue)
+        return normalizedOptions.filter((option) =>
+            option.label.toLowerCase().includes(searchValue)
         )
-
-    }, [
-        normalizedOptions,
-        search,
-    ])
-
+    }, [normalizedOptions, search])
 
     // =========================================================
     // HANDLE SELECT
     // =========================================================
 
     const handleSelect = (option) => {
-
         if (!option) {
-
             onChange?.('', null)
-
         } else {
-
             onChange?.(
                 option.value,
                 option.originalOption
             )
-
         }
 
         setOpen(false)
         setSearch('')
-
     }
 
-
     // =========================================================
-    // COMPONENT
+    // COMPONENT UI
     // =========================================================
 
     return (
-
         <div
             ref={dropdownRef}
-            className={`relative ${className}`}
+            className={`relative box-border w-full min-w-0 ${className}`}
         >
-
             {/* LABEL */}
 
             {showLabel && (
-
-                <label className="
-                    mb-1.5
-                    block
-                    text-xs
-                    font-medium
-                    text-base-content/60
-                ">
+                <label
+                    className="
+                        mb-1.5
+                        block
+                        text-xs
+                        font-medium
+                        text-base-content/60
+                    "
+                >
                     {label}
                 </label>
-
             )}
-
 
             {/* BUTTON */}
 
             <button
+                ref={buttonRef}
                 type="button"
                 disabled={disabled}
+                aria-haspopup="listbox"
+                aria-expanded={open}
                 onClick={() => {
-
-                    if (disabled) {
-                        return
-                    }
-
+                    if (disabled) return
 
                     setOpen((previous) => !previous)
                     setSearch('')
-
                 }}
                 className={`
+                    box-border
                     flex
                     h-10
                     min-h-10
                     w-full
+                    min-w-0
                     items-center
                     justify-between
                     gap-2
@@ -338,71 +302,74 @@ function SearchableFilterDropdown({
                     text-left
                     text-sm
                     text-base-content
-                    transition
+                    outline-none
+                    transition-colors
                     hover:border-base-content/30
+                    focus-visible:ring-2
+                    focus-visible:ring-indigo-500/30
                     disabled:cursor-not-allowed
                     disabled:opacity-60
                     ${buttonClassName}
                 `}
             >
-
-                <span className="min-w-0 truncate">
+                <span className="min-w-0 flex-1 truncate">
                     {displayValue}
                 </span>
 
-
-                <ChevronDownIcon className="
-                    h-4
-                    w-4
-                    shrink-0
-                    text-base-content/40
-                " />
-
+                <ChevronDownIcon
+                    className={`
+                        h-4
+                        w-4
+                        shrink-0
+                        text-base-content/40
+                        transition-transform
+                        duration-150
+                        ${open ? 'rotate-180' : ''}
+                    `}
+                />
             </button>
 
-
-            {/* DROPDOWN */}
+            {/* DROPDOWN MENU
+                No top margin: positioned directly below the button.
+            */}
 
             {open && (
-
-                <div className={`
-                    absolute
-                    left-0
-                    right-0
-                    z-50
-                    mt-1
-                    overflow-hidden
-                    rounded-lg
-                    border
-                    border-base-300
-                    bg-base-100
-                    shadow-lg
-                    ${menuClassName}
-                `}>
-
+                <div
+                    className={`
+                        absolute
+                        left-0
+                        right-0
+                        top-full
+                        z-50
+                        box-border
+                        overflow-hidden
+                        rounded-lg
+                        border
+                        border-base-300
+                        bg-base-100
+                        shadow-lg
+                        ${menuClassName}
+                    `}
+                >
                     {/* SEARCH */}
 
-                    <div className="
-                        border-b
-                        border-base-300
-                        p-2
-                    ">
-
+                    <div className="border-b border-base-300 p-2">
                         <div className="relative">
-
-                            <MagnifyingGlassIcon className="
-                                pointer-events-none
-                                absolute
-                                left-2.5
-                                top-1/2
-                                h-4
-                                w-4
-                                -translate-y-1/2
-                                text-base-content/35
-                            " />
-
+                            <MagnifyingGlassIcon
+                                className="
+                                    pointer-events-none
+                                    absolute
+                                    left-2.5
+                                    top-1/2
+                                    h-4
+                                    w-4
+                                    -translate-y-1/2
+                                    text-base-content/35
+                                "
+                            />
 
                             <input
+                                ref={searchInputRef}
                                 type="text"
                                 value={search}
                                 onChange={(event) =>
@@ -410,12 +377,13 @@ function SearchableFilterDropdown({
                                 }
                                 placeholder={
                                     searchPlaceholder ||
-                                    `Search ${String(label).toLowerCase()}`
+                                    `Search ${String(label || 'options').toLowerCase()}`
                                 }
                                 autoFocus
                                 className="
                                     input
                                     input-bordered
+                                    box-border
                                     h-9
                                     min-h-9
                                     w-full
@@ -423,24 +391,22 @@ function SearchableFilterDropdown({
                                     text-sm
                                 "
                             />
-
                         </div>
-
                     </div>
-
 
                     {/* OPTIONS */}
 
-                    <div className="
-                        max-h-56
-                        overflow-y-auto
-                        p-1
-                    ">
-
+                    <div
+                        className="
+                            max-h-56
+                            overflow-y-auto
+                            p-1
+                        "
+                        role="listbox"
+                    >
                         {/* ALL */}
 
                         {includeAllOption && (
-
                             <button
                                 type="button"
                                 onClick={() => handleSelect(null)}
@@ -452,78 +418,71 @@ function SearchableFilterDropdown({
                             >
                                 {allLabel}
                             </button>
-
                         )}
-
 
                         {/* LOADING */}
 
                         {loading && (
-
-                            <div className="
-                                px-3
-                                py-3
-                                text-center
-                                text-xs
-                                text-base-content/50
-                            ">
+                            <div
+                                className="
+                                    px-3
+                                    py-3
+                                    text-center
+                                    text-xs
+                                    text-base-content/50
+                                "
+                            >
                                 Loading...
                             </div>
-
                         )}
 
-
-                        {/* OPTIONS */}
+                        {/* FILTERED OPTIONS */}
 
                         {!loading &&
                             filteredOptions.map((option) => (
-
                                 <button
                                     key={option.key}
                                     type="button"
+                                    role="option"
+                                    aria-selected={
+                                        String(value) ===
+                                        String(option.value)
+                                    }
                                     onClick={() =>
                                         handleSelect(option)
                                     }
                                     className={
-                                        String(value) === String(option.value)
+                                        String(value) ===
+                                        String(option.value)
                                             ? 'w-full rounded-md bg-[#8BCF00]/10 px-3 py-2 text-left text-sm font-medium text-[#78B300]'
                                             : 'w-full rounded-md px-3 py-2 text-left text-sm hover:bg-base-200'
                                     }
                                 >
                                     {option.label}
                                 </button>
-
                             ))}
 
-
-                        {/* EMPTY */}
+                        {/* EMPTY STATE */}
 
                         {!loading &&
                             filteredOptions.length === 0 && (
-
-                                <div className="
-                                    px-3
-                                    py-3
-                                    text-center
-                                    text-xs
-                                    text-base-content/50
-                                ">
+                                <div
+                                    className="
+                                        px-3
+                                        py-3
+                                        text-center
+                                        text-xs
+                                        text-base-content/50
+                                    "
+                                >
                                     {emptyMessage}
                                 </div>
-
                             )}
-
                     </div>
-
                 </div>
-
             )}
-
         </div>
-
     )
-
 }
-
 
 export default SearchableFilterDropdown

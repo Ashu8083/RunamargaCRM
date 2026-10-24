@@ -1,147 +1,203 @@
 // admin-react/src/components/GlobalModels/Filters/LoanTypeDropdown.jsx
 
+
+ // admin-react/src/components/GlobalModels/Filters/LoanTypeDropdown.jsx
+
 import { useEffect, useState } from 'react'
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'
 import { useCommonData } from '../../../context/CommonDataContext'
 
+
 const LoanTypeDropdown = ({
-  value = '',
-  onChange,
-  placeholder = 'Select Loan Type',
-  disabled = false,
-  className = '',
-  label = '',
-  error = '',
-  required = false,
-  onOptionsLoaded,
+    value = '',
+    onChange,
+    placeholder = 'Select Loan Type',
+    disabled = false,
+    className = '',
+    buttonClassName = '',
+    menuClassName = '',
+    label = '',
+    error = '',
+    required = false,
+    onOptionsLoaded,
 }) => {
 
-  const {
-    getLoanTypes,
-    loadingLoanTypes,
-    loanTypesError,
-  } = useCommonData()
+    const {
+        getLoanTypes,
+        loadingLoanTypes,
+        loanTypesError,
+    } = useCommonData()
 
-  const [loanTypes, setLoanTypes] = useState([])
+    const [loanTypes, setLoanTypes] = useState([])
 
-  useEffect(() => {
-    let isMounted = true
 
-    const fetchLoanTypes = async () => {
-      try {
-        const data = await getLoanTypes()
+    // =========================================================
+    // FETCH LOAN TYPES
+    // =========================================================
 
-        if (!isMounted) return
+    useEffect(() => {
+        let isMounted = true
 
-        setLoanTypes(data)
+        const fetchLoanTypes = async () => {
+            try {
+                const data = await getLoanTypes()
 
-        /*
-         * Send loaded options to parent.
-         */
-        if (typeof onOptionsLoaded === 'function') {
-          onOptionsLoaded(data)
+                if (!isMounted) return
+
+                const normalizedData = Array.isArray(data)
+                    ? data
+                    : []
+
+                setLoanTypes(normalizedData)
+
+                if (typeof onOptionsLoaded === 'function') {
+                    onOptionsLoaded(normalizedData)
+                }
+
+            } catch (fetchError) {
+                if (!isMounted) return
+
+                console.error(
+                    'Failed to fetch loan types:',
+                    fetchError
+                )
+
+                setLoanTypes([])
+            }
         }
 
-      } catch (error) {
-        if (!isMounted) return
+        fetchLoanTypes()
 
-        console.error(
-          'Failed to fetch loan types:',
-          error
-        )
+        return () => {
+            isMounted = false
+        }
 
-        setLoanTypes([])
-      }
-    }
+    }, [getLoanTypes, onOptionsLoaded])
 
-    fetchLoanTypes()
 
-    return () => {
-      isMounted = false
-    }
+    // =========================================================
+    // HANDLE SELECTION
+    // =========================================================
 
-  }, [getLoanTypes, onOptionsLoaded])
-
-  /*
-   * SearchableFilterDropdown returns:
-   *
-   * onChange(value, originalOption)
-   */
-  const handleChange = (
-    selectedValue,
-    selectedOption
-  ) => {
-    if (typeof onChange === 'function') {
-      onChange(
+    const handleChange = (
         selectedValue,
         selectedOption
-      )
+    ) => {
+        if (typeof onChange === 'function') {
+            onChange(
+                selectedValue,
+                selectedOption
+            )
+        }
     }
-  }
 
-  /*
-   * Parent error takes priority.
-   */
-  const dropdownError =
-    error || loanTypesError
 
-  return (
-    <div className={`w-full ${className}`}>
+    // =========================================================
+    // ERROR
+    // =========================================================
 
-      {label && (
-        <label
-          className="mb-1.5 block text-xs font-medium text-base-content/60"
+    const dropdownError = error || loanTypesError
+
+
+    // =========================================================
+    // COMPONENT UI
+    // =========================================================
+
+    return (
+        <div
+            className={`
+                box-border
+                w-full
+                min-w-0
+                ${className}
+            `}
         >
-          {label}
+            {/* OPTIONAL LABEL */}
 
-          {required && (
-            <span className="ml-1 text-error">
-              *
-            </span>
-          )}
-        </label>
-      )}
+            {label && (
+                <label
+                    className="
+                        mb-1.5
+                        block
+                        text-xs
+                        font-medium
+                        text-base-content/60
+                    "
+                >
+                    {label}
 
-      <SearchableFilterDropdown
-        value={value}
-        options={loanTypes}
-        onChange={handleChange}
+                    {required && (
+                        <span className="ml-1 text-error">
+                            *
+                        </span>
+                    )}
+                </label>
+            )}
 
-        /*
-         * Do not show ALL option.
-         */
-        includeAllOption={false}
+            {/* LOAN TYPE DROPDOWN */}
 
-        searchPlaceholder="Search Loan Type"
+            <SearchableFilterDropdown
+                label={label || 'Loan Type'}
+                value={value}
+                options={loanTypes}
+                onChange={handleChange}
 
-        placeholder={
-          loadingLoanTypes
-            ? 'Loading Loan Types...'
-            : placeholder
-        }
+                includeAllOption={false}
+                showLabel={false}
 
-        disabled={
-          disabled || loadingLoanTypes
-        }
+                placeholder={
+                    loadingLoanTypes
+                        ? 'Loading Loan Types...'
+                        : placeholder
+                }
 
-        getOptionValue={
-          (option) => option.id
-        }
+                searchPlaceholder="Search Loan Type"
 
-        getOptionLabel={
-          (option) => option.name
-        }
-      />
+                loading={loadingLoanTypes}
 
-      {dropdownError && (
-        <p className="mt-1 text-xs text-error">
-          {dropdownError}
-        </p>
-      )}
+                disabled={
+                    disabled || loadingLoanTypes
+                }
 
-    </div>
-  )
+                className="
+                    box-border
+                    w-full
+                    min-w-0
+                "
+
+                buttonClassName={`
+                    box-border
+                    h-10
+                    min-h-10
+                    w-full
+                    min-w-0
+                    rounded-lg
+                    ${buttonClassName}
+                `}
+
+                menuClassName={menuClassName}
+
+                getOptionValue={(option) => option.id}
+                getOptionLabel={(option) => option.name}
+            />
+
+            {/* ERROR MESSAGE */}
+
+            {dropdownError && (
+                <p
+                    className="
+                        mt-1
+                        text-xs
+                        text-error
+                    "
+                    role="alert"
+                >
+                    {dropdownError}
+                </p>
+            )}
+        </div>
+    )
 }
 
 export default LoanTypeDropdown

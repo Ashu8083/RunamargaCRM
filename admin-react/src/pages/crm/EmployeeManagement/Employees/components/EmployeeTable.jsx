@@ -8,6 +8,13 @@ import PlusIcon from "@heroicons/react/24/outline/PlusIcon";
 import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
 import PencilIcon from "@heroicons/react/24/outline/PencilIcon";
 import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
+import { PERMISSIONS, hasPermission } from '../../../../../app/permissions'
+
+const canCreateEmployee = hasPermission(PERMISSIONS.EMPLOYEES_CREATE)
+const canEditEmployee = hasPermission(PERMISSIONS.EMPLOYEES_EDIT)
+const canDeleteEmployee = hasPermission(PERMISSIONS.EMPLOYEES_DELETE)
+const canBlockEmployee = hasPermission(PERMISSIONS.EMPLOYEES_BLOCK)
+
 
 function EmployeeTable({
   employees = [],
@@ -140,6 +147,7 @@ function EmployeeTable({
             <button
               type="button"
               onClick={onCreate}
+              disabled={!canCreateEmployee}
               className="
                 btn h-10 min-h-10
                 border-[#8BCF00]
@@ -290,6 +298,7 @@ function EmployeeTable({
                         onClick={() =>
                           handleBlockClick(employee)
                         }
+                        disabled={!canBlockEmployee}
                         title={
                           employee.blocked
                             ? "Unblock Employee"
@@ -334,6 +343,7 @@ function EmployeeTable({
                             hover:bg-base-200
                             hover:text-base-content
                           "
+                          disabled={!canEditEmployee}
                         >
                           <PencilIcon className="h-5 w-5" />
                         </button>
@@ -345,6 +355,7 @@ function EmployeeTable({
                           onClick={() =>
                             handleBlockClick(employee)
                           }
+                          disabled={!canBlockEmployee}
                           title={
                             employee.blocked
                               ? "Unblock Employee"
@@ -369,6 +380,7 @@ function EmployeeTable({
                           onClick={() =>
                             onDelete?.(employee)
                           }
+                          disabled={!canDeleteEmployee}
                           title="Delete Employee"
                           className="
                             flex h-10 w-10

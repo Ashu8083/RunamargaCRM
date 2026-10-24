@@ -20,6 +20,11 @@ import {
     getEmployeeHistory,
     getApiErrorMessage,
 } from './API'
+import { PERMISSIONS, hasPermission } from '../../../../app/permissions'
+
+const canViewTodayAttendance = hasPermission(PERMISSIONS.EMPLOYEE_TODAY_ATTENDANCE_VIEW)
+
+
 
 const AttendanceHistoryModal = lazy(
     () => import('./components/AttendanceHistoryModal')
@@ -846,6 +851,7 @@ function Attendance() {
                         onClick={
                             handleOpenTodayAttendance
                         }
+                        disabled={!canViewTodayAttendance}
                         className="
                             inline-flex
                             h-10

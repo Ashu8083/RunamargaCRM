@@ -1,5 +1,7 @@
+
 # backend/app/controllers/Logs/loan_shuffle_logs_controller.py
 
+import logging
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -8,6 +10,8 @@ from app.models.employees import Employee
 from app.services.logs.loan_shuffle_logs_service import (
     LoanShuffleLogsService,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class LoanShuffleLogsController:
@@ -28,18 +32,28 @@ class LoanShuffleLogsController:
         page: int = 1,
         limit: int = 10,
     ):
-        return LoanShuffleLogsService.get_logs(
-            db=db,
-            employee=employee,
-            context_id=context_id,
-            search=search,
-            shuffled_by_context_id=shuffled_by_context_id,
-            from_agent_context_id=from_agent_context_id,
-            to_agent_context_id=to_agent_context_id,
-            from_rm_context_id=from_rm_context_id,
-            to_rm_context_id=to_rm_context_id,
-            from_date=from_date,
-            to_date=to_date,
-            page=page,
-            limit=limit,
-        )
+        try:
+            return LoanShuffleLogsService.get_logs(
+                db=db,
+                employee=employee,
+                context_id=context_id,
+                search=search,
+                shuffled_by_context_id=shuffled_by_context_id,
+                from_agent_context_id=from_agent_context_id,
+                to_agent_context_id=to_agent_context_id,
+                from_rm_context_id=from_rm_context_id,
+                to_rm_context_id=to_rm_context_id,
+                from_date=from_date,
+                to_date=to_date,
+                page=page,
+                limit=limit,
+            )
+
+        except Exception:
+            logger.exception(
+                "Failed to retrieve loan shuffle logs. "
+                "Employee ID: %s, Context ID: %s",
+                getattr(employee, "id", None),
+                context_id,
+            )
+            raise

@@ -23,6 +23,16 @@ import TeamLeadDropdown from "../../../../../components/GlobalModels/Filters/Tea
 import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import StatusDropdown from "../../../../../components/GlobalModels/Filters/StatusDropdown";
 import apiClient from "../../../../../app/apiClient";
+import { PERMISSIONS, hasPermission } from '../../../../../app/permissions'
+
+const canChangeLoanType = hasPermission(PERMISSIONS.LOANS_CHANGE_LOAN_TYPE)
+const canChangeStatus = hasPermission(PERMISSIONS.LOANS_STATUS_UPDATE)
+const canAssignAgent = hasPermission(PERMISSIONS.LOANS_AGENT_ASSIGNMENT)
+const canViewApplication = hasPermission(PERMISSIONS.LOANS_APPLICATION_VIEW)
+const canAddReminder = hasPermission(PERMISSIONS.LOANS_ADD_REMINDER)
+const canViewChat = hasPermission(PERMISSIONS.LOANS_REMARKS_VIEW)
+const canDeleteApplication = hasPermission(PERMISSIONS.LOANS_DELETE)
+
 
 const GlobalChat = lazy(
   () =>
@@ -806,9 +816,13 @@ function ApplicationsTable({
                       <td className="px-3 py-4">
                         <button
                           type="button"
-                          onClick={() => onLoanTypeChange?.(application)}
+                          onClick={() => {
+                            if (!canChangeLoanType) return
+                            onLoanTypeChange?.(application)
+                          }}
                           title={loanTypeName}
-                          className="max-w-full inline-flex items-center px-2.5 py-1 rounded-full border border-[#8BCF00]/40 bg-[#8BCF00]/10 text-[#78B300] text-xs font-medium truncate hover:bg-[#8BCF00]/20"
+                          disabled={!canChangeLoanType}
+                          className="max-w-full inline-flex items-center px-2.5 py-1 rounded-full border border-[#8BCF00]/40 bg-[#8BCF00]/10 text-[#78B300] text-xs font-medium truncate hover:bg-[#8BCF00]/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {loanTypeName}
                         </button>
@@ -864,6 +878,7 @@ function ApplicationsTable({
                             type="button"
                             onClick={() => onStatusChange?.(application)}
                             title={status}
+                            disabled={!canChangeStatus}
                             className={`max-w-full shrink-0 inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-medium truncate hover:opacity-80 ${getStatusClass(
                               status,
                             )}`}
@@ -879,6 +894,7 @@ function ApplicationsTable({
                             type="button"
                             onClick={() => openAssignmentModal(application)}
                             title="Assign application"
+                            disabled={!canAssignAgent}
                             aria-label={`Assign application for ${
                               application.name || "customer"
                             }`}
@@ -891,6 +907,7 @@ function ApplicationsTable({
                             type="button"
                             onClick={() => onViewApplication?.(application)}
                             title="View application"
+                            disabled={!canViewApplication}
                             className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
                           >
                             <EyeIcon className="w-4 h-4" />
@@ -900,6 +917,7 @@ function ApplicationsTable({
                             type="button"
                             onClick={() => onReminder?.(application)}
                             title="Add reminder"
+                            disabled={!canAddReminder}
                             className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
                           >
                             <BellAlertIcon className="w-4 h-4" />
@@ -909,6 +927,7 @@ function ApplicationsTable({
                             type="button"
                             onClick={() => handleOpenChat(application)}
                             title="Open chat"
+                            disabled={!canViewChat}
                             className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
                           >
                             <ChatBubbleLeftRightIcon className="w-4 h-4" />
@@ -918,6 +937,7 @@ function ApplicationsTable({
                             type="button"
                             onClick={() => onDeleteApplication?.(application)}
                             title="Delete application"
+                            disabled={!canDeleteApplication}
                             aria-label={`Delete application for ${
                               application.name || "customer"
                             }`}

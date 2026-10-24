@@ -594,13 +594,13 @@ const sidebarmenu = [
         permission: PERMISSIONS.LOAN_SHUFFLE_LOGS_VIEW,
       },
 
-      {
-        path: "/crm/reverted-history-logs",
-        icon: <BackwardIcon className={submenuIconClasses} />,
-        name: "Reverted History Logs",
-        parent: "Logs",
-        permission: PERMISSIONS.REVERTED_HISTORY_LOGS_VIEW,
-      },
+      // {
+      //   path: "/crm/reverted-history-logs",
+      //   icon: <BackwardIcon className={submenuIconClasses} />,
+      //   name: "Reverted History Logs",
+      //   parent: "Logs",
+      //   permission: PERMISSIONS.REVERTED_HISTORY_LOGS_VIEW,
+      // },
 
       /* -----------------------------------------------------
        * CALL MANAGEMENT

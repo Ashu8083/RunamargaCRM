@@ -187,7 +187,7 @@ class LoanShuffleLogsService:
         # 4. Filter shuffled-by
         # ---------------------------------------------------------
 
-        if shuffled_by_context_id:
+        if shuffled_by_context_id is not None:
             query = query.filter(
                 LoanShuffleHistory.shuffled_by_context_id
                 == shuffled_by_context_id
@@ -203,10 +203,13 @@ class LoanShuffleLogsService:
                     from_date
                 )
 
+                # If only a date is supplied, include the
+                # beginning of that date.
                 query = query.filter(
                     LoanShuffleHistory.created_at
                     >= parsed_from_date
                 )
+
             except ValueError:
                 raise ValueError(
                     "Invalid from_date. Expected YYYY-MM-DD."
@@ -238,37 +241,76 @@ class LoanShuffleLogsService:
 
         # ---------------------------------------------------------
         # 6. Load all loans once
+        #
+        # Supports both formats:
+        # [101, 102]
+        #
+        # OR
+        #
+        # [
+        #     {"loan_id": 101},
+        #     {"loan_id": 102}
+        # ]
         # ---------------------------------------------------------
 
-        all_loan_ids = {
-            item.get("loan_id")
-            for history in histories
-            for item in (history.loan_ids or [])
-            if item.get("loan_id") is not None
-        }
+        all_loan_ids = set()
+
+        for history in histories:
+            loan_items = history.loan_ids or []
+
+            # Handle a single integer or dictionary as well
+            # as the usual list format.
+            if isinstance(loan_items, (int, dict)):
+                loan_items = [loan_items]
+
+            if not isinstance(loan_items, (list, tuple)):
+                continue
+
+            for item in loan_items:
+
+                if isinstance(item, dict):
+                    loan_id = item.get("loan_id")
+
+                elif isinstance(item, int) and not isinstance(
+                    item, bool
+                ):
+                    loan_id = item
+
+                else:
+                    continue
+
+                if loan_id is not None:
+                    all_loan_ids.add(loan_id)
 
         loan_map = {}
 
         if all_loan_ids:
-            loan_map = {
-                loan.id: loan
-                for loan in db.query(LoanApplication)
+            loans = (
+                db.query(LoanApplication)
                 .filter(
                     LoanApplication.id.in_(all_loan_ids),
                     LoanApplication.deleted_at.is_(None),
                 )
                 .all()
+            )
+
+            loan_map = {
+                loan.id: loan
+                for loan in loans
             }
 
         # ---------------------------------------------------------
-        # 7. Convert DB history → table rows
+        # 7. Convert DB history into table rows
         # ---------------------------------------------------------
 
         rows = []
 
         for history in histories:
 
+            # -----------------------------------------------------
             # Access control
+            # -----------------------------------------------------
+
             if not LoanShuffleLogsService._can_access_history(
                 db=db,
                 history=history,
@@ -279,21 +321,75 @@ class LoanShuffleLogsService:
             ):
                 continue
 
-            shuffled_by = LoanShuffleLogsService._context_details(
-                db=db,
-                context_id=history.shuffled_by_context_id,
+            # -----------------------------------------------------
+            # Resolve person who shuffled the loan
+            # -----------------------------------------------------
+
+            shuffled_by = (
+                LoanShuffleLogsService._context_details(
+                    db=db,
+                    context_id=history.shuffled_by_context_id,
+                )
             )
 
             loan_items = history.loan_ids or []
 
+            if isinstance(loan_items, (int, dict)):
+                loan_items = [loan_items]
+
+            if not isinstance(loan_items, (list, tuple)):
+                continue
+
             for item in loan_items:
 
-                loan_id = item.get("loan_id")
+                # -------------------------------------------------
+                # Safely extract loan and assignment details
+                # -------------------------------------------------
+
+                if isinstance(item, dict):
+
+                    loan_id = item.get("loan_id")
+
+                    from_agent_id = item.get(
+                        "from_agent_context_id"
+                    )
+
+                    to_agent_id = item.get(
+                        "to_agent_context_id"
+                    )
+
+                    from_rm_id = item.get(
+                        "from_rm_context_id"
+                    )
+
+                    to_rm_id = item.get(
+                        "to_rm_context_id"
+                    )
+
+                elif isinstance(item, int) and not isinstance(
+                    item, bool
+                ):
+
+                    # Integer-only entries contain the loan ID,
+                    # but no previous/current assignment details.
+                    loan_id = item
+
+                    from_agent_id = None
+                    to_agent_id = None
+                    from_rm_id = None
+                    to_rm_id = None
+
+                else:
+                    # Ignore unsupported entry formats.
+                    continue
 
                 if loan_id is None:
                     continue
 
+                # -------------------------------------------------
                 # Get loan from already-loaded map
+                # -------------------------------------------------
+
                 loan = loan_map.get(loan_id)
 
                 phone = loan.phone if loan else None
@@ -303,49 +399,29 @@ class LoanShuffleLogsService:
                 # -------------------------------------------------
 
                 if search and search.strip():
+
                     search_value = search.strip().lower()
 
                     if (
                         search_value not in str(loan_id).lower()
-                        and search_value not in str(phone or "").lower()
+                        and search_value
+                        not in str(phone or "").lower()
                     ):
                         continue
-
-                # -------------------------------------------------
-                # Extract assignments
-                # -------------------------------------------------
-
-                from_agent_id = item.get(
-                    "from_agent_context_id"
-                )
-
-                to_agent_id = item.get(
-                    "to_agent_context_id"
-                )
-
-                from_rm_id = item.get(
-                    "from_rm_context_id"
-                )
-
-                to_rm_id = item.get(
-                    "to_rm_context_id"
-                )
 
                 # -------------------------------------------------
                 # Apply agent filters
                 # -------------------------------------------------
 
                 if (
-                    from_agent_context_id
-                    and from_agent_id
-                    != from_agent_context_id
+                    from_agent_context_id is not None
+                    and from_agent_id != from_agent_context_id
                 ):
                     continue
 
                 if (
-                    to_agent_context_id
-                    and to_agent_id
-                    != to_agent_context_id
+                    to_agent_context_id is not None
+                    and to_agent_id != to_agent_context_id
                 ):
                     continue
 
@@ -354,21 +430,19 @@ class LoanShuffleLogsService:
                 # -------------------------------------------------
 
                 if (
-                    from_rm_context_id
-                    and from_rm_id
-                    != from_rm_context_id
+                    from_rm_context_id is not None
+                    and from_rm_id != from_rm_context_id
                 ):
                     continue
 
                 if (
-                    to_rm_context_id
-                    and to_rm_id
-                    != to_rm_context_id
+                    to_rm_context_id is not None
+                    and to_rm_id != to_rm_context_id
                 ):
                     continue
 
                 # -------------------------------------------------
-                # Resolve names
+                # Resolve assignment names
                 # -------------------------------------------------
 
                 from_agent = (
@@ -409,49 +483,22 @@ class LoanShuffleLogsService:
 
                         "loanId": loan_id,
                         "phone": phone,
-                        "shuffledById": (
-                            shuffled_by["id"]
-                        ),
 
-                        "shuffledByName": (
-                            shuffled_by["name"]
-                        ),
+                        "shuffledById": shuffled_by["id"],
+                        "shuffledByName": shuffled_by["name"],
+                        "shuffledByRole": shuffled_by["role"],
 
-                        "shuffledByRole": (
-                            shuffled_by["role"]
-                        ),
+                        "fromAgentId": from_agent["id"],
+                        "fromAgentName": from_agent["name"],
 
-                        "fromAgentId": (
-                            from_agent["id"]
-                        ),
+                        "toAgentId": to_agent["id"],
+                        "toAgentName": to_agent["name"],
 
-                        "fromAgentName": (
-                            from_agent["name"]
-                        ),
+                        "fromRmId": from_rm["id"],
+                        "fromRmName": from_rm["name"],
 
-                        "toAgentId": (
-                            to_agent["id"]
-                        ),
-
-                        "toAgentName": (
-                            to_agent["name"]
-                        ),
-
-                        "fromRmId": (
-                            from_rm["id"]
-                        ),
-
-                        "fromRmName": (
-                            from_rm["name"]
-                        ),
-
-                        "toRmId": (
-                            to_rm["id"]
-                        ),
-
-                        "toRmName": (
-                            to_rm["name"]
-                        ),
+                        "toRmId": to_rm["id"],
+                        "toRmName": to_rm["name"],
 
                         "createdAt": (
                             history.created_at.isoformat()
@@ -468,15 +515,19 @@ class LoanShuffleLogsService:
                 )
 
         # ---------------------------------------------------------
-        # 7. Pagination
+        # 8. Pagination
         # ---------------------------------------------------------
 
         total = len(rows)
 
+        # Prevent invalid pagination values.
+        page = max(1, page)
+        limit = max(1, limit)
+
         offset = (page - 1) * limit
 
         paginated_rows = rows[
-            offset: offset + limit
+            offset:offset + limit
         ]
 
         total_pages = (

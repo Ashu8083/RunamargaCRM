@@ -7,6 +7,14 @@ import UserGroupIcon from "@heroicons/react/24/outline/UserGroupIcon";
 import ShieldCheckIcon from "@heroicons/react/24/outline/ShieldCheckIcon";
 import PencilIcon from "@heroicons/react/24/outline/PencilIcon";
 import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
+import {PERMISSIONS,hasPermission,} from '../../../../../app/permissions';
+
+const canCreateTeamLead = hasPermission(PERMISSIONS.TEAM_LEADS_CREATE);
+const canEditTeamLead = hasPermission(PERMISSIONS.TEAM_LEADS_EDIT);
+const canDeleteTeamLead = hasPermission(PERMISSIONS.TEAM_LEADS_DELETE);
+const canManageTeamLeadPermissions = hasPermission(PERMISSIONS.TEAM_LEADS_PERMISSIONS_MANAGE);
+const canChangeTeamLeadStatus = hasPermission(PERMISSIONS.TEAM_LEADS_STATUS_CHANGE);
+const canViewAssignAgents = hasPermission(PERMISSIONS.TEAM_LEADS_ASSIGN_AGENTS_VIEW);
 
 function TeamLeadTable({
     teamLeads = [],
@@ -275,6 +283,7 @@ function TeamLeadTable({
                         <button
                             type="button"
                             onClick={onCreate}
+                            disabled={!canCreateTeamLead}
                             className="
                                 btn
                                 h-11
@@ -735,44 +744,25 @@ function TeamLeadTable({
                                             <td className="align-middle">
 
                                                 <select
-                                                    value={
-                                                        teamLead?.status ===
-                                                        "Inactive"
-                                                            ? "Inactive"
-                                                            : "Active"
+                                                value={teamLead?.status === "Inactive" ? "Inactive" : "Active"}
+                                                onChange={(event) =>
+                                                    onStatusChange?.(teamLead, event.target.value)
+                                                }
+                                                disabled={!canChangeTeamLeadStatus}
+                                                className={`
+                                                    select select-sm h-9 min-h-9 min-w-[125px]
+                                                    rounded-md border px-3 text-xs font-medium
+                                                    outline-none disabled:cursor-not-allowed
+                                                    disabled:opacity-100
+                                                    ${
+                                                    teamLead?.status === "Inactive"
+                                                        ? "text-red-600 disabled:text-red-600"
+                                                        : "text-green-600 disabled:text-green-600"
                                                     }
-                                                    onChange={(event) =>
-                                                        onStatusChange?.(
-                                                            teamLead,
-                                                            event.target.value
-                                                        )
-                                                    }
-                                                    className={`
-                                                        select
-                                                        select-sm
-                                                        h-9
-                                                        min-h-9
-                                                        min-w-[125px]
-                                                        rounded-md
-                                                        border
-                                                        px-3
-                                                        text-xs
-                                                        font-medium
-                                                        outline-none
-                                                        ${getStatusClass(
-                                                            teamLead?.status
-                                                        )}
-                                                    `}
+                                                `}
                                                 >
-
-                                                    <option value="Active">
-                                                        Active
-                                                    </option>
-
-                                                    <option value="Inactive">
-                                                        Inactive
-                                                    </option>
-
+                                                <option value="Active">Active</option>
+                                                <option value="Inactive">Inactive</option>
                                                 </select>
 
                                             </td>
@@ -839,6 +829,7 @@ function TeamLeadTable({
                                                                 teamLead
                                                             )
                                                         }
+                                                        disabled={!canEditTeamLead}
                                                         className="
                                                             btn
                                                             btn-ghost
@@ -874,6 +865,7 @@ function TeamLeadTable({
                                                                 teamLead
                                                             )
                                                         }
+                                                        disabled={!canViewAssignAgents}
                                                         className="
                                                             btn
                                                             btn-ghost
@@ -909,6 +901,7 @@ function TeamLeadTable({
                                                                 teamLead
                                                             )
                                                         }
+                                                        disabled={!canManageTeamLeadPermissions}
                                                         className="
                                                             btn
                                                             btn-ghost
@@ -944,6 +937,7 @@ function TeamLeadTable({
                                                                 teamLead
                                                             )
                                                         }
+                                                        disabled={!canDeleteTeamLead}
                                                         className="
                                                             btn
                                                             btn-ghost

@@ -12,6 +12,9 @@ import ChevronRightIcon from '@heroicons/react/24/outline/ChevronRightIcon'
 import MapPinIcon from '@heroicons/react/24/outline/MapPinIcon'
 
 import EmployeeDropdown from '../../../../../components/GlobalModels/Filters/EmployeeDropdown'
+import { PERMISSIONS, hasPermission } from '../../../../../app/permissions'
+
+const canViewEmployeeAttendanceInfo = hasPermission(PERMISSIONS.EMPLOYEE_TODAY_ATTENDANCE_VIEW_INFO)
 
 
 // ============================================================================
@@ -1874,6 +1877,8 @@ function AttendanceTable({
                                                             entry
                                                         )
                                                     }
+
+                                                    disabled={!canViewEmployeeAttendanceInfo}
                                                     className="
                                                         inline-flex
                                                         h-9

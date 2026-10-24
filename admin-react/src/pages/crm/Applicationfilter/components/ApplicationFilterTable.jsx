@@ -1,176 +1,117 @@
 // admin-react/src/pages/Applicationfilter/components/ApplicationFilterTable.jsx
 
-import EyeIcon from '@heroicons/react/24/outline/EyeIcon'
-
+import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
+import {PERMISSIONS,hasPermission,} from '../../../../app/permissions';
 
 // =============================================================
 // STATUS
 // =============================================================
+const canViewDisbursement = hasPermission(PERMISSIONS.DISBURSEMENT_VIEW);
 
 const getStatusClasses = (status) => {
+  const normalizedStatus = String(status || "")
+    .trim()
+    .toLowerCase();
 
-    const normalizedStatus =
-        String(status || '')
-            .trim()
-            .toLowerCase()
+  if (normalizedStatus === "disbursed") {
+    return ["border-[#8BCF00]/40", "bg-[#8BCF00]/10", "text-[#6FA800]"].join(
+      " ",
+    );
+  }
 
+  if (normalizedStatus === "approved") {
+    return ["border-blue-300", "bg-blue-50", "text-blue-600"].join(" ");
+  }
 
-    if (normalizedStatus === 'disbursed') {
+  if (normalizedStatus === "rejected") {
+    return ["border-red-300", "bg-red-50", "text-red-600"].join(" ");
+  }
 
-        return [
-            'border-[#8BCF00]/40',
-            'bg-[#8BCF00]/10',
-            'text-[#6FA800]',
-        ].join(' ')
+  if (normalizedStatus === "pending") {
+    return ["border-amber-300", "bg-amber-50", "text-amber-600"].join(" ");
+  }
 
-    }
+  if (normalizedStatus === "processing") {
+    return ["border-purple-300", "bg-purple-50", "text-purple-600"].join(" ");
+  }
 
-
-    if (normalizedStatus === 'approved') {
-
-        return [
-            'border-blue-300',
-            'bg-blue-50',
-            'text-blue-600',
-        ].join(' ')
-
-    }
-
-
-    if (normalizedStatus === 'rejected') {
-
-        return [
-            'border-red-300',
-            'bg-red-50',
-            'text-red-600',
-        ].join(' ')
-
-    }
-
-
-    if (normalizedStatus === 'pending') {
-
-        return [
-            'border-amber-300',
-            'bg-amber-50',
-            'text-amber-600',
-        ].join(' ')
-
-    }
-
-
-    if (normalizedStatus === 'processing') {
-
-        return [
-            'border-purple-300',
-            'bg-purple-50',
-            'text-purple-600',
-        ].join(' ')
-
-    }
-
-
-    return [
-        'border-base-300',
-        'bg-base-200',
-        'text-base-content/50',
-    ].join(' ')
-
-}
-
+  return ["border-base-300", "bg-base-200", "text-base-content/50"].join(" ");
+};
 
 // =============================================================
 // STATUS TEXT
 // =============================================================
 
 const formatStatus = (status) => {
+  const normalizedStatus = String(status || "")
+    .trim()
+    .toLowerCase();
 
-    const normalizedStatus =
-        String(status || '')
-            .trim()
-            .toLowerCase()
+  if (!normalizedStatus) {
+    return "Unknown";
+  }
 
-
-    if (!normalizedStatus) {
-        return 'Unknown'
-    }
-
-
-    return normalizedStatus
-        .split('-')
-        .map(
-            (word) =>
-                word.charAt(0).toUpperCase() +
-                word.slice(1)
-        )
-        .join(' ')
-
-}
-
+  return normalizedStatus
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
 
 // =============================================================
 // APPLICATION TABLE
 // =============================================================
 
-function ApplicationFilterTable({
-    entries = [],
-    loading = false,
-    onView,
-}) {
+function ApplicationFilterTable({ entries = [], loading = false, onView }) {
+  // =========================================================
+  // LOADING
+  // =========================================================
 
-    // =========================================================
-    // LOADING
-    // =========================================================
-
-    if (loading) {
-
-        return (
-
-            <div className="
+  if (loading) {
+    return (
+      <div
+        className="
                 overflow-hidden
                 rounded-xl
                 border
                 border-base-300
                 bg-base-100
                 shadow-sm
-            ">
-
-                <div className="
+            "
+      >
+        <div
+          className="
                     w-full
                     overflow-x-auto
-                ">
-
-                    <table className="
+                "
+        >
+          <table
+            className="
                         w-full
                         min-w-[1050px]
                         border-collapse
-                    ">
-
-                        <thead>
-
-                            <tr className="
+                    "
+          >
+            <thead>
+              <tr
+                className="
                                 border-b
                                 border-base-300
                                 bg-base-200/40
-                            ">
-
-                                {[
-                                    'ID',
-                                    'Name',
-                                    'Applied Date',
-                                    'Agent',
-                                    'RM',
-                                    'Loan Type',
-                                    'Loan Status',
-                                    'Action',
-                                ].map(
-                                    (heading) => (
-
-                                        <th
-                                            key={
-                                                heading
-                                            }
-                                            className="
+                            "
+              >
+                {[
+                  "ID",
+                  "Name",
+                  "Applied Date",
+                  "Agent",
+                  "RM",
+                  "Loan Type",
+                  "Loan Status",
+                  "Action",
+                ].map((heading) => (
+                  <th
+                    key={heading}
+                    className="
                                                 whitespace-nowrap
                                                 px-5
                                                 py-3.5
@@ -179,107 +120,77 @@ function ApplicationFilterTable({
                                                 font-semibold
                                                 text-base-content/70
                                             "
-                                        >
-                                            {heading}
-                                        </th>
+                  >
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-                                    )
-                                )}
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-                            {[1, 2, 3, 4, 5].map(
-                                (item) => (
-
-                                    <tr
-                                        key={item}
-                                        className="
+            <tbody>
+              {[1, 2, 3, 4, 5].map((item) => (
+                <tr
+                  key={item}
+                  className="
                                             border-b
                                             border-base-300
                                         "
-                                    >
-
-                                        {[
-                                            'w-16',
-                                            'w-40',
-                                            'w-28',
-                                            'w-28',
-                                            'w-28',
-                                            'w-32',
-                                            'w-24',
-                                            'w-20',
-                                        ].map(
-                                            (
-                                                width,
-                                                index
-                                            ) => (
-
-                                                <td
-                                                    key={
-                                                        index
-                                                    }
-                                                    className="
+                >
+                  {[
+                    "w-16",
+                    "w-40",
+                    "w-28",
+                    "w-28",
+                    "w-28",
+                    "w-32",
+                    "w-24",
+                    "w-20",
+                  ].map((width, index) => (
+                    <td
+                      key={index}
+                      className="
                                                         px-5
                                                         py-4
                                                     "
-                                                >
-
-                                                    <div
-                                                        className={`
+                    >
+                      <div
+                        className={`
                                                             ${width}
                                                             h-4
                                                             animate-pulse
                                                             rounded
                                                             bg-base-300
                                                         `}
-                                                    />
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
-                                                </td>
+  // =========================================================
+  // EMPTY STATE
+  // =========================================================
 
-                                            )
-                                        )}
-
-                                    </tr>
-
-                                )
-                            )}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        )
-
-    }
-
-
-    // =========================================================
-    // EMPTY STATE
-    // =========================================================
-
-    if (!entries.length) {
-
-        return (
-
-            <div className="
+  if (!entries.length) {
+    return (
+      <div
+        className="
                 overflow-hidden
                 rounded-xl
                 border
                 border-base-300
                 bg-base-100
                 shadow-sm
-            ">
-
-                <div className="
+            "
+      >
+        <div
+          className="
                     flex
                     min-h-[280px]
                     flex-col
@@ -288,9 +199,10 @@ function ApplicationFilterTable({
                     px-6
                     py-12
                     text-center
-                ">
-
-                    <div className="
+                "
+        >
+          <div
+            className="
                         flex
                         h-12
                         w-12
@@ -298,87 +210,88 @@ function ApplicationFilterTable({
                         justify-center
                         rounded-full
                         bg-base-200
-                    ">
-
-                        <span className="
+                    "
+          >
+            <span
+              className="
                             text-lg
                             font-semibold
                             text-base-content/30
-                        ">
-                            —
-                        </span>
+                        "
+            >
+              —
+            </span>
+          </div>
 
-                    </div>
-
-
-                    <p className="
+          <p
+            className="
                         mt-4
                         text-sm
                         font-semibold
                         text-base-content/70
-                    ">
-                        No applications found
-                    </p>
+                    "
+          >
+            No applications found
+          </p>
 
-
-                    <p className="
+          <p
+            className="
                         mt-1
                         text-xs
                         text-base-content/45
-                    ">
-                        Try changing your filters or search.
-                    </p>
+                    "
+          >
+            Try changing your filters or search.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-                </div>
+  // =========================================================
+  // TABLE
+  // =========================================================
 
-            </div>
-
-        )
-
-    }
-
-
-    // =========================================================
-    // TABLE
-    // =========================================================
-
-    return (
-
-        <div className="
+  return (
+    <div
+      className="
             overflow-hidden
             rounded-xl
             border
             border-base-300
             bg-base-100
             shadow-sm
-        ">
-
-            <div className="
+        "
+    >
+      <div
+        className="
                 w-full
                 overflow-x-auto
-            ">
-
-                <table className="
+            "
+      >
+        <table
+          className="
                     w-full
                     min-w-[1050px]
                     border-collapse
-                ">
-
-                    {/* =================================================
+                "
+        >
+          {/* =================================================
                         HEADER
                     ================================================= */}
 
-                    <thead>
-
-                        <tr className="
+          <thead>
+            <tr
+              className="
                             border-b
                             border-base-300
                             bg-base-200/40
-                        ">
+                        "
+            >
+              {/* ID */}
 
-                            {/* ID */}
-
-                            <th className="
+              <th
+                className="
                                 whitespace-nowrap
                                 px-5
                                 py-3.5
@@ -386,14 +299,15 @@ function ApplicationFilterTable({
                                 text-xs
                                 font-semibold
                                 text-base-content/70
-                            ">
-                                ID
-                            </th>
+                            "
+              >
+                ID
+              </th>
 
+              {/* NAME */}
 
-                            {/* NAME */}
-
-                            <th className="
+              <th
+                className="
                                 whitespace-nowrap
                                 px-5
                                 py-3.5
@@ -401,14 +315,15 @@ function ApplicationFilterTable({
                                 text-xs
                                 font-semibold
                                 text-base-content/70
-                            ">
-                                Name
-                            </th>
+                            "
+              >
+                Name
+              </th>
 
+              {/* APPLIED DATE */}
 
-                            {/* APPLIED DATE */}
-
-                            <th className="
+              <th
+                className="
                                 whitespace-nowrap
                                 px-5
                                 py-3.5
@@ -416,14 +331,15 @@ function ApplicationFilterTable({
                                 text-xs
                                 font-semibold
                                 text-base-content/70
-                            ">
-                                Applied Date
-                            </th>
+                            "
+              >
+                Applied Date
+              </th>
 
+              {/* AGENT */}
 
-                            {/* AGENT */}
-
-                            <th className="
+              <th
+                className="
                                 whitespace-nowrap
                                 px-5
                                 py-3.5
@@ -431,14 +347,15 @@ function ApplicationFilterTable({
                                 text-xs
                                 font-semibold
                                 text-base-content/70
-                            ">
-                                Agent
-                            </th>
+                            "
+              >
+                Agent
+              </th>
 
+              {/* RM */}
 
-                            {/* RM */}
-
-                            <th className="
+              <th
+                className="
                                 whitespace-nowrap
                                 px-5
                                 py-3.5
@@ -446,14 +363,15 @@ function ApplicationFilterTable({
                                 text-xs
                                 font-semibold
                                 text-base-content/70
-                            ">
-                                RM
-                            </th>
+                            "
+              >
+                RM
+              </th>
 
+              {/* LOAN TYPE */}
 
-                            {/* LOAN TYPE */}
-
-                            <th className="
+              <th
+                className="
                                 whitespace-nowrap
                                 px-5
                                 py-3.5
@@ -461,14 +379,15 @@ function ApplicationFilterTable({
                                 text-xs
                                 font-semibold
                                 text-base-content/70
-                            ">
-                                Loan Type
-                            </th>
+                            "
+              >
+                Loan Type
+              </th>
 
+              {/* LOAN STATUS */}
 
-                            {/* LOAN STATUS */}
-
-                            <th className="
+              <th
+                className="
                                 whitespace-nowrap
                                 px-5
                                 py-3.5
@@ -476,14 +395,15 @@ function ApplicationFilterTable({
                                 text-xs
                                 font-semibold
                                 text-base-content/70
-                            ">
-                                Loan Status
-                            </th>
+                            "
+              >
+                Loan Status
+              </th>
 
+              {/* ACTION */}
 
-                            {/* ACTION */}
-
-                            <th className="
+              <th
+                className="
                                 w-[100px]
                                 whitespace-nowrap
                                 px-5
@@ -492,339 +412,268 @@ function ApplicationFilterTable({
                                 text-xs
                                 font-semibold
                                 text-base-content/70
-                            ">
-                                Action
-                            </th>
+                            "
+              >
+                Action
+              </th>
+            </tr>
+          </thead>
 
-                        </tr>
-
-                    </thead>
-
-
-                    {/* =================================================
+          {/* =================================================
                         BODY
                     ================================================= */}
 
-                    <tbody>
+          <tbody>
+            {entries.map((entry, index) => {
+              const status = String(entry.loanStatus || entry.status || "")
+                .trim()
+                .toLowerCase();
 
-                        {entries.map(
-                            (entry, index) => {
+              const isDisbursed = status === "disbursed";
 
-                                const status =
-                                    String(
-                                        entry.loanStatus ||
-                                        entry.status ||
-                                        ''
-                                    )
-                                        .trim()
-                                        .toLowerCase()
-
-
-                                const isDisbursed =
-                                    status ===
-                                    'disbursed'
-
-
-                                return (
-
-                                    <tr
-                                        key={
-                                            entry.id ??
-                                            index
-                                        }
-                                        className="
+              return (
+                <tr
+                  key={entry.id ?? index}
+                  className="
                                             border-b
                                             border-base-300
                                             last:border-b-0
                                             transition-colors
                                             hover:bg-base-200/30
                                         "
-                                    >
-
-                                        {/* =================================
+                >
+                  {/* =================================
                                             ID
                                         ================================= */}
 
-                                        <td className="
+                  <td
+                    className="
                                             px-5
                                             py-4
-                                        ">
-
-                                            <span className="
+                                        "
+                  >
+                    <span
+                      className="
                                                 font-mono
                                                 text-xs
                                                 font-medium
                                                 text-base-content/60
-                                            ">
-                                                {
-                                                    entry.id ||
-                                                    '—'
-                                                }
-                                            </span>
+                                            "
+                    >
+                      {entry.id || "—"}
+                    </span>
+                  </td>
 
-                                        </td>
-
-
-                                        {/* =================================
+                  {/* =================================
                                             NAME
                                         ================================= */}
 
-                                        <td className="
+                  <td
+                    className="
                                             px-5
                                             py-4
-                                        ">
-
-                                            <div>
-
-                                                <p className="
+                                        "
+                  >
+                    <div>
+                      <p
+                        className="
                                                     whitespace-nowrap
                                                     text-sm
                                                     font-medium
                                                     text-base-content
-                                                ">
-                                                    {
-                                                        entry.name ||
-                                                        '—'
-                                                    }
-                                                </p>
+                                                "
+                      >
+                        {entry.name || "—"}
+                      </p>
 
-
-                                                <p className="
+                      <p
+                        className="
                                                     mt-0.5
                                                     whitespace-nowrap
                                                     text-xs
                                                     text-base-content/45
-                                                ">
-                                                    {
-                                                        entry.phone ||
-                                                        '—'
-                                                    }
-                                                </p>
+                                                "
+                      >
+                        {entry.phone || "—"}
+                      </p>
+                    </div>
+                  </td>
 
-                                            </div>
-
-                                        </td>
-
-
-                                        {/* =================================
+                  {/* =================================
                                             APPLIED DATE
                                         ================================= */}
 
-                                        <td className="
+                  <td
+                    className="
                                             whitespace-nowrap
                                             px-5
                                             py-4
-                                        ">
-
-                                            <span className="
+                                        "
+                  >
+                    <span
+                      className="
                                                 text-sm
                                                 text-base-content/75
-                                            ">
-                                                {
-                                                    entry.appliedDate ||
-                                                    '—'
-                                                }
-                                            </span>
+                                            "
+                    >
+                      {entry.appliedDate || "—"}
+                    </span>
+                  </td>
 
-                                        </td>
-
-
-                                        {/* =================================
+                  {/* =================================
                                             AGENT
                                         ================================= */}
 
-                                        <td className="
+                  <td
+                    className="
                                             px-5
                                             py-4
-                                        ">
-
-                                            <p className="
+                                        "
+                  >
+                    <p
+                      className="
                                                 whitespace-nowrap
                                                 text-sm
                                                 text-base-content/80
-                                            ">
-                                                {
-                                                    entry.agentName ||
-                                                    '—'
-                                                }
-                                            </p>
+                                            "
+                    >
+                      {entry.agentName || "—"}
+                    </p>
+                  </td>
 
-                                        </td>
-
-
-                                        {/* =================================
+                  {/* =================================
                                             RM
                                         ================================= */}
 
-                                        <td className="
+                  <td
+                    className="
                                             px-5
                                             py-4
-                                        ">
-
-                                            <p className="
+                                        "
+                  >
+                    <p
+                      className="
                                                 whitespace-nowrap
                                                 text-sm
                                                 text-base-content/80
-                                            ">
-                                                {
-                                                    entry.rmName ||
-                                                    '—'
-                                                }
-                                            </p>
+                                            "
+                    >
+                      {entry.rmName || "—"}
+                    </p>
+                  </td>
 
-                                        </td>
-
-
-                                        {/* =================================
+                  {/* =================================
                                             LOAN TYPE
                                         ================================= */}
 
-                                        <td className="
+                  <td
+                    className="
                                             px-5
                                             py-4
-                                        ">
-
-                                            <span className="
+                                        "
+                  >
+                    <span
+                      className="
                                                 whitespace-nowrap
                                                 text-sm
                                                 text-base-content/75
-                                            ">
-                                                {
-                                                    entry.loanType ||
-                                                    '—'
-                                                }
-                                            </span>
+                                            "
+                    >
+                      {entry.loanType || "—"}
+                    </span>
+                  </td>
 
-                                        </td>
-
-
-                                        {/* =================================
+                  {/* =================================
                                             LOAN STATUS
                                         ================================= */}
 
-                                        <td className="
+                  <td
+                    className="
                                             px-5
                                             py-4
-                                        ">
+                                        "
+                  >
+                    <span
+                      className={[
+                        "inline-flex",
+                        "rounded-full",
+                        "border",
+                        "px-3",
+                        "py-1.5",
+                        "text-xs",
+                        "font-medium",
+                        getStatusClasses(status),
+                      ].join(" ")}
+                    >
+                      {formatStatus(status)}
+                    </span>
+                  </td>
 
-                                            <span
-                                                className={[
-                                                    'inline-flex',
-                                                    'rounded-full',
-                                                    'border',
-                                                    'px-3',
-                                                    'py-1.5',
-                                                    'text-xs',
-                                                    'font-medium',
-                                                    getStatusClasses(
-                                                        status
-                                                    ),
-                                                ].join(' ')}
-                                            >
-                                                {
-                                                    formatStatus(
-                                                        status
-                                                    )
-                                                }
-                                            </span>
-
-                                        </td>
-
-
-                                        {/* =================================
+                  {/* =================================
                                             ACTION
                                         ================================= */}
 
-                                        <td className="
-                                            px-5
-                                            py-4
-                                            text-center
-                                        ">
+                  {canViewDisbursement && (
+                    <td className="px-5 py-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isDisbursed) {
+                            onView?.(entry);
+                          }
+                        }}
+                        disabled={!isDisbursed}
+                        title={
+                          isDisbursed
+                            ? "View disbursement details"
+                            : "Available after disbursement"
+                        }
+                        className={[
+                          "inline-flex",
+                          "h-9",
+                          "items-center",
+                          "justify-center",
+                          "gap-1.5",
+                          "rounded-lg",
+                          "border",
+                          "px-3.5",
+                          "text-xs",
+                          "font-medium",
+                          "transition",
+                          "focus:outline-none",
+                          "focus:ring-2",
+                          "focus:ring-[#8BCF00]/30",
 
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-
-                                                    if (
-                                                        isDisbursed
-                                                    ) {
-
-                                                        onView?.(
-                                                            entry
-                                                        )
-
-                                                    }
-
-                                                }}
-                                                title={
-                                                    isDisbursed
-                                                        ? 'View disbursement details'
-                                                        : 'Available after disbursement'
-                                                }
-                                                className={[
-                                                    'inline-flex',
-                                                    'h-9',
-                                                    'items-center',
-                                                    'justify-center',
-                                                    'gap-1.5',
-                                                    'rounded-lg',
-                                                    'border',
-                                                    'px-3.5',
-                                                    'text-xs',
-                                                    'font-medium',
-                                                    'transition',
-                                                    'focus:outline-none',
-                                                    'focus:ring-2',
-                                                    'focus:ring-[#8BCF00]/30',
-
-                                                    isDisbursed
-                                                        ? [
-                                                            'border-base-300',
-                                                            'bg-base-100',
-                                                            'text-base-content/70',
-                                                            'hover:border-[#8BCF00]/40',
-                                                            'hover:bg-[#8BCF00]/10',
-                                                            'hover:text-[#6FA800]',
-                                                        ].join(' ')
-                                                        : [
-                                                            'cursor-not-allowed',
-                                                            'border-base-300',
-                                                            'bg-base-200/50',
-                                                            'text-base-content/25',
-                                                        ].join(' '),
-
-                                                ].join(' ')}
-                                            >
-
-                                                <EyeIcon className="
-                                                    h-4
-                                                    w-4
-                                                " />
-
-                                                View
-
-                                            </button>
-
-                                        </td>
-
-                                    </tr>
-
-                                )
-
-                            }
-                        )}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    )
-
+                          isDisbursed
+                            ? [
+                                "border-base-300",
+                                "bg-base-100",
+                                "text-base-content/70",
+                                "hover:border-[#8BCF00]/40",
+                                "hover:bg-[#8BCF00]/10",
+                                "hover:text-[#6FA800]",
+                              ].join(" ")
+                            : [
+                                "cursor-not-allowed",
+                                "border-base-300",
+                                "bg-base-200/50",
+                                "text-base-content/25",
+                              ].join(" "),
+                        ].join(" ")}
+                      >
+                        <EyeIcon className="h-4 w-4" aria-hidden="true" />
+                        View
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
-
-export default ApplicationFilterTable
+export default ApplicationFilterTable;

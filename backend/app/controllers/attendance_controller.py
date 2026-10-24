@@ -367,12 +367,11 @@ def _get_joining_date(
 
     details = (
         db_session.query(EmployeeDetails)
-        .filter(EmployeeDetails.id == employee.id)
+        .filter(EmployeeDetails.employee_id == employee.id)
         .first()
     )
 
     joining_date = getattr(details, "joining_date", None)
-
     if joining_date:
         return (
             joining_date.date()
@@ -380,14 +379,6 @@ def _get_joining_date(
             else joining_date
         )
 
-    created_at = getattr(employee, "created_at", None)
-
-    if created_at:
-        return (
-            created_at.date()
-            if isinstance(created_at, datetime)
-            else created_at
-        )
 
     raise HTTPException(
         status_code=400,
@@ -410,7 +401,6 @@ def _get_monthly_entitlement(
 
     if joining_date > as_of:
         return 0
-
     return (
         _month_number(as_of)
         - _month_number(joining_date)
@@ -515,6 +505,81 @@ def _count_leave_days(
     )
 
 
+def _get_unexplained_absence_days(
+    db_session: Session,
+    employee: Employee,
+    joining_date: date,
+    as_of: date | None = None,
+) -> list[date]:
+    """
+    Return eligible working dates with no attendance record
+    and no approved leave.
+
+    Active holidays are excluded.
+    Dates before joining and after today are excluded.
+    Approved full-day leave dates are not counted as absences.
+
+    IMPORTANT:
+    This assumes a date without an attendance record is an
+    absence, subject to the exclusions implemented here.
+    """
+
+    as_of = as_of or date.today()
+
+    start_date = max(joining_date, date.min)
+    end_date = as_of
+
+    if start_date > end_date:
+        return []
+
+    # Candidate dates: eligible dates without completed attendance.
+    candidate_days = _get_eligible_working_days(
+        db_session=db_session,
+        employee_id=employee.id,
+        start_date=start_date,
+        end_date=end_date,
+        exclude_attended_days=True,
+    )
+
+    # Get approved full-day leave requests for this employee.
+    approved_leaves = (
+        db_session.query(LeaveManagement)
+        .filter(
+            LeaveManagement.applied_by == employee.id,
+            LeaveManagement.status == "Approved",
+            LeaveManagement.leave_type == "Full Day Leave",
+            LeaveManagement.from_date <= end_date,
+            LeaveManagement.to_date >= start_date,
+        )
+        .all()
+    )
+
+    # Build a set of dates covered by approved leave.
+    approved_leave_dates = set()
+
+    for leave in approved_leaves:
+        effective_start = max(leave.from_date, start_date)
+        effective_end = min(leave.to_date, end_date)
+
+        if effective_start > effective_end:
+            continue
+
+        approved_leave_dates.update(
+            _get_eligible_working_days(
+                db_session=db_session,
+                employee_id=employee.id,
+                start_date=effective_start,
+                end_date=effective_end,
+            )
+        )
+
+    # Exclude approved leave dates to avoid double deductions.
+    return [
+        absence_date
+        for absence_date in candidate_days
+        if absence_date not in approved_leave_dates
+    ]
+
 def _get_leave_balance(
     db_session: Session,
     employee: Employee,
@@ -523,16 +588,22 @@ def _get_leave_balance(
     """
     Available paid leave =
         accrued entitlement
-        - approved Full Day Leave days already elapsed.
+        - elapsed approved full-day leave
+        - eligible unexplained absences.
 
     Pending, rejected, and cancelled requests do not reduce
-    available leave. Attendance absences alone do not consume
-    paid leave. Unused entitlement carries forward.
+    the available balance.
+
+    Active holidays and approved leave dates are excluded
+    from unexplained absences.
     """
 
     today = date.today()
 
-    joining_date = _get_joining_date(db_session, employee)
+    joining_date = _get_joining_date(
+        db_session,
+        employee,
+    )
 
     accrued = _get_monthly_entitlement(
         db_session,
@@ -540,13 +611,16 @@ def _get_leave_balance(
         today,
     )
 
-    # Count only approved leave requests. Do not deduct pending,
-    # rejected, or cancelled requests.
+    # ---------------------------------------------------------
+    # 1. Count approved full-day leave already elapsed
+    # ---------------------------------------------------------
+
     approved_requests = (
         db_session.query(LeaveManagement)
         .filter(
             LeaveManagement.applied_by == employee.id,
             LeaveManagement.status == "Approved",
+            LeaveManagement.leave_type == "Full Day Leave",
         )
         .all()
     )
@@ -554,73 +628,110 @@ def _get_leave_balance(
     approved_days = 0
 
     for leave in approved_requests:
+
         if (
             exclude_leave_id is not None
             and leave.id == exclude_leave_id
         ):
             continue
 
-        # Do not deduct leave dates that precede employment.
         effective_start_date = max(
             leave.from_date,
             joining_date,
         )
 
-        if effective_start_date > today:
+        effective_end_date = min(
+            leave.to_date,
+            today,
+        )
+
+        if effective_start_date > effective_end_date:
             continue
 
-        # _count_leave_days clips the end date to today.
-        # Use a temporary date range for any leave beginning
-        # before the employee's joining date.
-        if effective_start_date == leave.from_date:
-            approved_days += _count_leave_days(
-                db_session,
-                employee.id,
-                leave,
-                today,
+        approved_days += len(
+            _get_eligible_working_days(
+                db_session=db_session,
+                employee_id=employee.id,
+                start_date=effective_start_date,
+                end_date=effective_end_date,
             )
-        elif leave.leave_type == "Full Day Leave":
-            effective_end_date = min(leave.to_date, today)
+        )
 
-            if effective_start_date <= effective_end_date:
-                approved_days += len(
-                    _get_eligible_working_days(
-                        db_session,
-                        employee.id,
-                        effective_start_date,
-                        effective_end_date,
-                    )
-                )
+    # ---------------------------------------------------------
+    # 2. Identify unexplained absences
+    # ---------------------------------------------------------
 
-    # Pending days are returned for display only.
+    absence_dates = _get_unexplained_absence_days(
+        db_session=db_session,
+        employee=employee,
+        joining_date=joining_date,
+        as_of=today,
+    )
+
+    absence_days = len(absence_dates)
+
+    # ---------------------------------------------------------
+    # 3. Pending leave days: display only
+    # ---------------------------------------------------------
+
     pending_requests = (
         db_session.query(LeaveManagement)
         .filter(
             LeaveManagement.applied_by == employee.id,
             LeaveManagement.status == "Pending",
+            LeaveManagement.leave_type == "Full Day Leave",
         )
         .all()
     )
 
-    pending_days = sum(
-        _count_leave_days(
-            db_session,
-            employee.id,
-            leave,
-        )
-        for leave in pending_requests
-    )
+    pending_days = 0
 
-    available = max(0, accrued - approved_days)
+    for leave in pending_requests:
+
+        effective_start_date = max(
+            leave.from_date,
+            joining_date,
+        )
+
+        effective_end_date = min(
+            leave.to_date,
+            today,
+        )
+
+        if effective_start_date > effective_end_date:
+            continue
+
+        pending_days += len(
+            _get_eligible_working_days(
+                db_session=db_session,
+                employee_id=employee.id,
+                start_date=effective_start_date,
+                end_date=effective_end_date,
+            )
+        )
+
+    # ---------------------------------------------------------
+    # 4. Calculate available balance
+    # ---------------------------------------------------------
+
+    available = max(
+        0,
+        accrued - approved_days - absence_days,
+    )
 
     return {
         "accrued": accrued,
         "approved_days": approved_days,
+        "absence_days": absence_days,
+        "absence_dates": [
+            absence_date.isoformat()
+            for absence_date in absence_dates
+        ],
         "pending_days": pending_days,
         "available": available,
     }
 
-
+    
 def _validate_leave_request(
     db_session: Session,
     employee: Employee,

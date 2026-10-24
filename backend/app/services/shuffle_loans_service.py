@@ -1251,7 +1251,11 @@ class ShuffleLoansService:
 
         if not application:
             raise ValueError("Application was not found.")
-
+        # Check whether an agent is already assigned.
+        if application.agent_context_id is not None:
+            raise ValueError(
+                "An agent is already assigned to this application."
+            )
         # Verify that the employee is authorized to access this application.
         authorized = ShuffleLoansService._apply_access_scope(
             query=db.query(LoanApplication).filter(
@@ -1277,7 +1281,7 @@ class ShuffleLoansService:
         )
 
         eligible_agents = eligible_result["agents"]
-
+        # print(eligible_agents,"980980980808080809999999999999999999999999")
         if not eligible_agents:
             raise ValueError(
                 "No eligible agents are available for this loan type."

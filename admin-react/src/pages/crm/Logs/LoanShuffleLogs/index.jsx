@@ -1092,50 +1092,7 @@ function LoanShuffleLogs() {
                         </button>
 
 
-                        {/* PAGE NUMBERS */}
-
-                        {Array.from(
-                            {
-                                length:
-                                    totalPages,
-                            },
-                            (_, index) =>
-                                index + 1
-                        ).map(
-                            (page) => (
-
-                                <button
-                                    key={page}
-                                    type="button"
-                                    onClick={() =>
-                                        handlePageChange(
-                                            page
-                                        )
-                                    }
-                                    className={`
-                                        btn
-                                        btn-sm
-                                        ${safeCurrentPage ===
-                                            page
-                                            ? `
-                                                    border-[#8BCF00]
-                                                    bg-[#8BCF00]
-                                                    text-white
-                                                    hover:border-[#6FA800]
-                                                    hover:bg-[#6FA800]
-                                                `
-                                            : `
-                                                    btn-ghost
-                                                `
-                                        }
-                                    `}
-                                >
-                                    {page}
-                                </button>
-
-                            )
-                        )}
-
+                        
 
                         {/* NEXT */}
 

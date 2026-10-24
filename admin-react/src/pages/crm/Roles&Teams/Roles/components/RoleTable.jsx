@@ -5,6 +5,11 @@ import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 import PencilIcon from '@heroicons/react/24/outline/PencilIcon'
 import TrashIcon from '@heroicons/react/24/outline/TrashIcon'
+import {PERMISSIONS,hasPermission,} from '../../../../../app/permissions';
+
+const canCreateRole = hasPermission(PERMISSIONS.ROLES_CREATE);
+const canEditRole = hasPermission(PERMISSIONS.ROLES_EDIT);
+const canDeleteRole = hasPermission(PERMISSIONS.ROLES_DELETE);
 
 
 function RoleTable({
@@ -200,7 +205,7 @@ function RoleTable({
                         <button
                             type="button"
                             onClick={onCreate}
-                            disabled={loading}
+                            disabled={loading || !canCreateRole}
                             className="
                                 btn
                                 border-[#8BCF00]
@@ -587,7 +592,7 @@ function RoleTable({
                                                         }
                                                         disabled={
                                                             deletingId ===
-                                                            role.id
+                                                            role.id || !canEditRole
                                                         }
                                                         className="
                                                             btn
@@ -620,7 +625,7 @@ function RoleTable({
                                                         }
                                                         disabled={
                                                             deletingId ===
-                                                            role.id
+                                                            role.id || !canDeleteRole
                                                         }
                                                         className="
                                                             btn
