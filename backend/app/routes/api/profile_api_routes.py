@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.api_security import get_current_api_employee
 from app.core.log_config import logger
 from app.config.database import get_db
 from app.controllers.api.profile_controller import get_employee_profile
+from app.models import Employee
 from app.schemas.api.profile.profile_schema import ProfileResponse
 
 router = APIRouter(
@@ -16,7 +18,8 @@ router = APIRouter(
             , response_model=ProfileResponse)
 def get_employee_profile_route(
     employee_id: int,
-    db: Session = Depends(get_db)
+    employee: Employee = Depends(get_current_api_employee),
+    db: Session = Depends(get_db),
 ):
 
     try :
