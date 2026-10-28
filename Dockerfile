@@ -16,7 +16,7 @@ ENV PYTHONUNBUFFERED=1
 
 COPY backend/requirements.txt ./requirements.txt
 
-RUN pip install --no-cache-dir --default-timeout=300 --retries=10 -r requirements.txt
+RUN pip install --no-cache-dir --retries=3 -r requirements.txt
 
 COPY backend/app/ ./app/
 
@@ -28,6 +28,6 @@ RUN useradd --create-home appuser \
 
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8001
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
