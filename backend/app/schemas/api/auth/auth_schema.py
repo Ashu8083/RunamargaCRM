@@ -81,13 +81,9 @@ class EmployeeIdentifyResponse(BaseModel):
 
 class EmployeeContextResponse(BaseModel):
 
-    id: int
     name: str
-    context_id: int | None = None
     employee_context_id: int | None = None
     code: str | None = None
-    is_default: bool = False
-
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -141,6 +137,11 @@ class FaceLoginResponse(BaseModel):
     matched_capture_type: str | None = None
 
     face_similarity: float | None = None
+
+    office_latitude: float | None = 13.046920
+    office_longitude: float | None = 77.512945
+
+    office_radius_meters: float | None = 50
 
 
 # ========================================================================
