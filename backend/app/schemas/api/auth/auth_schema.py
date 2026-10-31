@@ -138,6 +138,11 @@ class FaceLoginResponse(BaseModel):
 
     face_similarity: float | None = None
 
+    work_mode: str | None = Field(
+        default=None,
+        description="Today's work mode for the employee: 'WFH' or 'Office'. Null if no attendance record today.",
+    )
+
     office_latitude: float | None = 13.046920
     office_longitude: float | None = 77.512945
 

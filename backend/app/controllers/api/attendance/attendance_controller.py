@@ -1,14 +1,17 @@
 # backend/app/controllers/api/attendance/attendance_controller.py
 
+from datetime import date
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.models.employees import Employee
 from app.schemas.api.attendance.attendance_schema import (
     AttendanceActionRequest,
+    AttendanceHistoryPaginationResponse,
     AttendanceResponse,
 )
 from app.services.api.attendance.attendance_service import (
+    get_attendance_history,
     punch_in,
     punch_out,
     lunch_out,
@@ -171,3 +174,38 @@ async def lunch_in_controller(
     )
 
     return AttendanceResponse(**result)
+
+
+async def get_attendance_history_controller(
+    db: Session,
+    employee: Employee,
+    month: int | None = None,
+    year: int | None = None,
+    page: int = 1,
+    limit: int = 10,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    status: str | None = None,
+    work_mode: str | None = None,
+) -> AttendanceHistoryPaginationResponse:
+    """
+    Controller for employee attendance history.
+
+    - Authenticated employee fetches their own attendance history (ID from JWT token).
+    - Admin use: call get_attendance_history() service directly with any employee_id.
+    """
+
+    result = get_attendance_history(
+        db=db,
+        employee_id=employee.id,
+        month=month,
+        year=year,
+        page=page,
+        limit=limit,
+        start_date=start_date,
+        end_date=end_date,
+        status=status,
+        work_mode=work_mode,
+    )
+
+    return AttendanceHistoryPaginationResponse(**result)

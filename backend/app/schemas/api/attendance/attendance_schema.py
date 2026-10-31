@@ -57,3 +57,74 @@ class AttendanceResponse(BaseModel):
     face_similarity: float | None = None
 
     matched_capture_type: str | None = None
+
+
+# ------------------------------------------------------------------------
+# ATTENDANCE HISTORY SCHEMAS
+# ------------------------------------------------------------------------
+
+class AttendanceHistoryRecord(BaseModel):
+    """
+    Formatted attendance history record for an employee.
+    """
+
+    id: int
+
+    employee_id: int
+
+    date: date
+
+    work_mode: str = Field(
+        description="Work mode: 'WFH' or 'Office'",
+    )
+
+    checkIn: str | None = Field(
+        default=None,
+        description="Punch in time (e.g. '11:46 AM')",
+    )
+
+    checkOut: str | None = Field(
+        default=None,
+        description="Punch out time (e.g. '06:00 PM')",
+    )
+
+    lunchIn: str | None = Field(
+        default=None,
+        description="Lunch in time (e.g. '01:45 PM')",
+    )
+
+    lunchOut: str | None = Field(
+        default=None,
+        description="Lunch out time (e.g. '01:00 PM')",
+    )
+
+    checkInImage: str | None = Field(
+        default=None,
+        description="Check-in image URL (e.g. '/uploads/attendance/...')",
+    )
+
+    checkOutImage: str | None = Field(
+        default=None,
+        description="Check-out image URL (e.g. '/uploads/attendance/...')",
+    )
+
+
+
+class AttendanceHistoryPaginationResponse(BaseModel):
+    """
+    Paginated response for attendance history.
+    """
+
+    total: int
+
+    page: int
+
+    limit: int
+
+    total_pages: int
+
+    month: int | None = None
+
+    year: int
+
+    data: list[AttendanceHistoryRecord]

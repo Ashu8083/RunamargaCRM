@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models import phone_numbers, PhoneNumber, EmployeeContext, Context
 from app.models.employees import Employee
+from app.models.attendance import Attendance
 from app.core.log_config import logger
 from app.models.employee_face_profiles import EmployeeFaceProfile
 from app.models.auth_tokens import AuthToken
@@ -1621,6 +1622,13 @@ def face_login(
         f"employee_context_id={employee_context_id}, context_name={context_name}, "
         f"contexts_count={len(contexts_list)}"
     )
+
+    # --------------------------------------------------------------------
+    # Resolve work mode from employee status
+    # --------------------------------------------------------------------
+    work_mode = "WFH" if employee.status == "WFH" else "Office"
+
+
     return {
         "message": "Face login successful",
         "employee_id": employee.id,
@@ -1640,6 +1648,7 @@ def face_login(
         "face_similarity": face_result.get(
             "similarity"
         ),
+        "work_mode": work_mode,
     }
 
 

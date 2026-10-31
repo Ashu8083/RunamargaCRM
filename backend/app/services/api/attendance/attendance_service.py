@@ -1,6 +1,8 @@
 # backend/app/services/api/attendance/attendance_service.py
 
-from datetime import date, datetime
+import calendar
+from datetime import date, datetime, timedelta
+from math import ceil
 from pathlib import Path
 
 import cv2
@@ -1907,3 +1909,203 @@ def lunch_in(
         attendance=attendance,
         message="Lunch in successful.",
     )
+
+
+# ------------------------------------------------------------------------
+# ATTENDANCE HISTORY
+# ------------------------------------------------------------------------
+
+def format_image_url(image_path: str | None) -> str | None:
+    """
+    Format image path to a client-accessible URL path.
+    """
+    if not image_path:
+        return None
+    image_str = str(image_path).strip()
+    if not image_str:
+        return None
+    if image_str.startswith("http://") or image_str.startswith("https://"):
+        return image_str
+    if not image_str.startswith("/"):
+        return f"/{image_str}"
+    return image_str
+
+
+def format_event_time(dt: datetime | None) -> str | None:
+    """
+    Format a datetime object to 12-hour format (e.g., '09:30 AM').
+    """
+    if not dt:
+        return None
+    return dt.strftime("%I:%M %p")
+
+
+def calculate_working_hours(
+    check_in: datetime | None,
+    check_out: datetime | None,
+    lunch_out: datetime | None = None,
+    lunch_in: datetime | None = None,
+) -> str | None:
+    """
+    Calculate working hours formatted as 'Xh Ym'.
+    Deducts lunch break if both lunch_out and lunch_in are present.
+    """
+    if not check_in or not check_out:
+        return None
+
+    if check_out <= check_in:
+        return "0h 0m"
+
+    gross_duration = check_out - check_in
+    lunch_duration = timedelta(0)
+
+    if lunch_out and lunch_in and lunch_in > lunch_out:
+        lunch_duration = lunch_in - lunch_out
+
+    effective_duration = max(gross_duration - lunch_duration, timedelta(0))
+    total_seconds = int(effective_duration.total_seconds())
+
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+
+    return f"{hours}h {minutes}m"
+
+
+def get_attendance_history(
+    db: Session,
+    employee_id: int,
+    month: int | None = None,
+    year: int | None = None,
+    page: int = 1,
+    limit: int = 10,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    status: str | None = None,
+    work_mode: str | None = None,
+) -> dict:
+    """
+    Fetch paginated attendance history for an employee.
+
+    - If neither month nor year is provided, defaults to the current month and year.
+    - If month is provided without year, year defaults to current year.
+    - If year is provided without month, records for the entire year are fetched.
+    - If both month and year are provided, records for that specific month/year are fetched.
+    """
+    today = date.today()
+
+    if month is None and year is None:
+        target_year = today.year
+        target_month = today.month
+    elif month is not None and year is None:
+        target_year = today.year
+        target_month = month
+    elif month is not None and year is not None:
+        target_year = year
+        target_month = month
+    else:  # year is not None, month is None
+        target_year = year
+        target_month = None
+
+    if target_month is not None:
+        if target_month < 1 or target_month > 12:
+            raise HTTPException(
+                status_code=400,
+                detail="Month must be between 1 and 12.",
+            )
+        _, last_day = calendar.monthrange(target_year, target_month)
+        filter_start_date = date(target_year, target_month, 1)
+        filter_end_date = date(target_year, target_month, last_day)
+    else:
+        filter_start_date = date(target_year, 1, 1)
+        filter_end_date = date(target_year, 12, 31)
+
+    if start_date is not None:
+        filter_start_date = max(filter_start_date, start_date)
+
+    if end_date is not None:
+        filter_end_date = min(filter_end_date, end_date)
+
+    if filter_start_date > filter_end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Start date cannot be greater than end date.",
+        )
+
+    if page < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Page must be greater than or equal to 1.",
+        )
+
+    if limit < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Limit must be greater than or equal to 1.",
+        )
+
+    query = db.query(Attendance).filter(
+        Attendance.employee_id == employee_id,
+        Attendance.deleted_at.is_(None),
+        Attendance.date >= filter_start_date,
+        Attendance.date <= filter_end_date,
+    )
+
+    if work_mode:
+        normalized_mode = work_mode.strip().upper()
+        if normalized_mode in ["WFH", "WORK FROM HOME"]:
+            query = query.filter(Attendance.is_wfh.is_(True))
+        elif normalized_mode in ["OFFICE", "WFO", "WORK FROM OFFICE"]:
+            query = query.filter(Attendance.is_wfh.is_(False))
+
+    if status:
+        normalized_status = status.strip().lower()
+        if normalized_status == "present":
+            query = query.filter(Attendance.check_in.isnot(None))
+        elif normalized_status == "absent":
+            query = query.filter(Attendance.check_in.is_(None))
+
+    total = query.count()
+    total_pages = ceil(total / limit) if total > 0 else 0
+    offset = (page - 1) * limit
+
+    records = (
+        query.order_by(Attendance.date.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    data = []
+    for attendance in records:
+        resolved_work_mode = "WFH" if attendance.is_wfh else "Office"
+        check_in_time = format_event_time(attendance.check_in)
+        lunch_out_time = format_event_time(attendance.lunch_out)
+        lunch_in_time = format_event_time(attendance.lunch_in)
+        check_out_time = format_event_time(attendance.check_out)
+
+        check_in_img = format_image_url(attendance.check_in_image)
+        check_out_img = format_image_url(attendance.check_out_image)
+        data.append(
+            {
+                "id": attendance.id,
+                "employee_id": attendance.employee_id,
+                "date": attendance.date,
+                "work_mode": resolved_work_mode,
+                "checkIn": check_in_time,
+                "checkOut": check_out_time,
+                "lunchIn": lunch_in_time,
+                "lunchOut": lunch_out_time,
+                "checkInImage": check_in_img,
+                "checkOutImage": check_out_img,
+            }
+        )
+
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages,
+        "month": target_month,
+        "year": target_year,
+        "data": data,
+    }

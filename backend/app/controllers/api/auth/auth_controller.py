@@ -384,6 +384,9 @@ async def face_login_controller(
         face_similarity=result.get(
             "face_similarity"
         ),
+        work_mode=result.get(
+            "work_mode"
+        ),
     )
 
 

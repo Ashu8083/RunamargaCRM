@@ -1,11 +1,14 @@
 # backend/app/routes/api/attendance/attendance_routes.py
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from datetime import date
+
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.core.api_security import get_current_api_employee
 from app.controllers.api.attendance.attendance_controller import (
+    get_attendance_history_controller,
     lunch_in_controller,
     lunch_out_controller,
     punch_in_controller,
@@ -14,6 +17,7 @@ from app.controllers.api.attendance.attendance_controller import (
 from app.models.employees import Employee
 from app.schemas.api.attendance.attendance_schema import (
     AttendanceActionRequest,
+    AttendanceHistoryPaginationResponse,
     AttendanceResponse,
 )
 
@@ -171,4 +175,81 @@ async def lunch_in(
         db=db,
         employee=employee,
         attendance_data=attendance_data,
+    )
+
+
+# ------------------------------------------------------------------------
+# ATTENDANCE HISTORY
+# ------------------------------------------------------------------------
+
+@router.get(
+    "/history",
+    response_model=AttendanceHistoryPaginationResponse,
+
+)
+async def get_attendance_history(
+    month: int | None = Query(
+        default=None,
+        ge=1,
+        le=12,
+        description="Month (1-12). Defaults to current month if omitted.",
+    ),
+    year: int | None = Query(
+        default=None,
+        ge=2000,
+        le=2100,
+        description="Year (e.g. 2026). Defaults to current year.",
+    ),
+    page: int = Query(
+        default=1,
+        ge=1,
+        description="Page number (1-indexed).",
+    ),
+    limit: int = Query(
+        default=10,
+        ge=1,
+        le=100,
+        description="Number of records per page.",
+    ),
+    start_date: date | None = Query(
+        default=None,
+        description="Optional start date filter (YYYY-MM-DD).",
+    ),
+    end_date: date | None = Query(
+        default=None,
+        description="Optional end date filter (YYYY-MM-DD).",
+    ),
+    status: str | None = Query(
+        default=None,
+        description="Filter by attendance status ('Present' or 'Absent').",
+    ),
+    work_mode: str | None = Query(
+        default=None,
+        description="Filter by work mode ('WFH' or 'Office').",
+    ),
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(get_current_api_employee),
+):
+    """
+    Fetch paginated attendance history for the employee.
+
+    - By default, fetches attendance for the current month and year.
+    - If user specifies 'month', fetches for that month of the current year.
+    - If user specifies 'month' and 'year', fetches for that month and year.
+    - Returns each event's datetime (check_in, lunch_out, lunch_in, check_out),
+      events list with status and formatted time, work mode (WFH / Office, is_wfh),
+      working hours, and pagination metadata.
+    """
+
+    return await get_attendance_history_controller(
+        db=db,
+        employee=employee,
+        month=month,
+        year=year,
+        page=page,
+        limit=limit,
+        start_date=start_date,
+        end_date=end_date,
+        status=status,
+        work_mode=work_mode,
     )
