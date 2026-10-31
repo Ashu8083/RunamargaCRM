@@ -28,6 +28,10 @@ from app.services.face.face_validation import (
     validate_face_brightness,
 )
 from app.utils.geo import haversine_distance
+from app.utils.face_storage_upload_impl import LocalFileService
+
+# Singleton file service – delegates image storage to LocalFileService
+_file_service = LocalFileService(static_dir=Path(__file__).resolve().parents[4] / "app" / "static")
 
 
 # Project root:
@@ -903,42 +907,45 @@ def get_attendance_image_directory(
     attendance_date: date | None = None,
 ) -> Path:
     """
-    Return the directory where the attendance image
-    for the specified action/date must be stored.
+    Return the directory where the attendance image for the specified action/date must be stored.
 
-    Structure:
+    New Structure (date first, then mode):
 
         app/static/
             uploads/
                 attendance/
-                    punch in/
-                        YYYY-MM-DD/
+                    YYYY-MM-DD/
+                        punch in/
+                        punch out/
 
-                    punch out/
-                        YYYY-MM-DD/
-
-    The action folder and date folder are created
-    automatically if they do not exist.
+    The date folder is created first, then the appropriate action sub‑folder.
     """
 
+    # Ensure we have a date (defaults to today)
+    if attendance_date is None:
+        attendance_date = date.today()
+
+    # Base directory under static/uploads/attendance
+    base_dir = STATIC_DIRECTORY / "uploads" / "attendance"
+
+    # Date directory (YYYY‑MM‑DD)
+    date_dir = base_dir / attendance_date.isoformat()
+
+    # Determine the action sub‑folder name
     if action == "punch_in":
-
-        action_directory_name = (
-            PUNCH_IN_DIRECTORY_NAME
-        )
-
+        action_dir = PUNCH_IN_DIRECTORY_NAME
     elif action == "punch_out":
-
-        action_directory_name = (
-            PUNCH_OUT_DIRECTORY_NAME
-        )
-
+        action_dir = PUNCH_OUT_DIRECTORY_NAME
     else:
-
         raise HTTPException(
             status_code=500,
             detail="Invalid attendance image action.",
         )
+
+    # Full path: .../attendance/YYYY‑MM‑DD/<action>/
+    full_path = date_dir / action_dir
+    full_path.mkdir(parents=True, exist_ok=True)
+    return full_path
 
     if attendance_date is None:
 
@@ -986,138 +993,100 @@ def save_attendance_image(
     attendance_date: date | None = None,
 ) -> str:
     """
-    Decode and re-encode the attendance image as JPEG.
+    Save an attendance image using LocalFileService.
 
-    Physical storage structure:
+    Physical storage structure (date-first, then mode):
 
-        backend/app/static/uploads/attendance/
-            punch in/YYYY-MM-DD/employee_id_employee_name.jpg
-            punch out/YYYY-MM-DD/employee_id_employee_name.jpg
-
-    Database path:
-
-        uploads/attendance/punch in/YYYY-MM-DD/employee_id_employee_name.jpg
-
-    IMPORTANT:
-        The returned path is relative to STATIC_DIRECTORY,
-        NOT PROJECT_ROOT.
+        backend/app/static/
+            uploads/
+                attendance/
+                    YYYY-MM-DD/
+                        punch in/
+                            {employee_code}_{employee_name}.jpg
+                        punch out/
+                            {employee_code}_{employee_name}.jpg
 
     Returns:
-        Relative path stored in attendance table.
+        Path relative to static dir — stored in the DB.
+        Example: uploads/attendance/2026-10-31/punch in/EMP001_John_Doe.jpg
     """
 
     if not image_bytes:
-
         raise HTTPException(
             status_code=400,
             detail="Attendance image cannot be empty.",
         )
 
     # ------------------------------------------------------------
-    # Decode image
+    # Decode and re-encode image as JPEG (quality 90)
     # ------------------------------------------------------------
 
-    image = decode_image(
-        image_bytes
-    )
-
-    # ------------------------------------------------------------
-    # Determine date
-    # ------------------------------------------------------------
-
-    if attendance_date is None:
-
-        attendance_date = date.today()
-
-    # ------------------------------------------------------------
-    # Create action/date directory
-    # ------------------------------------------------------------
-
-    date_directory = (
-        get_attendance_image_directory(
-            action=action,
-            attendance_date=attendance_date,
-        )
-    )
-
-    # ------------------------------------------------------------
-    # Build employee filename
-    # ------------------------------------------------------------
-
-    filename = build_employee_image_filename(
-        employee
-    )
-
-    file_path = (
-        date_directory
-        / filename
-    )
-
-    # ------------------------------------------------------------
-    # Encode as JPEG
-    # ------------------------------------------------------------
+    image = decode_image(image_bytes)
 
     try:
-
         success, encoded_image = cv2.imencode(
             ".jpg",
             image,
-            [
-                int(cv2.IMWRITE_JPEG_QUALITY),
-                90,
-            ],
+            [int(cv2.IMWRITE_JPEG_QUALITY), 90],
         )
-
         if not success:
-
-            raise OSError(
-                "JPEG encoding failed."
-            )
-
-        file_path.write_bytes(
-            encoded_image.tobytes()
-        )
+            raise OSError("JPEG encoding failed.")
+        jpeg_bytes = encoded_image.tobytes()
 
     except OSError:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to encode attendance image.",
+        )
 
+    # ------------------------------------------------------------
+    # Resolve captured_at datetime from attendance_date
+    # ------------------------------------------------------------
+
+    if attendance_date is None:
+        attendance_date = date.today()
+
+    captured_at = datetime.combine(attendance_date, datetime.min.time())
+
+    # ------------------------------------------------------------
+    # Resolve employee code and name for the filename
+    # ------------------------------------------------------------
+
+    employee_code = getattr(employee, "employee_code", None) or str(employee.id)
+    employee_name = (
+        getattr(employee, "name", None)
+        or " ".join(
+            part for part in [
+                getattr(employee, "first_name", None),
+                getattr(employee, "last_name", None),
+            ]
+            if part
+        )
+        or "employee"
+    )
+
+    # ------------------------------------------------------------
+    # Delegate to LocalFileService (abstract class implementation)
+    # ------------------------------------------------------------
+
+    try:
+        relative_path = _file_service.save_attendance_image(
+            employee_id=employee.id,
+            attendance_id=0,          # not known at save time; ID is in filename via code
+            action=action,
+            captured_at=captured_at,
+            image_bytes=jpeg_bytes,
+            extension="jpg",
+            employee_code=employee_code,
+            employee_name=employee_name,
+        )
+    except Exception:
         raise HTTPException(
             status_code=500,
             detail="Failed to save attendance image.",
         )
 
-    # ------------------------------------------------------------
-    # Return path relative to STATIC_DIRECTORY
-    # ------------------------------------------------------------
-    #
-    # Physical path:
-    #
-    # backend/app/static/uploads/attendance/punch in/...
-    #
-    # Returned database path:
-    #
-    # uploads/attendance/punch in/...
-    #
-    # This prevents "static/" from being stored in the database.
-
-    try:
-
-        relative_path = file_path.relative_to(
-            STATIC_DIRECTORY
-        )
-
-    except ValueError:
-
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to generate attendance image path.",
-        )
-
-    return str(
-        relative_path
-    ).replace(
-        "\\",
-        "/",
-    )
+    return relative_path.replace("\\", "/")
 
 
 # ------------------------------------------------------------------------
