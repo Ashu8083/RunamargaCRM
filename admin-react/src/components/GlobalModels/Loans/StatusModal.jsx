@@ -1,10 +1,20 @@
-// admin-react/src/pages/Loans/AgentApplications/components/StatusModal.jsx
+
+ // admin-react/src/pages/Loans/AgentApplications/components/StatusModal.jsx
 
 import { useEffect, useState } from 'react'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
 
+const rejectionReasons = [
+    'CIBIL/ OD issues',
+    'Legal Documents Issue',
+    'Less Income',
+    'Not Serviceable Location',
+    'Temple/Lake/HighTension/Railway Track area etc',
+    'Single applicant',
+    'Other Reason',
+]
 
 function StatusModal({
     open,
@@ -18,12 +28,14 @@ function StatusModal({
     const [rejectionReason, setRejectionReason] =
         useState('')
 
+    const [isOtherReason, setIsOtherReason] =
+        useState(false)
+
     const [revertRejectionReason, setRevertRejectionReason] =
         useState('')
 
     const [revertRejectionDate, setRevertRejectionDate] =
         useState('')
-
 
     // =========================================================
     // LOAD APPLICATION
@@ -35,31 +47,36 @@ function StatusModal({
 
             setStatus('')
             setRejectionReason('')
+            setIsOtherReason(false)
             setRevertRejectionReason('')
             setRevertRejectionDate('')
 
             return
         }
 
-
         setStatus(
             application.status || ''
         )
 
-
-        setRejectionReason(
+        const existingRejectionReason =
             application.rejectionReason ||
             application.rejection_reason ||
             ''
-        )
 
+        setRejectionReason(existingRejectionReason)
+
+        setIsOtherReason(
+            Boolean(existingRejectionReason) &&
+            !rejectionReasons
+                .slice(0, -1)
+                .includes(existingRejectionReason)
+        )
 
         setRevertRejectionReason(
             application.revertRejectedReason ||
             application.revert_rejected_reason ||
             ''
         )
-
 
         setRevertRejectionDate(
             application.revertRejectedDate
@@ -74,7 +91,6 @@ function StatusModal({
         )
 
     }, [open, application])
-
 
     // =========================================================
     // STATUS OPTIONS
@@ -116,14 +132,11 @@ function StatusModal({
 
     ]
 
-
     const requiresRejectionReason =
         status === 'Rejected'
 
-
     const requiresRevertReason =
         status === 'Revert Rejected'
-
 
     // =========================================================
     // STATUS CHANGE
@@ -133,7 +146,6 @@ function StatusModal({
 
         setStatus(value)
 
-
         /*
          * Rejection reason belongs only to
          * Rejected status.
@@ -142,9 +154,9 @@ function StatusModal({
         if (value !== 'Rejected') {
 
             setRejectionReason('')
+            setIsOtherReason(false)
 
         }
-
 
         /*
          * Revert rejection fields belong only
@@ -160,6 +172,35 @@ function StatusModal({
 
     }
 
+    // =========================================================
+    // REJECTION REASON CHANGE
+    // =========================================================
+
+    const handleRejectionReasonChange = (value) => {
+
+        if (value === 'Other Reason') {
+
+            setIsOtherReason(true)
+            setRejectionReason('')
+
+            return
+        }
+
+        setIsOtherReason(false)
+        setRejectionReason(value)
+
+    }
+
+    // =========================================================
+    // BACK TO REJECTION DROPDOWN
+    // =========================================================
+
+    const handleBackToReasons = () => {
+
+        setIsOtherReason(false)
+        setRejectionReason('')
+
+    }
 
     // =========================================================
     // SUBMIT
@@ -169,11 +210,9 @@ function StatusModal({
 
         event.preventDefault()
 
-
         if (!status) {
             return
         }
-
 
         /*
          * REJECTED
@@ -185,7 +224,6 @@ function StatusModal({
         ) {
             return
         }
-
 
         /*
          * REVERT REJECTED
@@ -200,7 +238,6 @@ function StatusModal({
         ) {
             return
         }
-
 
         /*
          * Nothing changed.
@@ -218,23 +255,21 @@ function StatusModal({
 
         }
 
-
         onSubmit?.({
 
             ...application,
 
             status,
 
-
             /*
              * Rejection information
+             * Same field name as original.
              */
 
             rejectionReason:
                 status === 'Rejected'
                     ? rejectionReason.trim()
                     : '',
-
 
             /*
              * Revert rejection information
@@ -254,7 +289,6 @@ function StatusModal({
 
     }
 
-
     // =========================================================
     // MODAL
     // =========================================================
@@ -262,7 +296,6 @@ function StatusModal({
     if (!open || !application) {
         return null
     }
-
 
     return (
 
@@ -318,7 +351,6 @@ function StatusModal({
 
                         </div>
 
-
                         <div>
 
                             <h3 className="
@@ -327,7 +359,6 @@ function StatusModal({
                             ">
                                 Update Application Status
                             </h3>
-
 
                             <p className="
                                 text-xs
@@ -340,7 +371,6 @@ function StatusModal({
                         </div>
 
                     </div>
-
 
                     <button
                         type="button"
@@ -355,14 +385,12 @@ function StatusModal({
                     >
 
                         <XMarkIcon className="
-                            w-5
-                            h-5
+                            w-5 h-5
                         " />
 
                     </button>
 
                 </div>
-
 
                 {/* =================================================
                     FORM
@@ -386,7 +414,6 @@ function StatusModal({
                                 Assigned Agent
                             </p>
 
-
                             <p className="
                                 text-sm
                                 font-semibold
@@ -401,7 +428,6 @@ function StatusModal({
 
                         </div>
 
-
                         {/* CURRENT STATUS */}
 
                         <div>
@@ -413,7 +439,6 @@ function StatusModal({
                             ">
                                 Current Status
                             </p>
-
 
                             <span className="
                                 inline-flex
@@ -435,7 +460,6 @@ function StatusModal({
 
                         </div>
 
-
                         {/* SELECT NEW STATUS */}
 
                         <div>
@@ -448,7 +472,6 @@ function StatusModal({
                                 Select New Status
                             </p>
 
-
                             <div className="
                                 grid
                                 grid-cols-1
@@ -460,7 +483,6 @@ function StatusModal({
 
                                     const isSelected =
                                         status === item.value
-
 
                                     return (
 
@@ -504,7 +526,6 @@ function StatusModal({
                                                         {item.title}
                                                     </p>
 
-
                                                     <p className="
                                                         text-xs
                                                         text-base-content/60
@@ -514,7 +535,6 @@ function StatusModal({
                                                     </p>
 
                                                 </div>
-
 
                                                 <div className={`
                                                     w-5
@@ -557,9 +577,9 @@ function StatusModal({
 
                         </div>
 
-
                         {/* =================================================
                             REJECTION REASON
+                            DROPDOWN + OTHER REASON
                         ================================================= */}
 
                         {requiresRejectionReason && (
@@ -579,7 +599,6 @@ function StatusModal({
                                         Reason for Rejection
                                     </span>
 
-
                                     <span className="
                                         label-text-alt
                                         text-error
@@ -590,40 +609,102 @@ function StatusModal({
 
                                 </label>
 
+                                {!isOtherReason ? (
 
-                                <textarea
-                                    value={rejectionReason}
-                                    onChange={(event) =>
-                                        setRejectionReason(
-                                            event.target.value
-                                        )
-                                    }
-                                    placeholder="Enter the reason for rejecting this application..."
-                                    rows={4}
-                                    className="
-                                        textarea
-                                        textarea-bordered
-                                        w-full
-                                        resize-none
-                                        focus:border-[#8BCF00]
-                                        focus:outline-[#8BCF00]
-                                    "
-                                    autoFocus
-                                />
+                                    /* REJECTION DROPDOWN */
 
+                                    <select
+                                        value={rejectionReason}
+                                        onChange={(event) =>
+                                            handleRejectionReasonChange(
+                                                event.target.value
+                                            )
+                                        }
+                                        className="
+                                            select
+                                            select-bordered
+                                            w-full
+                                            focus:border-[#8BCF00]
+                                            focus:outline-[#8BCF00]
+                                        "
+                                        required
+                                    >
+
+                                        <option value="" disabled>
+                                            Select rejection reason
+                                        </option>
+
+                                        {rejectionReasons.map((reason) => (
+
+                                            <option
+                                                key={reason}
+                                                value={reason}
+                                            >
+                                                {reason}
+                                            </option>
+
+                                        ))}
+
+                                    </select>
+
+                                ) : (
+
+                                    /* OTHER REASON TEXTBOX */
+
+                                    <div className="space-y-3">
+
+                                        <textarea
+                                            value={rejectionReason}
+                                            onChange={(event) =>
+                                                setRejectionReason(
+                                                    event.target.value
+                                                )
+                                            }
+                                            placeholder="Enter other rejection reason..."
+                                            rows={4}
+                                            className="
+                                                textarea
+                                                textarea-bordered
+                                                w-full
+                                                resize-none
+                                                focus:border-[#8BCF00]
+                                                focus:outline-[#8BCF00]
+                                            "
+                                            autoFocus
+                                            required
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={handleBackToReasons}
+                                            className="
+                                                btn
+                                                btn-sm
+                                                btn-ghost
+                                                text-[#78B300]
+                                            "
+                                        >
+                                            ← Back to rejection reasons
+                                        </button>
+
+                                    </div>
+
+                                )}
 
                                 <p className="
                                     text-[11px]
                                     text-base-content/50
                                     mt-1.5
                                 ">
-                                    Please provide a reason before submitting.
+                                    {isOtherReason
+                                        ? 'Please enter a reason before submitting.'
+                                        : 'Please select a rejection reason before submitting.'
+                                    }
                                 </p>
 
                             </div>
 
                         )}
-
 
                         {/* =================================================
                             REVERT REJECTION
@@ -633,7 +714,7 @@ function StatusModal({
 
                             <div className="
                                 space-y-4
-                                rounded-xl  
+                                rounded-xl
                                 border
                                 border-[#8BCF00]/30
                                 bg-[#8BCF00]/5
@@ -660,7 +741,6 @@ function StatusModal({
 
                                 </div>
 
-
                                 {/* REVERT DATE */}
 
                                 <div>
@@ -678,7 +758,6 @@ function StatusModal({
                                             Revert Rejection Date
                                         </span>
 
-
                                         <span className="
                                             label-text-alt
                                             text-error
@@ -689,12 +768,9 @@ function StatusModal({
 
                                     </label>
 
-
                                     <input
                                         type="date"
-                                        value={
-                                            revertRejectionDate
-                                        }
+                                        value={revertRejectionDate}
                                         onChange={(event) =>
                                             setRevertRejectionDate(
                                                 event.target.value
@@ -710,7 +786,6 @@ function StatusModal({
                                     />
 
                                 </div>
-
 
                                 {/* REVERT REASON */}
 
@@ -729,7 +804,6 @@ function StatusModal({
                                             Reason for Revert Rejection
                                         </span>
 
-
                                         <span className="
                                             label-text-alt
                                             text-error
@@ -740,11 +814,8 @@ function StatusModal({
 
                                     </label>
 
-
                                     <textarea
-                                        value={
-                                            revertRejectionReason
-                                        }
+                                        value={revertRejectionReason}
                                         onChange={(event) =>
                                             setRevertRejectionReason(
                                                 event.target.value
@@ -770,7 +841,6 @@ function StatusModal({
 
                     </div>
 
-
                     {/* =================================================
                         FOOTER
                     ================================================= */}
@@ -795,7 +865,6 @@ function StatusModal({
                         >
                             Cancel
                         </button>
-
 
                         <button
                             type="submit"
@@ -840,7 +909,6 @@ function StatusModal({
 
             </div>
 
-
             {/* =================================================
                 BACKDROP
             ================================================= */}
@@ -861,6 +929,5 @@ function StatusModal({
 
     )
 }
-
 
 export default StatusModal
