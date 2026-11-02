@@ -19,7 +19,9 @@ import {
 } from '../API'
 
 import FeedbackModal from '../../../../../components/GlobalModels/FeedbackModal'
+import { PERMISSIONS, hasPermission } from '../../../../../app/permissions'
 
+const canAssign = hasPermission(PERMISSIONS.LOANS_SHUFFLE_ASSIGN)
 
 function ShuffleLoansTable({
     applications = [],
@@ -1337,7 +1339,7 @@ function ShuffleLoansTable({
                             }
                             disabled={
                                 assigning ||
-                                selectedApplicationIds.length === 0
+                                selectedApplicationIds.length === 0 || !canAssign
                             }
                             className="
                                 btn

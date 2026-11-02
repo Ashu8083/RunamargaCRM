@@ -8,6 +8,7 @@ import {
 
 import SearchableFilterDropdown from './SearchableFilterDropdown'
 import { useCommonData } from '../../../context/CommonDataContext'
+import { PERMISSIONS, hasPermission } from '../../../app/permissions'
 
 const RmDropdown = ({
   value = '',
@@ -18,11 +19,7 @@ const RmDropdown = ({
   label = '',
   error = '',
   required = false,
-
-  // Selected RM name when value is not in loaded options
   fallbackLabel = '',
-
-  // Optional Team Lead EmployeeContext ID
   teamLeadContextId = null,
 }) => {
   const {
@@ -34,10 +31,12 @@ const RmDropdown = ({
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState('')
 
-  // =========================================================
-  // LOAD RMS FROM SHARED DATA PROVIDER
-  // =========================================================
+  // Check RM view permission
+  const canSelectRM = hasPermission(
+    PERMISSIONS.RM_VIEW
+  )
 
+  // Load RMs from the shared data provider
   useEffect(() => {
     let isMounted = true
 
@@ -52,9 +51,7 @@ const RmDropdown = ({
       setFetchError('')
 
       try {
-        const data = await getRms(
-          teamLeadContextId
-        )
+        const data = await getRms(teamLeadContextId)
 
         if (!isMounted) return
 
@@ -62,15 +59,10 @@ const RmDropdown = ({
       } catch (error) {
         if (!isMounted) return
 
-        console.error(
-          'Failed to load RMs:',
-          error
-        )
+        console.error('Failed to load RMs:', error)
 
         setRms([])
-        setFetchError(
-          'Unable to load RMs.'
-        )
+        setFetchError('Unable to load RMs.')
       } finally {
         if (isMounted) {
           setLoading(false)
@@ -89,10 +81,7 @@ const RmDropdown = ({
     getRms,
   ])
 
-  // =========================================================
-  // INCLUDE CURRENT SELECTED RM IF NOT IN OPTIONS
-  // =========================================================
-
+  // Include the selected RM if it is missing from the loaded options
   const dropdownRms = useMemo(() => {
     if (
       value === '' ||
@@ -104,8 +93,7 @@ const RmDropdown = ({
     }
 
     const exists = rms.some(
-      (rm) =>
-        String(rm.id) === String(value)
+      (rm) => String(rm.id) === String(value)
     )
 
     if (exists) {
@@ -125,17 +113,20 @@ const RmDropdown = ({
     fallbackLabel,
   ])
 
-  // =========================================================
-  // HANDLE CHANGE
-  // =========================================================
-
+  // Handle selection
   const handleChange = (
     selectedValue,
     selectedOption
   ) => {
     if (
-      typeof onChange === 'function'
+      !canSelectRM ||
+      disabled ||
+      loading
     ) {
+      return
+    }
+
+    if (typeof onChange === 'function') {
       onChange(
         selectedValue,
         selectedOption
@@ -143,31 +134,13 @@ const RmDropdown = ({
     }
   }
 
-  // =========================================================
-  // ERROR
-  // =========================================================
-
-  const dropdownError =
-    error || fetchError
-
-  // =========================================================
-  // RENDER
-  // =========================================================
+  // Parent error takes priority
+  const dropdownError = error || fetchError
 
   return (
-    <div
-      className={`w-full ${className}`}
-    >
+    <div className={`box-border w-full min-w-0 ${className}`}>
       {label && (
-        <label
-          className="
-            mb-1.5
-            block
-            text-sm
-            font-medium
-            text-base-content
-          "
-        >
+        <label className="block text-sm font-medium text-base-content">
           {label}
 
           {required && (
@@ -190,18 +163,17 @@ const RmDropdown = ({
             : placeholder
         }
         disabled={
-          disabled || loading
+          disabled ||
+          loading ||
+          !canSelectRM
         }
-        getOptionValue={
-          (option) => option.id
-        }
-        getOptionLabel={
-          (option) => option.name
-        }
+        className="box-border w-full min-w-0"
+        getOptionValue={(option) => option.id}
+        getOptionLabel={(option) => option.name}
       />
 
       {dropdownError && (
-        <p className="mt-1 text-xs text-error">
+        <p className="mt-1 text-xs text-error" role="alert">
           {dropdownError}
         </p>
       )}

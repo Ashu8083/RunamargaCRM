@@ -250,10 +250,10 @@ function SearchableFilterDropdown({
     // =========================================================
 
     return (
-        <div
-            ref={dropdownRef}
-            className={`relative box-border w-full min-w-0 ${className}`}
-        >
+            <div
+                ref={dropdownRef}
+                className={`relative box-border w-full min-w-0 ${className}`}
+            >
             {/* LABEL */}
 
             {showLabel && (

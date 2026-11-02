@@ -82,6 +82,7 @@ export const PERMISSIONS = Object.freeze({
   LEAVE_UPDATE: "leave:update",
   LEAVE_DELETE: "leave:delete",
   LEAVE_APPLY: "leave:apply",
+  LEAVE_STATUS:"leave:status",
 
   FACE_ENROLLMENT_VIEW: "face-enrollment:view",
 
@@ -101,8 +102,6 @@ export const PERMISSIONS = Object.freeze({
   LOANS_CREATE: "loans:create",
   LOANS_EDIT: "loans:edit",
   LOANS_DELETE: "loans:delete",
-  LOANS_CHANGE_RM:"loan:rm:change",
-  LOANS_CHANGE_AGENT:"loan:agent:change",
   LOANS_AGENT_ASSIGNMENT: "loan:agent-assignment",
   LOANS_APPLICATION_VIEW: "loan:application-view",
   LOANS_STATUS_UPDATE: "loans:status:update",
@@ -112,7 +111,6 @@ export const PERMISSIONS = Object.freeze({
   
   LOANS_ASSIGN: "loans:assign",
   LOANS_SHUFFLE: "loans:shuffle",
-  LOANS_REVERT: "loans:revert",
   LOANS_PENDING_VIEW: "loans:pending:view",
 
   // =========================================================================
@@ -122,6 +120,13 @@ export const PERMISSIONS = Object.freeze({
   LOANS_SHUFFLE_LOAN_TYPE: "loans:shuffle:loan-type",
   LOANS_SHUFFLE_AGENT: "loans:shuffle:agent",
   LOANS_SHUFFLE_RM: "loans:shuffle:rm",
+  LOANS_SHUFFLE_ASSIGN: "loans:shuffle:assign",
+
+  // =========================================================================
+  // LOAN SHUFFLE
+  // =========================================================================
+  LOANS_REVERT: "loans:revert",
+  LOANS_REVERT_EDIT: "loans:revert:edit",
 
   // =========================================================================
   // LOAN EDITING
@@ -191,17 +196,18 @@ export const PERMISSIONS = Object.freeze({
 
   CALL_LOGS_VIEW: "calls:logs:view",
 
-  CALL_ASSIGNMENT_VIEW: "calls:assignment:view",
-
   CALLS_LOGS_VIEW: "calls:logs:view",
 
   CALLS_ASSIGNMENT_VIEW: "calls:assignment:view",
-
+  CALL_ASSIGNMENT_ASSIGN:"calls:assignment:assign",
   CALLS_NUMBER_ASSIGN: "calls:number:assign",
-
   CALLS_NUMBER_EXCHANGE: "calls:number:exchange",
 
   PHONE_NUMBERS_VIEW: "phone:numbers:view",
+  PHONE_NUMBERS_ADD: "phone:numbers:add",
+  PHONE_NUMBERS_EDIT: "phone:numbers:edit",
+
+
 
   CALL_REMINDER_VIEW: "call:reminder:view",
 
@@ -223,9 +229,7 @@ export const PERMISSIONS = Object.freeze({
   // =========================================================================
 
   AGENT_ANALYTICS_OVERVIEW_VIEW: "agent-analytics-overview:view",
-
   AGENT_PERFORMANCE_OVERVIEW_VIEW: "agent-performance-overview:view",
-
   AGENT_ANALYTICS_CALL_TRENDS_VIEW: "agent-analytics-call-trends:view",
 
   // =========================================================================
@@ -233,13 +237,9 @@ export const PERMISSIONS = Object.freeze({
   // =========================================================================
 
   BANKS_VIEW: "banks:view",
-
   BANKS_MANAGE: "banks:manage",
-
   BANKS_CREATE: "banks:create",
-
   BANKS_EDIT: "banks:edit",
-
   BANKS_DELETE: "banks:delete",
 
   // =========================================================================
@@ -247,11 +247,8 @@ export const PERMISSIONS = Object.freeze({
   // =========================================================================
 
   BANKERS_VIEW: "bankers:view",
-
   BANKERS_CREATE: "bankers:create",
-
   BANKERS_EDIT: "bankers:edit",
-
   BANKERS_DELETE: "bankers:delete",
 
   // =========================================================================
@@ -259,13 +256,9 @@ export const PERMISSIONS = Object.freeze({
   // =========================================================================
 
   DSA_VIEW: "dsa:view",
-
   DSA_MANAGE: "dsa:manage",
-
   DSA_CREATE: "dsa:create",
-
   DSA_EDIT: "dsa:edit",
-
   DSA_DELETE: "dsa:delete",
 
   // =========================================================================
@@ -273,11 +266,8 @@ export const PERMISSIONS = Object.freeze({
   // =========================================================================
 
   BANK_PROCESSING_VIEW: "bank-processing:view",
-
   BANK_PROCESSING_CREATE: "bank-processing:create",
-
   BANK_PROCESSING_EDIT: "bank-processing:edit",
-
   BANK_PROCESSING_DELETE: "bank-processing:delete",
 
   // =========================================================================

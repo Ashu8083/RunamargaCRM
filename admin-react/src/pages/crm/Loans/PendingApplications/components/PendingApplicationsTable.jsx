@@ -24,6 +24,16 @@ import TeamLeadDropdown from "../../../../../components/GlobalModels/Filters/Tea
 import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import StatusDropdown from "../../../../../components/GlobalModels/Filters/StatusDropdown";
 import apiClient from "../../../../../app/apiClient";
+import { PERMISSIONS, hasPermission } from '../../../../../app/permissions'
+
+const canChangeLoanType = hasPermission(PERMISSIONS.LOANS_CHANGE_LOAN_TYPE)
+const canChangeStatus = hasPermission(PERMISSIONS.LOANS_STATUS_UPDATE)
+const canAssignAgent = hasPermission(PERMISSIONS.LOANS_AGENT_ASSIGNMENT)
+const canViewApplication = hasPermission(PERMISSIONS.LOANS_APPLICATION_VIEW)
+const canAddReminder = hasPermission(PERMISSIONS.LOANS_ADD_REMINDER)
+const canViewChat = hasPermission(PERMISSIONS.LOANS_REMARKS_VIEW)
+const canDeleteApplication = hasPermission(PERMISSIONS.LOANS_DELETE)
+
 
 // =============================================================
 // LAZY-LOADED GLOBAL CHAT
@@ -915,6 +925,7 @@ function PendingApplicationsTable({
                           type="button"
                           onClick={() => onLoanTypeChange?.(application)}
                           title={loanTypeName}
+                          disabled={!canChangeLoanType}
                           className="max-w-full inline-flex items-center px-2.5 py-1 rounded-full border border-[#8BCF00]/40 bg-[#8BCF00]/10 text-[#78B300] text-xs font-medium truncate hover:bg-[#8BCF00]/20"
                         >
                           {loanTypeName}
@@ -967,6 +978,7 @@ function PendingApplicationsTable({
                             type="button"
                             onClick={() => onStatusChange?.(application)}
                             title={displayStatus}
+                            disabled={!canChangeStatus}
                             className={`min-w-0 max-w-full inline-flex items-center justify-center px-2.5 py-1 rounded-full border text-xs font-medium truncate hover:opacity-80 ${getStatusClass(
                               displayStatus,
                             )}`}
@@ -982,6 +994,7 @@ function PendingApplicationsTable({
                             type="button"
                             onClick={() => openAssignmentModal(application)}
                             title="Assign application"
+                            disabled={!canAssignAgent}
                             aria-label={`Assign application for ${
                               application.name || "customer"
                             }`}
@@ -994,6 +1007,7 @@ function PendingApplicationsTable({
                             type="button"
                             onClick={() => onViewApplication?.(application)}
                             title="View application"
+                            disabled={!canViewApplication}
                             className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
                           >
                             <EyeIcon className="w-4 h-4" />
@@ -1003,6 +1017,7 @@ function PendingApplicationsTable({
                             type="button"
                             onClick={() => onReminder?.(application)}
                             title="Add reminder"
+                            disabled={!canAddReminder}
                             className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
                           >
                             <BellAlertIcon className="w-4 h-4" />
@@ -1012,6 +1027,7 @@ function PendingApplicationsTable({
                             type="button"
                             onClick={() => handleOpenChat(application)}
                             title="Open chat"
+                            disabled={!canViewChat}
                             className="btn btn-ghost btn-sm btn-square hover:bg-[#8BCF00]/10 hover:text-[#78B300]"
                           >
                             <ChatBubbleLeftRightIcon className="w-4 h-4" />
@@ -1021,6 +1037,7 @@ function PendingApplicationsTable({
                             type="button"
                             onClick={() => onDeleteApplication?.(application)}
                             title="Delete application"
+                            disabled={!canDeleteApplication}
                             aria-label={`Delete application for ${
                               application.name || "customer"
                             }`}

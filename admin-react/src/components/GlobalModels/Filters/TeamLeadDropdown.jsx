@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import SearchableFilterDropdown from './SearchableFilterDropdown'
 import apiClient from '../../../app/apiClient'
 import { getActiveContext } from '../../../app/auth'
+import { hasPermission, PERMISSIONS } from '../../../app/permissions'
 
 const TeamLeadDropdown = ({
   value = '',
@@ -17,44 +18,30 @@ const TeamLeadDropdown = ({
   required = false,
 }) => {
   const [teamLeads, setTeamLeads] = useState([])
-
   const [loading, setLoading] = useState(false)
-
   const [fetchError, setFetchError] = useState('')
+
+  const canSelectTeamLeads = hasPermission(PERMISSIONS.TEAM_LEADS_VIEW)
 
   // Current active EmployeeContext
   const [activeContext, setActiveContext] = useState(
     () => getActiveContext()
   )
 
-  // =========================================================
-  // LISTEN FOR ACTIVE CONTEXT CHANGES
-  // =========================================================
-
+  // Listen for active context changes
   useEffect(() => {
     const handleAuthChanged = () => {
-      const currentContext = getActiveContext()
-
-      setActiveContext(currentContext)
+      setActiveContext(getActiveContext())
     }
 
-    window.addEventListener(
-      'auth:changed',
-      handleAuthChanged
-    )
+    window.addEventListener('auth:changed', handleAuthChanged)
 
     return () => {
-      window.removeEventListener(
-        'auth:changed',
-        handleAuthChanged
-      )
+      window.removeEventListener('auth:changed', handleAuthChanged)
     }
   }, [])
 
-  // =========================================================
-  // FETCH TEAM LEADS
-  // =========================================================
-
+  // Fetch team leads only when the user has permission
   useEffect(() => {
     let isMounted = true
 
@@ -63,19 +50,7 @@ const TeamLeadDropdown = ({
       setFetchError('')
 
       try {
-        /*
-         * Active context is handled internally.
-         *
-         * Example:
-         *
-         * GET /common/team-leads?context_id=59
-         */
-
         const params = {}
-
-        // -----------------------------------------------------
-        // ACTIVE EMPLOYEE CONTEXT
-        // -----------------------------------------------------
 
         if (
           activeContext?.id !== null &&
@@ -85,8 +60,6 @@ const TeamLeadDropdown = ({
           params.context_id = activeContext.id
         }
 
-      
-
         const response = await apiClient({
           method: 'GET',
           url: '/common/team-leads',
@@ -95,53 +68,31 @@ const TeamLeadDropdown = ({
 
         const data = response.data
 
-        
-        /*
-         * Backend response:
-         *
-         * [
-         *   { id: 1, name: 'Team Lead Name' },
-         *   { id: 2, name: 'Another Team Lead' }
-         * ]
-         *
-         * Only use Team Leads returned by
-         * the backend.
-         */
-
-        const formattedTeamLeads =
-          Array.isArray(data)
-            ? data
-                .filter(
-                  (teamLead) =>
-                    teamLead &&
-                    teamLead.id !== undefined &&
-                    teamLead.id !== null &&
-                    teamLead.name
-                )
-                .map((teamLead) => ({
-                  id: Number(teamLead.id),
-                  name: teamLead.name,
-                }))
-            : []
+        const formattedTeamLeads = Array.isArray(data)
+          ? data
+              .filter(
+                (teamLead) =>
+                  teamLead &&
+                  teamLead.id !== undefined &&
+                  teamLead.id !== null &&
+                  teamLead.name
+              )
+              .map((teamLead) => ({
+                id: Number(teamLead.id),
+                name: teamLead.name,
+              }))
+          : []
 
         if (!isMounted) return
-
-      
 
         setTeamLeads(formattedTeamLeads)
       } catch (error) {
         if (!isMounted) return
 
-        console.error(
-          'Failed to fetch team leads:',
-          error
-        )
+        console.error('Failed to fetch team leads:', error)
 
         setTeamLeads([])
-
-        setFetchError(
-          'Unable to load team leads.'
-        )
+        setFetchError('Unable to load team leads.')
       } finally {
         if (isMounted) {
           setLoading(false)
@@ -149,14 +100,15 @@ const TeamLeadDropdown = ({
       }
     }
 
-    /*
-     * Do not make the request without an
-     * active EmployeeContext.
-     */
-    if (!activeContext?.id) {
+    // Do not fetch without permission or an active EmployeeContext
+    if (!canSelectTeamLeads || !activeContext?.id) {
       setTeamLeads([])
       setLoading(false)
-      return
+      setFetchError('')
+
+      return () => {
+        isMounted = false
+      }
     }
 
     fetchTeamLeads()
@@ -164,64 +116,22 @@ const TeamLeadDropdown = ({
     return () => {
       isMounted = false
     }
-  }, [activeContext?.id])
+  }, [activeContext?.id, canSelectTeamLeads])
 
-  // =========================================================
-  // HANDLE CHANGE
-  // =========================================================
-
-  /*
-   * SearchableFilterDropdown returns:
-   *
-   * onChange(value, originalOption)
-   */
-
-  const handleChange = (
-    selectedValue,
-    selectedOption
-  ) => {
-    if (
-      typeof onChange === 'function'
-    ) {
-      onChange(
-        selectedValue,
-        selectedOption
-      )
+  // Handle selection
+  const handleChange = (selectedValue, selectedOption) => {
+    if (typeof onChange === 'function') {
+      onChange(selectedValue, selectedOption)
     }
   }
 
-  // =========================================================
-  // ERROR
-  // =========================================================
-
-  /*
-   * Parent error takes priority.
-   *
-   * If there is no parent error,
-   * show API fetch error.
-   */
-
-  const dropdownError =
-    error || fetchError
-
-  // =========================================================
-  // RENDER
-  // =========================================================
+  // Parent error takes priority
+  const dropdownError = error || fetchError
 
   return (
-    <div
-      className={`w-full ${className}`}
-    >
+    <div className={`box-border w-full min-w-0 ${className}`}>
       {label && (
-        <label
-          className="
-            mb-1.5
-            block
-            text-sm
-            font-medium
-            text-base-content
-          "
-        >
+        <label className="block text-sm font-medium text-base-content">
           {label}
 
           {required && (
@@ -239,23 +149,20 @@ const TeamLeadDropdown = ({
         includeAllOption={false}
         searchPlaceholder="Search Team Lead"
         placeholder={
-          loading
-            ? 'Loading Team Leads...'
-            : placeholder
+          !canSelectTeamLeads
+            ? 'Permission Required'
+            : loading
+              ? 'Loading Team Leads...'
+              : placeholder
         }
-        disabled={
-          disabled || loading
-        }
-        getOptionValue={
-          (option) => option.id
-        }
-        getOptionLabel={
-          (option) => option.name
-        }
+        disabled={disabled || loading || !canSelectTeamLeads}
+        className="box-border w-full min-w-0"
+        getOptionValue={(option) => option.id}
+        getOptionLabel={(option) => option.name}
       />
 
       {dropdownError && (
-        <p className="mt-1 text-xs text-error">
+        <p className="mt-1 text-xs text-error" role="alert">
           {dropdownError}
         </p>
       )}

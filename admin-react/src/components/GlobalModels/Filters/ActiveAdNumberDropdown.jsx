@@ -5,21 +5,17 @@ import { useEffect, useState } from 'react'
 import SearchableFilterDropdown from './SearchableFilterDropdown'
 import apiClient from '../../../app/apiClient'
 
-
 // =============================================================
 // API
 // =============================================================
 
 const fetchActiveAdNumbers = async () => {
-
     const response = await apiClient.get(
         '/call-analytics/active-ad-numbers'
     )
-    // console.log(response);
+
     return response.data
-
 }
-
 
 // =============================================================
 // COMPONENT
@@ -34,36 +30,32 @@ function ActiveAdNumberDropdown({
     placeholder = allLabel,
     searchPlaceholder = 'Search ad number',
     emptyMessage = 'No ad numbers found',
+    className = '',
     ...props
 }) {
-
     const [defaultOptions, setDefaultOptions] = useState([])
-
     const [loading, setLoading] = useState(false)
-
 
     // =========================================================
     // LOAD DATA
     // =========================================================
 
     useEffect(() => {
+        let isMounted = true
 
         const loadAdNumbers = async () => {
-
             setLoading(true)
 
             try {
+                const data = await fetchActiveAdNumbers()
 
-                const data =
-                    await fetchActiveAdNumbers()
+                if (!isMounted) return
 
                 setDefaultOptions(
-                    Array.isArray(data)
-                        ? data
-                        : []
+                    Array.isArray(data) ? data : []
                 )
-
             } catch (error) {
+                if (!isMounted) return
 
                 console.error(
                     'Failed to load active ad numbers:',
@@ -71,22 +63,25 @@ function ActiveAdNumberDropdown({
                 )
 
                 setDefaultOptions([])
-
             } finally {
-
-                setLoading(false)
-
+                if (isMounted) {
+                    setLoading(false)
+                }
             }
-
         }
 
         loadAdNumbers()
 
+        return () => {
+            isMounted = false
+        }
     }, [])
 
+    // =========================================================
+    // COMPONENT UI
+    // =========================================================
 
     return (
-
         <SearchableFilterDropdown
             label={label}
             value={value}
@@ -98,14 +93,12 @@ function ActiveAdNumberDropdown({
             searchPlaceholder={searchPlaceholder}
             emptyMessage={emptyMessage}
             loading={loading}
+            className={`w-full min-w-0 ${className}`}
             getOptionValue={(option) => option.phone}
             getOptionLabel={(option) => option.phone}
             {...props}
         />
-
     )
-
 }
-
 
 export default ActiveAdNumberDropdown

@@ -8,7 +8,10 @@ import {
 import ChevronLeftIcon from '@heroicons/react/24/outline/ChevronLeftIcon'
 import ChevronRightIcon from '@heroicons/react/24/outline/ChevronRightIcon'
 import PlusIcon from '@heroicons/react/24/outline/PlusIcon'
+import { PERMISSIONS,hasPermission } from '../../../../../app/permissions'
 
+const canAdd=hasPermission(PERMISSIONS.HOLIDAY_CREATE)
+const canEdit=hasPermission(PERMISSIONS.HOLIDAY_UPDATE)
 
 // ============================================================================
 // DATE HELPERS
@@ -439,7 +442,7 @@ function HolidayCalendar({
                     onClick={() => onAddHoliday?.(
                         selectedDate || todayKey
                     )}
-                    disabled={loading}
+                    disabled={loading |!canAdd}
                     className="
                         inline-flex
                         h-10
@@ -563,6 +566,7 @@ function HolidayCalendar({
                             aria-label={
                                 `${day.key}, ${dayHolidays.length} holidays`
                             }
+                            disabled={!canEdit}
                             className={[
                                 'group',
                                 'relative',
