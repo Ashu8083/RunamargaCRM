@@ -95,7 +95,9 @@ app = FastAPI(
     title="Runamarga CRM API",
     lifespan=lifespan,
 )
-
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 # ============================================================
 # GLOBAL HTTP REQUEST LOAD CONTROL
