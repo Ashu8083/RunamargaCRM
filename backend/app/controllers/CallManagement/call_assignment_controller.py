@@ -18,12 +18,28 @@ def get_call_assignments(
     db: Session,
     employee: Employee,
     context_id: int | None = None,
+    page: int = 1,
+    page_size: int = 10,
+    search: str | None = None,
+    status: str | None = None,
+    rm: str | None = None,
+    date_filter: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
 ):
     try:
-        assignments = CallAssignmentService.get_all(
+        assignments, total = CallAssignmentService.get_all(
             db=db,
             employee=employee,
             context_id=context_id,
+            page=page,
+            page_size=page_size,
+            search=search,
+            status=status,
+            rm=rm,
+            date_filter=date_filter,
+            from_date=from_date,
+            to_date=to_date,
         )
 
         data = []
@@ -69,7 +85,23 @@ def get_call_assignments(
         return {
             "success": True,
             "data": data,
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "total": total,
+                "total_pages": (
+                    (total + page_size - 1) // page_size
+                    if total
+                    else 0
+                ),
+            },
         }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
 
     except Exception as e:
         raise HTTPException(

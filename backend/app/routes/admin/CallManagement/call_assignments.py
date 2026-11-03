@@ -1,5 +1,4 @@
-
-from fastapi import APIRouter, Depends, Body, Request
+from fastapi import APIRouter, Depends, Body, Query, Request
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
@@ -27,12 +26,37 @@ router = APIRouter(
 
 @router.get("")
 def get_call_assignments_route(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1),
+    search: str | None = None,
+    status: str | None = None,
+    rm: str | None = None,
+    date_filter: str | None = Query(
+        default=None,
+        alias="dateFilter",
+    ),
+    from_date: str | None = Query(
+        default=None,
+        alias="fromDate",
+    ),
+    to_date: str | None = Query(
+        default=None,
+        alias="toDate",
+    ),
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
     return get_call_assignments(
         db=db,
         employee=employee,
+        page=page,
+        page_size=page_size,
+        search=search,
+        status=status,
+        rm=rm,
+        date_filter=date_filter,
+        from_date=from_date,
+        to_date=to_date,
     )
 
 

@@ -20,80 +20,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # =========================================================
-    # EMPLOYEE AUDIT LOGS
-    # Preserved from the original generated migration.
-    # =========================================================
-
-    op.create_table(
-        "employee_audit_logs",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("action", sa.String(length=10), nullable=False),
-        sa.Column("action_by_id", sa.Integer(), nullable=True),
-        sa.Column("employee_id", sa.Integer(), nullable=True),
-        sa.Column("report_to_id", sa.Integer(), nullable=True),
-        sa.Column(
-            "date_and_time",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["action_by_id"],
-            ["employee_contexts.id"],
-            ondelete="SET NULL",
-        ),
-        sa.ForeignKeyConstraint(
-            ["employee_id"],
-            ["employee_contexts.id"],
-            ondelete="SET NULL",
-        ),
-        sa.ForeignKeyConstraint(
-            ["report_to_id"],
-            ["employee_contexts.id"],
-            ondelete="SET NULL",
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-
-    op.create_index(
-        op.f("ix_employee_audit_logs_action"),
-        "employee_audit_logs",
-        ["action"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_employee_audit_logs_action_by_id"),
-        "employee_audit_logs",
-        ["action_by_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_employee_audit_logs_date_and_time"),
-        "employee_audit_logs",
-        ["date_and_time"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_employee_audit_logs_employee_id"),
-        "employee_audit_logs",
-        ["employee_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_employee_audit_logs_id"),
-        "employee_audit_logs",
-        ["id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_employee_audit_logs_report_to_id"),
-        "employee_audit_logs",
-        ["report_to_id"],
-        unique=False,
-    )
-
-    # =========================================================
     # DUPLICATE LEAD APPROVAL LOGS
     # =========================================================
 
@@ -283,34 +209,4 @@ def downgrade() -> None:
 
     op.drop_table("duplicate_lead_approval_logs")
 
-    # =========================================================
-    # DROP EMPLOYEE AUDIT LOGS
-    # Preserved from the original migration.
-    # =========================================================
 
-    op.drop_index(
-        op.f("ix_employee_audit_logs_report_to_id"),
-        table_name="employee_audit_logs",
-    )
-    op.drop_index(
-        op.f("ix_employee_audit_logs_id"),
-        table_name="employee_audit_logs",
-    )
-    op.drop_index(
-        op.f("ix_employee_audit_logs_employee_id"),
-        table_name="employee_audit_logs",
-    )
-    op.drop_index(
-        op.f("ix_employee_audit_logs_date_and_time"),
-        table_name="employee_audit_logs",
-    )
-    op.drop_index(
-        op.f("ix_employee_audit_logs_action_by_id"),
-        table_name="employee_audit_logs",
-    )
-    op.drop_index(
-        op.f("ix_employee_audit_logs_action"),
-        table_name="employee_audit_logs",
-    )
-
-    op.drop_table("employee_audit_logs")

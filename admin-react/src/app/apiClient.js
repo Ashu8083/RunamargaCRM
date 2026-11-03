@@ -1,4 +1,5 @@
 // admin-react/src/app/apiClient.js
+
 import axios from 'axios'
 
 import {
@@ -7,6 +8,7 @@ import {
 } from './auth'
 
 import { API_BASE_URL } from '../config/url'
+
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
     withCredentials: true,
@@ -30,11 +32,23 @@ apiClient.interceptors.request.use(
     (config) => {
         /*
          * Authentication is handled by HttpOnly cookies.
-         *
-         * We intentionally do NOT read the access token
-         * from localStorage or manually create an
-         * Authorization header.
          */
+
+        /*
+         * Attach the currently selected EmployeeContext ID.
+         */
+        if (typeof localStorage !== 'undefined') {
+            const contextId = localStorage.getItem(
+                'active_context_id'
+            )
+
+            if (contextId && Number(contextId) > 0) {
+                config.headers = config.headers || {}
+
+                config.headers['X-Employee-Context-ID'] =
+                    String(contextId)
+            }
+        }
 
         showGlobalLoader()
 
@@ -56,14 +70,10 @@ apiClient.interceptors.response.use(
         hideGlobalLoader()
 
         const originalRequest = error.config
+
         const isUnauthorized =
             error.response?.status === 401
 
-        /*
-         * If the API says the access token is expired,
-         * try to get a new access token using the
-         * HttpOnly refresh-token cookie.
-         */
         if (
             isUnauthorized &&
             originalRequest &&
@@ -80,12 +90,6 @@ apiClient.interceptors.response.use(
 
                 refreshRequest = null
 
-                /*
-                 * The refresh endpoint has already
-                 * set a new access_token cookie.
-                 *
-                 * Retry the original request.
-                 */
                 const retryRequest = {
                     ...originalRequest,
                     headers: undefined,

@@ -2,8 +2,30 @@
 
 import apiClient from '../../../../app/apiClient'
 
-export const getCallAssignments = async () => {
-    const response = await apiClient.get('/call-assignments')
+export const getCallAssignments = async ({
+    page = 1,
+    pageSize = 10,
+    page_size,
+    search = '',
+    status = '',
+    rm = '',
+    dateFilter = '',
+    fromDate = '',
+    toDate = '',
+} = {}) => {
+    const response = await apiClient.get('/call-assignments', {
+        params: {
+            page,
+            page_size: page_size ?? pageSize,
+            search,
+            status,
+            rm,
+            dateFilter,
+            fromDate,
+            toDate,
+        },
+    })
+
     return response.data
 }
 

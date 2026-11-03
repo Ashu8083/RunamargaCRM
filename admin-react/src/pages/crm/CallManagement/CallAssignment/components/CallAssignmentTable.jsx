@@ -51,12 +51,62 @@ const formatStatus = (status) => {
 function CallAssignmentTable({
     entries = [],
     loading = false,
+    currentPage = 1,
+    pageSize = 10,
+    totalRecords = 0,
+    totalPages = 1,
+    onPageChange,
+    onPageSizeChange,
     onViewHistory,
     onViewLoan,
     onCreateLead,
     onExchange,
     onDelete,
 }) {
+
+    const firstRecord = totalRecords
+        ? (currentPage - 1) * pageSize + 1
+        : 0
+
+    const lastRecord = totalRecords
+        ? Math.min(currentPage * pageSize, totalRecords)
+        : 0
+
+    const pageNumbers = (() => {
+        if (totalPages <= 7) {
+            return Array.from(
+                { length: totalPages },
+                (_, index) => index + 1
+            )
+        }
+
+        const pages = new Set([
+            1,
+            totalPages,
+            currentPage,
+            currentPage - 1,
+            currentPage + 1,
+        ])
+
+        const sortedPages = Array.from(pages)
+            .filter((page) => page > 0 && page <= totalPages)
+            .sort((a, b) => a - b)
+
+        return sortedPages.reduce(
+            (result, page, index) => {
+                if (
+                    index > 0 &&
+                    page - sortedPages[index - 1] > 1
+                ) {
+                    result.push('ellipsis-' + page)
+                }
+
+                result.push(page)
+                return result
+            },
+            []
+        )
+    })()
 
     // =========================================================
     // LOADING
@@ -779,6 +829,132 @@ function CallAssignmentTable({
                     </tbody>
 
                 </table>
+
+            </div>
+
+            <div className="
+                flex
+                flex-col
+                gap-3
+                border-t
+                border-base-300
+                px-4
+                py-4
+                text-xs
+                text-base-content/60
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+            ">
+
+                <div className="flex items-center gap-2">
+
+                    <label htmlFor="call-assignment-page-size">
+                        Rows per page
+                    </label>
+
+                    <select
+                        id="call-assignment-page-size"
+                        value={pageSize}
+                        onChange={(event) =>
+                            onPageSizeChange?.(
+                                Number(event.target.value)
+                            )
+                        }
+                        className="
+                            select
+                            select-bordered
+                            select-xs
+                            min-h-8
+                            w-20
+                        "
+                    >
+                        {[10, 25, 50, 100].map((size) => (
+                            <option key={size} value={size}>
+                                {size}
+                            </option>
+                        ))}
+                    </select>
+
+                    <span>
+                        Showing {firstRecord}–{lastRecord} of {totalRecords}
+                    </span>
+
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onPageChange?.(currentPage - 1)
+                        }
+                        disabled={currentPage === 1}
+                        className="
+                            btn
+                            btn-xs
+                            border-base-300
+                            bg-base-100
+                            normal-case
+                            disabled:opacity-50
+                        "
+                    >
+                        Previous
+                    </button>
+
+                    {pageNumbers.map((page) =>
+                        typeof page === 'string' ? (
+                            <span
+                                key={page}
+                                className="px-1"
+                            >
+                                …
+                            </span>
+                        ) : (
+                            <button
+                                key={page}
+                                type="button"
+                                onClick={() => onPageChange?.(page)}
+                                aria-current={
+                                    page === currentPage
+                                        ? 'page'
+                                        : undefined
+                                }
+                                className={[
+                                    'btn btn-xs min-w-8',
+                                    page === currentPage
+                                        ? 'bg-[#8BCF00] text-white hover:bg-[#78B300]'
+                                        : 'border-base-300 bg-base-100',
+                                ].join(' ')}
+                            >
+                                {page}
+                            </button>
+                        )
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onPageChange?.(currentPage + 1)
+                        }
+                        disabled={currentPage === totalPages}
+                        className="
+                            btn
+                            btn-xs
+                            border-base-300
+                            bg-base-100
+                            normal-case
+                            disabled:opacity-50
+                        "
+                    >
+                        Next
+                    </button>
+
+                    <span className="ml-1 whitespace-nowrap">
+                        Page {currentPage} of {totalPages}
+                    </span>
+
+                </div>
 
             </div>
 
