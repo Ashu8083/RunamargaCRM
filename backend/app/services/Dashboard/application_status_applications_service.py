@@ -1246,14 +1246,26 @@ def get_application_status_applications(
                 ),
 
                 "agent_id": (
-                    agent_employee.id
-                    if agent_employee
+                    application.agent_context.id
+                    if application.agent_context
                     else None
                 ),
 
                 "rm_id": (
-                    rm_employee.id
-                    if rm_employee
+                    application.rm_context.id
+                    if application.rm_context
+                    else None
+                ),
+
+                "agent_context_id": (
+                    application.agent_context.id
+                    if application.agent_context
+                    else None
+                ),
+
+                "rm_context_id": (
+                    application.rm_context.id
+                    if application.rm_context
                     else None
                 ),
 
@@ -1284,7 +1296,7 @@ def get_application_status_applications(
 
                     {
                         "id":
-                            agent_employee.id,
+                            application.agent_context.id,
 
                         "name":
                             agent_employee.name,
@@ -1299,7 +1311,7 @@ def get_application_status_applications(
 
                     {
                         "id":
-                            rm_employee.id,
+                            application.rm_context.id,
 
                         "name":
                             rm_employee.name,
