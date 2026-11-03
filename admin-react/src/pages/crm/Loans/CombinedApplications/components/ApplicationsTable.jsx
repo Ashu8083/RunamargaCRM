@@ -364,6 +364,8 @@ function ApplicationsTable({
   onAssignApplication,
   onRefresh,
   onAssignmentChange,
+  onAssignmentSuccess,
+  onAssignmentError,
   onDeleteApplication,
   currentPage = 1,
   pageSize = 10,
@@ -389,7 +391,10 @@ function ApplicationsTable({
       application.id ?? application.loanId ?? application.loan_id;
 
     if (!applicationId) {
-      window.alert("Application ID is missing.");
+      onAssignmentError?.(
+        null,
+        "Processing Team assignment"
+      );
       return;
     }
 
@@ -407,12 +412,13 @@ function ApplicationsTable({
         onAssignmentChange(Number(applicationId), updatedApplication);
       }
       if (onRefresh) await onRefresh();
-      window.alert("Application successfully assigned to Processing Team.");
+      onAssignmentSuccess?.(
+        "Processing Team assignment"
+      );
     } catch (error) {
-      window.alert(
-        error?.response?.data?.detail ||
-        error?.response?.data?.message ||
-        "Assignment failed. Please try again.",
+      onAssignmentError?.(
+        error,
+        "Processing Team assignment"
       );
     }
   };
@@ -450,8 +456,11 @@ function ApplicationsTable({
       if (updatedApplication && onAssignmentChange) {
         onAssignmentChange(applicationId, updatedApplication);
       }
+
+      onAssignmentSuccess?.("Processing Agent");
     } catch (error) {
       console.error("Failed to update Processing Agent:", error);
+      onAssignmentError?.(error, "Processing Agent");
     }
   };
 
@@ -484,8 +493,11 @@ function ApplicationsTable({
       if (updatedApplication && onAssignmentChange) {
         onAssignmentChange(applicationId, updatedApplication);
       }
+
+      onAssignmentSuccess?.("RM");
     } catch (error) {
       console.error("Failed to update RM:", error);
+      onAssignmentError?.(error, "RM");
     }
   };
 

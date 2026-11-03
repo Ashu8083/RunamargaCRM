@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 
@@ -30,6 +31,8 @@ const RmDropdown = ({
   const [rms, setRms] = useState([])
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState('')
+  const autoSelectedContextKeys = useRef(new Set())
+  const loadedOptionsKey = useRef(null)
 
   // Check RM view permission
   const canSelectRM = hasPermission(
@@ -39,6 +42,12 @@ const RmDropdown = ({
   // Load RMs from the shared data provider
   useEffect(() => {
     let isMounted = true
+    const optionsKey = [
+      activeContext?.id ?? 'none',
+      teamLeadContextId ?? 'none',
+    ].join(':')
+
+    loadedOptionsKey.current = null
 
     const loadRms = async () => {
       if (!activeContext?.id) {
@@ -56,6 +65,7 @@ const RmDropdown = ({
         if (!isMounted) return
 
         setRms(data)
+        loadedOptionsKey.current = optionsKey
       } catch (error) {
         if (!isMounted) return
 
@@ -133,6 +143,74 @@ const RmDropdown = ({
       )
     }
   }
+
+  // Automatically select the logged-in user's RM EmployeeContext once
+  // when it is present in the loaded options. Parent values always win.
+  useEffect(() => {
+    const activeContextCode = String(
+      activeContext?.code || ''
+    ).trim().toUpperCase()
+
+    const isRmContext =
+      activeContextCode === 'RM' ||
+      activeContextCode.startsWith('RM_')
+
+    const hasParentValue =
+      value !== '' &&
+      value !== null &&
+      value !== undefined
+
+    const selectionKey = [
+      activeContext?.id,
+      teamLeadContextId ?? 'none',
+    ].join(':')
+
+    if (
+      !isRmContext ||
+      activeContext?.id === undefined ||
+      activeContext?.id === null ||
+      hasParentValue ||
+      loading ||
+      disabled ||
+      !canSelectRM ||
+      loadedOptionsKey.current !== selectionKey
+    ) {
+      return
+    }
+
+    if (autoSelectedContextKeys.current.has(selectionKey)) {
+      return
+    }
+
+    autoSelectedContextKeys.current.add(selectionKey)
+
+    const loggedInRm = rms.find(
+      (rm) =>
+        String(rm.id) ===
+        String(activeContext.id)
+    )
+
+    if (!loggedInRm) {
+      return
+    }
+
+    if (typeof onChange === 'function') {
+      onChange(
+        loggedInRm.id,
+        loggedInRm
+      )
+    }
+  }, [
+    activeContext?.code,
+    activeContext?.id,
+    canSelectRM,
+    disabled,
+    loading,
+    onChange,
+    rms,
+    teamLeadContextId,
+    value,
+  ])
 
   // Parent error takes priority
   const dropdownError = error || fetchError

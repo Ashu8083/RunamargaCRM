@@ -17,7 +17,7 @@ from app.schemas.application_schema import (
    LoanApplicationCreateRequest,AssignBankRequest
 )
 from app.models.employees import Employee
-
+from fastapi import APIRouter, Depends, Query, HTTPException, Header
 
 router = APIRouter(
     prefix="/applications",
@@ -79,10 +79,13 @@ def view_application_route(
         "data": application,
     }
 
-
 @router.post("/create")
 def create_loan_application(
     payload: LoanApplicationCreateRequest,
+    context_id: int | None = Header(
+        default=None,
+        alias="X-Employee-Context-ID",
+    ),
     db: Session = Depends(get_db),
     employee=Depends(check_permission("loans:create")),
 ):
@@ -90,6 +93,7 @@ def create_loan_application(
         db=db,
         employee=employee,
         payload=payload,
+        context_id=context_id,
     )
 
 

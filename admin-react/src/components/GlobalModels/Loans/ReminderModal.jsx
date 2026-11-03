@@ -9,7 +9,13 @@ import BellAlertIcon from "@heroicons/react/24/outline/BellAlertIcon";
 import apiClient from "../../../app/apiClient";
 import FeedbackModal from "../../../components/GlobalModels/FeedbackModal";
 
-function ReminderModal({ open, application, onClose, onSubmit }) {
+function ReminderModal({
+  open,
+  application,
+  applicationId: applicationIdProp,
+  onClose,
+  onSubmit,
+}) {
   const [formData, setFormData] = useState({
     date: "",
     time: "",
@@ -19,7 +25,8 @@ function ReminderModal({ open, application, onClose, onSubmit }) {
   const [error, setError] = useState("");
 
   const [loading, setLoading] = useState(true);
-  const [applicationId] = useState(true);
+  const applicationId =
+    applicationIdProp ?? application?.applicationId ?? application?.id;
 
   // =========================================================
   // FEEDBACK MODAL STATE
