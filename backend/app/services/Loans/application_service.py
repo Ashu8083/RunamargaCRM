@@ -660,11 +660,15 @@ class ApplicationService:
         db: Session,
         employee: Employee,
         payload,
+        context_id: int | None = None,
     ):
+        # ---------------------------------------------------------
+        # GET THE CURRENTLY SELECTED EMPLOYEE CONTEXT
+        # ---------------------------------------------------------
         current_context = AccessControl.get_active_context(
             db=db,
             employee=employee,
-            context_id=None,
+            context_id=context_id,
         )
 
         if not current_context:
@@ -673,36 +677,55 @@ class ApplicationService:
                 detail="No active employee context found",
             )
 
-        rm_context = None
+        # ---------------------------------------------------------
+        # DETERMINE RM CONTEXT
+        # ---------------------------------------------------------
+        # If the logged-in user's current context is RM,
+        # automatically use that EmployeeContext ID.
+        #
+        # Otherwise, preserve the existing manually selected RM.
+        # ---------------------------------------------------------
+        current_context_family = AccessControl.get_context_family(
+            current_context.context.code
+        )
 
-        if payload.rm_id is not None:
-            rm_context = (
-                db.query(EmployeeContext)
-                .join(
-                    Employee,
-                    Employee.id == EmployeeContext.employee_id,
-                )
-                .join(
-                    Context,
-                    Context.id == EmployeeContext.context_id,
-                )
-                .filter(
-                    EmployeeContext.id == payload.rm_id,
-                    EmployeeContext.is_active.is_(True),
-                    Employee.status == "active",
-                    Employee.deleted_at.is_(None),
-                    Context.is_active.is_(True),
-                    Context.code == "RM",
-                )
-                .first()
-            )
+        if current_context_family == "RM":
+            rm_context = current_context
 
-            if not rm_context:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Relationship Manager context not found",
+        else:
+            rm_context = None
+
+            if payload.rm_id is not None:
+                rm_context = (
+                    db.query(EmployeeContext)
+                    .join(
+                        Employee,
+                        Employee.id == EmployeeContext.employee_id,
+                    )
+                    .join(
+                        Context,
+                        Context.id == EmployeeContext.context_id,
+                    )
+                    .filter(
+                        EmployeeContext.id == payload.rm_id,
+                        EmployeeContext.is_active.is_(True),
+                        Employee.status == "active",
+                        Employee.deleted_at.is_(None),
+                        Context.is_active.is_(True),
+                        Context.code == "RM",
+                    )
+                    .first()
                 )
 
+                if not rm_context:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Relationship Manager context not found",
+                    )
+
+        # ---------------------------------------------------------
+        # CHECK FOR EXISTING APPLICATION
+        # ---------------------------------------------------------
         existing_application = (
             db.query(LoanApplication)
             .filter(
@@ -717,24 +740,28 @@ class ApplicationService:
 
         if existing_application:
 
+            applied_by_context = existing_application.applied_by_context
+            rm_existing_context = existing_application.rm_context
+            agent_existing_context = existing_application.agent_context
+
             applied_by = (
-                existing_application.applied_by_context.employee
-                if existing_application.applied_by_context
-                and existing_application.applied_by_context.employee
+                applied_by_context.employee
+                if applied_by_context
+                and applied_by_context.employee
                 else None
             )
 
-            rm = (
-                existing_application.rm_context.employee
-                if existing_application.rm_context
-                and existing_application.rm_context.employee
+            rm_employee = (
+                rm_existing_context.employee
+                if rm_existing_context
+                and rm_existing_context.employee
                 else None
             )
 
             agent = (
-                existing_application.agent_context.employee
-                if existing_application.agent_context
-                and existing_application.agent_context.employee
+                agent_existing_context.employee
+                if agent_existing_context
+                and agent_existing_context.employee
                 else None
             )
 
@@ -782,21 +809,22 @@ class ApplicationService:
                         else None
                     ),
 
+                    # Return EmployeeContext ID, not Employee ID.
                     "rm_id": (
-                        rm.id
-                        if rm
+                        rm_existing_context.id
+                        if rm_existing_context
                         else None
                     ),
 
                     "rm_name": (
-                        rm.name
-                        if rm
+                        rm_employee.name
+                        if rm_employee
                         else None
                     ),
 
                     "agent_id": (
-                        agent.id
-                        if agent
+                        agent_existing_context.id
+                        if agent_existing_context
                         else None
                     ),
 
@@ -808,6 +836,9 @@ class ApplicationService:
                 },
             }
 
+        # ---------------------------------------------------------
+        # CREATE APPLICATION
+        # ---------------------------------------------------------
         application = LoanApplication(
             name=payload.name,
             phone=payload.phone,
@@ -820,12 +851,16 @@ class ApplicationService:
 
             referral=payload.reference_name,
 
+            # Save the current RM EmployeeContext ID when
+            # the logged-in user's active context is RM.
+            # Otherwise save the selected RM EmployeeContext ID.
             rm_context_id=(
                 rm_context.id
                 if rm_context
                 else None
             ),
 
+            # Preserve the existing applied-by behavior.
             applied_by_context_id=current_context.id,
 
             state_id=payload.state_id,
@@ -860,7 +895,6 @@ class ApplicationService:
 
         db.commit()
         db.refresh(application)
-
 
         return {
             "success": True,

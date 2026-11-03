@@ -51,18 +51,18 @@ def view_application(
         application_id=application_id,
     )
 
-
 def create_application(
     db: Session,
     employee: Employee,
     payload,
+    context_id: int | None = None,
 ):
     return ApplicationService.create_application(
         db=db,
         employee=employee,
         payload=payload,
+        context_id=context_id,
     )
-
 
 def get_bank_processings(
     db: Session,
