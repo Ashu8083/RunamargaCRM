@@ -3,8 +3,8 @@
 import {
     lazy,
     Suspense,
+    useCallback,
     useEffect,
-    useMemo,
     useState,
 } from 'react'
 
@@ -95,179 +95,11 @@ const DATE_OPTIONS = [
 ]
 
 // =============================================================
-// DATE HELPERS
+// ASSIGNMENT REQUEST
 // =============================================================
 
-const parseDate = (value) => {
-    if (!value) {
-        return null
-    }
-
-    const date =
-        new Date(
-            value.includes(' ')
-                ? value.replace(' ', 'T')
-                : value
-        )
-
-    return Number.isNaN(
-        date.getTime()
-    )
-        ? null
-        : date
-}
-
-const startOfDay = (date) => {
-    const result =
-        new Date(date)
-
-    result.setHours(
-        0,
-        0,
-        0,
-        0
-    )
-
-    return result
-}
-
-const endOfDay = (date) => {
-    const result =
-        new Date(date)
-
-    result.setHours(
-        23,
-        59,
-        59,
-        999
-    )
-
-    return result
-}
-
-const getDateRange = (value) => {
-    const today =
-        startOfDay(
-            new Date()
-        )
-
-    if (value === 'today') {
-        return {
-            from: today,
-            to: endOfDay(today),
-        }
-    }
-
-    if (value === 'yesterday') {
-        const yesterday =
-            new Date(today)
-
-        yesterday.setDate(
-            yesterday.getDate() - 1
-        )
-
-        return {
-            from: yesterday,
-            to: endOfDay(yesterday),
-        }
-    }
-
-    if (value === 'this-week') {
-        const from =
-            new Date(today)
-
-        const day =
-            from.getDay()
-
-        const difference =
-            day === 0
-                ? 6
-                : day - 1
-
-        from.setDate(
-            from.getDate() -
-            difference
-        )
-
-        return {
-            from,
-            to: endOfDay(today),
-        }
-    }
-
-    if (value === 'last-week') {
-        const from =
-            new Date(today)
-
-        const day =
-            from.getDay()
-
-        const difference =
-            day === 0
-                ? 6
-                : day - 1
-
-        from.setDate(
-            from.getDate() -
-            difference -
-            7
-        )
-
-        const to =
-            new Date(from)
-
-        to.setDate(
-            to.getDate() + 6
-        )
-
-        return {
-            from,
-            to: endOfDay(to),
-        }
-    }
-
-    if (value === 'this-month') {
-        return {
-            from: new Date(
-                today.getFullYear(),
-                today.getMonth(),
-                1
-            ),
-            to: endOfDay(today),
-        }
-    }
-
-    if (value === 'last-month') {
-        const from =
-            new Date(
-                today.getFullYear(),
-                today.getMonth() - 1,
-                1
-            )
-
-        const to =
-            new Date(
-                today.getFullYear(),
-                today.getMonth(),
-                0
-            )
-
-        return {
-            from,
-            to: endOfDay(to),
-        }
-    }
-
-    return null
-}
-
-const fetchAssignments = async () => {
-    const response = await getCallAssignments()
-
-    return response?.success &&
-        Array.isArray(response.data)
-        ? response.data
-        : []
+const fetchAssignments = async (params) => {
+    return getCallAssignments(params)
 }
 
 // =============================================================
@@ -300,8 +132,14 @@ function CallAssignment() {
     const [showAssignModal, setShowAssignModal] =
         useState(false)
 
-    const [loading, setLoading] =
+    const [, setLoading] =
+        useState(false)
+
+    const [loadingAssignments, setLoadingAssignments] =
         useState(true)
+
+    const [loadingAvailableNumbers, setLoadingAvailableNumbers] =
+        useState(false)
 
     // =========================================================
     // FILTERS
@@ -324,6 +162,20 @@ function CallAssignment() {
 
     const [toDate, setToDate] =
         useState('')
+
+    const [currentPage, setCurrentPage] =
+        useState(1)
+
+    const [pageSize, setPageSize] =
+        useState(10)
+
+    const [pagination, setPagination] =
+        useState({
+            page: 1,
+            pageSize: 10,
+            total: 0,
+            totalPages: 0,
+        })
 
     // =========================================================
     // MODALS
@@ -358,7 +210,7 @@ function CallAssignment() {
         }))
     }
 
-    const showFeedback = ({
+    const showFeedback = useCallback(({
         type = 'success',
         title = '',
         message = '',
@@ -369,7 +221,7 @@ function CallAssignment() {
             title,
             message,
         })
-    }
+    }, [])
 
     // =========================================================
     // LOAD AVAILABLE NUMBERS
@@ -377,7 +229,7 @@ function CallAssignment() {
 
     const openAssignModal = async () => {
         try {
-            setLoading(true)
+            setLoadingAvailableNumbers(true)
 
             const response =
                 await getAvailableCallNumbers()
@@ -403,7 +255,7 @@ function CallAssignment() {
             })
 
         } finally {
-            setLoading(false)
+            setLoadingAvailableNumbers(false)
         }
     }
 
@@ -411,12 +263,43 @@ function CallAssignment() {
     // LOAD DATA
     // =========================================================
 
-    const loadAssignments = async () => {
+    const loadAssignments = useCallback(async (params = {}) => {
+        const requestPage =
+            params.page ?? currentPage
+
+        const requestPageSize =
+            params.pageSize ?? pageSize
+
+        const requestFilters = {
+            search:
+                params.search ?? search,
+            status:
+                params.status ?? status,
+            rm:
+                params.rm ?? rm,
+            dateFilter:
+                params.dateFilter ?? dateFilter,
+            fromDate:
+                params.fromDate ?? fromDate,
+            toDate:
+                params.toDate ?? toDate,
+        }
+
         try {
-            setLoading(true)
+            setLoadingAssignments(true)
+
+            const response =
+                await fetchAssignments({
+                    page: requestPage,
+                    pageSize: requestPageSize,
+                    ...requestFilters,
+                })
 
             const assignments =
-                await fetchAssignments()
+                response?.success &&
+                    Array.isArray(response.data)
+                    ? response.data
+                    : []
 
             const normalizedAssignments =
                 assignments.map(
@@ -460,6 +343,36 @@ function CallAssignment() {
                 normalizedAssignments
             )
 
+            const responsePagination =
+                response?.pagination || {}
+
+            setPagination({
+                page:
+                    Number(
+                        responsePagination.page
+                    ) || requestPage,
+
+                pageSize:
+                    Number(
+                        responsePagination.page_size
+                    ) || requestPageSize,
+
+                total:
+                    Number(
+                        responsePagination.total
+                    ) || 0,
+
+                totalPages:
+                    Number(
+                        responsePagination.total_pages
+                    ) || 0,
+            })
+
+            return {
+                data: assignments,
+                pagination: responsePagination,
+            }
+
         } catch (err) {
 
             showFeedback({
@@ -472,192 +385,73 @@ function CallAssignment() {
             })
 
         } finally {
-            setLoading(false)
+            setLoadingAssignments(false)
         }
-    }
+    }, [
+        currentPage,
+        pageSize,
+        search,
+        status,
+        rm,
+        dateFilter,
+        fromDate,
+        toDate,
+        showFeedback,
+    ])
 
     useEffect(() => {
-        loadAssignments()
-    }, [])
-
-    // =========================================================
-    // FILTER DATA
-    // =========================================================
-
-    const filteredEntries =
-        useMemo(() => {
-
-            const searchValue =
-                search
-                    .trim()
-                    .toLowerCase()
-
-            let result =
-                entries
-
-            // -------------------------------------------------
-            // SEARCH
-            // -------------------------------------------------
-
-            if (searchValue) {
-                result =
-                    result.filter(
-                        (entry) => {
-
-                            const values = [
-                                entry.name,
-                                entry.phone,
-                                entry.contact,
-                                entry.assignedToName,
-                            ]
-
-                            return values.some(
-                                (value) =>
-                                    String(
-                                        value || ''
-                                    )
-                                        .toLowerCase()
-                                        .includes(
-                                            searchValue
-                                        )
-                            )
-                        }
-                    )
-            }
-
-            // -------------------------------------------------
-            // STATUS
-            // -------------------------------------------------
-
-            if (status) {
-                result =
-                    result.filter(
-                        (entry) =>
-                            String(
-                                entry.status ||
-                                ''
-                            ).toLowerCase() ===
-                            status.toLowerCase()
-                    )
-            }
-
-            // -------------------------------------------------
-            // RM
-            // -------------------------------------------------
-
-            if (rm) {
-                result =
-                    result.filter(
-                        (entry) =>
-                            entry.assignedTo === rm
-                    )
-            }
-
-            // -------------------------------------------------
-            // DATE
-            // -------------------------------------------------
-
-            if (
-                dateFilter &&
-                dateFilter !== 'custom'
-            ) {
-
-                const range =
-                    getDateRange(
-                        dateFilter
-                    )
-
-                if (range) {
-                    result =
-                        result.filter(
-                            (entry) => {
-
-                                const date =
-                                    parseDate(
-                                        entry.assignedDate
-                                    )
-
-                                if (!date) {
-                                    return false
-                                }
-
-                                return (
-                                    date >=
-                                    range.from &&
-                                    date <=
-                                    range.to
-                                )
-                            }
-                        )
-                }
-            }
-
-            // -------------------------------------------------
-            // CUSTOM DATE
-            // -------------------------------------------------
-
-            if (
-                dateFilter === 'custom' &&
-                (fromDate || toDate)
-            ) {
-
-                const from =
-                    fromDate
-                        ? startOfDay(
-                            new Date(fromDate)
-                        )
-                        : null
-
-                const to =
-                    toDate
-                        ? endOfDay(
-                            new Date(toDate)
-                        )
-                        : null
-
-                result =
-                    result.filter(
-                        (entry) => {
-
-                            const date =
-                                parseDate(
-                                    entry.assignedDate
-                                )
-
-                            if (!date) {
-                                return false
-                            }
-
-                            if (
-                                from &&
-                                date < from
-                            ) {
-                                return false
-                            }
-
-                            if (
-                                to &&
-                                date > to
-                            ) {
-                                return false
-                            }
-
-                            return true
-                        }
-                    )
-            }
-
-            return result
-
-        }, [
-            entries,
+        loadAssignments({
+            page: currentPage,
+            pageSize,
             search,
             status,
             rm,
             dateFilter,
             fromDate,
             toDate,
-        ])
+        })
+    }, [
+        loadAssignments,
+        currentPage,
+        pageSize,
+        search,
+        status,
+        rm,
+        dateFilter,
+        fromDate,
+        toDate,
+    ])
+
+    // =========================================================
+    // SERVER PAGINATION
+    // =========================================================
+
+    const totalRecords = pagination.total
+
+    const totalPages = Math.max(
+        1,
+        pagination.totalPages
+    )
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages)
+        }
+    }, [currentPage, totalPages])
+
+    const handlePageChange = (page) => {
+        setCurrentPage(
+            Math.min(
+                Math.max(page, 1),
+                totalPages
+            )
+        )
+    }
+
+    const handlePageSizeChange = (size) => {
+        setPageSize(size)
+        setCurrentPage(1)
+    }
 
     // =========================================================
     // RESET
@@ -670,6 +464,7 @@ function CallAssignment() {
         setRM('')
         setFromDate('')
         setToDate('')
+        setCurrentPage(1)
     }
 
     // =========================================================
@@ -716,7 +511,11 @@ function CallAssignment() {
                 })
             }
 
-            await loadAssignments()
+            if (currentPage === 1) {
+                await loadAssignments()
+            } else {
+                setCurrentPage(1)
+            }
 
             setShowAssignModal(false)
 
@@ -1057,66 +856,7 @@ function CallAssignment() {
 
             setLoading(true)
 
-            const response =
-                await getCallAssignments()
-
-            if (
-                !response?.success ||
-                !Array.isArray(
-                    response.data
-                )
-            ) {
-                throw new Error(
-                    response?.message ||
-                    'Unable to refresh call assignments.'
-                )
-            }
-
-            const assignments =
-                response.data
-
-            const normalizedAssignments =
-                assignments.map(
-                    (assignment) => ({
-                        ...assignment,
-
-                        phone:
-                            assignment.phone_number,
-
-                        contact:
-                            assignment.phone_number,
-
-                        assignedBy:
-                            assignment.assigned_by_name ||
-                            '—',
-
-                        assignedTo:
-                            assignment.assigned_to_id,
-
-                        assignedToName:
-                            assignment.assigned_to_name ||
-                            '—',
-
-                        assignedDate:
-                            assignment.created_at,
-
-                        attempts:
-                            assignment.attempts ??
-                            0,
-
-                        lastCalled:
-                            assignment.last_called ??
-                            null,
-
-                        callStatus:
-                            assignment.call_status ??
-                            null,
-                    })
-                )
-
-            setEntries(
-                normalizedAssignments
-            )
+            await loadAssignments()
 
             setShowExchangeModal(false)
             setSelectedEntry(null)
@@ -1175,13 +915,7 @@ function CallAssignment() {
                 )
             }
 
-            setEntries(
-                (previous) =>
-                    previous.filter(
-                        (item) =>
-                            item.id !== entry.id
-                    )
-            )
+            await loadAssignments()
 
             showFeedback({
                 type: 'success',
@@ -1269,11 +1003,12 @@ function CallAssignment() {
                             <input
                                 type="text"
                                 value={search}
-                                onChange={(event) =>
+                                onChange={(event) => {
                                     setSearch(
                                         event.target.value
                                     )
-                                }
+                                    setCurrentPage(1)
+                                }}
                                 placeholder="Search name, phone or contact..."
                                 className="
                                     input
@@ -1307,11 +1042,12 @@ function CallAssignment() {
 
                         <select
                             value={status}
-                            onChange={(event) =>
+                            onChange={(event) => {
                                 setStatus(
                                     event.target.value
                                 )
-                            }
+                                setCurrentPage(1)
+                            }}
                             className="
                                 select
                                 select-bordered
@@ -1377,6 +1113,8 @@ function CallAssignment() {
                                     setToDate('')
                                 }
 
+                                setCurrentPage(1)
+
                             }}
                             className="
                                 select
@@ -1414,7 +1152,10 @@ function CallAssignment() {
 
                     <RmDropdown
                         value={rm}
-                        onChange={setRM}
+                        onChange={(value) => {
+                            setRM(value)
+                            setCurrentPage(1)
+                        }}
                         className="w-full xl:w-48"
                     />
 
@@ -1461,7 +1202,10 @@ function CallAssignment() {
                     <button
                         type="button"
                         onClick={openAssignModal}
-                        disabled={!canAssign}
+                        disabled={
+                            !canAssign ||
+                            loadingAvailableNumbers
+                        }
                         className="
                             inline-flex
                             h-10
@@ -1523,11 +1267,12 @@ function CallAssignment() {
                             <input
                                 type="date"
                                 value={fromDate}
-                                onChange={(event) =>
+                                onChange={(event) => {
                                     setFromDate(
                                         event.target.value
                                     )
-                                }
+                                    setCurrentPage(1)
+                                }}
                                 className="
                                     input
                                     input-bordered
@@ -1559,9 +1304,12 @@ function CallAssignment() {
                                     undefined
                                 }
                                 onChange={(event) =>
-                                    setToDate(
-                                        event.target.value
-                                    )
+                                    {
+                                        setToDate(
+                                            event.target.value
+                                        )
+                                        setCurrentPage(1)
+                                    }
                                 }
                                 className="
                                     input
@@ -1595,8 +1343,8 @@ function CallAssignment() {
                     font-medium
                     text-base-content/50
                 ">
-                    {filteredEntries.length}{' '}
-                    {filteredEntries.length === 1
+                    {totalRecords}{' '}
+                    {totalRecords === 1
                         ? 'number'
                         : 'numbers'}{' '}
                     found
@@ -1609,8 +1357,14 @@ function CallAssignment() {
             ===================================================== */}
 
             <CallAssignmentTable
-                entries={filteredEntries}
-                loading={loading}
+                entries={entries}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                totalRecords={totalRecords}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+                loading={loadingAssignments}
                 onViewHistory={
                     handleViewHistory
                 }

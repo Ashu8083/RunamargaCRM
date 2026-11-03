@@ -56,38 +56,37 @@ const STATUS_OPTIONS = [
 // =============================================================
 
 const getAgentName = (application) => {
-  if (application.agent && typeof application.agent === "object") {
-    return application.agent.name || "N/A";
-  }
-  if (
-    application.processingAgent &&
-    typeof application.processingAgent === "object"
-  ) {
-    return application.processingAgent.name || "N/A";
-  }
-  if (application.agentName && typeof application.agentName === "string") {
-    return application.agentName;
-  }
-  if (application.agent_name && typeof application.agent_name === "string") {
-    return application.agent_name;
-  }
-  if (typeof application.processingAgent === "string") {
-    return application.processingAgent;
-  }
-  if (typeof application.processing_agent === "string") {
-    return application.processing_agent;
-  }
-  return "N/A";
+  const names = [
+    application.agent?.name,
+    application.processingAgent?.name,
+    application.agentName,
+    application.agent_name,
+    typeof application.processingAgent === "string"
+      ? application.processingAgent
+      : null,
+    typeof application.processing_agent === "string"
+      ? application.processing_agent
+      : null,
+  ];
+
+  return names.find(
+    (name) => typeof name === "string" && name.trim(),
+  ) || "N/A";
 };
 
 const getRMName = (application) => {
-  if (application.rm && typeof application.rm === "object") {
-    return application.rm.name || "N/A";
-  }
-  if (typeof application.rmName === "string") return application.rmName;
-  if (typeof application.rm_name === "string") return application.rm_name;
-  if (typeof application.rm === "string") return application.rm;
-  return "N/A";
+  const names = [
+    application.rm?.name,
+    application.rmName,
+    application.rm_name,
+    typeof application.rm === "string"
+      ? application.rm
+      : null,
+  ];
+
+  return names.find(
+    (name) => typeof name === "string" && name.trim(),
+  ) || "N/A";
 };
 
 const getTeamLeadName = (application) => {
@@ -853,6 +852,7 @@ function ApplicationsTable({
                             application.rm_context_id ??
                             ""
                           }
+                          fallbackLabel={getRMName(application)}
                           onChange={(value) =>
                             handleRmChange(application, value)
                           }
@@ -866,6 +866,7 @@ function ApplicationsTable({
                             application.agent_context_id ??
                             ""
                           }
+                          fallbackLabel={getAgentName(application)}
                           onChange={(value) =>
                             handleAgentChange(application, value)
                           }
@@ -1095,6 +1096,7 @@ function ApplicationsTable({
                             application.rm_context_id ??
                             ""
                           }
+                          fallbackLabel={getRMName(application)}
                           onChange={(value) =>
                             handleRmChange(application, value)
                           }
@@ -1113,6 +1115,7 @@ function ApplicationsTable({
                             application.agent_context_id ??
                             ""
                           }
+                          fallbackLabel={getAgentName(application)}
                           onChange={(value) =>
                             handleAgentChange(application, value)
                           }

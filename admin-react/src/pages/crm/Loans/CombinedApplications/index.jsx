@@ -212,41 +212,92 @@ function Applications() {
                     application.agentId ??
                     application.agent_context_id ??
                     application.processingAgentId ??
-                    application.processing_agent_id,
+                    application.processing_agent_id ??
+                    application.agent?.id ??
+                    application.processingAgent?.id ??
+                    application.processing_agent?.id,
 
                 agent_id:
                     application.agent_id ??
                     application.agentId ??
-                    application.agent_context_id,
+                    application.agent_context_id ??
+                    application.processingAgentId ??
+                    application.processing_agent_id ??
+                    application.agent?.id ??
+                    application.processingAgent?.id ??
+                    application.processing_agent?.id,
 
                 agent_context_id:
                     application.agent_context_id ??
                     application.agent_id ??
-                    application.agentId,
+                    application.agentId ??
+                    application.processingAgentId ??
+                    application.processing_agent_id ??
+                    application.agent?.id ??
+                    application.processingAgent?.id ??
+                    application.processing_agent?.id,
 
                 agent:
-                    application.agent ?? null,
+                    application.agent ??
+                    application.processingAgent ??
+                    application.processing_agent ??
+                    null,
+
+                processingAgent:
+                    application.processingAgent ??
+                    application.agent ??
+                    null,
+
+                processing_agent:
+                    application.processing_agent ??
+                    application.processingAgent ??
+                    null,
 
                 agentName:
                     application.agent_name ??
                     application.agentName ??
                     application.agent?.name ??
                     application.processingAgent?.name ??
+                    application.processing_agent?.name ??
+                    (typeof application.processingAgent === 'string'
+                        ? application.processingAgent
+                        : null) ??
+                    (typeof application.processing_agent === 'string'
+                        ? application.processing_agent
+                        : null) ??
                     '',
 
                 agent_name:
                     application.agent_name ??
                     application.agentName ??
                     application.agent?.name ??
+                    application.processingAgent?.name ??
+                    application.processing_agent?.name ??
+                    (typeof application.processingAgent === 'string'
+                        ? application.processingAgent
+                        : null) ??
+                    (typeof application.processing_agent === 'string'
+                        ? application.processing_agent
+                        : null) ??
                     '',
 
                 rmId:
                     application.rm_id ??
-                    application.rmId,
+                    application.rmId ??
+                    application.rm_context_id ??
+                    application.rm?.id,
 
                 rm_id:
                     application.rm_id ??
-                    application.rmId,
+                    application.rmId ??
+                    application.rm_context_id ??
+                    application.rm?.id,
+
+                rm_context_id:
+                    application.rm_context_id ??
+                    application.rm_id ??
+                    application.rmId ??
+                    application.rm?.id,
 
                 rm:
                     application.rm ?? null,
@@ -255,12 +306,18 @@ function Applications() {
                     application.rm_name ??
                     application.rmName ??
                     application.rm?.name ??
+                    (typeof application.rm === 'string'
+                        ? application.rm
+                        : null) ??
                     '',
 
                 rm_name:
                     application.rm_name ??
                     application.rmName ??
                     application.rm?.name ??
+                    (typeof application.rm === 'string'
+                        ? application.rm
+                        : null) ??
                     '',
 
                 teamLeadId:

@@ -1,10 +1,11 @@
 # backend/app/services/CallManagement/call_assignment_service.py
 
+from datetime import datetime, timedelta
 from typing import Optional
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, Query
 from app.core.access_control import AccessControl
-from app.models.call_assignments import CallAssignment
+from app.models.call_assignments import CallAssignment, StatusEnum
 from app.models.loan_applications import LoanApplication
 from app.models.call_logs import CallLog
 from app.models.employees import Employee
@@ -441,8 +442,24 @@ class CallAssignmentService:
         db: Session,
         employee: Employee,
         context_id: Optional[int] = None,
+        page: int = 1,
+        page_size: int = 10,
+        search: Optional[str] = None,
+        status: Optional[str] = None,
+        rm: Optional[str] = None,
+        date_filter: Optional[str] = None,
+        from_date: Optional[str] = None,
+        to_date: Optional[str] = None,
     ):
-        """Get call assignments visible to the employee."""
+        """Get one filtered page of call assignments visible to the employee."""
+
+        if page < 1:
+            raise ValueError("page must be greater than or equal to 1")
+
+        if page_size not in {10, 25, 50, 100}:
+            raise ValueError(
+                "page_size must be one of 10, 25, 50, or 100"
+            )
 
         query = (
             db.query(CallAssignment)
@@ -458,14 +475,145 @@ class CallAssignmentService:
             context_id=context_id,
         )
 
-        return (
+        if search and search.strip():
+            search_value = f"%{search.strip()}%"
+
+            query = (
+                query
+                .outerjoin(CallAssignment.assigned_to)
+                .outerjoin(EmployeeContext.employee)
+                .filter(
+                    or_(
+                        CallAssignment.phone_number.ilike(
+                            search_value
+                        ),
+                        Employee.name.ilike(search_value),
+                    )
+                )
+            )
+
+        if status and status.strip():
+            normalized_status = status.strip().lower()
+
+            if normalized_status in {
+                item.value for item in StatusEnum
+            }:
+                query = query.filter(
+                    CallAssignment.status == StatusEnum(
+                        normalized_status
+                    )
+                )
+            else:
+                query = query.filter(False)
+
+        if rm and str(rm).strip():
+            try:
+                rm_id = int(str(rm).strip())
+            except (TypeError, ValueError):
+                query = query.filter(False)
+            else:
+                query = query.filter(
+                    CallAssignment.assigned_to_id == rm_id
+                )
+
+        date_range = None
+        normalized_date_filter = (
+            date_filter.strip().lower()
+            if date_filter
+            else ""
+        )
+
+        if normalized_date_filter != "custom":
+            today = datetime.now().replace(
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+
+            if normalized_date_filter == "today":
+                date_range = (today, today + timedelta(days=1))
+
+            elif normalized_date_filter == "yesterday":
+                start = today - timedelta(days=1)
+                date_range = (start, today)
+
+            elif normalized_date_filter == "this-week":
+                start = today - timedelta(days=today.weekday())
+                date_range = (start, today + timedelta(days=1))
+
+            elif normalized_date_filter == "last-week":
+                start = today - timedelta(days=today.weekday() + 7)
+                date_range = (
+                    start,
+                    start + timedelta(days=7),
+                )
+
+            elif normalized_date_filter == "this-month":
+                start = today.replace(day=1)
+                date_range = (start, today + timedelta(days=1))
+
+            elif normalized_date_filter == "last-month":
+                end = today.replace(day=1)
+                start = (end - timedelta(days=1)).replace(day=1)
+                date_range = (start, end)
+
+        else:
+            start = None
+            end = None
+
+            if from_date:
+                try:
+                    start = datetime.strptime(
+                        from_date,
+                        "%Y-%m-%d",
+                    )
+                except ValueError:
+                    raise ValueError(
+                        "fromDate must use YYYY-MM-DD format"
+                    )
+
+            if to_date:
+                try:
+                    end = datetime.strptime(
+                        to_date,
+                        "%Y-%m-%d",
+                    ) + timedelta(days=1)
+                except ValueError:
+                    raise ValueError(
+                        "toDate must use YYYY-MM-DD format"
+                    )
+
+            if start or end:
+                date_range = (start, end)
+
+        if date_range:
+            start, end = date_range
+
+            if start:
+                query = query.filter(
+                    CallAssignment.created_at >= start
+                )
+
+            if end:
+                query = query.filter(
+                    CallAssignment.created_at < end
+                )
+
+        total = query.order_by(None).count()
+
+        assignments = (
             query
             .order_by(
                 CallAssignment.created_at.desc(),
                 CallAssignment.id.desc(),
             )
+            .offset((page - 1) * page_size)
+            .limit(page_size)
             .all()
         )
+
+        return assignments, total
 
     @staticmethod
     def get_available_call_numbers(
