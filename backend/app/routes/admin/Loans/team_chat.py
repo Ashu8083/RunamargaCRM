@@ -4,6 +4,7 @@
 from fastapi import (
     APIRouter,
     Depends,
+    Request,
     WebSocket,
     WebSocketDisconnect,
 )
@@ -50,18 +51,31 @@ def get_team_chat_route(
 # =========================================================
 
 @router.post("/{application_id}/chat")
-def create_team_chat_route(
+async def create_team_chat_route(
     application_id: str,
     payload: CreateTeamChatRequest,
+    request: Request,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
-    return create_team_chat(
+    result = create_team_chat(
         db=db,
         employee=employee,
         application_id=application_id,
         payload=payload,
+        sender_context_id=getattr(
+            request.state,
+            "employee_context_id",
+            None,
+        ),
     )
+
+    await team_chat_manager.broadcast(
+        application_id,
+        result,
+    )
+
+    return result
 
 # =========================================================
 # DELETE MESSAGE
@@ -71,6 +85,7 @@ def create_team_chat_route(
 def delete_team_chat_route(
     application_id: str,
     chat_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     employee: Employee = Depends(get_current_employee),
 ):
@@ -80,4 +95,9 @@ def delete_team_chat_route(
         employee=employee,
         application_id=application_id,
         chat_id=chat_id,
+        sender_context_id=getattr(
+            request.state,
+            "employee_context_id",
+            None,
+        ),
     )

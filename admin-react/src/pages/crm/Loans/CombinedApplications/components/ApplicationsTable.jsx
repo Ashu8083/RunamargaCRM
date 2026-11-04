@@ -342,6 +342,7 @@ function Cell({ children, title, className = "" }) {
 
 function ApplicationsTable({
   applications = [],
+  currentEmployeeContextId,
   search,
   setSearch,
   statuses = STATUS_OPTIONS,
@@ -1302,12 +1303,13 @@ function ApplicationsTable({
       <Suspense fallback={null}>
         {selectedChatApplication && (
           <GlobalChat
-            open={chatOpen}
-            onClose={handleCloseChat}
-            loanId={getLoanId(selectedChatApplication)}
-            agentId={getAgentId(selectedChatApplication)}
-            customerName={selectedChatApplication.name || "Customer"}
-            customerPhone={selectedChatApplication.phone || ""}
+              open={chatOpen}
+              onClose={handleCloseChat}
+              loanId={getLoanId(selectedChatApplication)}
+              agentId={getAgentId(selectedChatApplication)}
+              currentEmployeeContextId={currentEmployeeContextId}
+              customerName={selectedChatApplication.name || "Customer"}
+              customerPhone={selectedChatApplication.phone || ""}
           />
         )}
       </Suspense>

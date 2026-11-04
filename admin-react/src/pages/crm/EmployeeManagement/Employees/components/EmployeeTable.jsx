@@ -193,6 +193,7 @@ function EmployeeTable({
               <tr className="border-b border-base-300">
                 {[
                   "Name",
+                  "Employee Code",
                   "Email",
                   "Phone",
                   "Role",
@@ -247,7 +248,15 @@ function EmployeeTable({
                         )}
                       </div>
                     </td>
+                    {/* EMPLOYEE CODE */}
 
+                    <td className="px-5 py-5">
+                      <div>
+                        <p className="whitespace-nowrap text-sm font-medium text-base-content">
+                          {employee.employee_code || "—"}
+                        </p>
+                      </div>
+                    </td>
                     {/* EMAIL */}
 
                     <td className="px-5 py-5">

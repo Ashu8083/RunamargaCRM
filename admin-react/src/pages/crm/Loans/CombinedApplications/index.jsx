@@ -70,6 +70,9 @@ const getOperationErrorMessage = (
 
 function Applications() {
     const navigate = useNavigate()
+    const currentUser = getStoredUser()
+    const activeContext = getActiveContext(currentUser)
+    const currentEmployeeContextId = activeContext?.id ?? null
 
     // =========================================================
     // CONSTANTS
@@ -872,18 +875,13 @@ function Applications() {
     }
 
 
-    const handleReminderSubmit = (data) => {
+    const handleReminderSubmit = () => {
 
         /*
          * Later:
          *
          * POST /applications/{applicationId}/reminders
          */
-
-        console.log(
-            'Application Reminder:',
-            data
-        )
 
         handleCloseReminderModal()
 
@@ -904,22 +902,7 @@ function Applications() {
     // CHAT
     // =========================================================
 
-    const handleChat = (application) => {
-
-        console.log(
-            'Open Application Chat:',
-            {
-                loanId:
-                    application.unique_id ||
-                    application.id,
-
-                agentId:
-                    application.agentId ||
-                    application.agent_id,
-            }
-        )
-
-    }
+    const handleChat = () => {}
 
 
     // =========================================================
@@ -1029,6 +1012,10 @@ function Applications() {
 
             <ApplicationsTable
                 applications={displayApplications}
+
+                currentEmployeeContextId={
+                    currentEmployeeContextId
+                }
 
                 currentPage={currentPage}
                 pageSize={pageSize}

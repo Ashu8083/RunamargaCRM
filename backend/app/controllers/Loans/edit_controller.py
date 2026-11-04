@@ -14,6 +14,7 @@ from app.models.bank_processings import BankProcessing
 from app.models.dsa_details import DSADetail
 from app.models.bank_processing_logs import BankProcessingLog
 from app.models.loan_reference import LoanReference
+from app.models.loan_assignments import LoanAssignment
 from app.models.bank import Bank
 import random
 from app.schemas.application_schema import (
@@ -436,37 +437,9 @@ def update_application_status(
                 detail="Loan type not found for this application",
             )
 
-        # Find the required permission for this loan type.
-        permission_code = LOAN_TYPE_PERMISSION_MAP.get(
-            loan_type.name.strip().lower()
-        )
+       
 
-        if not permission_code:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"No permission mapping found for loan type: "
-                    f"{loan_type.name}"
-                ),
-            )
-
-        permission = (
-            db.query(Permission)
-            .filter(
-                Permission.code == permission_code,
-                Permission.is_active.is_(True),
-            )
-            .first()
-        )
-
-        if not permission:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Required permission not found or inactive: "
-                    f"{permission_code}"
-                ),
-            )
+     
 
         # Get active agent contexts.
         agent_contexts = AccessControl._visible_contexts(
