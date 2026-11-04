@@ -14,17 +14,11 @@ import {
     useNavigate,
 } from "react-router-dom";
 
-import {
-    getActiveContext,
-} from "../../../../app/auth";
-
-import {
-    getApplicationStatusApplications
-} from "./API";
-import { deleteApplication
-} from '../CombinedApplications/Api'
+import { getActiveContext } from "../../../../app/auth";
+import { getApplicationStatusApplications } from "./API";
+import { deleteApplication } from "../CombinedApplications/Api";
 import ApplicationsTable from "./components/ApplicationsTable";
-import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
+import FeedbackModal from "../../../../components/GlobalModels/FeedbackModal";
 
 const INITIAL_FEEDBACK = {
     open: false,
@@ -1255,19 +1249,6 @@ const ApplicationStatus = () => {
         application
     ) => {
 
-        /*
-         * Store the complete application object.
-         *
-         * ReminderModal can therefore access:
-         *
-         * application.id
-         * application.unique_id
-         * application.name
-         * application.phone
-         * application.agent
-         * application.rm
-         * etc.
-         */
 
         setSelectedApplication(
             application
@@ -1407,167 +1388,62 @@ const ApplicationStatus = () => {
             {/* =================================================
                 HEADER
             ================================================= */}
+        <div className="flex flex-row items-center justify-between gap-3 mb-5">
 
-            <div
-                className="
-                    flex
-                    flex-col
-                    md:flex-row
-                    md:items-center
-                    md:justify-between
-                    gap-4
-                    mb-5
-                "
-            >
+            {/* LEFT: Dashboard Status + Count */}
+            <div className="flex flex-wrap items-center gap-2">
 
-                <div>
+                {(fromDate || toDate || loanType || dashboardStatus) && (
+                    <>
+                        {fromDate && (
+                            <span className="badge badge-ghost h-8 px-3">
+                                From: {fromDate}
+                            </span>
+                        )}
 
-                    <h1
-                        className="
-                            text-2xl
-                            font-semibold
-                            text-base-content
-                        "
-                    >
-                        {
-                            getPageTitle()
-                        }
-                    </h1>
+                        {toDate && (
+                            <span className="badge badge-ghost h-8 px-3">
+                                To: {toDate}
+                            </span>
+                        )}
 
+                        {loanType && (
+                            <span className="badge badge-ghost h-8 px-3">
+                                Loan Type: {loanType}
+                            </span>
+                        )}
 
-                    <p
-                        className="
-                            mt-1
-                            text-sm
-                            text-base-content/60
-                        "
-                    >
+                        {dashboardStatus && (
+                            <span className="badge badge-primary h-8 px-3">
+                                {dashboardStatus}
+                            </span>
+                        )}
 
-                        {loading
-
-                            ? "Loading applications..."
-
-                            : `${totalApplications} application${totalApplications === 1
-                                ? ""
-                                : "s"
-                            }`
-
-                        }
-
-                    </p>
-
-                </div>
-
-
-                <button
-                    type="button"
-                    onClick={() =>
-                        navigate(-1)
-                    }
-                    className="
-                        btn
-                        btn-sm
-                        btn-outline
-                        self-start
-                        md:self-auto
-                    "
-                >
-                    ← Back
-                </button>
+                        {/* Application count only */}
+                         <span className="badge badge-ghost h-8 px-3">
+                            {loading
+                                ? "..."
+                                : `${totalApplications} ${totalApplications === 1 ? "Application" : "Applications"}`
+                            }
+                        </span>
+                    </>
+                )}
 
             </div>
 
+            {/* RIGHT: Back Button */}
+            <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="btn btn-sm btn-outline shrink-0"
+            >
+                ← Back
+            </button>
 
-            {/* =================================================
-                DASHBOARD FILTER INFORMATION
-            ================================================= */}
-
-            {(fromDate ||
-                toDate ||
-                loanType ||
-                dashboardStatus) && (
-
-                    <div
-                        className="
-                        flex
-                        flex-wrap
-                        items-center
-                        gap-2
-                        mb-4
-                    "
-                    >
-
-                        {fromDate && (
-
-                            <span
-                                className="
-                                badge
-                                badge-ghost
-                                h-8
-                                px-3
-                            "
-                            >
-                                From: {fromDate}
-                            </span>
-
-                        )}
+        </div>
 
 
-                        {toDate && (
-
-                            <span
-                                className="
-                                badge
-                                badge-ghost
-                                h-8
-                                px-3
-                            "
-                            >
-                                To: {toDate}
-                            </span>
-
-                        )}
-
-
-                        {loanType && (
-
-                            <span
-                                className="
-                                badge
-                                badge-ghost
-                                h-8
-                                px-3
-                            "
-                            >
-                                Loan Type: {loanType}
-                            </span>
-
-                        )}
-
-
-                        {dashboardStatus && (
-
-                            <span
-                                className="
-                                badge
-                                badge-primary
-                                h-8
-                                px-3
-                            "
-                            >
-                                Status: {
-                                    dashboardStatus
-                                }
-                            </span>
-
-                        )}
-
-                    </div>
-
-                )}
-
-
-            {/* =================================================
+           { /* =================================================
                 ERROR
             ================================================= */}
 

@@ -45,6 +45,7 @@ STATUS_PRIORITY = {
 
 STATUS_LABELS = {
     "inprocess": "In Process",
+    "docspending": "Docs Pending",
     "rejected": "Rejected",
     "revert_rejected": "Rejected",
     "login": "Login",
@@ -1070,16 +1071,18 @@ def get_application_status_applications(
 
             if status == "Pending":
 
-                if (
-                    dashboard_status
-                    not in PENDING_STATUSES
-                ):
+                if dashboard_status not in PENDING_STATUSES:
                     continue
 
-            elif (
-                dashboard_status
-                != status
-            ):
+            elif status == "In Process":
+
+                if dashboard_status not in {
+                    "In Process",
+                    "Docs Pending",
+                }:
+                    continue
+
+            elif dashboard_status != status:
                 continue
 
         # -------------------------------------------------
