@@ -235,24 +235,26 @@ def save_refresh_token(
     employee_id: int,
     refresh_token: str,
 ) -> AuthToken:
+    now = datetime.now(timezone.utc)
 
-    # Revoke any existing active refresh tokens
+    # Keep at most two active web sessions per employee. On a third
+    # login, retain the newest existing session and the session being
+    # created; revoke any older sessions.
     existing_tokens = (
         db.query(AuthToken)
         .filter(
             AuthToken.employee_id == employee_id,
             AuthToken.token_type == "refresh",
             AuthToken.revoked_at.is_(None),
+            AuthToken.expires_at > now,
         )
+        .order_by(AuthToken.id.desc())
         .all()
     )
 
-    now = datetime.now(timezone.utc)
-
-    for token in existing_tokens:
+    for token in existing_tokens[1:]:
         token.revoked_at = now
 
-    # Create the new refresh token session
     auth_token = AuthToken(
         employee_id=employee_id,
         token_hash=hash_token(refresh_token),
@@ -264,6 +266,27 @@ def save_refresh_token(
     db.commit()
     db.refresh(auth_token)
     return auth_token
+
+
+def revoke_refresh_token(
+    db: Session,
+    refresh_token: str,
+) -> None:
+    """Revoke only the refresh session represented by this token."""
+    token_hash = hash_token(refresh_token)
+    (
+        db.query(AuthToken)
+        .filter(
+            AuthToken.token_hash == token_hash,
+            AuthToken.token_type == "refresh",
+            AuthToken.revoked_at.is_(None),
+        )
+        .update(
+            {AuthToken.revoked_at: datetime.now(timezone.utc)},
+            synchronize_session=False,
+        )
+    )
+    db.commit()
 def refresh_access_token(
     db: Session,
     refresh_token: str,

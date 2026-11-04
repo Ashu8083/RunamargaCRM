@@ -14,20 +14,62 @@ import ApplicationsTable from './components/ApplicationsTable'
 import LoanTypeModal from '../../../../components/GlobalModels/Loans/LoanTypeModal'
 import StatusModal from '../../../../components/GlobalModels/Loans/StatusModal'
 import ReminderModal from '../../../../components/GlobalModels/Loans/ReminderModal'
+import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
 import {
     getApplications,
     updateApplicationLoanType,
     updateApplicationStatus, deleteApplication
 } from './Api'
-import { useToast } from '../../../../components/Toast/ToastProvider'
+
+const INITIAL_FEEDBACK = {
+    open: false,
+    type: 'success',
+    title: '',
+    message: '',
+}
+
+const getOperationErrorMessage = (
+    error,
+    fallbackMessage
+) => {
+    const detail = error?.response?.data?.detail
+
+    if (Array.isArray(detail)) {
+        const messages = detail
+            .map((item) =>
+                typeof item === 'string'
+                    ? item
+                    : item?.msg || item?.message
+            )
+            .filter(Boolean)
+
+        if (messages.length) {
+            return messages.join(', ')
+        }
+    }
+
+    if (typeof detail === 'string' && detail) {
+        return detail
+    }
+
+    if (detail && typeof detail === 'object') {
+        const detailMessage =
+            detail.message || detail.msg
+
+        if (typeof detailMessage === 'string' && detailMessage) {
+            return detailMessage
+        }
+    }
+
+    const message = error?.response?.data?.message
+
+    return typeof message === 'string' && message
+        ? message
+        : fallbackMessage
+}
 
 function Applications() {
     const navigate = useNavigate()
-
-    const {
-        showSuccess,
-        showError,
-    } = useToast()
 
     // =========================================================
     // CONSTANTS
@@ -99,6 +141,41 @@ function Applications() {
     const [showReminderModal, setShowReminderModal] =
         useState(false)
 
+    const [feedback, setFeedback] =
+        useState(INITIAL_FEEDBACK)
+
+    const closeFeedback = () => {
+        setFeedback(INITIAL_FEEDBACK)
+    }
+
+    const openSuccessFeedback = (
+        title,
+        message
+    ) => {
+        setFeedback({
+            open: true,
+            type: 'success',
+            title,
+            message,
+        })
+    }
+
+    const openErrorFeedback = (
+        title,
+        error,
+        fallbackMessage
+    ) => {
+        setFeedback({
+            open: true,
+            type: 'error',
+            title,
+            message: getOperationErrorMessage(
+                error,
+                fallbackMessage
+            ),
+        })
+    }
+
 
     
 
@@ -141,6 +218,9 @@ function Applications() {
 
             const mappedApplications = data.map((application) => ({
                 id: application.id,
+
+                // Keep the database primary key explicit for reminder creation.
+                applicationId: application.id,
 
                 loanId:
                     application.unique_id ??
@@ -565,16 +645,20 @@ function Applications() {
                 application.unique_id ?? application.id
             );
 
-            showSuccess("Application deleted successfully");
+            openSuccessFeedback(
+                'Application deleted',
+                'The application was deleted successfully.'
+            )
 
             // Refresh the current applications page.
             await fetchApplications(currentPage, pageSize, search);
         } catch (error) {
             console.error("Failed to delete application:", error);
 
-            showError(
-                error?.response?.data?.detail ||
-                "Failed to delete application"
+            openErrorFeedback(
+                'Unable to delete application',
+                error,
+                'Failed to delete application.'
             );
         }
     };
@@ -629,8 +713,9 @@ function Applications() {
             )
 
             handleCloseLoanTypeModal()
-            showSuccess(
-                'Loan type updated successfully'
+            openSuccessFeedback(
+                'Loan type updated',
+                'The loan type was updated successfully.'
             )
 
         } catch (error) {
@@ -640,10 +725,10 @@ function Applications() {
                 error
             )
 
-            showError(
-                error?.response?.data?.detail ||
-                'Failed to update loan type',
-                'error'
+            openErrorFeedback(
+                'Unable to update loan type',
+                error,
+                'Failed to update loan type.'
             )
         }
     }
@@ -741,10 +826,13 @@ function Applications() {
 
             await fetchApplications()
 
-            showSuccess(
+            openSuccessFeedback(
                 isRevertRejected
-                    ? 'Application rejection reverted successfully'
-                    : 'Application status updated successfully'
+                    ? 'Application rejection reverted'
+                    : 'Application status updated',
+                isRevertRejected
+                    ? 'The application rejection was reverted successfully.'
+                    : 'The application status was updated successfully.'
             )
 
         } catch (error) {
@@ -754,22 +842,10 @@ function Applications() {
                 error
             )
 
-            const detail =
-                error?.response?.data?.detail
-
-            const errorMessage =
-                Array.isArray(detail)
-                    ? detail
-                        .map((item) => item?.msg)
-                        .filter(Boolean)
-                        .join(', ')
-                    : typeof detail === 'string'
-                        ? detail
-                        : 'Failed to update application status'
-
-            showError(
-                errorMessage,
-                'error'
+            openErrorFeedback(
+                'Unable to update application status',
+                error,
+                'Failed to update application status.'
             )
         }
     }
@@ -917,6 +993,26 @@ function Applications() {
         )
     }
 
+    const handleAssignmentSuccess = (
+        label = 'Assignment'
+    ) => {
+        openSuccessFeedback(
+            `${label} updated`,
+            `${label} was updated successfully.`
+        )
+    }
+
+    const handleAssignmentError = (
+        error,
+        label = 'Assignment'
+    ) => {
+        openErrorFeedback(
+            `Unable to update ${label}`,
+            error,
+            `Failed to update ${label.toLowerCase()}.`
+        )
+    }
+
     // =========================================================
     // RENDER
     // =========================================================
@@ -1047,6 +1143,12 @@ function Applications() {
                 onAssignmentChange={
                     handleAssignmentChange
                 }
+                onAssignmentSuccess={
+                    handleAssignmentSuccess
+                }
+                onAssignmentError={
+                    handleAssignmentError
+                }
                 onDeleteApplication={handleDeleteApplication}
                 onRefresh={fetchApplications}
             />
@@ -1103,6 +1205,11 @@ function Applications() {
                     selectedApplication
                 }
 
+                applicationId={
+                    selectedApplication?.applicationId ??
+                    null
+                }
+
                 onClose={
                     handleCloseReminderModal
                 }
@@ -1111,6 +1218,15 @@ function Applications() {
                     handleReminderSubmit
                 }
 
+            />
+
+            <FeedbackModal
+                open={feedback.open}
+                type={feedback.type}
+                title={feedback.title}
+                message={feedback.message}
+                autoClose={feedback.type === 'success'}
+                onClose={closeFeedback}
             />
 
         </div>

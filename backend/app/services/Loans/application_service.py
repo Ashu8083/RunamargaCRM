@@ -654,7 +654,6 @@ class ApplicationService:
     # =========================================================
     # CREATE APPLICATION
     # =========================================================
-
     @staticmethod
     def create_application(
         db: Session,
@@ -867,7 +866,7 @@ class ApplicationService:
             city_id=payload.city_id,
 
             status=LoanStatus.docspending,
-            docspending_date=date.today(),
+            applied_date=date.today(),
         )
 
         db.add(application)
@@ -905,7 +904,6 @@ class ApplicationService:
                 "status": application.status.value,
             },
         }
-
     # =========================================================
     # GET BANK PROCESSINGS
     # =========================================================

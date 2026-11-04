@@ -5,6 +5,7 @@ import {
     Suspense,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react";
 
@@ -23,8 +24,54 @@ import {
 import { deleteApplication
 } from '../CombinedApplications/Api'
 import ApplicationsTable from "./components/ApplicationsTable";
+import FeedbackModal from '../../../../components/GlobalModels/FeedbackModal'
 
-import { useToast } from '../../../../components/Toast/ToastProvider'
+const INITIAL_FEEDBACK = {
+    open: false,
+    type: 'success',
+    title: '',
+    message: '',
+};
+
+const getOperationErrorMessage = (
+    error,
+    fallbackMessage
+) => {
+    const detail = error?.response?.data?.detail;
+
+    if (Array.isArray(detail)) {
+        const messages = detail
+            .map((item) =>
+                typeof item === 'string'
+                    ? item
+                    : item?.msg || item?.message
+            )
+            .filter(Boolean);
+
+        if (messages.length) {
+            return messages.join(', ');
+        }
+    }
+
+    if (typeof detail === 'string' && detail) {
+        return detail;
+    }
+
+    if (detail && typeof detail === 'object') {
+        const detailMessage =
+            detail.message || detail.msg;
+
+        if (typeof detailMessage === 'string' && detailMessage) {
+            return detailMessage;
+        }
+    }
+
+    const message = error?.response?.data?.message;
+
+    return typeof message === 'string' && message
+        ? message
+        : fallbackMessage;
+};
 
 // =============================================================
 // NORMALIZE APPLICATION
@@ -40,6 +87,9 @@ const mapApplication = (application) => ({
     // IDENTITY
     // ---------------------------------------------------------
     id: application.id,
+
+    // Keep the database primary key explicit for reminder creation.
+    applicationId: application.id,
 
     loanId:
         application.unique_id ??
@@ -349,7 +399,6 @@ const ApplicationStatus = () => {
         useLocation();
 
     const navigate = useNavigate();
-    const [search, setSearch] = useState('')
 
     const [selectedLoanType, setSelectedLoanType] =
         useState('')
@@ -365,11 +414,6 @@ const ApplicationStatus = () => {
 
     const [selectedStatus, setSelectedStatus] =
         useState('')
-    const {
-        showSuccess,
-        showError,
-    } = useToast()
-
     // =========================================================
     // URL PARAMETERS
     // =========================================================
@@ -449,6 +493,44 @@ const ApplicationStatus = () => {
         setError,
     ] = useState(null);
 
+    const [feedback, setFeedback] = useState(
+        INITIAL_FEEDBACK
+    );
+
+    const requestSequence = useRef(0);
+
+    const closeFeedback = () => {
+        setFeedback(INITIAL_FEEDBACK);
+    };
+
+    const openSuccessFeedback = (
+        title,
+        message
+    ) => {
+        setFeedback({
+            open: true,
+            type: 'success',
+            title,
+            message,
+        });
+    };
+
+    const openErrorFeedback = (
+        title,
+        error,
+        fallbackMessage
+    ) => {
+        setFeedback({
+            open: true,
+            type: 'error',
+            title,
+            message: getOperationErrorMessage(
+                error,
+                fallbackMessage
+            ),
+        });
+    };
+
 
     // =========================================================
     // TABLE FILTERS
@@ -505,6 +587,9 @@ const ApplicationStatus = () => {
         filters = tableFilters
     ) => {
 
+        const requestId =
+            ++requestSequence.current;
+
         try {
 
             setLoading(true);
@@ -549,6 +634,13 @@ const ApplicationStatus = () => {
 
                 });
 
+            if (
+                requestId !==
+                requestSequence.current
+            ) {
+                return;
+            }
+
 
             // =================================================
             // APPLICATIONS  →  MAP INTO TABLE SHAPE
@@ -592,6 +684,13 @@ const ApplicationStatus = () => {
 
         } catch (err) {
 
+            if (
+                requestId !==
+                requestSequence.current
+            ) {
+                return;
+            }
+
             console.error(
                 "Failed to load Application Status applications:",
                 err
@@ -613,7 +712,12 @@ const ApplicationStatus = () => {
 
         } finally {
 
-            setLoading(false);
+            if (
+                requestId ===
+                requestSequence.current
+            ) {
+                setLoading(false);
+            }
 
         }
 
@@ -635,16 +739,23 @@ const ApplicationStatus = () => {
                 application.unique_id ?? application.id
             );
 
-            showSuccess("Application deleted successfully");
+            openSuccessFeedback(
+                'Application deleted',
+                'The application was deleted successfully.'
+            );
 
             // Refresh the current applications page.
-            await fetchApplications(currentPage, pageSize, search);
+            await fetchApplications(
+                currentPage,
+                tableFilters
+            );
         } catch (error) {
             console.error("Failed to delete application:", error);
 
-            showError(
-                error?.response?.data?.detail ||
-                "Failed to delete application"
+            openErrorFeedback(
+                'Unable to delete application',
+                error,
+                'Failed to delete application.'
             );
         }
     };
@@ -697,6 +808,8 @@ const ApplicationStatus = () => {
 
     useEffect(() => {
 
+        requestSequence.current += 1;
+
         setTableFilters({
             search: "",
 
@@ -713,6 +826,20 @@ const ApplicationStatus = () => {
                 dashboardStatus || "",
         });
 
+        setSelectedLoanType(
+            loanType || ""
+        );
+
+        setSelectedRM('');
+
+        setSelectedTeamLead('');
+
+        setSelectedAgent('');
+
+        setSelectedStatus(
+            dashboardStatus || ""
+        );
+
 
         setCurrentPage(1);
 
@@ -727,6 +854,8 @@ const ApplicationStatus = () => {
     // =========================================================
 
     const handleClearFilters = () => {
+
+        requestSequence.current += 1;
 
         const clearedFilters = {
 
@@ -748,6 +877,20 @@ const ApplicationStatus = () => {
 
         setTableFilters(
             clearedFilters
+        );
+
+        setSelectedLoanType(
+            clearedFilters.selectedLoanType
+        );
+
+        setSelectedRM('');
+
+        setSelectedTeamLead('');
+
+        setSelectedAgent('');
+
+        setSelectedStatus(
+            clearedFilters.selectedStatus
         );
 
         setCurrentPage(1);
@@ -777,11 +920,22 @@ const ApplicationStatus = () => {
         value
     ) => {
 
+        const nextValue = value || "";
+
         setSelectedLoanType(
-            value || ""
+            nextValue
         );
 
-        setCurrentPage(1);
+        setTableFilters((previous) => ({
+            ...previous,
+            selectedLoanType: nextValue,
+        }));
+
+        requestSequence.current += 1;
+
+        setCurrentPage(
+            1
+        );
 
     };
 
@@ -794,11 +948,22 @@ const ApplicationStatus = () => {
         value
     ) => {
 
+        const nextValue = value || "";
+
         setSelectedStatus(
-            value || ""
+            nextValue
         );
 
-        setCurrentPage(1);
+        setTableFilters((previous) => ({
+            ...previous,
+            selectedStatus: nextValue,
+        }));
+
+        requestSequence.current += 1;
+
+        setCurrentPage(
+            1
+        );
 
     };
 
@@ -811,11 +976,22 @@ const ApplicationStatus = () => {
         value
     ) => {
 
+        const nextValue = value || "";
+
         setSelectedRM(
-            value || ""
+            nextValue
         );
 
-        setCurrentPage(1);
+        setTableFilters((previous) => ({
+            ...previous,
+            selectedRM: nextValue,
+        }));
+
+        requestSequence.current += 1;
+
+        setCurrentPage(
+            1
+        );
 
     };
 
@@ -828,11 +1004,22 @@ const ApplicationStatus = () => {
         value
     ) => {
 
+        const nextValue = value || "";
+
         setSelectedTeamLead(
-            value || ""
+            nextValue
         );
 
-        setCurrentPage(1);
+        setTableFilters((previous) => ({
+            ...previous,
+            selectedTeamLead: nextValue,
+        }));
+
+        requestSequence.current += 1;
+
+        setCurrentPage(
+            1
+        );
 
     };
 
@@ -845,9 +1032,40 @@ const ApplicationStatus = () => {
         value
     ) => {
 
+        const nextValue = value || "";
+
         setSelectedAgent(
-            value || ""
+            nextValue
         );
+
+        setTableFilters((previous) => ({
+            ...previous,
+            selectedAgent: nextValue,
+        }));
+
+        requestSequence.current += 1;
+
+        setCurrentPage(
+            1
+        );
+
+    };
+
+
+    // =========================================================
+    // SEARCH CHANGE
+    // =========================================================
+
+    const handleSearchChange = (
+        value
+    ) => {
+
+        requestSequence.current += 1;
+
+        setTableFilters((previous) => ({
+            ...previous,
+            search: value || "",
+        }));
 
         setCurrentPage(1);
 
@@ -872,6 +1090,7 @@ const ApplicationStatus = () => {
             return;
         }
 
+        requestSequence.current += 1;
 
         setCurrentPage(
             page
@@ -977,6 +1196,26 @@ const ApplicationStatus = () => {
                 )
         );
 
+    };
+
+    const handleAssignmentSuccess = (
+        label = 'Assignment'
+    ) => {
+        openSuccessFeedback(
+            `${label} updated`,
+            `${label} was updated successfully.`
+        );
+    };
+
+    const handleAssignmentError = (
+        error,
+        label = 'Assignment'
+    ) => {
+        openErrorFeedback(
+            `Unable to update ${label}`,
+            error,
+            `Failed to update ${label.toLowerCase()}.`
+        );
     };
 
 
@@ -1360,8 +1599,8 @@ const ApplicationStatus = () => {
                 pageSize={pageSize}
                 loading={loading}
 
-                search={search}
-                setSearch={setSearch}
+                search={tableFilters.search}
+                setSearch={handleSearchChange}
 
                 selectedLoanType={selectedLoanType}
                 setSelectedLoanType={handleLoanTypeChange}
@@ -1390,6 +1629,8 @@ const ApplicationStatus = () => {
                 onRefresh={fetchApplications}
 
                 onAssignmentChange={handleAssignmentChange}
+                onAssignmentSuccess={handleAssignmentSuccess}
+                onAssignmentError={handleAssignmentError}
                 onDeleteApplication={handleDeleteApplication}
                 onPageChange={handlePageChange}
             />
@@ -1407,7 +1648,7 @@ const ApplicationStatus = () => {
                         }
 
                         applicationId={
-                            selectedApplication?.id ??
+                            selectedApplication?.applicationId ??
                             null
                         }
 
@@ -1425,6 +1666,15 @@ const ApplicationStatus = () => {
                     />
                 )}
             </Suspense>
+
+            <FeedbackModal
+                open={feedback.open}
+                type={feedback.type}
+                title={feedback.title}
+                message={feedback.message}
+                autoClose={feedback.type === 'success'}
+                onClose={closeFeedback}
+            />
 
         </div>
 
