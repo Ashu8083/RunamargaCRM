@@ -15,9 +15,17 @@ export const getApplicationStatusApplications = async ({
     page = 1,
     pageSize = 10,
 } = {}) => {
+    const safePage = Number.isFinite(Number(page)) && Number(page) >= 1
+    ? Math.floor(Number(page))
+    : 1;
+
+    const safePageSize = Number.isFinite(Number(pageSize)) && Number(pageSize) >= 1
+        ? Math.floor(Number(pageSize))
+        : 10;
+
     const params = {
-        page: Number(page),
-        page_size: Number(pageSize),
+        page: safePage,
+        page_size: safePageSize,
     };
 
     if (contextId) {

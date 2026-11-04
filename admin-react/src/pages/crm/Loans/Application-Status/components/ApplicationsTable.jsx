@@ -1,12 +1,15 @@
 // admin-react/src/pages/crm/Loans/Application-Status/components/ApplicationsTable.jsx
 
+
+
 import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useState,
+    lazy,
+    Suspense,
+    useCallback,
+    useEffect,
+    useState,
 } from "react";
+
 import { createPortal } from "react-dom";
 
 import SearchIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
@@ -17,17 +20,20 @@ import EyeIcon from "@heroicons/react/24/outline/EyeIcon";
 import PhoneIcon from "@heroicons/react/24/outline/PhoneIcon";
 import InformationCircleIcon from "@heroicons/react/24/outline/InformationCircleIcon";
 import TrashIcon from "@heroicons/react/24/outline/TrashIcon";
+import UserPlusIcon from "@heroicons/react/24/outline/UserPlusIcon";
+
 import AgentDropdown from "../../../../../components/GlobalModels/Filters/AgentDropdown";
 import RmDropdown from "../../../../../components/GlobalModels/Filters/RmDropdown";
 import TeamLeadDropdown from "../../../../../components/GlobalModels/Filters/TeamLeadDropdown";
 import LoanTypeDropdown from "../../../../../components/GlobalModels/Filters/LoanTypeDropdown";
 import StatusDropdown from "../../../../../components/GlobalModels/Filters/StatusDropdown";
-import UserPlusIcon from "@heroicons/react/24/outline/UserPlusIcon";
+
 import apiClient from "../../../../../app/apiClient";
 
 const GlobalChat = lazy(() =>
-  import("../../../../../components/GlobalModels/Loans/GlobalChat"),
+    import("../../../../../components/GlobalModels/Loans/GlobalChat")
 );
+
 
 const STATUS_OPTIONS = [
   { label: "In Process", value: "inprocess" },
@@ -352,6 +358,22 @@ function ApplicationsTable({
 
   const statusOptions = statuses?.length ? statuses : STATUS_OPTIONS;
 
+  const statusCounts =
+    applications.length > 0 &&
+    totalPages <= 1 &&
+    Number(totalApplications) === applications.length
+      ? applications.reduce((counts, application) => {
+          const status = getApplicationStatus(application);
+          counts[status] = (counts[status] || 0) + 1;
+          return counts;
+        }, {})
+      : null;
+
+  const getStatusLabel = (status) =>
+    statusCounts
+      ? `${status} (${statusCounts[status] || 0})`
+      : status;
+
   const startIndex = (currentPage - 1) * pageSizeValue;
 
   const paginatedApplications = applications;
@@ -651,7 +673,7 @@ function ApplicationsTable({
 
                 <button
                   type="button"
-                  onClick={onRefresh}
+                  onClick={() => onRefresh?.()}
                   title="Refresh applications"
                   className="btn btn-sm btn-square h-10 min-h-10 border-[#8BCF00] text-[#78B300] hover:bg-[#8BCF00] hover:text-white"
                 >
@@ -867,7 +889,7 @@ function ApplicationsTable({
                               status,
                             )}`}
                           >
-                            {status}
+                            {getStatusLabel(status)}
                           </button>
 
                           {(status === "Rejected" ||
@@ -1004,7 +1026,7 @@ function ApplicationsTable({
                           status,
                         )}`}
                       >
-                        {status}
+                        {getStatusLabel(status)}
                       </button>
 
                       {(status === "Rejected" ||
