@@ -324,47 +324,10 @@ function ApplicationForm({
         return ''
 
 
-      // -------------------------------------------------------
-      // REFERENCE NAME
-      // -------------------------------------------------------
-
-      case 'reference_name':
-
-        if (!trimmedValue) {
-          return 'Reference name is required.'
-        }
-
-        if (trimmedValue.length < 2) {
-          return 'Reference name must contain at least 2 characters.'
-        }
-
-        if (trimmedValue.length > 100) {
-          return 'Reference name cannot exceed 100 characters.'
-        }
-
-        return ''
+      
 
 
-      // -------------------------------------------------------
-      // LOAN PURPOSE
-      // -------------------------------------------------------
-
-      case 'loan_purpose':
-
-        if (!trimmedValue) {
-          return 'Loan purpose is required.'
-        }
-
-        if (trimmedValue.length < 3) {
-          return 'Loan purpose must contain at least 3 characters.'
-        }
-
-        if (trimmedValue.length > 200) {
-          return 'Loan purpose cannot exceed 200 characters.'
-        }
-
-        return ''
-
+    
 
       // -------------------------------------------------------
       // REMARKS
@@ -2000,10 +1963,6 @@ function ApplicationForm({
 
                     Reference Name
 
-                    <span className="ml-1 text-error">
-                      *
-                    </span>
-
                   </label>
 
                   <input
@@ -2046,9 +2005,7 @@ function ApplicationForm({
 
                     Loan Purpose
 
-                    <span className="ml-1 text-error">
-                      *
-                    </span>
+                  
 
                   </label>
 

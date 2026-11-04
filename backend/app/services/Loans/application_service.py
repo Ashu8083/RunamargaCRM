@@ -661,6 +661,7 @@ class ApplicationService:
         payload,
         context_id: int | None = None,
     ):
+        # print(payload)
         # ---------------------------------------------------------
         # GET THE CURRENTLY SELECTED EMPLOYEE CONTEXT
         # ---------------------------------------------------------
@@ -873,7 +874,22 @@ class ApplicationService:
         db.flush()
 
         application.unique_id = f"LN{application.id}"
+        # ---------------------------------------------------------
+        # SAVE APPLICATION REMARKS IN TEAM CHAT
+        # ---------------------------------------------------------
 
+        remarks = getattr(payload, "remarks", None)
+
+        if remarks and remarks.strip():
+
+            team_chat_message = TeamChat(
+                message_text=remarks.strip(),
+                message_type="text",
+                loan_application_id=application.id,
+                sender_admin_id=current_context.id,
+            )
+
+            db.add(team_chat_message)
         LoanApplicationAuditLogService.log_audit_log(
             db=db,
             action="create",

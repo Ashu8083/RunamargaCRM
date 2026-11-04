@@ -14,11 +14,16 @@ import {
     useNavigate,
 } from "react-router-dom";
 
+import StatusModal from '../../../../components/GlobalModels/Loans/StatusModal'
 import { getActiveContext } from "../../../../app/auth";
 import { getApplicationStatusApplications } from "./API";
-import { deleteApplication } from "../CombinedApplications/Api";
 import ApplicationsTable from "./components/ApplicationsTable";
 import FeedbackModal from "../../../../components/GlobalModels/FeedbackModal";
+import {
+    getApplications,
+    updateApplicationLoanType,
+    updateApplicationStatus, deleteApplication
+} from '../CombinedApplications/Api'
 
 const INITIAL_FEEDBACK = {
     open: false,
@@ -396,7 +401,8 @@ const ApplicationStatus = () => {
 
     const [selectedLoanType, setSelectedLoanType] =
         useState('')
-
+    const [showStatusModal, setShowStatusModal] =
+        useState(false)
     const [selectedRM, setSelectedRM] =
         useState('')
 
@@ -1229,18 +1235,22 @@ const ApplicationStatus = () => {
     };
 
 
-    const handleStatusAction = (
-        application
-    ) => {
+    const handleStatusAction = (application) => {
 
-        console.log(
-            "Status action:",
-            application
-        );
+        setSelectedApplication(application)
 
-    };
+        setShowStatusModal(true)
+
+    }
 
 
+    const handleCloseStatusModal = () => {
+
+        setShowStatusModal(false)
+
+        setSelectedApplication(null)
+
+    }
     // =========================================================
     // REMINDER
     // =========================================================
@@ -1260,6 +1270,102 @@ const ApplicationStatus = () => {
 
     };
 
+    
+        const handleStatusSubmit = async (data) => {
+    
+            try {
+    
+                const isRevertRejected =
+                    data.status === 'Revert Rejected'
+    
+                const rejectedRemarks =
+                    data.status === 'Rejected'
+                        ? data.rejectionReason
+                        : isRevertRejected
+                            ? data.revertRejectedReason
+                            : null
+    
+                const revertRejectionDate =
+                    isRevertRejected
+                        ? data.revertRejectedDate
+                        : null
+    
+                const response =
+                    await updateApplicationStatus(
+                        data.id,
+                        data.status,
+                        rejectedRemarks,
+                        revertRejectionDate
+                    )
+    
+                const updatedApplication =
+                    response?.data
+    
+                setApplications((previous) =>
+                    previous.map((application) =>
+                        application.id === data.id
+                            ? {
+                                ...application,
+    
+                                // Revert Rejected is stored
+                                // as rejected in DB.
+                                status:
+                                    updatedApplication?.status ??
+                                    (
+                                        isRevertRejected
+                                            ? 'rejected'
+                                            : data.status
+                                    ),
+    
+                                rejectionReason:
+                                    updatedApplication?.rejected_remarks ??
+                                    rejectedRemarks ??
+                                    '',
+    
+                                rejected_remarks:
+                                    updatedApplication?.rejected_remarks ??
+                                    rejectedRemarks ??
+                                    '',
+    
+                                rejectionDate:
+                                    updatedApplication?.rejection_date ??
+                                    application.rejectionDate,
+    
+                                updatedAt:
+                                    updatedApplication?.updated_at ??
+                                    new Date().toISOString(),
+                            }
+                            : application
+                    )
+                )
+    
+                handleCloseStatusModal()
+    
+                await fetchApplications()
+    
+                openSuccessFeedback(
+                    isRevertRejected
+                        ? 'Application rejection reverted'
+                        : 'Application status updated',
+                    isRevertRejected
+                        ? 'The application rejection was reverted successfully.'
+                        : 'The application status was updated successfully.'
+                )
+    
+            } catch (error) {
+    
+                console.error(
+                    'Failed to update application status:',
+                    error
+                )
+    
+                openErrorFeedback(
+                    'Unable to update application status',
+                    error,
+                    'Failed to update application status.'
+                )
+            }
+        }
 
     // =========================================================
     // CLOSE REMINDER MODAL
@@ -1388,62 +1494,62 @@ const ApplicationStatus = () => {
             {/* =================================================
                 HEADER
             ================================================= */}
-        <div className="flex flex-row items-center justify-between gap-3 mb-5">
+            <div className="flex flex-row items-center justify-between gap-3 mb-5">
 
-            {/* LEFT: Dashboard Status + Count */}
-            <div className="flex flex-wrap items-center gap-2">
+                {/* LEFT: Dashboard Status + Count */}
+                <div className="flex flex-wrap items-center gap-2">
 
-                {(fromDate || toDate || loanType || dashboardStatus) && (
-                    <>
-                        {fromDate && (
+                    {(fromDate || toDate || loanType || dashboardStatus) && (
+                        <>
+                            {fromDate && (
+                                <span className="badge badge-ghost h-8 px-3">
+                                    From: {fromDate}
+                                </span>
+                            )}
+
+                            {toDate && (
+                                <span className="badge badge-ghost h-8 px-3">
+                                    To: {toDate}
+                                </span>
+                            )}
+
+                            {loanType && (
+                                <span className="badge badge-ghost h-8 px-3">
+                                    Loan Type: {loanType}
+                                </span>
+                            )}
+
+                            {dashboardStatus && (
+                                <span className="badge badge-primary h-8 px-3">
+                                    {dashboardStatus}
+                                </span>
+                            )}
+
+                            {/* Application count only */}
                             <span className="badge badge-ghost h-8 px-3">
-                                From: {fromDate}
+                                {loading
+                                    ? "..."
+                                    : `${totalApplications} ${totalApplications === 1 ? "Application" : "Applications"}`
+                                }
                             </span>
-                        )}
+                        </>
+                    )}
 
-                        {toDate && (
-                            <span className="badge badge-ghost h-8 px-3">
-                                To: {toDate}
-                            </span>
-                        )}
+                </div>
 
-                        {loanType && (
-                            <span className="badge badge-ghost h-8 px-3">
-                                Loan Type: {loanType}
-                            </span>
-                        )}
-
-                        {dashboardStatus && (
-                            <span className="badge badge-primary h-8 px-3">
-                                {dashboardStatus}
-                            </span>
-                        )}
-
-                        {/* Application count only */}
-                         <span className="badge badge-ghost h-8 px-3">
-                            {loading
-                                ? "..."
-                                : `${totalApplications} ${totalApplications === 1 ? "Application" : "Applications"}`
-                            }
-                        </span>
-                    </>
-                )}
+                {/* RIGHT: Back Button */}
+                <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="btn btn-sm btn-outline shrink-0"
+                >
+                    ← Back
+                </button>
 
             </div>
 
-            {/* RIGHT: Back Button */}
-            <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="btn btn-sm btn-outline shrink-0"
-            >
-                ← Back
-            </button>
 
-        </div>
-
-
-           { /* =================================================
+            { /* =================================================
                 ERROR
             ================================================= */}
 
@@ -1511,7 +1617,29 @@ const ApplicationStatus = () => {
                 onPageChange={handlePageChange}
             />
 
+             {/* =================================================
+                STATUS MODAL
+            ================================================= */}
 
+            <StatusModal
+
+                open={
+                    showStatusModal
+                }
+
+                application={
+                    selectedApplication
+                }
+
+                onClose={
+                    handleCloseStatusModal
+                }
+
+                onSubmit={
+                    handleStatusSubmit
+                }
+
+            />
             {/* =================================================
                 REMINDER MODAL
             ================================================= */}

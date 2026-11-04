@@ -89,14 +89,12 @@ def find_employee_by_code(
     Find employee using the current employee identification field.
 
     The current Employee model does not have an employee_code column.
-
-    Therefore employee_code currently maps to Employee.email.
     """
 
     return (
         db.query(Employee)
         .filter(
-            Employee.email == employee_code,
+            Employee.employee_code == employee_code,
             Employee.deleted_at.is_(None),
         )
         .first()
@@ -1575,7 +1573,7 @@ def face_login(
     return {
         "message": "Face login successful",
         "employee_id": employee.id,
-        "employee_code": employee.email,
+        "employee_code": employee.employee_code,
         "employee_name": employee.name,
         "access_token": access_token,
         "refresh_token": refresh_token,
