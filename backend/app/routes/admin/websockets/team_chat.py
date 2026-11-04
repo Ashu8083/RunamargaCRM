@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.config.database import SessionLocal
 from app.models.loan_applications import LoanApplication
+from app.models.employee_contexts import EmployeeContext
 from app.core.websocket_auth import (
     get_current_employee_websocket,
 )
@@ -49,10 +50,47 @@ async def team_chat_websocket_route(
             await websocket.close(code=1008)
             return
 
+        application = auth_db.query(LoanApplication).filter(
+            LoanApplication.unique_id == application_id,
+            LoanApplication.deleted_at.is_(None),
+        ).first()
+
+        if application is None:
+            await websocket.close(code=1008)
+            return
+
+        requested_context_id = websocket.query_params.get(
+            "context_id"
+        )
+        context_query = auth_db.query(EmployeeContext).filter(
+            EmployeeContext.employee_id == employee.id,
+            EmployeeContext.is_active.is_(True),
+            EmployeeContext.deleted_at.is_(None),
+        )
+        employee_context = None
+        if requested_context_id and requested_context_id.isdigit():
+            employee_context = context_query.filter(
+                EmployeeContext.id == int(requested_context_id),
+            ).first()
+        if employee_context is None:
+            employee_context = context_query.filter(
+                EmployeeContext.is_default.is_(True),
+            ).first() or context_query.first()
+
         # Capture the attributes used by chat handling before
         # closing the authentication database session.
         employee_data = SimpleNamespace(
             id=employee.id,
+            context_id=(
+                employee_context.id
+                if employee_context
+                else employee.id
+            ),
+            context_name=(
+                employee_context.context.name
+                if employee_context and employee_context.context
+                else None
+            ),
             name=getattr(employee, "name", None),
             full_name=getattr(employee, "full_name", None),
         )
@@ -79,6 +117,12 @@ async def team_chat_websocket_route(
     )
 
     try:
+        await websocket.send_json({
+            "success": True,
+            "type": "connected",
+            "application_id": application_id,
+        })
+
         while True:
             message_data = await websocket.receive_json()
 
@@ -86,27 +130,6 @@ async def team_chat_websocket_route(
             db: Session = SessionLocal()
 
             try:
-                try:
-                    parsed_application_id = int(application_id)
-                except (TypeError, ValueError):
-                    await websocket.send_json({
-                        "success": False,
-                        "error": "Invalid application ID",
-                    })
-                    continue
-
-                application = db.get(
-                    LoanApplication,
-                    parsed_application_id,
-                )
-
-                if application is None:
-                    await websocket.send_json({
-                        "success": False,
-                        "error": "Application not found",
-                    })
-                    continue
-
                 message_data["loan_application_id"] = application.id
 
                 await team_chat_manager.send_message(

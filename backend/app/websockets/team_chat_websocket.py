@@ -2,6 +2,7 @@
 from collections import defaultdict
 
 from fastapi import WebSocket
+from fastapi.encoders import jsonable_encoder
 
 from sqlalchemy.orm import Session
 
@@ -21,7 +22,7 @@ class TeamChatConnectionManager:
         await websocket.accept()
 
         self.active_connections[
-            application_id
+            str(application_id)
         ].add(websocket)
 
     def disconnect(
@@ -29,8 +30,9 @@ class TeamChatConnectionManager:
         application_id: str,
         websocket: WebSocket,
     ):
+        connection_key = str(application_id)
         connections = self.active_connections.get(
-            application_id
+            connection_key
         )
 
         if not connections:
@@ -40,7 +42,7 @@ class TeamChatConnectionManager:
 
         if not connections:
             self.active_connections.pop(
-                application_id,
+                connection_key,
                 None,
             )
 
@@ -49,23 +51,26 @@ class TeamChatConnectionManager:
         application_id: str,
         message: dict,
     ):
+        connection_key = str(application_id)
         connections = self.active_connections.get(
-            application_id,
+            connection_key,
             set(),
         )
 
         disconnected = []
 
-        for websocket in connections:
+        for websocket in tuple(connections):
             try:
-                await websocket.send_json(message)
+                await websocket.send_json(
+                    jsonable_encoder(message)
+                )
 
             except Exception:
                 disconnected.append(websocket)
 
         for websocket in disconnected:
             self.disconnect(
-                application_id,
+                connection_key,
                 websocket,
             )
 
@@ -103,7 +108,7 @@ class TeamChatConnectionManager:
             loan_application_id=message_data[
                 "loan_application_id"
             ],
-            sender_admin_id=employee.id,
+            sender_admin_id=employee.context_id,
             message_text=message_text,
             message_type="text",
             reply_to_remark_id=message_data.get(
@@ -116,11 +121,7 @@ class TeamChatConnectionManager:
         db.commit()
         db.refresh(chat)
 
-        sender_name = (
-            getattr(employee, "name", None)
-            or getattr(employee, "full_name", None)
-            or "You"
-        )
+        sender_name = getattr(employee, "name", None)
 
         response = {
             "success": True,
@@ -130,7 +131,13 @@ class TeamChatConnectionManager:
                     chat.loan_application_id,
                 "sender_admin_id":
                     chat.sender_admin_id,
+                "sender_employee_id": employee.id,
                 "sender_name": sender_name,
+                "sender_context_name": getattr(
+                    employee,
+                    "context_name",
+                    None,
+                ),
                 "message_text":
                     chat.message_text,
                 "message_type":

@@ -4,6 +4,8 @@ from app.schemas.employee import CreateEmployeeRequest,UpdateEmployeeRequest
 from app.services.employee_service import get_employees,create_employee,update_employee,update_employee_block_status,delete_employee
 from app.models.employees import Employee
 from fastapi import UploadFile
+
+
 def get_employees_controller(
     db: Session,
     employee,

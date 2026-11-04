@@ -319,6 +319,7 @@ def get_employees(
                 "name": emp.name,
                 "email": emp.email,
                 "phone": emp.phone,
+                "employee_code": emp.employee_code,
                 "status": emp.status,
                 "blocked": emp.deactivate,
 

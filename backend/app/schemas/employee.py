@@ -17,7 +17,7 @@ class CreateEmployeeRequest(BaseModel):
 
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
-
+    employee_code: Optional[str] = None
     role_id: int
     reports_to_id: Optional[int] = None
     status: str = "active"
@@ -44,7 +44,7 @@ class UpdateEmployeeRequest(BaseModel):
 
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
-
+    employee_code: Optional[str] = None
     role_id: int
     reports_to_id: Optional[int] = None
     status: str = "active"
