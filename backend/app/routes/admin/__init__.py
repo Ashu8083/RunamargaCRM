@@ -53,6 +53,7 @@ from .Loans.reverted_loans_routes import router as reverted_loans_router
 # ============================================================================
 
 from .call_reassignment_audit_log_routes import router as call_reassignment_audit_log_router
+from .CallManagement.call_logs import router as call_log_router
 
 # ============================================================================
 # Dashboard
@@ -107,8 +108,6 @@ from .phone_number_routes import router as phone_number_router
 from .CallManagement.call_assignments import (
     router as call_assignment_router,
 )
-from app.routes.api.call_log_api import router as call_log_router
-
 # ============================================================================
 # CALL Analytics
 # ============================================================================
@@ -251,6 +250,7 @@ router.include_router(profile_attendance_router)
 
 # Call Management
 router.include_router(call_assignment_router)
+router.include_router(call_log_router)
 
 # ============================================================================
 # FACE ENROLLMENT

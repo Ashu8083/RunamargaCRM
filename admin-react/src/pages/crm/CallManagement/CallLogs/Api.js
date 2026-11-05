@@ -2,14 +2,32 @@
 
 import apiClient from '../../../../app/apiClient'
 
-export const getCallLogs = async () => {
-    const response = await apiClient.get('/call-logs')
+const cleanParams = (params = {}) =>
+    Object.fromEntries(
+        Object.entries(params).filter(
+            ([, value]) =>
+                value !== '' &&
+                value !== null &&
+                value !== undefined
+        )
+    )
+
+export const getCallLogs = async (params = {}) => {
+    const response = await apiClient.get('/call-logs', {
+        params: cleanParams(params),
+    })
     return response.data
 }
 
-export const getCallHistory = async (phoneNumber) => {
+export const getCallHistory = async (
+    phoneNumber,
+    params = {}
+) => {
     const response = await apiClient.get(
-        `/call-logs/${encodeURIComponent(phoneNumber)}/history`
+        `/call-logs/${encodeURIComponent(phoneNumber)}/history`,
+        {
+            params: cleanParams(params),
+        }
     )
     return response.data
 }
