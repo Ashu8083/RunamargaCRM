@@ -1,6 +1,12 @@
 // admin-react/src/pages/CallManagement/CallLogs/components/CallHistoryModal.jsx
 
-import { useMemo, useState } from 'react'
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react'
 
 import XMarkIcon from '@heroicons/react/24/outline/XMarkIcon'
 import MagnifyingGlassIcon from '@heroicons/react/24/outline/MagnifyingGlassIcon'
@@ -10,6 +16,78 @@ import PhoneIcon from '@heroicons/react/24/outline/PhoneIcon'
 import PhoneArrowDownLeftIcon from '@heroicons/react/24/outline/PhoneArrowDownLeftIcon'
 import PhoneArrowUpRightIcon from '@heroicons/react/24/outline/PhoneArrowUpRightIcon'
 import PhoneXMarkIcon from '@heroicons/react/24/outline/PhoneXMarkIcon'
+
+import { getCallHistory } from '../Api'
+
+const formatDuration = (seconds) => {
+    if (
+        seconds === null ||
+        seconds === undefined ||
+        seconds === ''
+    ) {
+        return '00:00'
+    }
+
+    const totalSeconds = Number(seconds)
+
+    if (Number.isNaN(totalSeconds)) {
+        return '00:00'
+    }
+
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor(
+        (totalSeconds % 3600) / 60
+    )
+    const remainingSeconds = totalSeconds % 60
+
+    if (hours > 0) {
+        return [
+            String(hours).padStart(2, '0'),
+            String(minutes).padStart(2, '0'),
+            String(remainingSeconds).padStart(2, '0'),
+        ].join(':')
+    }
+
+    return [
+        String(minutes).padStart(2, '0'),
+        String(remainingSeconds).padStart(2, '0'),
+    ].join(':')
+}
+
+const formatDate = (value) => {
+    if (!value) {
+        return ''
+    }
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) {
+        return ''
+    }
+
+    return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
+    ].join('-')
+}
+
+const formatTime = (value) => {
+    if (!value) {
+        return ''
+    }
+
+    const date = new Date(value)
+
+    if (Number.isNaN(date.getTime())) {
+        return ''
+    }
+
+    return date.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+}
 
 
 // =============================================================
@@ -28,10 +106,6 @@ const CALL_TYPES = [
     {
         value: 'outgoing',
         label: 'Outgoing',
-    },
-    {
-        value: 'missed',
-        label: 'Missed',
     },
 ]
 
@@ -57,7 +131,54 @@ const MOBILE_STATUSES = [
         value: 'rejected',
         label: 'Rejected',
     },
+    {
+        value: 'not_reached...',
+        label: 'Not Reached',
+    },
 ]
+
+const PAGE_SIZES = [
+    10,
+    20,
+    50,
+    100,
+    200,
+    500,
+]
+
+const getPageNumbers = (currentPage, totalPages) => {
+    if (totalPages <= 7) {
+        return Array.from(
+            { length: totalPages },
+            (_, index) => index + 1
+        )
+    }
+
+    const pages = [1]
+
+    if (currentPage > 4) {
+        pages.push('ellipsis-before')
+    }
+
+    for (
+        let pageNumber = Math.max(2, currentPage - 1);
+        pageNumber <= Math.min(
+            totalPages - 1,
+            currentPage + 1
+        );
+        pageNumber += 1
+    ) {
+        pages.push(pageNumber)
+    }
+
+    if (currentPage < totalPages - 3) {
+        pages.push('ellipsis-after')
+    }
+
+    pages.push(totalPages)
+
+    return pages
+}
 
 
 // =============================================================
@@ -538,6 +659,10 @@ const formatStatus = (
         return 'Rejected'
     }
 
+    if (normalized === 'not_reached...') {
+        return 'Not Reached'
+    }
+
 
     return 'Unknown'
 
@@ -607,7 +732,6 @@ const getStatusClasses = (
 function CallHistoryModal({
     open = false,
     call = null,
-    history = [],
     onClose,
 }) {
 
@@ -630,122 +754,211 @@ function CallHistoryModal({
     const [selectedDate, setSelectedDate] =
         useState('')
 
+    const [history, setHistory] =
+        useState([])
+
+    const [loading, setLoading] =
+        useState(false)
+
+    const [error, setError] =
+        useState('')
+
+    const [page, setPage] =
+        useState(1)
+
+    const [pageSize, setPageSize] =
+        useState(10)
+
+    const [pagination, setPagination] =
+        useState({
+            page: 1,
+            page_size: 10,
+            total_records: 0,
+            total_pages: 0,
+            has_next: false,
+            has_previous: false,
+        })
+
+    const requestIdRef = useRef(0)
+    const previousFilterKeyRef = useRef('')
+
+    const phoneNumber =
+        call?.phone_number || call?.phone || ''
+
+    const fetchHistory = useCallback(async () => {
+        if (!open || !phoneNumber) {
+            return
+        }
+
+        const requestId = ++requestIdRef.current
+
+        try {
+            setLoading(true)
+            setError('')
+
+            const response = await getCallHistory(
+                phoneNumber,
+                {
+                    page,
+                    page_size: pageSize,
+                    search: search.trim(),
+                    call_type: callType,
+                    mobile_status: mobileStatus,
+                    from_date: selectedDate,
+                    to_date: selectedDate,
+                }
+            )
+
+            if (requestId !== requestIdRef.current) {
+                return
+            }
+
+            const payload = response || {}
+            const backendHistory = Array.isArray(
+                payload.data
+            )
+                ? payload.data
+                : []
+
+            setHistory(
+                backendHistory.map((item) => {
+                    const startedAt =
+                        item.call_started_at
+
+                    return {
+                        id: item.id,
+                        name:
+                            item.employee_name ||
+                            item.name ||
+                            call?.name ||
+                            'Unknown',
+                        phone:
+                            item.phone_number ||
+                            phoneNumber,
+                        callType:
+                            item.call_type || '',
+                        callDate: formatDate(
+                            startedAt
+                        ),
+                        callTime: formatTime(
+                            startedAt
+                        ),
+                        duration: formatDuration(
+                            item.duration_seconds
+                        ),
+                        status:
+                            item.mobile_status || '',
+                    }
+                })
+            )
+
+            const nextPagination = {
+                page: payload.pagination?.page ?? page,
+                page_size:
+                    payload.pagination?.page_size ?? pageSize,
+                total_records:
+                    payload.pagination?.total_records ?? 0,
+                total_pages:
+                    payload.pagination?.total_pages ?? 0,
+                has_next:
+                    payload.pagination?.has_next ?? false,
+                has_previous:
+                    payload.pagination?.has_previous ?? false,
+            }
+
+            if (
+                nextPagination.total_pages > 0 &&
+                page > nextPagination.total_pages
+            ) {
+                setPage(nextPagination.total_pages)
+                return
+            }
+
+            setPagination(nextPagination)
+        } catch (fetchError) {
+            if (requestId !== requestIdRef.current) {
+                return
+            }
+
+            console.error(
+                'CALL HISTORY FETCH ERROR:',
+                fetchError
+            )
+            setHistory([])
+            setError('Unable to load call history.')
+            setPagination((current) => ({
+                ...current,
+                page,
+                page_size: pageSize,
+                total_records: 0,
+                total_pages: 0,
+                has_next: false,
+                has_previous: false,
+            }))
+        } finally {
+            if (requestId === requestIdRef.current) {
+                setLoading(false)
+            }
+        }
+    }, [
+        call?.name,
+        callType,
+        mobileStatus,
+        open,
+        page,
+        pageSize,
+        phoneNumber,
+        search,
+        selectedDate,
+    ])
+
+    useEffect(() => {
+        const filterKey = [
+            phoneNumber,
+            search,
+            mobileStatus,
+            callType,
+            selectedDate,
+            pageSize,
+        ].join('|')
+
+        const filtersChanged =
+            previousFilterKeyRef.current !== filterKey
+
+        if (filtersChanged) {
+            requestIdRef.current += 1
+            previousFilterKeyRef.current = filterKey
+
+            if (page !== 1) {
+                setPage(1)
+                return undefined
+            }
+        }
+
+        const delay = search.trim() ? 400 : 0
+        const timer = setTimeout(
+            () => fetchHistory(),
+            delay
+        )
+
+        return () => clearTimeout(timer)
+    }, [
+        callType,
+        fetchHistory,
+        mobileStatus,
+        page,
+        pageSize,
+        phoneNumber,
+        search,
+        selectedDate,
+    ])
+
 
     // =========================================================
     // FILTER HISTORY
     // =========================================================
 
-    const filteredHistory =
-        useMemo(() => {
-
-            const searchValue =
-                search
-                    .trim()
-                    .toLowerCase()
-
-
-            return history.filter(
-                (item) => {
-
-                    // -----------------------------------------
-                    // SEARCH
-                    // -----------------------------------------
-
-                    if (searchValue) {
-
-                        const values = [
-
-                            item.name,
-
-                            item.phone,
-
-                            item.callType,
-
-                            item.status,
-
-                            item.callDate,
-
-                            item.callTime,
-
-                            item.duration,
-
-                        ]
-
-
-                        const matches =
-                            values.some(
-                                (value) =>
-                                    value !== null &&
-                                    value !== undefined &&
-                                    String(value)
-                                        .toLowerCase()
-                                        .includes(
-                                            searchValue
-                                        )
-                            )
-
-
-                        if (!matches) {
-                            return false
-                        }
-
-                    }
-
-
-                    // -----------------------------------------
-                    // MOBILE STATUS
-                    // -----------------------------------------
-
-                    if (
-                        mobileStatus &&
-                        item.status !== mobileStatus
-                    ) {
-
-                        return false
-
-                    }
-
-
-                    // -----------------------------------------
-                    // CALL TYPE
-                    // -----------------------------------------
-
-                    if (
-                        callType &&
-                        item.callType !== callType
-                    ) {
-
-                        return false
-
-                    }
-
-
-                    // -----------------------------------------
-                    // DATE
-                    // -----------------------------------------
-
-                    if (
-                        selectedDate &&
-                        item.callDate !== selectedDate
-                    ) {
-
-                        return false
-
-                    }
-
-
-                    return true
-
-                }
-            )
-
-        }, [
-            history,
-            search,
-            mobileStatus,
-            callType,
-            selectedDate,
-        ])
+    const filteredHistory = history
 
 
     // =========================================================
@@ -762,6 +975,8 @@ function CallHistoryModal({
 
         setSelectedDate('')
 
+        setPage(1)
+
     }
 
 
@@ -773,6 +988,21 @@ function CallHistoryModal({
         return null
     }
 
+
+    const totalPages = pagination.total_pages || 0
+    const firstRecord = pagination.total_records
+        ? ((page - 1) * pageSize) + 1
+        : 0
+    const lastRecord = pagination.total_records
+        ? Math.min(
+            page * pageSize,
+            pagination.total_records
+        )
+        : 0
+    const pageNumbers = getPageNumbers(
+        page,
+        totalPages
+    )
 
     // =========================================================
     // RENDER
@@ -1119,36 +1349,62 @@ function CallHistoryModal({
                             text-base-content/40
                         ">
 
-                            {
-                                filteredHistory.length
-                            }{' '}
+                            {pagination.total_records}{' '}
 
                             {
-                                filteredHistory.length === 1
+                                pagination.total_records === 1
                                     ? 'call'
                                     : 'calls'
                             }{' '}
 
                             found
 
+                            {error && (
+                                <span className="ml-3 text-error">
+                                    {error}
+                                </span>
+                            )}
+
                         </p>
 
 
-                        <button
-                            type="button"
-                            onClick={
-                                handleReset
-                            }
-                            className="
-                                text-xs
-                                font-medium
-                                text-base-content/55
-                                transition
-                                hover:text-[#6FA800]
-                            "
-                        >
-                            Reset Filters
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <label className="flex items-center gap-2 text-xs text-base-content/55">
+                                <span>Rows</span>
+                                <select
+                                    value={pageSize}
+                                    onChange={(event) => {
+                                        setPageSize(
+                                            Number(event.target.value)
+                                        )
+                                        setPage(1)
+                                    }}
+                                    className="select select-bordered h-9 min-h-9 text-xs"
+                                >
+                                    {PAGE_SIZES.map((size) => (
+                                        <option key={size} value={size}>
+                                            {size}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <button
+                                type="button"
+                                onClick={
+                                    handleReset
+                                }
+                                className="
+                                    text-xs
+                                    font-medium
+                                    text-base-content/55
+                                    transition
+                                    hover:text-[#6FA800]
+                                "
+                            >
+                                Reset Filters
+                            </button>
+                        </div>
 
                     </div>
 
@@ -1521,6 +1777,60 @@ function CallHistoryModal({
 
                     )}
 
+                </div>
+
+
+                <div className="mt-3 flex flex-col gap-3 border-t border-base-300 pt-3 text-xs text-base-content/55 sm:flex-row sm:items-center sm:justify-between">
+                    <span>
+                        Showing {firstRecord}–{lastRecord} of{' '}
+                        {pagination.total_records} calls
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => Math.max(1, current - 1))}
+                            disabled={loading || !pagination.has_previous}
+                            className="rounded-lg border border-base-300 px-3 py-2 transition hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            Previous
+                        </button>
+
+                        {pageNumbers.map((pageNumber) => (
+                            typeof pageNumber === 'string' ? (
+                                <span
+                                    key={pageNumber}
+                                    className="px-2 py-2"
+                                >
+                                    …
+                                </span>
+                            ) : (
+                                <button
+                                    key={pageNumber}
+                                    type="button"
+                                    onClick={() => setPage(pageNumber)}
+                                    disabled={loading || pageNumber === page}
+                                    className={[
+                                        'min-w-9 rounded-lg border px-3 py-2 transition',
+                                        pageNumber === page
+                                            ? 'border-[#8BCF00] bg-[#8BCF00]/10 text-[#6FA800]'
+                                            : 'border-base-300 hover:bg-base-200 disabled:cursor-default',
+                                    ].join(' ')}
+                                >
+                                    {pageNumber}
+                                </button>
+                            )
+                        ))}
+
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => current + 1)}
+                            disabled={loading || !pagination.has_next}
+                            className="rounded-lg border border-base-300 px-3 py-2 transition hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
 
 

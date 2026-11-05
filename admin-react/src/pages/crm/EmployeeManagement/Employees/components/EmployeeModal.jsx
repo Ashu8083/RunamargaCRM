@@ -50,18 +50,13 @@ function EmployeeModal({
 }) {
   const isRestrictedRole =
     employee &&
-    ["admin", "business"].includes(
-      employee.role?.name?.trim().toLowerCase()
-    );
+    ["admin", "business"].includes(employee.role?.name?.trim().toLowerCase());
   const getFileUrl = (filePath) => {
     if (!filePath) {
       return null;
     }
 
-    if (
-      filePath.startsWith("http://") ||
-      filePath.startsWith("https://")
-    ) {
+    if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
       return filePath;
     }
 
@@ -134,22 +129,17 @@ function EmployeeModal({
         aadhaarCardNo: employee.aadhar_no ?? "",
       });
       setExistingDocuments({
-        profile_image:
-          employee.documents?.profile_image ?? null,
+        profile_image: employee.documents?.profile_image ?? null,
 
-        aadhar_card:
-          employee.documents?.aadhar_card ?? null,
+        aadhar_card: employee.documents?.aadhar_card ?? null,
 
-        pan_card:
-          employee.documents?.pan_card ?? null,
+        pan_card: employee.documents?.pan_card ?? null,
 
-        bank_passbook:
-          employee.documents?.bank_passbook ?? null,
+        bank_passbook: employee.documents?.bank_passbook ?? null,
 
-        salary_slip:
-          Array.isArray(employee.documents?.salary_slip)
-            ? employee.documents.salary_slip
-            : [],
+        salary_slip: Array.isArray(employee.documents?.salary_slip)
+          ? employee.documents.salary_slip
+          : [],
       });
       return;
     }
@@ -236,8 +226,7 @@ function EmployeeModal({
     }
 
     if (!form.role_id) {
-      nextErrors.role_id =
-        "Role is required";
+      nextErrors.role_id = "Role is required";
     }
 
     setErrors(nextErrors);
@@ -263,9 +252,7 @@ function EmployeeModal({
       alternate_phone: form.alternatePhone || null,
 
       role_id: Number(form.role_id),
-      reports_to_id: form.reports_to_id
-        ? Number(form.reports_to_id)
-        : null,
+      reports_to_id: form.reports_to_id ? Number(form.reports_to_id) : null,
 
       status: form.status,
 
@@ -287,45 +274,27 @@ function EmployeeModal({
 
     const formData = new FormData();
 
-    formData.append(
-      "data",
-      JSON.stringify(employeeData)
-    );
+    formData.append("data", JSON.stringify(employeeData));
 
     if (form.profileImage) {
-      formData.append(
-        "profile_image",
-        form.profileImage
-      );
+      formData.append("profile_image", form.profileImage);
     }
 
     if (form.aadhaarCard) {
-      formData.append(
-        "aadhaar_card",
-        form.aadhaarCard
-      );
+      formData.append("aadhaar_card", form.aadhaarCard);
     }
 
     if (form.panCard) {
-      formData.append(
-        "pan_card",
-        form.panCard
-      );
+      formData.append("pan_card", form.panCard);
     }
 
     if (form.bankPassbook) {
-      formData.append(
-        "bank_passbook",
-        form.bankPassbook
-      );
+      formData.append("bank_passbook", form.bankPassbook);
     }
 
     form.salarySlips.forEach((file) => {
       if (file instanceof File) {
-        formData.append(
-          "salary_slips",
-          file
-        );
+        formData.append("salary_slips", file);
       }
     });
 
@@ -594,71 +563,27 @@ function EmployeeModal({
                 </Field>
 
                 {/* ROLE */}
-                <Field
-                  label="Role"
-                  required
-                  error={errors.role_id}
-                >
-                  {employee &&
-                    ["admin", "business"].includes(
-                      employee.role?.name?.toLowerCase()
-                    ) ? (
-                    <div
-                      className="
-        flex
-        h-10
-        items-center
-        rounded-lg
-        border
-        border-base-300
-        bg-base-200/40
-        px-3
-        text-sm
-        text-base-content
-      "
-                    >
-                      {employee.role?.name}
-                    </div>
-                  ) : (
-                    <select
-                      value={form.role_id}
-                      onChange={(event) => {
-                        updateField(
-                          "role_id",
-                          event.target.value
-                            ? Number(event.target.value)
-                            : ""
-                        );
-                      }}
-                      className="
-        select
-        select-bordered
-        h-10
-        min-h-10
-        w-full
-      "
-                    >
-                      <option value="">
-                        Select role
-                      </option>
+                <Field label="Role" required error={errors.role_id}>
+                  <select
+                    value={form.role_id ?? ""}
+                    onChange={(event) => {
+                      updateField(
+                        "role_id",
+                        event.target.value ? Number(event.target.value) : "",
+                      );
+                    }}
+                    className="select select-bordered h-10 min-h-10 w-full"
+                  >
+                    <option value="">Select role</option>
 
-                      {roles
-                        .filter(
-                          (role) =>
-                            !["admin"].includes(
-                              role.name?.toLowerCase()
-                            )
-                        )
-                        .map((role) => (
-                          <option
-                            key={role.id}
-                            value={role.id}
-                          >
-                            {role.name}
-                          </option>
-                        ))}
-                    </select>
-                  )}
+                    {roles
+                      .filter((role) => role.name?.toLowerCase())
+                      .map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {role.name}
+                        </option>
+                      ))}
+                  </select>
                 </Field>
                 {/* STATUS */}
 
@@ -704,9 +629,7 @@ function EmployeeModal({
                     onChange={(event) =>
                       updateField(
                         "reports_to_id",
-                        event.target.value
-                          ? Number(event.target.value)
-                          : ""
+                        event.target.value ? Number(event.target.value) : "",
                       )
                     }
                     className="
@@ -717,9 +640,7 @@ function EmployeeModal({
           w-full
         "
                   >
-                    <option value="">
-                      Select employee
-                    </option>
+                    <option value="">Select employee</option>
 
                     {employees
                       .filter((item) => {
@@ -738,10 +659,7 @@ function EmployeeModal({
                         return true;
                       })
                       .map((item) => (
-                        <option
-                          key={item.id}
-                          value={item.id}
-                        >
+                        <option key={item.id} value={item.id}>
                           {item.name}
                         </option>
                       ))}
@@ -1030,14 +948,9 @@ function EmployeeModal({
                     accept="image/*"
                     inputRef={profileImageRef}
                     onChange={(event) =>
-                      handleSingleFile(
-                        "profileImage",
-                        event
-                      )
+                      handleSingleFile("profileImage", event)
                     }
-                    onClick={() =>
-                      profileImageRef.current?.click()
-                    }
+                    onClick={() => profileImageRef.current?.click()}
                   />
 
                   {existingDocuments.profile_image && (
@@ -1054,17 +967,13 @@ function EmployeeModal({
                       </p>
 
                       <a
-                        href={getFileUrl(
-                          existingDocuments.profile_image
-                        )}
+                        href={getFileUrl(existingDocuments.profile_image)}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-block"
                       >
                         <img
-                          src={getFileUrl(
-                            existingDocuments.profile_image
-                          )}
+                          src={getFileUrl(existingDocuments.profile_image)}
                           alt="Existing profile"
                           className="
                 h-24
@@ -1092,15 +1001,8 @@ function EmployeeModal({
                     file={form.aadhaarCard}
                     accept=".pdf,.jpg,.jpeg,.png"
                     inputRef={aadhaarRef}
-                    onChange={(event) =>
-                      handleSingleFile(
-                        "aadhaarCard",
-                        event
-                      )
-                    }
-                    onClick={() =>
-                      aadhaarRef.current?.click()
-                    }
+                    onChange={(event) => handleSingleFile("aadhaarCard", event)}
+                    onClick={() => aadhaarRef.current?.click()}
                   />
 
                   {existingDocuments.aadhar_card && (
@@ -1117,20 +1019,16 @@ function EmployeeModal({
                       </p>
 
                       {/\.(jpg|jpeg|png|gif|webp)$/i.test(
-                        existingDocuments.aadhar_card
+                        existingDocuments.aadhar_card,
                       ) ? (
                         <a
-                          href={getFileUrl(
-                            existingDocuments.aadhar_card
-                          )}
+                          href={getFileUrl(existingDocuments.aadhar_card)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-block"
                         >
                           <img
-                            src={getFileUrl(
-                              existingDocuments.aadhar_card
-                            )}
+                            src={getFileUrl(existingDocuments.aadhar_card)}
                             alt="Existing Aadhaar"
                             className="
                   h-24
@@ -1146,9 +1044,7 @@ function EmployeeModal({
                         </a>
                       ) : (
                         <a
-                          href={getFileUrl(
-                            existingDocuments.aadhar_card
-                          )}
+                          href={getFileUrl(existingDocuments.aadhar_card)}
                           target="_blank"
                           rel="noreferrer"
                           className="
@@ -1182,15 +1078,8 @@ function EmployeeModal({
                     file={form.panCard}
                     accept=".pdf,.jpg,.jpeg,.png"
                     inputRef={panRef}
-                    onChange={(event) =>
-                      handleSingleFile(
-                        "panCard",
-                        event
-                      )
-                    }
-                    onClick={() =>
-                      panRef.current?.click()
-                    }
+                    onChange={(event) => handleSingleFile("panCard", event)}
+                    onClick={() => panRef.current?.click()}
                   />
 
                   {existingDocuments.pan_card && (
@@ -1207,20 +1096,16 @@ function EmployeeModal({
                       </p>
 
                       {/\.(jpg|jpeg|png|gif|webp)$/i.test(
-                        existingDocuments.pan_card
+                        existingDocuments.pan_card,
                       ) ? (
                         <a
-                          href={getFileUrl(
-                            existingDocuments.pan_card
-                          )}
+                          href={getFileUrl(existingDocuments.pan_card)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-block"
                         >
                           <img
-                            src={getFileUrl(
-                              existingDocuments.pan_card
-                            )}
+                            src={getFileUrl(existingDocuments.pan_card)}
                             alt="Existing PAN"
                             className="
                   h-24
@@ -1236,9 +1121,7 @@ function EmployeeModal({
                         </a>
                       ) : (
                         <a
-                          href={getFileUrl(
-                            existingDocuments.pan_card
-                          )}
+                          href={getFileUrl(existingDocuments.pan_card)}
                           target="_blank"
                           rel="noreferrer"
                           className="
@@ -1273,14 +1156,9 @@ function EmployeeModal({
                     accept=".pdf,.jpg,.jpeg,.png"
                     inputRef={bankPassbookRef}
                     onChange={(event) =>
-                      handleSingleFile(
-                        "bankPassbook",
-                        event
-                      )
+                      handleSingleFile("bankPassbook", event)
                     }
-                    onClick={() =>
-                      bankPassbookRef.current?.click()
-                    }
+                    onClick={() => bankPassbookRef.current?.click()}
                   />
 
                   {existingDocuments.bank_passbook && (
@@ -1297,20 +1175,16 @@ function EmployeeModal({
                       </p>
 
                       {/\.(jpg|jpeg|png|gif|webp)$/i.test(
-                        existingDocuments.bank_passbook
+                        existingDocuments.bank_passbook,
                       ) ? (
                         <a
-                          href={getFileUrl(
-                            existingDocuments.bank_passbook
-                          )}
+                          href={getFileUrl(existingDocuments.bank_passbook)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-block"
                         >
                           <img
-                            src={getFileUrl(
-                              existingDocuments.bank_passbook
-                            )}
+                            src={getFileUrl(existingDocuments.bank_passbook)}
                             alt="Existing bank passbook"
                             className="
                   h-24
@@ -1326,9 +1200,7 @@ function EmployeeModal({
                         </a>
                       ) : (
                         <a
-                          href={getFileUrl(
-                            existingDocuments.bank_passbook
-                          )}
+                          href={getFileUrl(existingDocuments.bank_passbook)}
                           target="_blank"
                           rel="noreferrer"
                           className="
@@ -1389,14 +1261,13 @@ function EmployeeModal({
             space-y-2
           "
                     >
-                      {existingDocuments.salary_slip.map(
-                        (filePath, index) => (
-                          <a
-                            key={`${filePath}-${index}`}
-                            href={getFileUrl(filePath)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="
+                      {existingDocuments.salary_slip.map((filePath, index) => (
+                        <a
+                          key={`${filePath}-${index}`}
+                          href={getFileUrl(filePath)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="
                   flex
                   items-center
                   justify-between
@@ -1410,17 +1281,12 @@ function EmployeeModal({
                   transition
                   hover:bg-base-200
                 "
-                          >
-                            <span>
-                              Salary Slip {index + 1}
-                            </span>
+                        >
+                          <span>Salary Slip {index + 1}</span>
 
-                            <span className="underline">
-                              View
-                            </span>
-                          </a>
-                        )
-                      )}
+                          <span className="underline">View</span>
+                        </a>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1438,9 +1304,7 @@ function EmployeeModal({
 
                 <button
                   type="button"
-                  onClick={() =>
-                    salarySlipsRef.current?.click()
-                  }
+                  onClick={() => salarySlipsRef.current?.click()}
                   className="
         flex
         h-10
@@ -1465,7 +1329,6 @@ function EmployeeModal({
           w-4
         "
                   />
-
                   Add Salary Slips
                 </button>
 
@@ -1478,11 +1341,10 @@ function EmployeeModal({
           space-y-2
         "
                   >
-                    {form.salarySlips.map(
-                      (file, index) => (
-                        <div
-                          key={`${file.name || "file"}-${index}`}
-                          className="
+                    {form.salarySlips.map((file, index) => (
+                      <div
+                        key={`${file.name || "file"}-${index}`}
+                        className="
                 flex
                 items-center
                 justify-between
@@ -1492,25 +1354,22 @@ function EmployeeModal({
                 px-3
                 py-2
               "
-                        >
-                          <p
-                            className="
+                      >
+                        <p
+                          className="
                   min-w-0
                   truncate
                   text-xs
                   text-base-content/70
                 "
-                          >
-                            {file.name ||
-                              "Uploaded salary slip"}
-                          </p>
+                        >
+                          {file.name || "Uploaded salary slip"}
+                        </p>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              removeSalarySlip(index)
-                            }
-                            className="
+                        <button
+                          type="button"
+                          onClick={() => removeSalarySlip(index)}
+                          className="
                   ml-3
                   flex
                   h-7
@@ -1523,18 +1382,17 @@ function EmployeeModal({
                   transition
                   hover:bg-red-50
                 "
-                            aria-label="Remove salary slip"
-                          >
-                            <TrashIcon
-                              className="
+                          aria-label="Remove salary slip"
+                        >
+                          <TrashIcon
+                            className="
                     h-4
                     w-4
                   "
-                            />
-                          </button>
-                        </div>
-                      )
-                    )}
+                          />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -1563,7 +1421,7 @@ function EmployeeModal({
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {permissions.map((permission) => {
                       const selected = form.permission_ids.includes(
-                        permission.id
+                        permission.id,
                       );
 
                       return (
@@ -1591,12 +1449,9 @@ function EmployeeModal({
                                 ...previous,
                                 permission_ids: selected
                                   ? previous.permission_ids.filter(
-                                    (id) => id !== permission.id
-                                  )
-                                  : [
-                                    ...previous.permission_ids,
-                                    permission.id,
-                                  ],
+                                      (id) => id !== permission.id,
+                                    )
+                                  : [...previous.permission_ids, permission.id],
                               }));
                             }}
                             className="checkbox checkbox-sm"
@@ -1608,7 +1463,8 @@ function EmployeeModal({
                             </p>
 
                             {permission.description &&
-                              permission.description.toLowerCase() !== "common" && (
+                              permission.description.toLowerCase() !==
+                                "common" && (
                                 <p className="mt-0.5 text-[11px] text-base-content/45">
                                   {permission.description}
                                 </p>

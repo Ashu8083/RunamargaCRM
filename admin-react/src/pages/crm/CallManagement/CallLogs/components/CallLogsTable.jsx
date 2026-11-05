@@ -194,6 +194,10 @@ const formatStatus = (
         return 'Rejected'
     }
 
+    if (normalized === 'not_reached...') {
+        return 'Not Reached'
+    }
+
 
     return 'Unknown'
 
@@ -548,14 +552,15 @@ function CallLogsTable({
                                  * Total calls is normally supplied
                                  * by the backend.
                                  *
-                                 * For the mock data, if it isn't
-                                 * available, show 1 because this
-                                 * row represents one call.
+                                 * Do not infer a total from the current
+                                 * row. The backend supplies this count
+                                 * for the filtered result set.
                                  */
 
                                 const totalCalls =
-                                    entry.totalCalls ??
-                                    1
+                                     entry.totalCalls ??
+                                     entry.total_calls ??
+                                     '—'
 
 
                                 return (

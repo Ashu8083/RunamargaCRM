@@ -1,7 +1,7 @@
 // admin-react\src\components\GlobalModels\Loans\GlobalChat.jsx
 
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 
 import UserGroupIcon from '@heroicons/react/24/outline/UserGroupIcon'
 import ArrowPathIcon from '@heroicons/react/24/outline/ArrowPathIcon'
@@ -43,11 +43,35 @@ const EMOJIS = [
 const normalizeId = (id) =>
     id === null || id === undefined ? null : String(id).trim()
 
+const getLocalDateKey = (date) => [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+].join('-')
+
+const formatDateSeparator = (date) => {
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+
+    const dateKey = getLocalDateKey(date)
+
+    if (dateKey === getLocalDateKey(today)) return 'Today'
+    if (dateKey === getLocalDateKey(yesterday)) return 'Yesterday'
+
+    return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    })
+}
+
 // FORMAT MESSAGE
 const formatMessage = (item, currentEmployeeContextId) => {
     const date = item.created_at
         ? new Date(item.created_at)
         : null
+    const hasValidDate = date && !isNaN(date.getTime())
 
     const senderContextId = normalizeId(item.sender_admin_id)
     const currentContextId = normalizeId(currentEmployeeContextId)
@@ -81,20 +105,15 @@ const formatMessage = (item, currentEmployeeContextId) => {
         message: item.message_text || '',
         attachment: item.attachment || null,
 
-        createdAt: date && !isNaN(date.getTime())
+        createdAt: hasValidDate
             ? date.toLocaleTimeString('en-IN', {
                 hour: '2-digit',
                 minute: '2-digit',
             })
             : '',
 
-        dateLabel: date && !isNaN(date.getTime())
-            ? date.toLocaleDateString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-            })
-            : '',
+        dateKey: hasValidDate ? getLocalDateKey(date) : null,
+        dateLabel: hasValidDate ? formatDateSeparator(date) : '',
     }
 }
 
@@ -407,15 +426,28 @@ function GlobalChat({
 
                         <div className="mx-auto flex max-w-5xl flex-col gap-3">
 
-                            {messages.map(item => {
+                            {messages.map((item, index) => {
 
                                 const isCurrentUser =
                                     item.senderType === 'current_user'
+                                const previousDateKey =
+                                    messages[index - 1]?.dateKey
+                                const showDateSeparator =
+                                    item.dateKey &&
+                                    item.dateKey !== previousDateKey
 
                                 return (
+                                    <Fragment key={item.id}>
+
+                                        {showDateSeparator && (
+                                            <div className="flex justify-center py-1">
+                                                <span className="rounded-full bg-base-200 px-3 py-1 text-[11px] font-medium text-base-content/60">
+                                                    {item.dateLabel}
+                                                </span>
+                                            </div>
+                                        )}
 
                                     <div
-                                        key={item.id}
                                         className={`flex w-full items-end gap-2.5 ${
                                             isCurrentUser
                                                 ? 'justify-end'
@@ -485,6 +517,7 @@ function GlobalChat({
                                         </div>
 
                                     </div>
+                                    </Fragment>
                                 )
                             })}
 

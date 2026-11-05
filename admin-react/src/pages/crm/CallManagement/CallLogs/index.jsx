@@ -3,8 +3,10 @@
 import {
     lazy,
     Suspense,
+    useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from 'react'
 
@@ -19,7 +21,6 @@ import CallLogsTable from './components/CallLogsTable'
 
 import {
     getCallLogs,
-    getCallHistory,
 } from './Api'
 
 // Lazy-load CallHistoryModal only when it is rendered.
@@ -45,10 +46,6 @@ const CALL_TYPES = [
         value: 'outgoing',
         label: 'Outgoing',
     },
-    {
-        value: 'missed',
-        label: 'Missed',
-    },
 ]
 
 
@@ -73,7 +70,54 @@ const MOBILE_STATUSES = [
         value: 'rejected',
         label: 'Rejected',
     },
+    {
+        value: 'not_reached...',
+        label: 'Not Reached',
+    },
 ]
+
+const PAGE_SIZES = [
+    10,
+    20,
+    50,
+    100,
+    200,
+    500,
+]
+
+const getPageNumbers = (currentPage, totalPages) => {
+    if (totalPages <= 7) {
+        return Array.from(
+            { length: totalPages },
+            (_, index) => index + 1
+        )
+    }
+
+    const pages = [1]
+
+    if (currentPage > 4) {
+        pages.push('ellipsis-before')
+    }
+
+    for (
+        let pageNumber = Math.max(2, currentPage - 1);
+        pageNumber <= Math.min(
+            totalPages - 1,
+            currentPage + 1
+        );
+        pageNumber += 1
+    ) {
+        pages.push(pageNumber)
+    }
+
+    if (currentPage < totalPages - 3) {
+        pages.push('ellipsis-after')
+    }
+
+    pages.push(totalPages)
+
+    return pages
+}
 
 
 // =============================================================
@@ -451,10 +495,32 @@ function CallLogs() {
     const [loading, setLoading] =
         useState(false)
 
+    const [error, setError] =
+        useState('')
+
+    const [pagination, setPagination] =
+        useState({
+            page: 1,
+            page_size: 10,
+            total_records: 0,
+            total_pages: 0,
+            has_next: false,
+            has_previous: false,
+        })
+
+    const requestIdRef = useRef(0)
+    const previousFilterKeyRef = useRef('')
+
 
     // =========================================================
     // FILTERS
     // =========================================================
+
+    const [page, setPage] =
+        useState(1)
+
+    const [pageSize, setPageSize] =
+        useState(10)
 
     const [search, setSearch] =
         useState('')
@@ -485,28 +551,40 @@ function CallLogs() {
     const [selectedCall, setSelectedCall] =
         useState(null)
 
-    const [callHistory, setCallHistory] =
-        useState([])
-
-
     // =========================================================
     // FETCH CALL LOGS
     // =========================================================
 
-    const fetchCallLogs = async () => {
+    const fetchCallLogs = useCallback(async () => {
+        const requestId = ++requestIdRef.current
+
         try {
             setLoading(true)
+            setError('')
 
-            const response =
-                await getCallLogs()
+            const response = await getCallLogs({
+                page,
+                page_size: pageSize,
+                search: search.trim(),
+                agent_id: agent,
+                call_type: callType,
+                mobile_status: mobileStatus,
+                from_date: fromDate,
+                to_date: toDate,
+            })
 
-            console.log(
-                'CALL LOGS RESPONSE:',
-                response
-            )
+            if (requestId !== requestIdRef.current) {
+                return
+            }
+
+            const payload = Array.isArray(response)
+                ? { data: response }
+                : response || {}
 
             const backendLogs =
-                response?.data || []
+                Array.isArray(payload.data)
+                    ? payload.data
+                    : []
 
             const formattedLogs =
                 backendLogs.map(
@@ -535,6 +613,7 @@ function CallLogs() {
                                 '',
 
                             agentId:
+                                call.employee_context_id ??
                                 call.employee_id,
 
                             agentName:
@@ -564,6 +643,9 @@ function CallLogs() {
                                 formatDuration(
                                     call.duration_seconds
                                 ),
+
+                            totalCalls:
+                                call.total_calls,
                         }
                     }
                 )
@@ -572,7 +654,35 @@ function CallLogs() {
                 formattedLogs
             )
 
+            const nextPagination = {
+                page: payload.pagination?.page ?? page,
+                page_size:
+                    payload.pagination?.page_size ?? pageSize,
+                total_records:
+                    payload.pagination?.total_records ?? 0,
+                total_pages:
+                    payload.pagination?.total_pages ?? 0,
+                has_next:
+                    payload.pagination?.has_next ?? false,
+                has_previous:
+                    payload.pagination?.has_previous ?? false,
+            }
+
+            if (
+                nextPagination.total_pages > 0 &&
+                page > nextPagination.total_pages
+            ) {
+                setPage(nextPagination.total_pages)
+                return
+            }
+
+            setPagination(nextPagination)
+
         } catch (error) {
+
+            if (requestId !== requestIdRef.current) {
+                return
+            }
 
             console.error(
                 'CALL LOGS FETCH ERROR:',
@@ -580,16 +690,76 @@ function CallLogs() {
             )
 
             setCallLogs([])
+            setPagination((current) => ({
+                ...current,
+                page,
+                page_size: pageSize,
+                total_records: 0,
+                total_pages: 0,
+                has_next: false,
+                has_previous: false,
+            }))
+            setError('Unable to load call logs.')
 
         } finally {
-            setLoading(false)
+            if (requestId === requestIdRef.current) {
+                setLoading(false)
+            }
         }
-    }
+    }, [
+        agent,
+        callType,
+        fromDate,
+        mobileStatus,
+        page,
+        pageSize,
+        search,
+        toDate,
+    ])
 
 
     useEffect(() => {
-        fetchCallLogs()
-    }, [])
+        const filterKey = [
+            search,
+            agent,
+            callType,
+            mobileStatus,
+            fromDate,
+            toDate,
+            pageSize,
+        ].join('|')
+
+        const filtersChanged =
+            previousFilterKeyRef.current !== filterKey
+
+        if (filtersChanged) {
+            requestIdRef.current += 1
+            previousFilterKeyRef.current = filterKey
+
+            if (page !== 1) {
+                setPage(1)
+                return undefined
+            }
+        }
+
+        const delay = search.trim() ? 400 : 0
+        const timer = setTimeout(
+            () => fetchCallLogs(),
+            delay
+        )
+
+        return () => clearTimeout(timer)
+    }, [
+        agent,
+        callType,
+        fetchCallLogs,
+        fromDate,
+        mobileStatus,
+        page,
+        pageSize,
+        search,
+        toDate,
+    ])
 
 
     // =========================================================
@@ -633,145 +803,10 @@ function CallLogs() {
 
 
     // =========================================================
-    // FILTERED CALL LOGS
+    // SERVER-FILTERED CALL LOGS
     // =========================================================
 
-    const filteredCallLogs =
-        useMemo(() => {
-
-            const searchValue =
-                search
-                    .trim()
-                    .toLowerCase()
-
-            return callLogs.filter(
-                (call) => {
-
-                    // ---------------------------------------------
-                    // SEARCH
-                    // ---------------------------------------------
-
-                    if (searchValue) {
-
-                        const searchableValues = [
-
-                            call.id,
-
-                            call.name,
-
-                            call.phone,
-
-                            call.contactNumber,
-
-                            call.agentName,
-
-                            call.callType,
-
-                            call.status,
-
-                            call.date,
-
-                            call.time,
-
-                            call.duration,
-
-                        ]
-
-                        const matchesSearch =
-                            searchableValues.some(
-                                (value) =>
-                                    value !== null &&
-                                    value !== undefined &&
-                                    String(value)
-                                        .toLowerCase()
-                                        .includes(
-                                            searchValue
-                                        )
-                            )
-
-                        if (!matchesSearch) {
-                            return false
-                        }
-
-                    }
-
-
-                    // ---------------------------------------------
-                    // AGENT
-                    // ---------------------------------------------
-
-                    if (
-                        agent &&
-                        String(
-                            call.agentId
-                        ) !== String(agent)
-                    ) {
-                        return false
-                    }
-
-
-                    // ---------------------------------------------
-                    // CALL TYPE
-                    // ---------------------------------------------
-
-                    if (
-                        callType &&
-                        call.callType !== callType
-                    ) {
-                        return false
-                    }
-
-
-                    // ---------------------------------------------
-                    // MOBILE STATUS
-                    // ---------------------------------------------
-
-                    if (
-                        mobileStatus &&
-                        call.status !== mobileStatus
-                    ) {
-                        return false
-                    }
-
-
-                    // ---------------------------------------------
-                    // FROM DATE
-                    // ---------------------------------------------
-
-                    if (
-                        fromDate &&
-                        call.date < fromDate
-                    ) {
-                        return false
-                    }
-
-
-                    // ---------------------------------------------
-                    // TO DATE
-                    // ---------------------------------------------
-
-                    if (
-                        toDate &&
-                        call.date > toDate
-                    ) {
-                        return false
-                    }
-
-
-                    return true
-
-                }
-            )
-
-        }, [
-            callLogs,
-            search,
-            agent,
-            callType,
-            mobileStatus,
-            fromDate,
-            toDate,
-        ])
+    const displayedCallLogs = callLogs
 
 
     // =========================================================
@@ -803,96 +838,9 @@ function CallLogs() {
     // VIEW HISTORY
     // =========================================================
 
-    const handleViewHistory = async (
-        call
-    ) => {
-
-        try {
-
-            setSelectedCall(call)
-
-            setShowHistoryModal(
-                true
-            )
-
-            setCallHistory([])
-
-            const response =
-                await getCallHistory(
-                    call.phone_number ||
-                    call.phone
-                )
-
-            console.log(
-                'CALL HISTORY RESPONSE:',
-                response
-            )
-
-            const backendHistory =
-                response?.data || []
-
-            const formattedHistory =
-                backendHistory.map(
-                    (item) => {
-
-                        const startedAt =
-                            item.call_started_at
-
-                        return {
-                            id: item.id,
-
-                            name:
-                                item.employee_name ||
-                                item.name ||
-                                call.name ||
-                                'Unknown',
-
-                            phone:
-                                item.phone_number ||
-                                call.phone ||
-                                '',
-
-                            callType:
-                                item.call_type ||
-                                '',
-
-                            callDate:
-                                formatDate(
-                                    startedAt
-                                ),
-
-                            callTime:
-                                formatTime(
-                                    startedAt
-                                ),
-
-                            duration:
-                                formatDuration(
-                                    item.duration_seconds
-                                ),
-
-                            status:
-                                item.mobile_status ||
-                                '',
-                        }
-                    }
-                )
-
-            setCallHistory(
-                formattedHistory
-            )
-
-        } catch (error) {
-
-            console.error(
-                'CALL HISTORY FETCH ERROR:',
-                error
-            )
-
-            setCallHistory([])
-
-        }
-
+    const handleViewHistory = (call) => {
+        setSelectedCall(call)
+        setShowHistoryModal(true)
     }
 
 
@@ -906,14 +854,27 @@ function CallLogs() {
 
         setSelectedCall(null)
 
-        setCallHistory([])
-
     }
 
 
     // =========================================================
     // RENDER
     // =========================================================
+
+    const totalPages = pagination.total_pages || 0
+    const firstRecord = pagination.total_records
+        ? ((page - 1) * pageSize) + 1
+        : 0
+    const lastRecord = pagination.total_records
+        ? Math.min(
+            page * pageSize,
+            pagination.total_records
+        )
+        : 0
+    const pageNumbers = getPageNumbers(
+        page,
+        totalPages
+    )
 
     return (
 
@@ -1241,23 +1202,51 @@ function CallLogs() {
                         text-base-content/45
                     ">
 
-                        {filteredCallLogs.length}{' '}
+                        {pagination.total_records}{' '}
 
-                        {filteredCallLogs.length === 1
+                        {pagination.total_records === 1
                             ? 'call'
                             : 'calls'}{' '}
 
                         found
 
+                        {error && (
+                            <span className="ml-3 text-error">
+                                {error}
+                            </span>
+                        )}
+
                     </p>
 
-                    <button
-                        type="button"
-                        onClick={
-                            handleRefresh
-                        }
-                        disabled={loading}
-                        className="
+                    <div className="flex items-center gap-2">
+
+                        <label className="flex items-center gap-2 text-xs text-base-content/55">
+                            <span>Rows</span>
+                            <select
+                                value={pageSize}
+                                onChange={(event) => {
+                                    setPageSize(
+                                        Number(event.target.value)
+                                    )
+                                    setPage(1)
+                                }}
+                                className="select select-bordered h-9 min-h-9 text-xs"
+                            >
+                                {PAGE_SIZES.map((size) => (
+                                    <option key={size} value={size}>
+                                        {size}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+
+                        <button
+                            type="button"
+                            onClick={
+                                handleRefresh
+                            }
+                            disabled={loading}
+                            className="
                             inline-flex
                             h-9
                             items-center
@@ -1277,7 +1266,7 @@ function CallLogs() {
                             disabled:cursor-not-allowed
                             disabled:opacity-50
                         "
-                    >
+                        >
 
                         <ArrowPathIcon className="
                             h-4
@@ -1288,7 +1277,9 @@ function CallLogs() {
                             ? 'Refreshing...'
                             : 'Refresh'}
 
-                    </button>
+                        </button>
+
+                    </div>
 
                 </div>
 
@@ -1301,12 +1292,65 @@ function CallLogs() {
 
             <CallLogsTable
                 entries={
-                    filteredCallLogs
+                    displayedCallLogs
                 }
                 onView={
                     handleViewHistory
                 }
             />
+
+            <div className="mt-3 flex flex-col gap-3 rounded-xl border border-base-300 bg-base-100 px-4 py-3 text-xs text-base-content/55 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                    Showing {firstRecord}–{lastRecord} of{' '}
+                    {pagination.total_records} calls
+                </span>
+
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={() => setPage((current) => Math.max(1, current - 1))}
+                        disabled={loading || !pagination.has_previous}
+                        className="rounded-lg border border-base-300 px-3 py-2 transition hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        Previous
+                    </button>
+
+                    {pageNumbers.map((pageNumber) => (
+                        typeof pageNumber === 'string' ? (
+                            <span
+                                key={pageNumber}
+                                className="px-2 py-2"
+                            >
+                                …
+                            </span>
+                        ) : (
+                            <button
+                                key={pageNumber}
+                                type="button"
+                                onClick={() => setPage(pageNumber)}
+                                disabled={loading || pageNumber === page}
+                                className={[
+                                    'min-w-9 rounded-lg border px-3 py-2 transition',
+                                    pageNumber === page
+                                        ? 'border-[#8BCF00] bg-[#8BCF00]/10 text-[#6FA800]'
+                                        : 'border-base-300 hover:bg-base-200 disabled:cursor-default',
+                                ].join(' ')}
+                            >
+                                {pageNumber}
+                            </button>
+                        )
+                    ))}
+
+                    <button
+                        type="button"
+                        onClick={() => setPage((current) => current + 1)}
+                        disabled={loading || !pagination.has_next}
+                        className="rounded-lg border border-base-300 px-3 py-2 transition hover:bg-base-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
 
 
             {/* =====================================================
@@ -1323,9 +1367,6 @@ function CallLogs() {
                         }
                         call={
                             selectedCall
-                        }
-                        history={
-                            callHistory
                         }
                         onClose={
                             handleCloseHistory
