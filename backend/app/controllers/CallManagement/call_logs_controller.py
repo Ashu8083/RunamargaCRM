@@ -1,12 +1,10 @@
 # backend/app/controllers/CallManagement/call_logs_controller.py
 
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import EmployeeContext
 from app.models.employees import Employee
 from app.schemas.CallAnalytics.call_logs_scheema import CallLogsCreateSchema,CallLogsResponseSchema
-from app.services.CallManagement.call_log_service import CallLogService
+from app.services.api.CallManagement.call_log_service import CallLogService
 
 
 
