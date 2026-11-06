@@ -8,8 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.models.employees import Employee
-from app.schemas.CallAnalytics.call_logs_scheema import CallLogsCreateSchema
-from app.services.CallManagement.call_log_service import CallLogService
+from app.schemas.CallAnalytics.call_logs_scheema import CallLogsCreateSchema,CallLogsResponseSchema
+from app.services.api.CallManagement.call_log_service import CallLogService
 
 
 def _pagination(page, page_size, total_records):
