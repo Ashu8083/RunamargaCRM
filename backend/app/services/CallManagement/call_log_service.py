@@ -139,15 +139,10 @@ class CallLogService:
     ):
         """Create a call log."""
 
-
-
         phone_numbers : PhoneNumber  = db.query(PhoneNumber).filter(
             PhoneNumber.employee_id == employee.id,
             PhoneNumber.id == call_log_schema.phone_id,
         ).first()
-
-
-
 
 
         call_log = CallLog(
