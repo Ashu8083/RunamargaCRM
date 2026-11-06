@@ -1,6 +1,6 @@
 # backend/app/schemas/api/auth/auth_schema.py
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ========================================================================
@@ -71,6 +71,23 @@ class EmployeeIdentifyResponse(BaseModel):
 
 
 # ========================================================================
+# EMPLOYEE CONTEXT RESPONSE
+# ========================================================================
+#
+# Represents an employee's context (role assignment).
+# When an employee has multiple contexts, all contexts are returned.
+#
+# ========================================================================
+
+class EmployeeContextResponse(BaseModel):
+
+    name: str
+    employee_context_id: int | None = None
+    code: str | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ========================================================================
 # FACE LOGIN RESPONSE
 # ========================================================================
 #
@@ -97,6 +114,12 @@ class FaceLoginResponse(BaseModel):
 
     employee_id: int
 
+    employee_context_id: int | None = None
+
+    context_name: str | None = None
+
+    contexts: list[EmployeeContextResponse] = Field(default_factory=list)
+
     employee_code: str
 
     employee_name: str
@@ -114,6 +137,16 @@ class FaceLoginResponse(BaseModel):
     matched_capture_type: str | None = None
 
     face_similarity: float | None = None
+
+    work_mode: str | None = Field(
+        default=None,
+        description="Today's work mode for the employee: 'WFH' or 'Office'. Null if no attendance record today.",
+    )
+
+    office_latitude: float | None = 13.046920
+    office_longitude: float | None = 77.512945
+
+    office_radius_meters: float | None = 50
 
 
 # ========================================================================
@@ -191,13 +224,21 @@ class FaceEnrollmentResponse(BaseModel):
 
 
 # ========================================================================
-# REFRESH TOKEN RESPONSE
+# REFRESH TOKEN REQUEST & RESPONSE
 # ========================================================================
 #
-# Returned when Android exchanges a valid refresh token for a new
-# access token.
+# Android sends refresh_token in request body.
 #
 # ========================================================================
+
+class RefreshTokenRequest(BaseModel):
+
+    refresh_token: str = Field(
+        ...,
+        min_length=1,
+        description="Refresh token to exchange for a new access token.",
+    )
+
 
 class RefreshTokenResponse(BaseModel):
 
@@ -206,3 +247,52 @@ class RefreshTokenResponse(BaseModel):
     access_token: str
 
     token_type: str = "bearer"
+
+
+# ========================================================================
+# LOGOUT REQUEST & RESPONSE
+# ========================================================================
+#
+# Used for Android logout API to revoke session and tokens.
+#
+# ========================================================================
+
+class LogoutRequest(BaseModel):
+
+    refresh_token: str | None = Field(
+        default=None,
+        description="Optional refresh token to revoke. If omitted, tokens are resolved from Authorization header or employee session.",
+    )
+
+    device_id: str | None = Field(
+        default=None,
+        description="Optional device ID to scope revocation.",
+    )
+
+
+class LogoutResponse(BaseModel):
+
+    success: bool = True
+
+    message: str = "Logout successful. Token revoked."
+
+    revoked_tokens_count: int = 0
+
+
+
+
+
+# ========================================================================
+# RM PHONE NUMBER RESPONSE
+# ========================================================================
+#
+# Fetched based on employee_context_id for RM context only.
+#
+# ========================================================================
+
+class RMPhoneNumberResponse(BaseModel):
+
+    phone_number_id: int
+    phone: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)

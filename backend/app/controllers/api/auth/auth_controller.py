@@ -1,6 +1,6 @@
 # backend/app/controllers/api/auth/auth_controller.py
 
-from fastapi import UploadFile
+from fastapi import UploadFile, logger
 from sqlalchemy.orm import Session
 
 from app.schemas.api.auth.auth_schema import (
@@ -9,14 +9,23 @@ from app.schemas.api.auth.auth_schema import (
     FaceEnrollmentResponse,
     FaceLoginResponse,
     RefreshTokenResponse,
+    LogoutResponse,
+    EmployeeContextResponse,
+    RMPhoneNumberResponse,
 )
+
 
 from app.services.api.auth.auth_service import (
     identify_employee,
     enroll_employee_face,
     face_login,
     refresh_access_token,
+    logout_employee,
+    get_employee_contexts_service,
+    get_rm_phone_number_service,
+    get_employee_phone_number_service,
 )
+
 
 
 # ========================================================================
@@ -307,9 +316,10 @@ async def face_login_controller(
     image_bytes = await image.read()
 
     if not image_bytes:
-
+        logger.info("Face image is required.")
         raise ValueError(
             "Face image is required."
+
         )
 
     # --------------------------------------------------------------------
@@ -327,6 +337,7 @@ async def face_login_controller(
         longitude=longitude,
     )
 
+
     # --------------------------------------------------------------------
     # Return successful authentication response.
     # --------------------------------------------------------------------
@@ -340,6 +351,16 @@ async def face_login_controller(
         ],
         employee_code=result[
             "employee_code"
+        ],
+        employee_context_id=result.get(
+            "employee_context_id"
+        ),
+        context_name=result.get(
+            "context_name"
+        ),
+        contexts=[
+            EmployeeContextResponse(**ctx)
+            for ctx in result.get("contexts", [])
         ],
         employee_name=result[
             "employee_name"
@@ -363,11 +384,74 @@ async def face_login_controller(
         face_similarity=result.get(
             "face_similarity"
         ),
+        work_mode=result.get(
+            "work_mode"
+        ),
     )
 
 
 # ========================================================================
+# GET EMPLOYEE CONTEXTS
+# ========================================================================
+#
+# Fetches all active contexts for an employee by employee_id.
+# If the employee has multiple contexts, all are returned with id and name.
+#
+# ========================================================================
+
+def get_employee_contexts_controller(
+    db: Session,
+    employee_id: int,
+) -> list[EmployeeContextResponse]:
+
+    contexts = get_employee_contexts_service(
+        db=db,
+        employee_id=employee_id,
+    )
+
+    return [
+        EmployeeContextResponse(**ctx)
+        for ctx in contexts
+    ]
+
+
+# ========================================================================
+# GET RM PHONE NUMBER
+# ========================================================================
+#
+# Fetches phone number based on employee_context_id for RM context only.
+#
+# ========================================================================
+
+def get_rm_phone_number_controller(
+    db: Session,
+    employee_context_id: int,
+) -> RMPhoneNumberResponse:
+
+    result = get_rm_phone_number_service(
+        db=db,
+        employee_context_id=employee_context_id,
+    )
+
+    return RMPhoneNumberResponse(**result)
+
+
+def get_employee_phone_number_controller(
+    db: Session,
+    employee_id: int,
+) -> RMPhoneNumberResponse:
+
+    result = get_employee_phone_number_service(
+        db=db,
+        employee_id=employee_id,
+    )
+
+    return RMPhoneNumberResponse(**result)
+
+
+# ========================================================================
 # REFRESH ACCESS TOKEN
+
 # ========================================================================
 #
 # Android sends the refresh token.
@@ -412,4 +496,36 @@ def refresh_token_controller(
             "access_token"
         ],
         token_type="bearer",
+    )
+
+
+# ========================================================================
+# LOGOUT
+# ========================================================================
+#
+# Android logout controller.
+# Revokes active refresh token sessions and blacklists access token.
+#
+# ========================================================================
+
+def logout_controller(
+    db: Session,
+    employee_id: int | None = None,
+    access_token: str | None = None,
+    refresh_token: str | None = None,
+    device_id: str | None = None,
+) -> LogoutResponse:
+
+    result = logout_employee(
+        db=db,
+        employee_id=employee_id,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        device_id=device_id,
+    )
+
+    return LogoutResponse(
+        success=result["success"],
+        message=result["message"],
+        revoked_tokens_count=result["revoked_tokens_count"],
     )

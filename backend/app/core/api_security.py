@@ -7,11 +7,13 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 
-from fastapi import Cookie, Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.models.employees import Employee
+from app.models.auth_tokens import AuthToken
 
 
 # ------------------------------------------------------------------------
@@ -27,7 +29,7 @@ JWT_ALGORITHM = "HS256"
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
-TEMPORARY_ENROLLMENT_EXPIRE_MINUTES = 5
+TEMPORARY_ENROLLMENT_EXPIRE_MINUTES = 60
 
 # ------------------------------------------------------------------------
 # TOKEN TYPES
@@ -200,6 +202,35 @@ def decode_token(
 
 
 # ------------------------------------------------------------------------
+# DECODE TOKEN WITHOUT EXPIRATION VALIDATION
+# ------------------------------------------------------------------------
+
+def decode_token_unverified_exp(
+    token: str,
+) -> dict:
+    """
+    Decode and validate a JWT signature while ignoring expiration.
+    Useful for logout to identify employee even if access_token or
+    refresh_token has just expired.
+    """
+
+    try:
+
+        return jwt.decode(
+            token,
+            JWT_SECRET_KEY,
+            algorithms=[JWT_ALGORITHM],
+            options={"verify_exp": False},
+        )
+
+    except jwt.InvalidTokenError:
+
+        raise ValueError(
+            "Invalid token"
+        )
+
+
+# ------------------------------------------------------------------------
 # GET EMPLOYEE ID FROM ACCESS TOKEN
 # ------------------------------------------------------------------------
 
@@ -324,39 +355,105 @@ def get_employee_id_from_face_enrollment_token(
 
 
 # ------------------------------------------------------------------------
+# HTTP BEARER SECURITY SCHEME FOR OPENAPI
+# ------------------------------------------------------------------------
+
+oauth2_scheme = HTTPBearer(
+    auto_error=False,
+    description="Bearer access token in Authorization header",
+)
+
+
+# ------------------------------------------------------------------------
 # CURRENT API EMPLOYEE
 # ------------------------------------------------------------------------
 
 def get_current_api_employee(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
-    access_token: str | None = Cookie(default=None),
 ) -> Employee:
     """
     Get the currently authenticated employee using
-    the normal access token.
+    the normal access token from the Authorization header.
 
-    This dependency accepts ONLY:
-        type = access
+    Accepts:
+        Authorization: Bearer <token>
+        X-Access-Token: <token>
+
+    Checks that token is not revoked in auth_tokens table.
     """
 
-    if not access_token:
+    raw_token = None
+    if credentials and credentials.credentials:
+        raw_token = credentials.credentials.strip()
+
+    if not raw_token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            raw_token = auth_header.split(" ", 1)[1].strip()
+        elif auth_header:
+            raw_token = auth_header.strip()
+        elif request.headers.get("X-Access-Token"):
+            raw_token = request.headers.get("X-Access-Token").strip()
+
+    if not raw_token:
 
         raise HTTPException(
             status_code=401,
-            detail="Authentication required",
+            detail={
+                "code": "AUTH_REQUIRED",
+                "message": "Authentication required. Please provide a valid access token in the Authorization header.",
+            },
         )
 
     try:
 
         employee_id = get_employee_id_from_access_token(
-            access_token
+            raw_token
         )
 
     except ValueError as exc:
 
+        error_message = str(exc)
+
+        # Map known token errors to specific codes
+        if "expired" in error_message.lower():
+            error_code = "TOKEN_EXPIRED"
+        elif "invalid" in error_message.lower():
+            error_code = "INVALID_TOKEN"
+        else:
+            error_code = "AUTH_FAILED"
+
         raise HTTPException(
             status_code=401,
-            detail=str(exc),
+            detail={
+                "code": error_code,
+                "message": error_message,
+            },
+        )
+
+    # --------------------------------------------------------------------
+    # Check if this access token has been revoked
+    # --------------------------------------------------------------------
+    token_h = hash_token(raw_token)
+    revoked_token = (
+        db.query(AuthToken)
+        .filter(
+            AuthToken.employee_id == employee_id,
+            AuthToken.token_hash == token_h,
+            AuthToken.revoked_at.isnot(None),
+        )
+        .first()
+    )
+
+    if revoked_token:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "code": "TOKEN_REVOKED",
+                "message": "Your session has been revoked. Please login again.",
+            },
         )
 
     employee = (
@@ -372,14 +469,20 @@ def get_current_api_employee(
 
         raise HTTPException(
             status_code=401,
-            detail="Employee not found",
+            detail={
+                "code": "EMPLOYEE_NOT_FOUND",
+                "message": "Employee account not found. Please contact your administrator.",
+            },
         )
 
     if employee.deactivate:
 
         raise HTTPException(
             status_code=401,
-            detail="Account is deactivated",
+            detail={
+                "code": "ACCOUNT_DEACTIVATED",
+                "message": "Your account has been deactivated. Please contact your administrator.",
+            },
         )
 
     if employee.status not in (
@@ -389,7 +492,10 @@ def get_current_api_employee(
 
         raise HTTPException(
             status_code=401,
-            detail="Account is inactive",
+            detail={
+                "code": "ACCOUNT_INACTIVE",
+                "message": "Your account is currently inactive. Please contact your administrator.",
+            },
         )
 
     return employee

@@ -1,6 +1,8 @@
 # backend/app/services/api/attendance/attendance_service.py
 
-from datetime import date, datetime
+import calendar
+from datetime import date, datetime, timedelta
+from math import ceil
 from pathlib import Path
 
 import cv2
@@ -10,6 +12,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.config.settings import settings
 from app.models.attendance import Attendance
 from app.models.employee_face_profiles import EmployeeFaceProfile
 from app.models.employees import Employee
@@ -24,11 +27,12 @@ from app.services.face.face_validation import (
     validate_face_blur,
     validate_face_brightness,
 )
+from app.utils.geo import haversine_distance
+from app.utils.face_storage_upload_impl import LocalFileService
 
+# Singleton file service – delegates image storage to LocalFileService
+_file_service = LocalFileService(static_dir=Path(__file__).resolve().parents[4] / "app" / "static")
 
-# ------------------------------------------------------------------------
-# CONFIGURATION
-# ------------------------------------------------------------------------
 
 # Project root:
 #
@@ -412,14 +416,20 @@ def generate_verified_face_embedding(
 
         raise HTTPException(
             status_code=400,
-            detail=str(exc),
+            detail={
+                "code": "FACE_DETECTION_ERROR",
+                "message": str(exc),
+            },
         )
 
     except Exception:
 
         raise HTTPException(
             status_code=500,
-            detail="Face detection failed.",
+            detail={
+                "code": "FACE_DETECTION_FAILED",
+                "message": "Face detection failed. Please try again with a clearer image.",
+            },
         )
 
     # ------------------------------------------------------------
@@ -556,14 +566,20 @@ def generate_verified_face_embedding(
 
         raise HTTPException(
             status_code=400,
-            detail=str(exc),
+            detail={
+                "code": "EMBEDDING_ERROR",
+                "message": str(exc),
+            },
         )
 
     except Exception:
 
         raise HTTPException(
             status_code=500,
-            detail="Face embedding generation failed.",
+            detail={
+                "code": "EMBEDDING_FAILED",
+                "message": "Face embedding generation failed. Please try again with a clearer image.",
+            },
         )
 
     # ------------------------------------------------------------
@@ -577,14 +593,20 @@ def generate_verified_face_embedding(
 
         raise HTTPException(
             status_code=500,
-            detail="Invalid generated face embedding.",
+            detail={
+                "code": "INVALID_EMBEDDING",
+                "message": "Invalid generated face embedding. Please try again.",
+            },
         )
 
     if len(embedding) != 512:
 
         raise HTTPException(
             status_code=500,
-            detail="Invalid generated face embedding dimension.",
+            detail={
+                "code": "INVALID_EMBEDDING_DIMENSION",
+                "message": "Invalid face embedding dimension. Please try again.",
+            },
         )
 
     return (
@@ -667,14 +689,20 @@ def verify_employee_face(
 
         raise HTTPException(
             status_code=500,
-            detail=str(exc),
+            detail={
+                "code": "FACE_VERIFY_ERROR",
+                "message": str(exc),
+            },
         )
 
     except Exception:
 
         raise HTTPException(
             status_code=500,
-            detail="Face verification failed.",
+            detail={
+                "code": "FACE_VERIFY_FAILED",
+                "message": "Face verification failed. Please try again.",
+            },
         )
 
     # ------------------------------------------------------------
@@ -685,7 +713,10 @@ def verify_employee_face(
 
         raise HTTPException(
             status_code=400,
-            detail="No registered face embeddings found for this employee.",
+            detail={
+                "code": "NO_STORED_EMBEDDINGS",
+                "message": "No registered face embeddings found for this employee. Please complete face enrollment first.",
+            },
         )
 
     # ------------------------------------------------------------
@@ -876,42 +907,45 @@ def get_attendance_image_directory(
     attendance_date: date | None = None,
 ) -> Path:
     """
-    Return the directory where the attendance image
-    for the specified action/date must be stored.
+    Return the directory where the attendance image for the specified action/date must be stored.
 
-    Structure:
+    New Structure (date first, then mode):
 
         app/static/
             uploads/
                 attendance/
-                    punch in/
-                        YYYY-MM-DD/
+                    YYYY-MM-DD/
+                        punch in/
+                        punch out/
 
-                    punch out/
-                        YYYY-MM-DD/
-
-    The action folder and date folder are created
-    automatically if they do not exist.
+    The date folder is created first, then the appropriate action sub‑folder.
     """
 
+    # Ensure we have a date (defaults to today)
+    if attendance_date is None:
+        attendance_date = date.today()
+
+    # Base directory under static/uploads/attendance
+    base_dir = STATIC_DIRECTORY / "uploads" / "attendance"
+
+    # Date directory (YYYY‑MM‑DD)
+    date_dir = base_dir / attendance_date.isoformat()
+
+    # Determine the action sub‑folder name
     if action == "punch_in":
-
-        action_directory_name = (
-            PUNCH_IN_DIRECTORY_NAME
-        )
-
+        action_dir = PUNCH_IN_DIRECTORY_NAME
     elif action == "punch_out":
-
-        action_directory_name = (
-            PUNCH_OUT_DIRECTORY_NAME
-        )
-
+        action_dir = PUNCH_OUT_DIRECTORY_NAME
     else:
-
         raise HTTPException(
             status_code=500,
             detail="Invalid attendance image action.",
         )
+
+    # Full path: .../attendance/YYYY‑MM‑DD/<action>/
+    full_path = date_dir / action_dir
+    full_path.mkdir(parents=True, exist_ok=True)
+    return full_path
 
     if attendance_date is None:
 
@@ -959,138 +993,100 @@ def save_attendance_image(
     attendance_date: date | None = None,
 ) -> str:
     """
-    Decode and re-encode the attendance image as JPEG.
+    Save an attendance image using LocalFileService.
 
-    Physical storage structure:
+    Physical storage structure (date-first, then mode):
 
-        backend/app/static/uploads/attendance/
-            punch in/YYYY-MM-DD/employee_id_employee_name.jpg
-            punch out/YYYY-MM-DD/employee_id_employee_name.jpg
-
-    Database path:
-
-        uploads/attendance/punch in/YYYY-MM-DD/employee_id_employee_name.jpg
-
-    IMPORTANT:
-        The returned path is relative to STATIC_DIRECTORY,
-        NOT PROJECT_ROOT.
+        backend/app/static/
+            uploads/
+                attendance/
+                    YYYY-MM-DD/
+                        punch in/
+                            {employee_code}_{employee_name}.jpg
+                        punch out/
+                            {employee_code}_{employee_name}.jpg
 
     Returns:
-        Relative path stored in attendance table.
+        Path relative to static dir — stored in the DB.
+        Example: uploads/attendance/2026-10-31/punch in/EMP001_John_Doe.jpg
     """
 
     if not image_bytes:
-
         raise HTTPException(
             status_code=400,
             detail="Attendance image cannot be empty.",
         )
 
     # ------------------------------------------------------------
-    # Decode image
+    # Decode and re-encode image as JPEG (quality 90)
     # ------------------------------------------------------------
 
-    image = decode_image(
-        image_bytes
-    )
-
-    # ------------------------------------------------------------
-    # Determine date
-    # ------------------------------------------------------------
-
-    if attendance_date is None:
-
-        attendance_date = date.today()
-
-    # ------------------------------------------------------------
-    # Create action/date directory
-    # ------------------------------------------------------------
-
-    date_directory = (
-        get_attendance_image_directory(
-            action=action,
-            attendance_date=attendance_date,
-        )
-    )
-
-    # ------------------------------------------------------------
-    # Build employee filename
-    # ------------------------------------------------------------
-
-    filename = build_employee_image_filename(
-        employee
-    )
-
-    file_path = (
-        date_directory
-        / filename
-    )
-
-    # ------------------------------------------------------------
-    # Encode as JPEG
-    # ------------------------------------------------------------
+    image = decode_image(image_bytes)
 
     try:
-
         success, encoded_image = cv2.imencode(
             ".jpg",
             image,
-            [
-                int(cv2.IMWRITE_JPEG_QUALITY),
-                90,
-            ],
+            [int(cv2.IMWRITE_JPEG_QUALITY), 90],
         )
-
         if not success:
-
-            raise OSError(
-                "JPEG encoding failed."
-            )
-
-        file_path.write_bytes(
-            encoded_image.tobytes()
-        )
+            raise OSError("JPEG encoding failed.")
+        jpeg_bytes = encoded_image.tobytes()
 
     except OSError:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to encode attendance image.",
+        )
 
+    # ------------------------------------------------------------
+    # Resolve captured_at datetime from attendance_date
+    # ------------------------------------------------------------
+
+    if attendance_date is None:
+        attendance_date = date.today()
+
+    captured_at = datetime.combine(attendance_date, datetime.min.time())
+
+    # ------------------------------------------------------------
+    # Resolve employee code and name for the filename
+    # ------------------------------------------------------------
+
+    employee_code = getattr(employee, "employee_code", None) or str(employee.id)
+    employee_name = (
+        getattr(employee, "name", None)
+        or " ".join(
+            part for part in [
+                getattr(employee, "first_name", None),
+                getattr(employee, "last_name", None),
+            ]
+            if part
+        )
+        or "employee"
+    )
+
+    # ------------------------------------------------------------
+    # Delegate to LocalFileService (abstract class implementation)
+    # ------------------------------------------------------------
+
+    try:
+        relative_path = _file_service.save_attendance_image(
+            employee_id=employee.id,
+            attendance_id=0,          # not known at save time; ID is in filename via code
+            action=action,
+            captured_at=captured_at,
+            image_bytes=jpeg_bytes,
+            extension="jpg",
+            employee_code=employee_code,
+            employee_name=employee_name,
+        )
+    except Exception:
         raise HTTPException(
             status_code=500,
             detail="Failed to save attendance image.",
         )
 
-    # ------------------------------------------------------------
-    # Return path relative to STATIC_DIRECTORY
-    # ------------------------------------------------------------
-    #
-    # Physical path:
-    #
-    # backend/app/static/uploads/attendance/punch in/...
-    #
-    # Returned database path:
-    #
-    # uploads/attendance/punch in/...
-    #
-    # This prevents "static/" from being stored in the database.
-
-    try:
-
-        relative_path = file_path.relative_to(
-            STATIC_DIRECTORY
-        )
-
-    except ValueError:
-
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to generate attendance image path.",
-        )
-
-    return str(
-        relative_path
-    ).replace(
-        "\\",
-        "/",
-    )
+    return relative_path.replace("\\", "/")
 
 
 # ------------------------------------------------------------------------
@@ -1215,7 +1211,6 @@ async def punch_in(
     image_bytes: bytes,
     latitude: float | None = None,
     longitude: float | None = None,
-    accuracy: float | None = None,
 ) -> dict:
     """
     Punch in an employee using face recognition.
@@ -1252,7 +1247,45 @@ async def punch_in(
     )
 
     # ------------------------------------------------------------
-    # 2. Validate image
+    # 2. Validate GPS location (required for Work From Office)
+    # ------------------------------------------------------------
+
+    if employee.status != "WFH":
+
+        if latitude is None or longitude is None:
+
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "LOCATION_REQUIRED",
+                    "message": "GPS location (latitude and longitude) is required for Work From Office punch in.",
+                },
+            )
+
+        distance_m = haversine_distance(
+            lat1=latitude,
+            lon1=longitude,
+            lat2=settings.OFFICE_LATITUDE,
+            lon2=settings.OFFICE_LONGITUDE,
+        )
+
+        if distance_m > settings.OFFICE_RADIUS_METERS:
+
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "OUTSIDE_OFFICE_LOCATION",
+                    "message": (
+                        f"You are {distance_m:.0f} meters away from the office. "
+                        f"Punch in is only allowed within {settings.OFFICE_RADIUS_METERS:.0f} meters."
+                    ),
+                    "distance_meters": round(distance_m, 2),
+                    "allowed_radius_meters": settings.OFFICE_RADIUS_METERS,
+                },
+            )
+
+    # ------------------------------------------------------------
+    # 3. Validate image
     # ------------------------------------------------------------
 
     if not image_bytes:
@@ -1326,7 +1359,6 @@ async def punch_in(
                 check_in=now,
                 check_in_latitude=latitude,
                 check_in_longitude=longitude,
-                check_in_accuracy=accuracy,
                 check_in_confidence=face_similarity,
                 is_wfh=(
                     employee.status == "WFH"
@@ -1346,10 +1378,6 @@ async def punch_in(
 
             attendance.check_in_longitude = (
                 longitude
-            )
-
-            attendance.check_in_accuracy = (
-                accuracy
             )
 
             attendance.check_in_confidence = (
@@ -1419,7 +1447,6 @@ async def punch_out(
     image_bytes: bytes,
     latitude: float | None = None,
     longitude: float | None = None,
-    accuracy: float | None = None,
 ) -> dict:
     """
     Punch out an employee using face recognition.
@@ -1442,7 +1469,45 @@ async def punch_out(
     )
 
     # ------------------------------------------------------------
-    # 2. Validate image
+    # 2. Validate GPS location (required for Work From Office)
+    # ------------------------------------------------------------
+
+    if employee.status != "WFH":
+
+        if latitude is None or longitude is None:
+
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "LOCATION_REQUIRED",
+                    "message": "GPS location (latitude and longitude) is required for Work From Office punch out.",
+                },
+            )
+
+        distance_m = haversine_distance(
+            lat1=latitude,
+            lon1=longitude,
+            lat2=settings.OFFICE_LATITUDE,
+            lon2=settings.OFFICE_LONGITUDE,
+        )
+
+        if distance_m > settings.OFFICE_RADIUS_METERS:
+
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "OUTSIDE_OFFICE_LOCATION",
+                    "message": (
+                        f"You are {distance_m:.0f} meters away from the office. "
+                        f"Punch out is only allowed within {settings.OFFICE_RADIUS_METERS:.0f} meters."
+                    ),
+                    "distance_meters": round(distance_m, 2),
+                    "allowed_radius_meters": settings.OFFICE_RADIUS_METERS,
+                },
+            )
+
+    # ------------------------------------------------------------
+    # 3. Validate image
     # ------------------------------------------------------------
 
     if not image_bytes:
@@ -1537,10 +1602,6 @@ async def punch_out(
             longitude
         )
 
-        attendance.check_out_accuracy = (
-            accuracy
-        )
-
         attendance.check_out_confidence = (
             face_similarity
         )
@@ -1590,7 +1651,6 @@ def lunch_out(
     employee: Employee,
     latitude: float | None = None,
     longitude: float | None = None,
-    accuracy: float | None = None,
 ) -> dict:
     """
     Mark lunch out.
@@ -1704,7 +1764,6 @@ def lunch_in(
     employee: Employee,
     latitude: float | None = None,
     longitude: float | None = None,
-    accuracy: float | None = None,
 ) -> dict:
     """
     Mark lunch in.
@@ -1819,3 +1878,203 @@ def lunch_in(
         attendance=attendance,
         message="Lunch in successful.",
     )
+
+
+# ------------------------------------------------------------------------
+# ATTENDANCE HISTORY
+# ------------------------------------------------------------------------
+
+def format_image_url(image_path: str | None) -> str | None:
+    """
+    Format image path to a client-accessible URL path.
+    """
+    if not image_path:
+        return None
+    image_str = str(image_path).strip()
+    if not image_str:
+        return None
+    if image_str.startswith("http://") or image_str.startswith("https://"):
+        return image_str
+    if not image_str.startswith("/"):
+        return f"/{image_str}"
+    return image_str
+
+
+def format_event_time(dt: datetime | None) -> str | None:
+    """
+    Format a datetime object to 12-hour format (e.g., '09:30 AM').
+    """
+    if not dt:
+        return None
+    return dt.strftime("%I:%M %p")
+
+
+def calculate_working_hours(
+    check_in: datetime | None,
+    check_out: datetime | None,
+    lunch_out: datetime | None = None,
+    lunch_in: datetime | None = None,
+) -> str | None:
+    """
+    Calculate working hours formatted as 'Xh Ym'.
+    Deducts lunch break if both lunch_out and lunch_in are present.
+    """
+    if not check_in or not check_out:
+        return None
+
+    if check_out <= check_in:
+        return "0h 0m"
+
+    gross_duration = check_out - check_in
+    lunch_duration = timedelta(0)
+
+    if lunch_out and lunch_in and lunch_in > lunch_out:
+        lunch_duration = lunch_in - lunch_out
+
+    effective_duration = max(gross_duration - lunch_duration, timedelta(0))
+    total_seconds = int(effective_duration.total_seconds())
+
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+
+    return f"{hours}h {minutes}m"
+
+
+def get_attendance_history(
+    db: Session,
+    employee_id: int,
+    month: int | None = None,
+    year: int | None = None,
+    page: int = 1,
+    limit: int = 10,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    status: str | None = None,
+    work_mode: str | None = None,
+) -> dict:
+    """
+    Fetch paginated attendance history for an employee.
+
+    - If neither month nor year is provided, defaults to the current month and year.
+    - If month is provided without year, year defaults to current year.
+    - If year is provided without month, records for the entire year are fetched.
+    - If both month and year are provided, records for that specific month/year are fetched.
+    """
+    today = date.today()
+
+    if month is None and year is None:
+        target_year = today.year
+        target_month = today.month
+    elif month is not None and year is None:
+        target_year = today.year
+        target_month = month
+    elif month is not None and year is not None:
+        target_year = year
+        target_month = month
+    else:  # year is not None, month is None
+        target_year = year
+        target_month = None
+
+    if target_month is not None:
+        if target_month < 1 or target_month > 12:
+            raise HTTPException(
+                status_code=400,
+                detail="Month must be between 1 and 12.",
+            )
+        _, last_day = calendar.monthrange(target_year, target_month)
+        filter_start_date = date(target_year, target_month, 1)
+        filter_end_date = date(target_year, target_month, last_day)
+    else:
+        filter_start_date = date(target_year, 1, 1)
+        filter_end_date = date(target_year, 12, 31)
+
+    if start_date is not None:
+        filter_start_date = max(filter_start_date, start_date)
+
+    if end_date is not None:
+        filter_end_date = min(filter_end_date, end_date)
+
+    if filter_start_date > filter_end_date:
+        raise HTTPException(
+            status_code=400,
+            detail="Start date cannot be greater than end date.",
+        )
+
+    if page < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Page must be greater than or equal to 1.",
+        )
+
+    if limit < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Limit must be greater than or equal to 1.",
+        )
+
+    query = db.query(Attendance).filter(
+        Attendance.employee_id == employee_id,
+        Attendance.deleted_at.is_(None),
+        Attendance.date >= filter_start_date,
+        Attendance.date <= filter_end_date,
+    )
+
+    if work_mode:
+        normalized_mode = work_mode.strip().upper()
+        if normalized_mode in ["WFH", "WORK FROM HOME"]:
+            query = query.filter(Attendance.is_wfh.is_(True))
+        elif normalized_mode in ["OFFICE", "WFO", "WORK FROM OFFICE"]:
+            query = query.filter(Attendance.is_wfh.is_(False))
+
+    if status:
+        normalized_status = status.strip().lower()
+        if normalized_status == "present":
+            query = query.filter(Attendance.check_in.isnot(None))
+        elif normalized_status == "absent":
+            query = query.filter(Attendance.check_in.is_(None))
+
+    total = query.count()
+    total_pages = ceil(total / limit) if total > 0 else 0
+    offset = (page - 1) * limit
+
+    records = (
+        query.order_by(Attendance.date.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    data = []
+    for attendance in records:
+        resolved_work_mode = "WFH" if attendance.is_wfh else "Office"
+        check_in_time = format_event_time(attendance.check_in)
+        lunch_out_time = format_event_time(attendance.lunch_out)
+        lunch_in_time = format_event_time(attendance.lunch_in)
+        check_out_time = format_event_time(attendance.check_out)
+
+        check_in_img = format_image_url(attendance.check_in_image)
+        check_out_img = format_image_url(attendance.check_out_image)
+        data.append(
+            {
+                "id": attendance.id,
+                "employee_id": attendance.employee_id,
+                "date": attendance.date,
+                "work_mode": resolved_work_mode,
+                "checkIn": check_in_time,
+                "checkOut": check_out_time,
+                "lunchIn": lunch_in_time,
+                "lunchOut": lunch_out_time,
+                "checkInImage": check_in_img,
+                "checkOutImage": check_out_img,
+            }
+        )
+
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages,
+        "month": target_month,
+        "year": target_year,
+        "data": data,
+    }

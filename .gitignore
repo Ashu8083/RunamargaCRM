@@ -45,3 +45,6 @@ venv/
 __pycache__/
 *.py[cod]
 admin-react/public/websiteimages/
+
+# Uploaded attendance images
+backend/app/static/uploads/

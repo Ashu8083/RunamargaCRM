@@ -368,28 +368,14 @@ class CallLogService:
                 "The employee context is not valid for the authenticated employee."
             )
 
-        phone_id = getattr(call_log_schema, "phone_id", None)
-        phone = None
+        phone_numbers : PhoneNumber  = db.query(PhoneNumber).filter(
+            PhoneNumber.employee_id == employee.id,
+            PhoneNumber.id == call_log_schema.phone_id,
+        ).first()
 
-        if phone_id is not None:
-            phone = (
-                db.query(PhoneNumber)
-                .filter(
-                    PhoneNumber.id == phone_id,
-                    PhoneNumber.employee_id == employee.id,
-                    PhoneNumber.deleted_at.is_(None),
-                )
-                .first()
-            )
 
-            if not phone:
-                raise ValueError(
-                    "The phone number is not assigned to the authenticated employee."
-                )
 
-        phone_number = getattr(call_log_schema, "phone_number", None)
-        if not phone_number:
-            raise ValueError("A phone number is required for a call log.")
+
 
         call_log = CallLog(
             phone_number=phone_number,
@@ -400,23 +386,11 @@ class CallLogService:
                 None,
             ),
             call_started_at=call_log_schema.call_started_at,
-            call_ended_at=getattr(
-                call_log_schema,
-                "call_ended_at",
-                None,
-            ),
-            duration_seconds=getattr(
-                call_log_schema,
-                "duration_seconds",
-                None,
-            ),
-            attended_at=getattr(
-                call_log_schema,
-                "attended_at",
-                None,
-            ),
-            phone_id=phone.id if phone else None,
-            employee_context_id=employee_context.id,
+            call_ended_at=call_log_schema.call_ended_at,
+            duration_seconds=call_log_schema.duration_seconds,
+            attended_at=call_log_schema.attended_at,
+            phone_id = phone_numbers.id,
+            employee_context_id = call_log_schema.employee_context_id,
         )
 
         try:

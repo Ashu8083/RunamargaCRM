@@ -100,7 +100,7 @@ class CallLog(Base):
 
     call_started_at = Column(
         TIMESTAMP(timezone=True),
-        nullable=False,
+        nullable=False,  
     )
 
     call_ended_at = Column(

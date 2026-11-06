@@ -10,7 +10,10 @@ import numpy as np
 
 from sqlalchemy.orm import Session
 
+from app.models import phone_numbers, PhoneNumber, EmployeeContext, Context
 from app.models.employees import Employee
+from app.models.attendance import Attendance
+from app.core.log_config import logger
 from app.models.employee_face_profiles import EmployeeFaceProfile
 from app.models.auth_tokens import AuthToken
 
@@ -21,7 +24,10 @@ from app.core.api_security import (
     create_face_enrollment_token,
     get_employee_id_from_face_enrollment_token,
     decode_token,
+    decode_token_unverified_exp,
     REFRESH_TOKEN_EXPIRE_DAYS,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    ACCESS_TOKEN_TYPE,
     FACE_ENROLLMENT_TOKEN_TYPE,
     REFRESH_TOKEN_TYPE,
 )
@@ -91,6 +97,7 @@ def find_employee_by_code(
     The current Employee model does not have an employee_code column.
     """
 
+
     return (
         db.query(Employee)
         .filter(
@@ -119,11 +126,11 @@ def validate_employee_for_api_login(
             "Employee not found"
         )
 
-    if employee.deleted_at is not None:
-
-        raise ValueError(
-            "Employee not found"
-        )
+    # if employee.deleted_at is not None:
+    #
+    #     raise ValueError(
+    #         "Employee not found"
+    #     )
 
     if employee.deactivate:
 
@@ -349,12 +356,12 @@ def identify_employee(
                                 ▼
                            5 minutes
     """
-
+    logger.info(f"employee code: {employee_code}")
     employee = find_employee_by_code(
         db=db,
         employee_code=employee_code,
     )
-
+    logger.info(f"employee found{employee}")
     employee = validate_employee_for_api_login(
         employee
     )
@@ -1507,7 +1514,7 @@ def face_login(
     # --------------------------------------------------------------------
     # Validate employee
     # --------------------------------------------------------------------
-
+    phone_numbers_id = None
     employee = (
         db.query(Employee)
         .filter(
@@ -1516,6 +1523,44 @@ def face_login(
         )
         .first()
     )
+
+    # --------------------------------------------------------------------
+    # Resolve employee contexts (default and all active contexts)
+    # --------------------------------------------------------------------
+    active_contexts = (
+        db.query(EmployeeContext)
+        .join(
+            Context,
+            EmployeeContext.context_id == Context.id,
+        )
+        .filter(
+            EmployeeContext.employee_id == employee_id,
+            EmployeeContext.is_active.is_(True),
+            EmployeeContext.deleted_at.is_(None),
+            Context.is_active.is_(True),
+        )
+        .order_by(
+            EmployeeContext.is_default.desc(),
+            EmployeeContext.id.asc(),
+        )
+        .all()
+    )
+
+    emp_context = active_contexts[0] if active_contexts else None
+    employee_context_id = emp_context.id if emp_context else None
+    context_name = emp_context.context.name if (emp_context and emp_context.context) else None
+
+    contexts_list = [
+        {
+            "id": ec.id,
+            "employee_context_id": ec.id,
+            "context_id": ec.context_id,
+            "name": ec.context.name if ec.context else "",
+            "code": ec.context.code if ec.context else "",
+            "is_default": bool(ec.is_default),
+        }
+        for ec in active_contexts
+    ]
 
     employee = validate_employee_for_api_login(
         employee
@@ -1570,10 +1615,25 @@ def face_login(
         longitude=longitude,
     )
 
+    logger.info(
+        f"employee login successful employee_id={employee.id}, "
+        f"employee_context_id={employee_context_id}, context_name={context_name}, "
+        f"contexts_count={len(contexts_list)}"
+    )
+
+    # --------------------------------------------------------------------
+    # Resolve work mode from employee status
+    # --------------------------------------------------------------------
+    work_mode = "WFH" if employee.status == "WFH" else "Office"
+
+
     return {
         "message": "Face login successful",
         "employee_id": employee.id,
-        "employee_code": employee.employee_code,
+        "employee_context_id": employee_context_id,
+        "context_name": context_name,
+        "contexts": contexts_list,
+        "employee_code": employee.email,
         "employee_name": employee.name,
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -1586,7 +1646,142 @@ def face_login(
         "face_similarity": face_result.get(
             "similarity"
         ),
+        "work_mode": work_mode,
     }
+
+
+# ------------------------------------------------------------------------
+# GET EMPLOYEE CONTEXTS
+# ------------------------------------------------------------------------
+
+def get_employee_contexts_service(
+    db: Session,
+    employee_id: int,
+) -> list[dict]:
+    """
+    Fetch all active contexts for an employee by employee_id.
+    Returns a list of contexts with context id and name.
+    """
+    employee = (
+        db.query(Employee)
+        .filter(
+            Employee.id == employee_id,
+            Employee.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not employee:
+        raise ValueError(f"Employee with ID {employee_id} not found.")
+
+    employee_contexts = (
+        db.query(EmployeeContext)
+        .join(
+            Context,
+            EmployeeContext.context_id == Context.id,
+        )
+        .filter(
+            EmployeeContext.employee_id == employee_id,
+            EmployeeContext.is_active.is_(True),
+            EmployeeContext.deleted_at.is_(None),
+            Context.is_active.is_(True),
+        )
+        .order_by(
+            EmployeeContext.is_default.desc(),
+            EmployeeContext.id.asc(),
+        )
+        .all()
+    )
+
+    return [
+        {
+            "id": ec.id,
+            "employee_context_id": ec.id,
+            "context_id": ec.context_id,
+            "name": ec.context.name if ec.context else "",
+            "code": ec.context.code if ec.context else "",
+            "is_default": bool(ec.is_default),
+        }
+        for ec in employee_contexts
+    ]
+
+
+# ------------------------------------------------------------------------
+# GET PHONE NUMBER BASED ON EMPLOYEE
+# ------------------------------------------------------------------------
+
+def get_employee_phone_number_service(
+    db: Session,
+    employee_id: int,
+) -> dict:
+    """
+    Fetch phone number based on employee_id.
+    Validates that the employee is allowed (active, not deactivated) and returns their assigned phone number.
+    """
+    employee = (
+        db.query(Employee)
+        .filter(
+            Employee.id == employee_id,
+            Employee.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    if not employee:
+        raise ValueError(
+            f"Employee with ID {employee_id} not found."
+        )
+
+    validate_employee_for_api_login(employee)
+
+    phone_record = (
+        db.query(PhoneNumber)
+        .filter(
+            PhoneNumber.employee_id == employee.id,
+            PhoneNumber.deleted_at.is_(None),
+        )
+        .order_by(PhoneNumber.id.desc())
+        .first()
+    )
+
+    if not phone_record:
+        raise ValueError(
+            f"No phone number assigned to employee (ID: {employee.id})."
+        )
+
+    return {
+        "phone_number_id": phone_record.id,
+        "phone": phone_record.phone,
+    }
+
+
+def get_rm_phone_number_service(
+    db: Session,
+    employee_context_id: int,
+) -> dict:
+    """
+    Fetch phone number based on employee_context_id or employee_id.
+    Does not filter on employee context; validates that the employee is allowed and fetches the assigned number.
+    """
+    employee_context = (
+        db.query(EmployeeContext)
+        .filter(
+            EmployeeContext.id == employee_context_id,
+            EmployeeContext.deleted_at.is_(None),
+        )
+        .first()
+    )
+
+    target_employee_id = (
+        employee_context.employee_id if employee_context else employee_context_id
+    )
+
+    return get_employee_phone_number_service(
+        db=db,
+        employee_id=target_employee_id,
+    )
+
+
 
 
 # ------------------------------------------------------------------------
@@ -1714,4 +1909,167 @@ def refresh_access_token(
         ),
         "access_token": access_token,
         "token_type": "bearer",
+    }
+
+
+# ------------------------------------------------------------------------
+# LOGOUT & REVOKE TOKENS
+# ------------------------------------------------------------------------
+
+def logout_employee(
+    db: Session,
+    employee_id: int | None = None,
+    access_token: str | None = None,
+    refresh_token: str | None = None,
+    device_id: str | None = None,
+) -> dict:
+    """
+    Revoke employee tokens on logout.
+
+    Validates incoming token JWTs and verifies active session exists.
+    If no valid token is provided, or the session is already revoked / not found,
+    raises ValueError so the API returns 401 Unauthorized instead of 200 OK.
+    """
+    now = datetime.now(timezone.utc)
+    revoked_count = 0
+    token_verified = False
+
+    # 1. Validate access_token if provided
+    if access_token:
+        try:
+            payload = decode_token_unverified_exp(access_token)
+            if payload.get("type") != ACCESS_TOKEN_TYPE:
+                raise ValueError("Invalid access token type")
+            sub = payload.get("sub")
+            if not sub:
+                raise ValueError("Access token is missing employee ID")
+            employee_id = int(sub)
+            token_verified = True
+        except Exception as exc:
+            raise ValueError(f"Invalid access token: {exc}")
+
+    # 2. Validate refresh_token if provided
+    if refresh_token:
+        try:
+            payload = decode_token_unverified_exp(refresh_token)
+            if payload.get("type") != REFRESH_TOKEN_TYPE:
+                raise ValueError("Invalid refresh token type")
+            sub = payload.get("sub")
+            if not sub:
+                raise ValueError("Refresh token is missing employee ID")
+            ref_emp_id = int(sub)
+            if employee_id and employee_id != ref_emp_id:
+                raise ValueError("Access token and refresh token belong to different employees")
+            employee_id = ref_emp_id
+            token_verified = True
+        except Exception as exc:
+            raise ValueError(f"Invalid refresh token: {exc}")
+
+    if not token_verified or not employee_id:
+        raise ValueError("Valid authentication token required for logout")
+
+    # 3. Verify employee exists in database
+    employee = (
+        db.query(Employee)
+        .filter(
+            Employee.id == employee_id,
+            Employee.deleted_at.is_(None),
+        )
+        .first()
+    )
+    if not employee:
+        raise ValueError("Employee not found")
+
+    # 4. If refresh token provided, look up in auth_tokens
+    if refresh_token:
+        refresh_hash = hash_token(refresh_token)
+        token_record = (
+            db.query(AuthToken)
+            .filter(
+                AuthToken.employee_id == employee_id,
+                AuthToken.token_hash == refresh_hash,
+                AuthToken.token_type == REFRESH_TOKEN_TYPE,
+            )
+            .first()
+        )
+        if not token_record:
+            raise ValueError("Refresh session not found or invalid")
+        if token_record.revoked_at is not None:
+            raise ValueError("Token is already revoked")
+
+        token_record.revoked_at = now
+        revoked_count += 1
+
+    # 5. If access token provided, blacklist in auth_tokens
+    if access_token:
+        access_hash = hash_token(access_token)
+        existing = (
+            db.query(AuthToken)
+            .filter(
+                AuthToken.employee_id == employee_id,
+                AuthToken.token_hash == access_hash,
+            )
+            .first()
+        )
+        if existing:
+            if existing.revoked_at is not None and not refresh_token:
+                raise ValueError("Access token is already revoked")
+            if existing.revoked_at is None:
+                existing.revoked_at = now
+                revoked_count += 1
+        else:
+            exp_dt = None
+            try:
+                payload = decode_token_unverified_exp(access_token)
+                if payload.get("exp"):
+                    exp_dt = datetime.fromtimestamp(payload.get("exp"), tz=timezone.utc)
+            except Exception:
+                pass
+
+            if not exp_dt:
+                exp_dt = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+            revoked_access_token = AuthToken(
+                employee_id=employee_id,
+                token_hash=access_hash,
+                token_type=ACCESS_TOKEN_TYPE,
+                expires_at=exp_dt,
+                revoked_at=now,
+                device_id=device_id,
+            )
+            db.add(revoked_access_token)
+            revoked_count += 1
+
+    # 6. Revoke any other active refresh sessions for this employee
+    filter_conditions = [
+        AuthToken.employee_id == employee_id,
+        AuthToken.token_type == REFRESH_TOKEN_TYPE,
+        AuthToken.revoked_at.is_(None),
+    ]
+    if device_id:
+        filter_conditions.append(AuthToken.device_id == device_id)
+
+    updated = (
+        db.query(AuthToken)
+        .filter(*filter_conditions)
+        .update(
+            {AuthToken.revoked_at: now},
+            synchronize_session=False,
+        )
+    )
+    revoked_count += updated
+
+    if revoked_count == 0:
+        raise ValueError("No active session found or token has already been revoked")
+
+    db.commit()
+
+    logger.info(
+        f"Employee {employee_id} logged out. Total tokens marked revoked: {revoked_count}"
+    )
+
+    return {
+        "success": True,
+        "message": "Logout successful. Token revoked.",
+        "revoked_tokens_count": revoked_count,
     }

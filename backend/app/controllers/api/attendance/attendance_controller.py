@@ -1,14 +1,17 @@
 # backend/app/controllers/api/attendance/attendance_controller.py
 
+from datetime import date
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.models.employees import Employee
 from app.schemas.api.attendance.attendance_schema import (
     AttendanceActionRequest,
+    AttendanceHistoryPaginationResponse,
     AttendanceResponse,
 )
 from app.services.api.attendance.attendance_service import (
+    get_attendance_history,
     punch_in,
     punch_out,
     lunch_out,
@@ -35,13 +38,19 @@ async def punch_in_controller(
     if image is None:
         raise HTTPException(
             status_code=400,
-            detail="Face image is required for punch in.",
+            detail={
+                "code": "IMAGE_REQUIRED",
+                "message": "Face image is required for punch in.",
+            },
         )
 
     if not image.filename:
         raise HTTPException(
             status_code=400,
-            detail="Invalid face image.",
+            detail={
+                "code": "INVALID_IMAGE",
+                "message": "Invalid face image file.",
+            },
         )
 
     image_bytes = await image.read()
@@ -49,7 +58,10 @@ async def punch_in_controller(
     if not image_bytes:
         raise HTTPException(
             status_code=400,
-            detail="Face image cannot be empty.",
+            detail={
+                "code": "EMPTY_IMAGE",
+                "message": "Face image cannot be empty.",
+            },
         )
 
     result = await punch_in(
@@ -58,7 +70,6 @@ async def punch_in_controller(
         image_bytes=image_bytes,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
-        accuracy=attendance_data.accuracy,
     )
 
     return AttendanceResponse(**result)
@@ -84,13 +95,19 @@ async def punch_out_controller(
     if image is None:
         raise HTTPException(
             status_code=400,
-            detail="Face image is required for punch out.",
+            detail={
+                "code": "IMAGE_REQUIRED",
+                "message": "Face image is required for punch out.",
+            },
         )
 
     if not image.filename:
         raise HTTPException(
             status_code=400,
-            detail="Invalid face image.",
+            detail={
+                "code": "INVALID_IMAGE",
+                "message": "Invalid face image file.",
+            },
         )
 
     image_bytes = await image.read()
@@ -98,7 +115,10 @@ async def punch_out_controller(
     if not image_bytes:
         raise HTTPException(
             status_code=400,
-            detail="Face image cannot be empty.",
+            detail={
+                "code": "EMPTY_IMAGE",
+                "message": "Face image cannot be empty.",
+            },
         )
 
     result = await punch_out(
@@ -107,7 +127,6 @@ async def punch_out_controller(
         image_bytes=image_bytes,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
-        accuracy=attendance_data.accuracy,
     )
 
     return AttendanceResponse(**result)
@@ -130,7 +149,6 @@ async def lunch_out_controller(
         employee=employee,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
-        accuracy=attendance_data.accuracy,
     )
 
     return AttendanceResponse(**result)
@@ -153,7 +171,41 @@ async def lunch_in_controller(
         employee=employee,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
-        accuracy=attendance_data.accuracy,
     )
 
     return AttendanceResponse(**result)
+
+
+async def get_attendance_history_controller(
+    db: Session,
+    employee: Employee,
+    month: int | None = None,
+    year: int | None = None,
+    page: int = 1,
+    limit: int = 10,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    status: str | None = None,
+    work_mode: str | None = None,
+) -> AttendanceHistoryPaginationResponse:
+    """
+    Controller for employee attendance history.
+
+    - Authenticated employee fetches their own attendance history (ID from JWT token).
+    - Admin use: call get_attendance_history() service directly with any employee_id.
+    """
+
+    result = get_attendance_history(
+        db=db,
+        employee_id=employee.id,
+        month=month,
+        year=year,
+        page=page,
+        limit=limit,
+        start_date=start_date,
+        end_date=end_date,
+        status=status,
+        work_mode=work_mode,
+    )
+
+    return AttendanceHistoryPaginationResponse(**result)

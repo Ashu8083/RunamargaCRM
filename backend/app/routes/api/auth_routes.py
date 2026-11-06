@@ -2,7 +2,6 @@
 
 from fastapi import (
     APIRouter,
-    Cookie,
     Depends,
     File,
     Form,
@@ -14,12 +13,17 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.config.database import get_db
+from app.core.api_security import get_current_api_employee, oauth2_scheme
+from app.models.employees import Employee
 
 from app.controllers.api.auth.auth_controller import (
     identify_employee_controller,
     face_enrollment_controller,
     face_login_controller,
     refresh_token_controller,
+    logout_controller,
+    get_employee_contexts_controller,
+    get_employee_phone_number_controller,
 )
 
 from app.schemas.api.auth.auth_schema import (
@@ -27,8 +31,15 @@ from app.schemas.api.auth.auth_schema import (
     EmployeeIdentifyResponse,
     FaceEnrollmentResponse,
     FaceLoginResponse,
+    RefreshTokenRequest,
     RefreshTokenResponse,
+    LogoutRequest,
+    LogoutResponse,
+    EmployeeContextResponse,
+    RMPhoneNumberResponse,
 )
+
+
 
 
 # ========================================================================
@@ -139,7 +150,10 @@ def identify_employee(
 
         raise HTTPException(
             status_code=401,
-            detail=str(exc),
+            detail={
+                "code": "IDENTIFY_FAILED",
+                "message": str(exc),
+            },
         )
 
 
@@ -171,7 +185,7 @@ def identify_employee(
 #
 # This endpoint DOES NOT require a normal access token.
 #
-# Instead it requires the short-lived:
+#Instead it requires the short-lived:
 #
 #     face_enrollment
 #
@@ -265,7 +279,10 @@ async def face_enrollment(
 
         raise HTTPException(
             status_code=401,
-            detail=str(exc),
+            detail={
+                "code": "ENROLLMENT_FAILED",
+                "message": str(exc),
+            },
         )
 
 
@@ -393,7 +410,7 @@ async def face_login(
 
     try:
 
-        result = await face_login_controller(
+        return await face_login_controller(
             db=db,
             employee_id=employee_id,
             image=image,
@@ -404,63 +421,14 @@ async def face_login(
             longitude=longitude,
         )
 
-        # ----------------------------------------------------------------
-        # Create JSON response.
-        # ----------------------------------------------------------------
-
-        response = JSONResponse(
-            content=result.model_dump()
-        )
-
-        # ----------------------------------------------------------------
-        # ACCESS TOKEN COOKIE
-        #
-        # Lifetime:
-        #
-        #     30 minutes
-        #
-        # Local development:
-        #
-        #     secure=False
-        #
-        # Production HTTPS:
-        #
-        #     secure=True
-        # ----------------------------------------------------------------
-
-        response.set_cookie(
-            key="access_token",
-            value=result.access_token,
-            httponly=True,
-            secure=False,
-            samesite="lax",
-            max_age=30 * 60,
-        )
-
-        # ----------------------------------------------------------------
-        # REFRESH TOKEN COOKIE
-        #
-        # Lifetime:
-        #
-        #     7 days
-        # ----------------------------------------------------------------
-
-        response.set_cookie(
-            key="refresh_token",
-            value=result.refresh_token,
-            httponly=True,
-            secure=False,
-            samesite="lax",
-            max_age=7 * 24 * 60 * 60,
-        )
-
-        return response
-
     except ValueError as exc:
 
         raise HTTPException(
             status_code=401,
-            detail=str(exc),
+            detail={
+                "code": "LOGIN_FAILED",
+                "message": str(exc),
+            },
         )
 
 
@@ -470,30 +438,8 @@ async def face_login(
 #
 # POST /android/auth/refresh
 #
-# The refresh token is read from the HttpOnly cookie.
-#
-#
-# Flow:
-#
-#     refresh_token cookie
-#             ↓
-#     Decode JWT
-#             ↓
-#     Verify type = refresh
-#             ↓
-#     Hash token
-#             ↓
-#     Find auth_tokens
-#             ↓
-#     Check revoked_at
-#             ↓
-#     Check expiration
-#             ↓
-#     Check employee
-#             ↓
-#     Generate new access token
-#             ↓
-#     Replace access_token cookie
+# Android sends the refresh token in the request body (or Authorization header).
+# Returns a new access token in the JSON response body.
 #
 # ========================================================================
 
@@ -502,61 +448,210 @@ async def face_login(
     response_model=RefreshTokenResponse,
 )
 def refresh_token(
-    refresh_token: str | None = Cookie(
-        default=None
-    ),
-
+    request: Request,
+    body: RefreshTokenRequest | None = None,
     db: Session = Depends(get_db),
 ):
+    token = None
+    if body and body.refresh_token:
+        token = body.refresh_token.strip()
+    elif request.headers.get("X-Refresh-Token"):
+        token = request.headers.get("X-Refresh-Token").strip()
+    else:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ", 1)[1].strip()
+        elif auth_header:
+            token = auth_header.strip()
 
-    # --------------------------------------------------------------------
-    # Refresh token must exist.
-    # --------------------------------------------------------------------
-
-    if not refresh_token:
-
+    if not token:
         raise HTTPException(
             status_code=401,
-            detail="Refresh token required.",
+            detail={
+                "code": "REFRESH_TOKEN_REQUIRED",
+                "message": "Refresh token is required. Please provide it in the request body or X-Refresh-Token header.",
+            },
         )
 
     try:
-
-        result = refresh_token_controller(
+        return refresh_token_controller(
             db=db,
-            refresh_token=refresh_token,
+            refresh_token=token,
         )
-
-        # ----------------------------------------------------------------
-        # Create response.
-        # ----------------------------------------------------------------
-
-        response = JSONResponse(
-            content=result.model_dump()
-        )
-
-        # ----------------------------------------------------------------
-        # Replace access token cookie.
-        #
-        # New lifetime:
-        #
-        #     30 minutes
-        # ----------------------------------------------------------------
-
-        response.set_cookie(
-            key="access_token",
-            value=result.access_token,
-            httponly=True,
-            secure=False,
-            samesite="lax",
-            max_age=30 * 60,
-        )
-
-        return response
 
     except ValueError as exc:
+        error_message = str(exc)
+        if "expired" in error_message.lower():
+            error_code = "REFRESH_TOKEN_EXPIRED"
+        elif "revoked" in error_message.lower():
+            error_code = "REFRESH_TOKEN_REVOKED"
+        else:
+            error_code = "REFRESH_FAILED"
 
         raise HTTPException(
             status_code=401,
-            detail=str(exc),
+            detail={
+                "code": error_code,
+                "message": error_message,
+            },
+        )
+
+
+# ========================================================================
+# LOGOUT
+# ========================================================================
+#
+# POST /android/auth/logout
+#
+# Android logout endpoint that revokes the active tokens.
+#
+# Supported token transmission methods from Android:
+#     - Authorization Header: Bearer <token>
+#     - Header: X-Access-Token / X-Refresh-Token / X-Device-ID
+#     - JSON body: LogoutRequest(refresh_token, device_id)
+#
+# Revocation actions:
+#     - Marks refresh tokens in auth_tokens as revoked (revoked_at = now)
+#     - Blacklists access token in auth_tokens table
+# ========================================================================
+
+@router.post(
+    "/logout",
+    response_model=LogoutResponse,
+    dependencies=[Depends(oauth2_scheme)],
+    summary="Logout employee and revoke active tokens",
+)
+def logout(
+    http_request: Request,
+    body: LogoutRequest | None = None,
+    current_employee: Employee = Depends(get_current_api_employee),
+    db: Session = Depends(get_db),
+):
+    # --------------------------------------------------------------------
+    # 1. Resolve access token (Authorization or X-Access-Token header)
+    # --------------------------------------------------------------------
+        raw_access_token = None
+
+        auth_header = http_request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            raw_access_token = auth_header.split(" ", 1)[1].strip()
+        elif auth_header:
+            raw_access_token = auth_header.strip()
+        elif http_request.headers.get("X-Access-Token"):
+            raw_access_token = http_request.headers.get("X-Access-Token").strip()
+
+        # --------------------------------------------------------------------
+        # 2. Resolve refresh token (Body or Header)
+        # --------------------------------------------------------------------
+        raw_refresh_token = (
+            (body.refresh_token if body else None)
+            or http_request.headers.get("X-Refresh-Token")
+        )
+
+        # --------------------------------------------------------------------
+        # 3. Resolve device ID (Body or Header)
+        # --------------------------------------------------------------------
+        device_id = (
+            (body.device_id if body else None)
+            or http_request.headers.get("X-Device-ID")
+        )
+
+        if not isinstance(raw_access_token, str):
+            raw_access_token = None
+        if not isinstance(raw_refresh_token, str):
+            raw_refresh_token = None
+        if not isinstance(device_id, str):
+            device_id = None
+
+        # --------------------------------------------------------------------
+        # Validate token presence
+        # --------------------------------------------------------------------
+        if not raw_access_token and not raw_refresh_token:
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "code": "LOGOUT_TOKEN_REQUIRED",
+                    "message": "An access token or refresh token is required to logout.",
+                },
+            )
+
+        try:
+            return logout_controller(
+                db=db,
+                access_token=raw_access_token,
+                refresh_token=raw_refresh_token,
+                device_id=device_id,
+            )
+
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "code": "LOGOUT_FAILED",
+                    "message": str(exc),
+                },
+        )
+
+
+# ========================================================================
+# FETCH EMPLOYEE CONTEXTS
+# ========================================================================
+
+@router.get(
+    "/employee-contexts",
+    response_model=list[EmployeeContextResponse],
+    summary="Fetch all contexts for the authenticated employee (from token)",
+)
+def get_employee_contexts(
+    db: Session = Depends(get_db),
+    current_employee: Employee = Depends(get_current_api_employee),
+):
+    try:
+        return get_employee_contexts_controller(
+            db=db,
+            employee_id=current_employee.id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "CONTEXT_NOT_FOUND",
+                "message": str(exc),
+            },
+        )
+
+
+# ========================================================================
+# FETCH PHONE NUMBER BASED ON AUTHENTICATED EMPLOYEE
+# ========================================================================
+
+@router.get(
+    "/phone-number",
+    response_model=RMPhoneNumberResponse,
+    summary="Fetch phone number of the authenticated employee (from token)",
+)
+def get_employee_phone_number(
+    db: Session = Depends(get_db),
+    current_employee: Employee = Depends(get_current_api_employee),
+):
+    try:
+        return get_employee_phone_number_controller(
+            db=db,
+            employee_id=current_employee.id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "PERMISSION_DENIED",
+                "message": str(exc),
+            },
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "PHONE_NUMBER_NOT_FOUND",
+                "message": str(exc),
+            },
         )
