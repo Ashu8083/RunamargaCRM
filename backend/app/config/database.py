@@ -1,6 +1,10 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
+# backend/app/config/database.py
+
+from sqlalchemy import create_engine
+from sqlalchemy.engine import URL
+from sqlalchemy.orm import sessionmaker
+import logging
 from app.config.settings import settings
 
 # Configure logger
@@ -25,7 +29,29 @@ DATABASE_URL = URL.create(
 # DATABASE ENGINE AND CONNECTION POOL
 # ============================================================================
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(
+    DATABASE_URL,
+
+    # Maximum number of persistent connections in this process.
+    pool_size=2,
+
+    # Additional temporary connections allowed during traffic spikes.
+    max_overflow=3,
+
+    # Maximum time to wait for an available connection.
+    pool_timeout=30,
+
+    # Recycle connections periodically.
+    pool_recycle=1800,
+
+    # Check connection health before reusing a pooled connection.
+    pool_pre_ping=True,
+)
+
+
+# ============================================================================
+# DATABASE SESSION FACTORY
+# ============================================================================
 
 SessionLocal = sessionmaker(
     autocommit=False,
@@ -33,6 +59,10 @@ SessionLocal = sessionmaker(
     bind=engine,
 )
 
+
+# ============================================================================
+# FASTAPI DATABASE DEPENDENCY
+# ============================================================================
 
 def get_db():
     db = SessionLocal()
