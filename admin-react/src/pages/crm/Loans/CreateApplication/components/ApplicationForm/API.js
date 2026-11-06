@@ -1,5 +1,14 @@
 import apiClient from '../../../../../../app/apiClient'
 
+export const findExistingApplicationByPhone = async (phone) => {
+  const response = await apiClient.get(
+    '/applications/existing-by-phone',
+    { params: { phone } }
+  )
+
+  return response.data
+}
+
 export const createLoanApplication = async (data) => {
   if (!data) {
     throw new Error('Application data is required.')

@@ -169,6 +169,22 @@ export const normalizePermission = (permission) => {
     permission.description !== undefined
       ? String(permission.description).trim()
       : null;
+  const hasCommonDescription =
+    description?.toLowerCase().includes("common");
+  const logSearchText = [
+    permission.name,
+    permission.code,
+    description,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const hasLogReference = /\blogs?\b/.test(logSearchText);
+  const category = hasCommonDescription
+    ? "common"
+    : hasLogReference
+      ? "logs"
+      : String(permission.category || "business").toLowerCase();
 
   return {
     ...permission,
@@ -176,13 +192,7 @@ export const normalizePermission = (permission) => {
     name: permission.name || "",
     code: permission.code || "",
     description,
-    category:
-      permission.category ||
-      (
-        description?.toLowerCase() === "common"
-          ? "common"
-          : "business"
-      ),
+    category,
     is_assigned: Boolean(
       permission.is_assigned
     ),
@@ -216,16 +226,18 @@ export const groupPermissionsByCategory = (
 ) => {
   const groups = {
     common: [],
+    logs: [],
     business: [],
   };
 
   normalizePermissions(
     permissions
   ).forEach((permission) => {
-    const category =
-      permission.category === "common"
-        ? "common"
-        : "business";
+    const category = ["common", "logs"].includes(
+      permission.category
+    )
+      ? permission.category
+      : "business";
 
     groups[category].push(permission);
   });

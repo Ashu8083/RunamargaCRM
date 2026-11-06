@@ -3,6 +3,7 @@
 import {
   lazy,
   Suspense,
+  useCallback,
   useState,
 } from 'react'
 
@@ -30,16 +31,15 @@ function CreateApplication() {
   // OPEN EXISTING APPLICATION POPUP
   // ===========================================================
 
-  const handleExistingLoan = ({
+  const handleExistingLoan = useCallback(({
     existingLoanData,
     originalApplicationData,
   }) => {
-
     setExistingLoan({
       existingLoanData,
       originalApplicationData,
     })
-  }
+  }, [])
 
 
   // ===========================================================

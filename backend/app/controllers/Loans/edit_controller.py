@@ -14,7 +14,6 @@ from app.models.bank_processings import BankProcessing
 from app.models.dsa_details import DSADetail
 from app.models.bank_processing_logs import BankProcessingLog
 from app.models.loan_reference import LoanReference
-from app.models.loan_assignments import LoanAssignment
 from app.models.bank import Bank
 import random
 from app.schemas.application_schema import (
@@ -32,17 +31,6 @@ from app.models.permissions import Permission
 from app.models.loan_other_details import LoanOtherDetail
 from app.schemas.application_schema import LoanOtherDetailsUpdateRequest
 
-LOAN_TYPE_PERMISSION_MAP = {
-    "personal loan": "loans:personal:view",
-    "business loan": "loans:business:view",
-    "home loan": "loans:home:view",
-    "lap": "loans:lap:view",
-    "education loan": "loans:education:view",
-    "car loan": "loans:car:view",
-    "gold loan": "loans:gold:view",
-    "credit card": "loans:credit-card:view",
-    "agriculture loan": "loans:agriculture:view",
-}
 # =============================================================
 # UPDATE LOAN TYPE
 # =============================================================
@@ -421,26 +409,27 @@ def update_application_status(
         and application.status != LoanStatus.inprocess
     ):
 
-        # Find the application's loan type.
-        loan_type = (
-            db.query(LoanType)
+        # Status changes require the shared status-update permission.
+        permission_code = "loans:status:update"
+        permission_id = (
+            db.query(Permission.id)
             .filter(
-                LoanType.id == application.loan_type_id,
-                LoanType.deleted_at.is_(None),
+                Permission.code == permission_code,
+                Permission.is_active.is_(True),
             )
-            .first()
+            .scalar()
         )
 
-        if not loan_type:
+        if permission_id is None:
             raise HTTPException(
                 status_code=400,
-                detail="Loan type not found for this application",
+                detail=(
+                    f"Required permission not found or inactive: "
+                    f"{permission_code}"
+                ),
             )
 
-       
-
-     
-
+        
         # Get active agent contexts.
         agent_contexts = AccessControl._visible_contexts(
             db=db,
@@ -458,9 +447,7 @@ def update_application_status(
             for context in agent_contexts
         ]
 
-        # Eligible agents must have both:
-        # 1. The required permission.
-        # 2. An active assignment for this loan type.
+        # Eligible agents are selected using the status-update permission only.
         eligible_agent_rows = (
             db.query(
                 EmployeeContextPermission.employee_context_id
@@ -470,21 +457,13 @@ def update_application_status(
                 Permission.id
                 == EmployeeContextPermission.permission_id,
             )
-            .join(
-                LoanAssignment,
-                LoanAssignment.employee_context_id
-                == EmployeeContextPermission.employee_context_id,
-            )
             .filter(
                 EmployeeContextPermission.employee_context_id.in_(
                     agent_context_ids
                 ),
                 EmployeeContextPermission.permission_id
-                == permission.id,
+                == permission_id,
                 Permission.is_active.is_(True),
-                LoanAssignment.loan_type_id == loan_type.id,
-                LoanAssignment.status == LoanAssignmentStatus.active,
-                LoanAssignment.deleted_at.is_(None),
             )
             .distinct()
             .all()
@@ -505,10 +484,8 @@ def update_application_status(
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    f"No eligible agents found for loan type "
-                    f"'{loan_type.name}'. Agents must have the "
-                    f"required permission and an active loan "
-                    f"assignment."
+                    "No active agents have the required "
+                    f"'{permission_code}' permission."
                 ),
             )
 

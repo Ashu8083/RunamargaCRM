@@ -27,6 +27,31 @@ const getCategoryLabel = (category) => {
     .toUpperCase();
 };
 
+const getBusinessPermissionGroup = (permission) => {
+  const text = [permission.name, permission.code, permission.description]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (/\bdashboard\b/.test(text)) return "dashboard";
+  if (/\bloans?\b/.test(text)) return "loans";
+  if (/bank[-\s]?processing/.test(text)) return "bank_processings";
+  if (/\bcalls?\b|\bphones?\b/.test(text)) return "call_management";
+  return "other";
+};
+
+const BUSINESS_PERMISSION_GROUPS = {
+  dashboard: "Dashboard",
+  loans: "Loans",
+  bank_processings: "Bank Processings",
+  call_management: "Call Management",
+  other: "Other Business Permissions",
+};
+
+const BUSINESS_PERMISSION_GROUP_ORDER = Object.keys(
+  BUSINESS_PERMISSION_GROUPS
+);
+
 
 // ============================================================================
 // PERMISSIONS MODAL
@@ -177,10 +202,11 @@ function PermissionsModal({
 
     filteredPermissions.forEach(
       (permission) => {
-        const category =
-          permission.category === "common"
-            ? "common"
-            : "business";
+        const category = ["common", "logs"].includes(
+          permission.category
+        )
+          ? permission.category
+          : "business";
 
         if (!groups[category]) {
           groups[category] = [];
@@ -191,6 +217,16 @@ function PermissionsModal({
         );
       }
     );
+
+    if (groups.business) {
+      groups.business.sort((a, b) =>
+        BUSINESS_PERMISSION_GROUP_ORDER.indexOf(
+          getBusinessPermissionGroup(a)
+        ) - BUSINESS_PERMISSION_GROUP_ORDER.indexOf(
+          getBusinessPermissionGroup(b)
+        )
+      );
+    }
 
     return groups;
   }, [
@@ -206,10 +242,13 @@ function PermissionsModal({
     return Object.keys(
       groupedPermissions
     ).sort((a, b) => {
-      if (a === "common") return -1;
-      if (b === "common") return 1;
+      const order = {
+        common: 0,
+        business: 1,
+        logs: 2,
+      };
 
-      return a.localeCompare(b);
+      return (order[a] ?? 3) - (order[b] ?? 3) || a.localeCompare(b);
     });
   }, [
     groupedPermissions,
@@ -682,11 +721,22 @@ function PermissionsModal({
                     {groupedPermissions[
                       category
                     ].map(
-                      (permission) => (
+                      (permission, index) => (
+                        <div key={permission.id}>
+                          {category === "business" &&
+                            (index === 0 ||
+                              getBusinessPermissionGroup(
+                                groupedPermissions.business[index - 1]
+                              ) !== getBusinessPermissionGroup(permission)) && (
+                              <div className="px-4 py-2 bg-base-200/30 border-b border-base-300">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-base-content/60">
+                                  {BUSINESS_PERMISSION_GROUPS[
+                                    getBusinessPermissionGroup(permission)
+                                  ]}
+                                </p>
+                              </div>
+                            )}
                         <button
-                          key={
-                            permission.id
-                          }
                           type="button"
                           onClick={() =>
                             togglePermission(
@@ -770,7 +820,7 @@ function PermissionsModal({
                                 }
                               </span>
 
-                              {permission.code && (
+                              {permission.description && (
                                 <span
                                   className="
                                     block
@@ -780,9 +830,7 @@ function PermissionsModal({
                                     mt-0.5
                                   "
                                 >
-                                  {
-                                    permission.code
-                                  }
+                                  {permission.description}
                                 </span>
                               )}
                             </div>
@@ -812,6 +860,7 @@ function PermissionsModal({
                           </div>
 
                         </button>
+                        </div>
                       )
                     )}
 

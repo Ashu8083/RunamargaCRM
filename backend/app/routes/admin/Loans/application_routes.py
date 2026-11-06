@@ -8,6 +8,7 @@ from app.controllers.Loans.application_controller import (
     get_applications,
     view_application,
     create_application,
+    find_existing_application_by_phone,
     get_bank_processings,
     get_default_dsa,
     delete_loan_application,
@@ -23,6 +24,14 @@ router = APIRouter(
     prefix="/applications",
     tags=["Applications"],
 )
+
+@router.get("/existing-by-phone")
+def find_existing_application_by_phone_route(
+    phone: str = Query(..., min_length=10, max_length=10, pattern=r"^\d{10}$"),
+    db: Session = Depends(get_db),
+    employee: Employee = Depends(check_permission("loans:create")),
+):
+    return find_existing_application_by_phone(db=db, phone=phone)
 
 @router.get("")
 def get_applications_route(

@@ -64,6 +64,15 @@ def create_application(
         context_id=context_id,
     )
 
+def find_existing_application_by_phone(
+    db: Session,
+    phone: str,
+):
+    return ApplicationService.find_existing_application_by_phone(
+        db=db,
+        phone=phone,
+    )
+
 def get_bank_processings(
     db: Session,
     employee: Employee,

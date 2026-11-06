@@ -17,6 +17,7 @@ import LoanTypeDropdown from '../../../../../../components/GlobalModels/Filters/
 
 import {
   createLoanApplication,
+  findExistingApplicationByPhone,
   getApplicationFilters,
 } from './API'
 import FeedbackModal from '../../../../../../components/GlobalModels/FeedbackModal'
@@ -103,6 +104,43 @@ function ApplicationForm({
 
   const [selectedLoanType, setSelectedLoanType] =
     useState(null)
+
+  useEffect(() => {
+    if (!/^\d{10}$/.test(formData.phone)) {
+      return undefined
+    }
+
+    let cancelled = false
+    const phone = formData.phone
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await findExistingApplicationByPhone(phone)
+
+        if (!cancelled && response?.existing_loan) {
+          onExistingLoan?.({
+            existingLoanData: response.data,
+            originalApplicationData: {
+              rm_id: formData.rm_id,
+              name: formData.name.trim(),
+              phone,
+              loan_type_id: formData.loan_type_id,
+              loan_amount: formData.loan_amount,
+              loan_purpose: formData.loan_purpose.trim(),
+              reference_name: formData.reference_name.trim(),
+            },
+          })
+        }
+      } catch (error) {
+        // Keep phone entry usable if the duplicate lookup is unavailable.
+        console.error('EXISTING APPLICATION LOOKUP ERROR:', error)
+      }
+    }, 300)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutId)
+    }
+  }, [formData.phone, onExistingLoan])
 
 
   // ===========================================================

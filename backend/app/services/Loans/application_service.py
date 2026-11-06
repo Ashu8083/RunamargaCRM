@@ -28,6 +28,58 @@ from app.services.loan_application_status_audit_log_service import LoanApplicati
 
 class ApplicationService:
 
+    @staticmethod
+    def find_existing_application_by_phone(
+        db: Session,
+        phone: str,
+    ) -> dict:
+        existing_application = (
+            db.query(LoanApplication)
+            .filter(
+                LoanApplication.phone == phone,
+                LoanApplication.deleted_at.is_(None),
+            )
+            .order_by(LoanApplication.id.desc())
+            .first()
+        )
+
+        if not existing_application:
+            return {"success": True, "existing_loan": False}
+
+        applied_by_context = existing_application.applied_by_context
+        rm_context = existing_application.rm_context
+        agent_context = existing_application.agent_context
+        applied_by = applied_by_context.employee if applied_by_context else None
+        rm_employee = rm_context.employee if rm_context else None
+        agent = agent_context.employee if agent_context else None
+
+        return {
+            "success": True,
+            "existing_loan": True,
+            "message": "An existing application was found for this phone number.",
+            "data": {
+                "application_id": existing_application.id,
+                "name": existing_application.name,
+                "phone": existing_application.phone,
+                "loan_type_id": existing_application.loan_type_id,
+                "loan_amount": existing_application.loan_amt,
+                "credit_score": existing_application.credit_score,
+                "loan_purpose": existing_application.loan_purpose,
+                "reference_name": existing_application.referral,
+                "status": existing_application.status.value if existing_application.status else None,
+                "applied_date": existing_application.applied_date or (
+                    existing_application.created_at.date()
+                    if existing_application.created_at else None
+                ),
+                "applied_by_id": applied_by.id if applied_by else None,
+                "applied_by_name": applied_by.name if applied_by else None,
+                "rm_id": rm_context.id if rm_context else None,
+                "rm_name": rm_employee.name if rm_employee else None,
+                "agent_id": agent_context.id if agent_context else None,
+                "agent_name": agent.name if agent else None,
+            },
+        }
+
 
     @staticmethod
     def apply_scope(
