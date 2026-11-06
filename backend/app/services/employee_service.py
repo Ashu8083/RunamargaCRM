@@ -488,6 +488,8 @@ def create_employee(
         db.add(new_employee)
         db.flush()
 
+        new_employee.employee_code = f"EMPR{new_employee.id}"
+
         # =====================================================
         # 7. Create employee details
         # =====================================================
@@ -633,6 +635,7 @@ def create_employee(
             "message": "Employee created successfully",
             "employee": {
                 "id": new_employee.id,
+                "employee_code": new_employee.employee_code,
                 "name": new_employee.name,
                 "email": new_employee.email,
                 "phone": new_employee.phone,

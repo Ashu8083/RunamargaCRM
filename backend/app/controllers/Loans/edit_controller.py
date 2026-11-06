@@ -9,6 +9,7 @@ from app.core.access_control import AccessControl
 from app.models.employees import Employee
 from app.models.loan_applications import LoanApplication, LoanStatus
 from app.models.loan_coapplicant import LoanCoApplicant
+from app.models.loan_assignments import LoanAssignment, LoanAssignmentStatus
 from app.models.reverted_loans import RevertedLoan
 from app.models.bank_processings import BankProcessing
 from app.models.dsa_details import DSADetail
@@ -447,7 +448,8 @@ def update_application_status(
             for context in agent_contexts
         ]
 
-        # Eligible agents are selected using the status-update permission only.
+        # Agents must have both the status-update permission and an active
+        # assignment for this application's exact loan type.
         eligible_agent_rows = (
             db.query(
                 EmployeeContextPermission.employee_context_id
@@ -457,6 +459,11 @@ def update_application_status(
                 Permission.id
                 == EmployeeContextPermission.permission_id,
             )
+            .join(
+                LoanAssignment,
+                LoanAssignment.employee_context_id
+                == EmployeeContextPermission.employee_context_id,
+            )
             .filter(
                 EmployeeContextPermission.employee_context_id.in_(
                     agent_context_ids
@@ -464,6 +471,9 @@ def update_application_status(
                 EmployeeContextPermission.permission_id
                 == permission_id,
                 Permission.is_active.is_(True),
+                LoanAssignment.loan_type_id == application.loan_type_id,
+                LoanAssignment.status == LoanAssignmentStatus.active,
+                LoanAssignment.deleted_at.is_(None),
             )
             .distinct()
             .all()
@@ -485,7 +495,8 @@ def update_application_status(
                 status_code=400,
                 detail=(
                     "No active agents have the required "
-                    f"'{permission_code}' permission."
+                    f"'{permission_code}' permission and an active "
+                    "assignment for this application's loan type."
                 ),
             )
 
