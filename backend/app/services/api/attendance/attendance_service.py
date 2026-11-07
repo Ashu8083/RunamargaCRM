@@ -397,23 +397,18 @@ def generate_verified_face_embedding(
     # ------------------------------------------------------------
     # 1. Decode image
     # ------------------------------------------------------------
-
     image = decode_image(
         image_bytes
     )
-
     # ------------------------------------------------------------
     # 2. Detect faces
     # ------------------------------------------------------------
-
     try:
-
         faces = detect_faces(
             image
         )
 
     except ValueError as exc:
-
         raise HTTPException(
             status_code=400,
             detail={

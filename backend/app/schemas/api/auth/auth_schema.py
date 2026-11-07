@@ -238,6 +238,14 @@ class RefreshTokenRequest(BaseModel):
         min_length=1,
         description="Refresh token to exchange for a new access token.",
     )
+    device_id: str | None = Field(
+        default=None,
+        description="Optional device ID to scope revocation.",
+    )
+    device_type: str | None = Field(
+        default=None,
+        description="Optional device type to scope revocation.",
+    )
 
 
 class RefreshTokenResponse(BaseModel):
@@ -267,6 +275,11 @@ class LogoutRequest(BaseModel):
     device_id: str | None = Field(
         default=None,
         description="Optional device ID to scope revocation.",
+    )
+
+    device_type: str | None = Field(
+        default="android",
+        description="Optional device type to scope revocation.",
     )
 
 
