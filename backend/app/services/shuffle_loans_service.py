@@ -25,28 +25,49 @@ class ShuffleLoansService:
         application: LoanApplication,
         employee: Employee,
         context_id: Optional[int] = None,
+        loan_type_id: Optional[int] = None,
     ):
-        """Return eligible agents using AccessControl and the application's loan type ID."""
-        if not application.loan_type_id:
+        """
+        Return eligible agents using AccessControl
+        and the target loan type ID.
+        """
+
+        # Use the new loan type if provided.
+        # Otherwise, use the application's existing loan type.
+        effective_loan_type_id = (
+            loan_type_id
+            if loan_type_id is not None
+            else application.loan_type_id
+        )
+
+        if not effective_loan_type_id:
             raise ValueError(
-                "This application has no loan type, so eligible agents cannot be determined."
+                "This application has no loan type."
             )
 
         loan_type = (
             db.query(LoanType)
-            .filter(LoanType.id == application.loan_type_id)
+            .filter(LoanType.id == effective_loan_type_id)
             .first()
         )
+
         if not loan_type:
-            raise ValueError("The application's loan type could not be found.")
+            raise ValueError(
+                "The application's loan type could not be found."
+            )
 
         eligible_contexts = AccessControl.get_eligible_agents(
             db=db,
             employee=employee,
-            loan_type_id=application.loan_type_id,
+            loan_type_id=effective_loan_type_id,
             context_id=context_id,
         )
-        employee_ids = [agent_context.employee_id for agent_context in eligible_contexts]
+
+        employee_ids = [
+            agent_context.employee_id
+            for agent_context in eligible_contexts
+        ]
+
         employee_names = {
             row.id: row.name
             for row in db.query(Employee.id, Employee.name)
@@ -60,7 +81,10 @@ class ShuffleLoansService:
                 {
                     "employee_context_id": agent_context.id,
                     "employee_id": agent_context.employee_id,
-                    "name": employee_names.get(agent_context.employee_id, "Unknown"),
+                    "name": employee_names.get(
+                        agent_context.employee_id,
+                        "Unknown"
+                    ),
                 }
                 for agent_context in eligible_contexts
             ],
@@ -788,25 +812,42 @@ class ShuffleLoansService:
 
         # A visible agent is eligible only if AccessControl confirms
         # an active loan_assignments row for this application's loan_type_id.
+        # =====================================================
+        # VALIDATE AGENT ELIGIBILITY FOR TARGET LOAN TYPE
+        # =====================================================
+
         if agent_id is not None:
+
+            # Determine which loan type should be used.
+            target_loan_type_id = (
+                loan_type_id
+                if loan_type_id is not None
+                else application.loan_type_id
+            )
+
             for application in applications:
+
                 eligible_result = (
                     ShuffleLoansService._get_eligible_agents_for_application(
                         db=db,
                         application=application,
                         employee=employee,
                         context_id=shuffled_by_context_id,
+                        loan_type_id=target_loan_type_id,
                     )
                 )
+
                 eligible_context_ids = {
                     item["employee_context_id"]
                     for item in eligible_result["agents"]
                 }
+
                 if agent_id not in eligible_context_ids:
                     raise ValueError(
-                        f'Selected agent is not eligible for application {application.id} '
-                        f'({eligible_result["loan_type"]}). The agent must have an active '
-                        "loan_assignments row for this loan type."
+                        f'Selected agent is not eligible for application '
+                        f'{application.id} ({eligible_result["loan_type"]}). '
+                        'The agent must have an active loan_assignments '
+                        'row for this loan type.'
                     )
 
         # =====================================================
