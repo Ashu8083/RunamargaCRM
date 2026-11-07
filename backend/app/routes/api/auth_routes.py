@@ -383,15 +383,14 @@ async def face_login(
     # Device information
     # --------------------------------------------------------------------
 
-    device_id: str | None = Form(None),
-
-    device_type: str | None = Form(None),
+    device_id: str  = Form(...),
+    device_type: str  = Form(...),
 
     # --------------------------------------------------------------------
     # Location
     # --------------------------------------------------------------------
-    latitude: float | None = Form(None),
-    longitude: float | None = Form(None),
+    latitude: float = Form(None),
+    longitude: float  = Form(None),
     # --------------------------------------------------------------------
     # Database
     # --------------------------------------------------------------------
@@ -477,6 +476,8 @@ def refresh_token(
         return refresh_token_controller(
             db=db,
             refresh_token=token,
+            device_id=body.device_id,
+            device_type=body.device_type,
         )
 
     except ValueError as exc:
@@ -581,6 +582,7 @@ def logout(
                 access_token=raw_access_token,
                 refresh_token=raw_refresh_token,
                 device_id=device_id,
+                device_type = body.device_type
             )
 
         except ValueError as exc:

@@ -481,11 +481,15 @@ def get_employee_phone_number_controller(
 def refresh_token_controller(
     db: Session,
     refresh_token: str,
+    device_id: str | None = None,
+    device_type: str | None = None,
 ) -> RefreshTokenResponse:
 
     result = refresh_access_token(
         db=db,
         refresh_token=refresh_token,
+        device_id=device_id,
+        device_type=device_type,
     )
 
     return RefreshTokenResponse(
@@ -514,6 +518,7 @@ def logout_controller(
     access_token: str | None = None,
     refresh_token: str | None = None,
     device_id: str | None = None,
+    device_type: str | None = None,
 ) -> LogoutResponse:
 
     result = logout_employee(
@@ -522,6 +527,7 @@ def logout_controller(
         access_token=access_token,
         refresh_token=refresh_token,
         device_id=device_id,
+        device_type = device_type
     )
 
     return LogoutResponse(

@@ -1434,6 +1434,8 @@ def save_refresh_token(
         .filter(
             AuthToken.employee_id == employee_id,
             AuthToken.token_type == REFRESH_TOKEN_TYPE,
+            AuthToken.device_id == device_id,
+            AuthToken.device_type == device_type,
             AuthToken.revoked_at.is_(None),
         )
         .update(
@@ -1793,6 +1795,8 @@ def get_rm_phone_number_service(
 def refresh_access_token(
     db: Session,
     refresh_token: str,
+    device_id : str,
+    device_type: str,
 ) -> dict:
     """
     Generate a new access token using a valid refresh token.
@@ -1804,6 +1808,7 @@ def refresh_access_token(
     # Decode refresh JWT
     # --------------------------------------------------------------------
 
+    logger.info(f"employee  device {device_type}, {device_id}")
     try:
 
         payload = decode_token(
@@ -1847,13 +1852,14 @@ def refresh_access_token(
             AuthToken.employee_id == employee_id,
             AuthToken.token_hash == token_hash,
             AuthToken.token_type == REFRESH_TOKEN_TYPE,
+            AuthToken.device_id == device_id,
+            AuthToken.device_type == device_type,
             AuthToken.revoked_at.is_(None),
         )
         .first()
     )
 
     if not token_record:
-
         raise ValueError(
             "Refresh token is invalid or revoked"
         )
@@ -1924,6 +1930,7 @@ def logout_employee(
     access_token: str | None = None,
     refresh_token: str | None = None,
     device_id: str | None = None,
+    device_type: str | None = None,
 ) -> dict:
     """
     Revoke employee tokens on logout.
@@ -2038,6 +2045,7 @@ def logout_employee(
                 expires_at=exp_dt,
                 revoked_at=now,
                 device_id=device_id,
+                device_type=device_type,
             )
             db.add(revoked_access_token)
             revoked_count += 1
@@ -2048,8 +2056,9 @@ def logout_employee(
         AuthToken.token_type == REFRESH_TOKEN_TYPE,
         AuthToken.revoked_at.is_(None),
     ]
-    if device_id:
-        filter_conditions.append(AuthToken.device_id == device_id)
+    filter_conditions.append(AuthToken.device_id == device_id)
+    filter_conditions.append(AuthToken.device_type == device_type)
+
 
     updated = (
         db.query(AuthToken)
