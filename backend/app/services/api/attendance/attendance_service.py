@@ -30,9 +30,6 @@ from app.services.face.face_validation import (
 from app.utils.geo import haversine_distance
 from app.utils.face_storage_upload_impl import LocalFileService
 
-# Singleton file service – delegates image storage to LocalFileService
-_file_service = LocalFileService(static_dir=Path(__file__).resolve().parents[4] / "app" / "static")
-
 
 # Project root:
 #
@@ -125,6 +122,9 @@ ATTENDANCE_UPLOAD_DIRECTORY = (
 
 PUNCH_IN_DIRECTORY_NAME = "punch in"
 PUNCH_OUT_DIRECTORY_NAME = "punch out"
+
+# Singleton file-service — uses the same STATIC_DIRECTORY already resolved above
+_file_service = LocalFileService(static_dir=STATIC_DIRECTORY)
 
 
 # ------------------------------------------------------------------------
