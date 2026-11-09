@@ -16,12 +16,19 @@ logger = logging.getLogger(__name__)
 
 # URL.create safely handles special characters in the database password.
 DATABASE_URL = URL.create(
+
     drivername="postgresql+psycopg",
+
     username=settings.DATABASE_USER,
+
     password=settings.DATABASE_PASSWORD,
+
     host=settings.DATABASE_HOST,
-    port=int(settings.DATABASE_PORT),
+
+    port=settings.DATABASE_PORT,
+
     database=settings.DATABASE_NAME,
+
 )
 
 
