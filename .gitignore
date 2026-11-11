@@ -48,3 +48,5 @@ admin-react/public/websiteimages/
 
 # Uploaded attendance images
 backend/app/static/uploads/
+Dockerfile
+docker-compose.yml
