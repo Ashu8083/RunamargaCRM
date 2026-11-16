@@ -25,6 +25,7 @@ def cal_logs_create(
     call_log_schema : CallLogsCreateSchema,
     request : Request,
     db: Session = Depends(get_db),
+    employee_id: int= Depends(get_current_api_employee),
 ):
     employee_id = request.state.employee_id
     call_logs = create_call_logs(db, employee_id, call_log_schema)
