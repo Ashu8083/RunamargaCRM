@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends,Request
 from sqlalchemy.orm import Session
 from starlette import status
+from fastapi.requests import Request
 
 from app.schemas.CallAnalytics.call_logs_scheema import CallLogsCreateSchema
 from app.config.database import get_db
@@ -22,9 +23,10 @@ router = APIRouter(
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def cal_logs_create(
     call_log_schema : CallLogsCreateSchema,
+    request : Request,
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_api_employee),
 ):
-    call_logs = create_call_logs(db, employee, call_log_schema)
+    employee_id = request.state.employee_id
+    call_logs = create_call_logs(db, employee_id, call_log_schema)
 
     return call_logs

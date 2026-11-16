@@ -178,13 +178,13 @@ def get_call_history(
 
 def create_call_logs(
     db: Session,
-    employee: Employee,
+    employee_id: int  ,
     call_log_schema: CallLogsCreateSchema,
 ):
     try:
         call_log = CallLogService.create_call_log(
             db=db,
-            employee=employee,
+            employee_id=employee_id,
             call_log_schema=call_log_schema,
         )
     except ValueError as exc:
