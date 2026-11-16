@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config.settings import settings
+from app.core.log_config import logger
 from app.models.attendance import Attendance
 from app.models.employee_face_profiles import EmployeeFaceProfile
 from app.models.employees import Employee
@@ -1202,7 +1203,7 @@ def build_attendance_response(
 
 async def punch_in(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     image_bytes: bytes,
     latitude: float | None = None,
     longitude: float | None = None,
@@ -1236,6 +1237,10 @@ async def punch_in(
     # ------------------------------------------------------------
     # 1. Validate employee
     # ------------------------------------------------------------
+
+    employee = db.query(Employee).filter(
+        Employee.id == employee_id
+    ).first()
 
     validate_employee_for_attendance(
         employee
@@ -1343,6 +1348,7 @@ async def punch_in(
     # ------------------------------------------------------------
 
     now = datetime.now()
+    logger.info(f"Employee punch in time {now}")
 
     try:
 
@@ -1438,7 +1444,7 @@ async def punch_in(
 
 async def punch_out(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     image_bytes: bytes,
     latitude: float | None = None,
     longitude: float | None = None,
@@ -1459,6 +1465,9 @@ async def punch_out(
     # 1. Validate employee
     # ------------------------------------------------------------
 
+    employee  = db.query(Employee).filter(
+        employee_id == Employee.id
+    ).first()
     validate_employee_for_attendance(
         employee
     )
@@ -1643,7 +1652,7 @@ async def punch_out(
 
 def lunch_out(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     latitude: float | None = None,
     longitude: float | None = None,
 ) -> dict:
@@ -1663,6 +1672,8 @@ def lunch_out(
     # ------------------------------------------------------------
     # 1. Validate employee
     # ------------------------------------------------------------
+
+    employee= db.query(Employee).filter(Employee.id == employee_id).first()
 
     validate_employee_for_attendance(
         employee
@@ -1756,7 +1767,7 @@ def lunch_out(
 
 def lunch_in(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     latitude: float | None = None,
     longitude: float | None = None,
 ) -> dict:
@@ -1777,6 +1788,7 @@ def lunch_in(
     # ------------------------------------------------------------
     # 1. Validate employee
     # ------------------------------------------------------------
+    employee= db.query(Employee).filter(Employee.id == employee_id).first()
 
     validate_employee_for_attendance(
         employee

@@ -348,7 +348,7 @@ class CallLogService:
     def create_call_log(
         db: Session,
         call_log_schema: CallLogsCreateSchema,
-        employee: Employee,
+        employee_id: int,
     ):
         """Store a call event received through the existing Android API."""
 
@@ -357,35 +357,36 @@ class CallLogService:
             "employee_context_id",
             None,
         )
-        employee_context = AccessControl.get_active_context(
-            db=db,
-            employee=employee,
-            context_id=requested_context_id,
-        )
 
-        if not employee_context:
-            raise ValueError(
-                "The employee context is not valid for the authenticated employee."
-            )
+        #
+        # if not employee_context:
+        #     raise ValueError(
+        #         "The employee context is not valid for the authenticated employee."
+        #     )
 
         phone_id = getattr(call_log_schema, "phone_id", None)
-        phone = None
-
-        if phone_id is not None:
-            phone = (
-                db.query(PhoneNumber)
-                .filter(
-                    PhoneNumber.id == phone_id,
-                    PhoneNumber.employee_id == employee.id,
-                    PhoneNumber.deleted_at.is_(None),
-                )
-                .first()
+        if not phone_id:
+            raise ValueError(
+                "The phone number is not found ."
+            )
+        employee_context_id = getattr(call_log_schema, "employee_context_id", None)
+        if not employee_context_id:
+            raise ValueError(
+                "The employee context id is not found ."
             )
 
-            if not phone:
-                raise ValueError(
-                    "The phone number is not assigned to the authenticated employee."
-                )
+        # if phone_id is not None:
+        #     phone = (
+        #         db.query(PhoneNumber)
+        #         .filter(
+        #             PhoneNumber.id == phone_id,
+        #             PhoneNumber.employee_id == employee.id,
+        #             PhoneNumber.deleted_at.is_(None),
+        #         )
+        #         .first()
+        #     )
+
+
 
         phone_number = getattr(call_log_schema, "phone_number", None)
         if not phone_number:
@@ -415,8 +416,10 @@ class CallLogService:
                 "attended_at",
                 None,
             ),
-            phone_id=phone.id if phone else None,
-            employee_context_id=employee_context.id,
+            phone_id=getattr(call_log_schema, "phone_id", None),
+            employee_context_id=getattr(
+                call_log_schema, "employee_context_id", None
+            ),
         )
 
         try:

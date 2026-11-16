@@ -41,7 +41,7 @@ async def punch_in(
     latitude: float | None = Form(default=None),
     longitude: float | None = Form(default=None),
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_api_employee),
+    employee_id: int = Depends(get_current_api_employee),
 ):
     """
     Punch in the authenticated employee.
@@ -64,7 +64,7 @@ async def punch_in(
 
     return await punch_in_controller(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         image=image,
         attendance_data=attendance_data,
     )

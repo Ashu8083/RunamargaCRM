@@ -21,7 +21,7 @@ from app.services.api.attendance.attendance_service import (
 
 async def punch_in_controller(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     image: UploadFile,
     attendance_data: AttendanceActionRequest,
 ) -> AttendanceResponse:
@@ -66,7 +66,7 @@ async def punch_in_controller(
 
     result = await punch_in(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         image_bytes=image_bytes,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,

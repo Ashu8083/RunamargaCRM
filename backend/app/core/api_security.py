@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.config.database import get_db
 from app.models.employees import Employee
+
 from app.models.auth_tokens import AuthToken
 
 
@@ -436,66 +437,68 @@ def get_current_api_employee(
     # --------------------------------------------------------------------
     # Check if this access token has been revoked
     # --------------------------------------------------------------------
-    token_h = hash_token(raw_token)
-    revoked_token = (
-        db.query(AuthToken)
-        .filter(
-            AuthToken.employee_id == employee_id,
-            AuthToken.token_hash == token_h,
-            AuthToken.revoked_at.isnot(None),
-        )
-        .first()
-    )
+    # token_h = hash_token(raw_token)
+    # revoked_token = (
+    #     db.query(AuthToken)
+    #     .filter(
+    #         AuthToken.employee_id == employee_id,
+    #         AuthToken.token_hash == token_h,
+    #         AuthToken.revoked_at.isnot(None),
+    #     )
+    #     .first()
+    # )
+    #
+    # if revoked_token:
+    #     raise HTTPException(
+    #         status_code=401,
+    #         detail={
+    #             "code": "TOKEN_REVOKED",
+    #             "message": "Your session has been revoked. Please login again.",
+    #         },
+    #     )
 
-    if revoked_token:
-        raise HTTPException(
-            status_code=401,
-            detail={
-                "code": "TOKEN_REVOKED",
-                "message": "Your session has been revoked. Please login again.",
-            },
-        )
+    # employee = (
+    #     db.query(Employee)
+    #     .filter(
+    #         Employee.id == employee_id,
+    #         Employee.deleted_at.is_(None),
+    #     )
+    #     .first()
+    # )
+    #
+    # if not employee:
+    #
+    #     raise HTTPException(
+    #         status_code=401,
+    #         detail={
+    #             "code": "EMPLOYEE_NOT_FOUND",
+    #             "message": "Employee account not found. Please contact your administrator.",
+    #         },
+    #     )
+    #
+    # if employee.deactivate:
+    #
+    #     raise HTTPException(
+    #         status_code=401,
+    #         detail={
+    #             "code": "ACCOUNT_DEACTIVATED",
+    #             "message": "Your account has been deactivated. Please contact your administrator.",
+    #         },
+    #     )
+    #
+    # if employee.status not in (
+    #     "active",
+    #     "WFH",
+    # ):
+    #
+    #     raise HTTPException(
+    #         status_code=401,
+    #         detail={
+    #             "code": "ACCOUNT_INACTIVE",
+    #             "message": "Your account is currently inactive. Please contact your administrator.",
+    #         },
+    #     )
 
-    employee = (
-        db.query(Employee)
-        .filter(
-            Employee.id == employee_id,
-            Employee.deleted_at.is_(None),
-        )
-        .first()
-    )
+    request.state.employee_id = employee_id
 
-    if not employee:
-
-        raise HTTPException(
-            status_code=401,
-            detail={
-                "code": "EMPLOYEE_NOT_FOUND",
-                "message": "Employee account not found. Please contact your administrator.",
-            },
-        )
-
-    if employee.deactivate:
-
-        raise HTTPException(
-            status_code=401,
-            detail={
-                "code": "ACCOUNT_DEACTIVATED",
-                "message": "Your account has been deactivated. Please contact your administrator.",
-            },
-        )
-
-    if employee.status not in (
-        "active",
-        "WFH",
-    ):
-
-        raise HTTPException(
-            status_code=401,
-            detail={
-                "code": "ACCOUNT_INACTIVE",
-                "message": "Your account is currently inactive. Please contact your administrator.",
-            },
-        )
-
-    return employee
+    return employee_id
