@@ -634,12 +634,12 @@ def get_employee_contexts(
 )
 def get_employee_phone_number(
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_api_employee),
+    employee_id: int = Depends(get_current_api_employee),
 ):
     try:
         return get_employee_phone_number_controller(
             db=db,
-            employee_id=current_employee.id,
+            employee_id=employee_id,
         )
     except PermissionError as exc:
         raise HTTPException(
