@@ -606,12 +606,12 @@ def logout(
 )
 def get_employee_contexts(
     db: Session = Depends(get_db),
-    current_employee: Employee = Depends(get_current_api_employee),
+    employee_id: int = Depends(get_current_api_employee),
 ):
     try:
         return get_employee_contexts_controller(
             db=db,
-            employee_id=current_employee.id,
+            employee_id= employee_id,
         )
     except ValueError as exc:
         raise HTTPException(
