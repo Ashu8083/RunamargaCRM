@@ -77,7 +77,7 @@ async def punch_in_controller(
 
 async def punch_out_controller(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     image: UploadFile,
     attendance_data: AttendanceActionRequest,
 ) -> AttendanceResponse:
@@ -123,7 +123,7 @@ async def punch_out_controller(
 
     result = await punch_out(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         image_bytes=image_bytes,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
@@ -134,7 +134,7 @@ async def punch_out_controller(
 
 async def lunch_out_controller(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     attendance_data: AttendanceActionRequest,
 ) -> AttendanceResponse:
     """
@@ -146,7 +146,7 @@ async def lunch_out_controller(
 
     result = lunch_out(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
     )
@@ -156,7 +156,7 @@ async def lunch_out_controller(
 
 async def lunch_in_controller(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     attendance_data: AttendanceActionRequest,
 ) -> AttendanceResponse:
     """
@@ -168,7 +168,7 @@ async def lunch_in_controller(
 
     result = lunch_in(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         latitude=attendance_data.latitude,
         longitude=attendance_data.longitude,
     )
@@ -178,7 +178,7 @@ async def lunch_in_controller(
 
 async def get_attendance_history_controller(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     month: int | None = None,
     year: int | None = None,
     page: int = 1,
@@ -197,7 +197,7 @@ async def get_attendance_history_controller(
 
     result = get_attendance_history(
         db=db,
-        employee_id=employee.id,
+        employee_id=employee_id,
         month=month,
         year=year,
         page=page,

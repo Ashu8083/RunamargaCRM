@@ -525,7 +525,7 @@ def refresh_token(
 def logout(
     http_request: Request,
     body: LogoutRequest | None = None,
-    current_employee: Employee = Depends(get_current_api_employee),
+    current_employee: int = Depends(get_current_api_employee),
     db: Session = Depends(get_db),
 ):
     # --------------------------------------------------------------------

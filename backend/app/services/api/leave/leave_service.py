@@ -11,7 +11,7 @@ from app.models.leave_managements import LeaveManagement
 
 def apply_leave(
     db: Session,
-    employee: Employee,
+    employee_id: id,
     from_date: date,
     to_date: date,
     leave_type: str,
@@ -21,6 +21,7 @@ def apply_leave(
     Create a leave request for the authenticated employee.
     No permission check — the employee applies for their own leave.
     """
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
 
     if to_date < from_date:
         raise HTTPException(
@@ -43,7 +44,7 @@ def apply_leave(
         )
 
     leave = LeaveManagement(
-        applied_by=employee.id,
+        applied_by=employee_id,
         from_date=from_date,
         to_date=to_date,
         leave_type=leave_type,
@@ -82,7 +83,7 @@ def apply_leave(
 
 def get_my_leaves(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     status: str | None = None,
     page: int = 1,
     limit: int = 10,
@@ -91,10 +92,12 @@ def get_my_leaves(
     Return the authenticated employee's own leave requests (paginated).
     Optionally filter by status: 'Pending', 'Approved', 'Rejected'.
     """
+    employee_name = db.query(Employee.name).filter(Employee.id == employee_id).first()
+
 
     query = (
         db.query(LeaveManagement)
-        .filter(LeaveManagement.applied_by == employee.id)
+        .filter(LeaveManagement.applied_by ==employee_id)
     )
 
     if status:
@@ -126,7 +129,7 @@ def get_my_leaves(
             {
                 "id": leave.id,
                 "employee_id": leave.applied_by,
-                "employee_name": getattr(employee, "name", None),
+                "employee_name": employee_name,
                 "from_date": leave.from_date.isoformat(),
                 "to_date": leave.to_date.isoformat(),
                 "days": (leave.to_date - leave.from_date).days + 1,
