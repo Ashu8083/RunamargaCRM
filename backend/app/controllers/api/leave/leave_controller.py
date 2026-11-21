@@ -14,14 +14,14 @@ from app.services.api.leave.leave_service import apply_leave, get_my_leaves
 
 async def apply_leave_controller(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     data: ApplyLeaveRequest,
 ) -> ApplyLeaveResponse:
     """Employee ID is always taken from the JWT token."""
 
     result = apply_leave(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         from_date=data.from_date,
         to_date=data.to_date,
         leave_type=data.leave_type,
@@ -36,7 +36,7 @@ async def apply_leave_controller(
 
 async def get_my_leaves_controller(
     db: Session,
-    employee: Employee,
+    employee_id: int,
     status: str | None = None,
     page: int = 1,
     limit: int = 10,
@@ -45,7 +45,7 @@ async def get_my_leaves_controller(
 
     result = get_my_leaves(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         status=status,
         page=page,
         limit=limit,

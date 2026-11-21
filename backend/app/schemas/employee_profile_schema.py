@@ -18,3 +18,6 @@ class EmployeeProfileResponse(BaseModel):
     joining_date: datetime | None = None
     aadhar_card: str | None = None
     pan_card: str | None = None
+
+
+

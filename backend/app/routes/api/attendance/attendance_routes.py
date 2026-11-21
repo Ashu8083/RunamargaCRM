@@ -83,7 +83,7 @@ async def punch_out(
     latitude: float | None = Form(default=None),
     longitude: float | None = Form(default=None),
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_api_employee),
+    employee_id: int = Depends(get_current_api_employee),
 ):
     """
     Punch out the authenticated employee.
@@ -107,7 +107,7 @@ async def punch_out(
 
     return await punch_out_controller(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         image=image,
         attendance_data=attendance_data,
     )
@@ -124,7 +124,7 @@ async def punch_out(
 async def lunch_out(
     attendance_data: AttendanceActionRequest,
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_api_employee),
+    employee_id: int = Depends(get_current_api_employee),
 ):
     """
     Mark lunch-out for the authenticated employee.
@@ -140,7 +140,7 @@ async def lunch_out(
 
     return await lunch_out_controller(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         attendance_data=attendance_data,
     )
 
@@ -156,7 +156,7 @@ async def lunch_out(
 async def lunch_in(
     attendance_data: AttendanceActionRequest,
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_api_employee),
+    employee_id: int = Depends(get_current_api_employee),
 ):
     """
     Mark lunch-in for the authenticated employee.
@@ -173,7 +173,7 @@ async def lunch_in(
 
     return await lunch_in_controller(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         attendance_data=attendance_data,
     )
 
@@ -228,7 +228,7 @@ async def get_attendance_history(
         description="Filter by work mode ('WFH' or 'Office').",
     ),
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_api_employee),
+    employee_id: int = Depends(get_current_api_employee),
 ):
     """
     Fetch paginated attendance history for the employee.
@@ -243,7 +243,7 @@ async def get_attendance_history(
 
     return await get_attendance_history_controller(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         month=month,
         year=year,
         page=page,

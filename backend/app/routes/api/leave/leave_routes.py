@@ -40,11 +40,11 @@ router = APIRouter(
 async def apply_leave_route(
     data: ApplyLeaveRequest,
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_api_employee),
+    employee_id: int = Depends(get_current_api_employee),
 ):
     return await apply_leave_controller(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         data=data,
     )
 
@@ -71,11 +71,11 @@ async def get_my_leaves_route(
     page: int = Query(default=1, ge=1, description="Page number (1-indexed)."),
     limit: int = Query(default=10, ge=1, le=100, description="Records per page."),
     db: Session = Depends(get_db),
-    employee: Employee = Depends(get_current_api_employee),
+    employee_id: int = Depends(get_current_api_employee),
 ):
     return await get_my_leaves_controller(
         db=db,
-        employee=employee,
+        employee_id=employee_id,
         status=status,
         page=page,
         limit=limit,
