@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.api_security import get_current_api_employee
 from app.core.log_config import logger
 from app.config.database import get_db
-from app.controllers.api.profile_controller import get_employee_profile
+from app.controllers.api.profile_controller import get_employee_profile, get_employee_work_mode
 from app.models import Employee
-from app.schemas.api.profile.profile_schema import ProfileResponse
+from app.schemas.api.profile.profile_schema import ProfileResponse , EmployeeWorkModeResponse
 
 router = APIRouter(
     prefix="/employees",
@@ -18,7 +19,7 @@ router = APIRouter(
             , response_model=ProfileResponse)
 def get_employee_profile_route(
     employee_id: int,
-    employee: Employee = Depends(get_current_api_employee),
+    employee: int = Depends(get_current_api_employee),
     db: Session = Depends(get_db),
 ):
 
@@ -36,3 +37,30 @@ def get_employee_profile_route(
         )
 
     return ProfileResponse(**employee_profile)
+
+
+@router.get(
+    "/work-mode/{employee_id}",
+       )
+
+def get_employee_work_mode_route(
+
+    employee_id: int = Depends(get_current_api_employee),
+    db: Session = Depends(get_db),
+):
+    try :
+        employee_work_mode = get_employee_work_mode(
+            db=db,
+            employee_id=employee_id
+        )
+        return  JSONResponse(status_code=200, content=
+        {
+            "employee_id" : employee_id,
+            "employee_work_mode": employee_work_mode
+        })
+    except ValueError as e:
+        logger.error("profile route error %s",e)
+        raise HTTPException(
+            status_code=404,
+            detail="Employee profile not found"
+        )

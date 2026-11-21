@@ -18,3 +18,7 @@ class ProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class EmployeeWorkModeResponse(BaseModel):
+    status: str
