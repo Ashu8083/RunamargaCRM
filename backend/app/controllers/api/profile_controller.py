@@ -41,6 +41,8 @@ def get_employee_work_mode(db: Session, employee_id: int):
     if employee_work_mode =="inactive":
         raise ValueError(f"Employee with id {employee_id} is inactive")
     if employee_work_mode == "active":
+        employee_work_mode = "wfo"
+    if employee_work_mode == "WFH":
         employee_work_mode = "wfh"
 
     if not employee_work_mode:
