@@ -29,15 +29,15 @@ class AttendanceService:
     # FORMAT DATETIME
     # =========================================================================
 
-    @staticmethod
-    def _format_datetime(value):
-        if not value:
-            return None
-
-        if isinstance(value, datetime):
-            return value.isoformat()
-
-        return str(value)
+    # @staticmethod
+    # def _format_datetime(value):
+    #     if not value:
+    #         return None
+    #
+    #     if isinstance(value, datetime):
+    #         return value.isoformat()
+    #
+    #     return str(value)
 
 
     # =========================================================================
@@ -651,18 +651,18 @@ class AttendanceService:
                 if attendance.lunch_in:
 
                     lunch_in = (
-                        AttendanceService._format_time(
+                        # AttendanceService._format_time(
                             attendance.lunch_in
-                        )
+                        # )
                     )
 
 
                 if attendance.check_out:
 
                     punch_out = (
-                        AttendanceService._format_time(
+                        # AttendanceService._format_time(
                             attendance.check_out
-                        )
+                        # )
                     )
 
 
