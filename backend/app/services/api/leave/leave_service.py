@@ -92,7 +92,7 @@ def get_my_leaves(
     Return the authenticated employee's own leave requests (paginated).
     Optionally filter by status: 'Pending', 'Approved', 'Rejected'.
     """
-    employee_name = db.query(Employee.name).filter(Employee.id == employee_id).first()
+    employee_name = db.query(Employee.name).filter(Employee.id == employee_id).scalar()
 
 
     query = (

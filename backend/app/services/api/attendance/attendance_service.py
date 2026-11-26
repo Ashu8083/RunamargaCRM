@@ -1825,12 +1825,12 @@ def lunch_in(
     # 4. Require lunch out first
     # ------------------------------------------------------------
 
-    if attendance.lunch_out is None:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Employee must mark lunch out before lunch in.",
-        )
+    # if attendance.lunch_out is not None:
+    #
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="Employee must mark lunch out before lunch in.",
+    #     )
 
     # ------------------------------------------------------------
     # 5. Cannot lunch in after punch out
