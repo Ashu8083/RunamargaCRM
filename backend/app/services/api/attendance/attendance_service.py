@@ -1472,6 +1472,8 @@ async def punch_out(
         employee
     )
 
+
+
     # ------------------------------------------------------------
     # 2. Validate GPS location (required for Work From Office)
     # ------------------------------------------------------------
@@ -1557,6 +1559,19 @@ async def punch_out(
         raise HTTPException(
             status_code=409,
             detail="Employee has already punched out today.",
+        )
+
+
+
+    time_need_work = calculate_working_hours(
+        check_in=attendance.check_in,
+        check_out=datetime.now(),
+    )
+
+    if time_need_work["total_hours"] < 4:
+        raise HTTPException(
+            status_code=400,
+            detail="Your punch-out is on vacation until you complete 4 hours! 😂",
         )
 
     # ------------------------------------------------------------
@@ -1921,7 +1936,7 @@ def calculate_working_hours(
     check_out: datetime | None,
     lunch_out: datetime | None = None,
     lunch_in: datetime | None = None,
-) -> str | None:
+) -> dict | None:
     """
     Calculate working hours formatted as 'Xh Ym'.
     Deducts lunch break if both lunch_out and lunch_in are present.
@@ -1930,7 +1945,8 @@ def calculate_working_hours(
         return None
 
     if check_out <= check_in:
-        return "0h 0m"
+        return {
+            "time" :"0h 0m"}
 
     gross_duration = check_out - check_in
     lunch_duration = timedelta(0)
@@ -1944,7 +1960,8 @@ def calculate_working_hours(
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60
 
-    return f"{hours}h {minutes}m"
+    return {    "total_hours": hours, "total_minutes": minutes }
+
 
 
 def get_attendance_history(
